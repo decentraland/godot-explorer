@@ -602,6 +602,35 @@ export async function currentScene(asyncOpts_?: {
 }
 
 /**
+ * What the Day 1 welcome needs from the OS right now. The shell calls it whenever the permission
+ * or the flags may have changed; arming again with the same id is harmless.
+ */
+export function day1Notification(
+  permissionGranted: boolean,
+): Day1Notification /*throws*/ {
+  const __rb: Uint8Array = uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_day1_notification(
+        FfiConverterBool.lower(
+          permissionGranted,
+          nativeModule().rustbuffer_alloc,
+        ),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterTypeDay1Notification.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
  * Resolves after `millis` on the core runtime: proves an async call returns a promise.
  */
 export async function debugDelay(
@@ -7989,6 +8018,11 @@ export enum SettingKey {
   InstallReferrerSent,
   DebugRotateGuestAnchor,
   LocalAssetsCacheVersion,
+  Day1NotificationScheduled,
+  /**
+   * Unix seconds the Day 1 welcome fires at; 0 when 1.x scheduled it without saying when.
+   */
+  Day1NotificationAt,
 }
 
 const FfiConverterTypeSettingKey = (() => {
@@ -8072,6 +8106,10 @@ const FfiConverterTypeSettingKey = (() => {
           return SettingKey.DebugRotateGuestAnchor;
         case 38:
           return SettingKey.LocalAssetsCacheVersion;
+        case 39:
+          return SettingKey.Day1NotificationScheduled;
+        case 40:
+          return SettingKey.Day1NotificationAt;
         default:
           throw new UniffiInternalError.UnexpectedEnumCase();
       }
@@ -8154,6 +8192,10 @@ const FfiConverterTypeSettingKey = (() => {
           return c.writeI32(37);
         case SettingKey.LocalAssetsCacheVersion:
           return c.writeI32(38);
+        case SettingKey.Day1NotificationScheduled:
+          return c.writeI32(39);
+        case SettingKey.Day1NotificationAt:
+          return c.writeI32(40);
       }
     }
     allocationSize(value: TypeName): number {
@@ -10090,6 +10132,194 @@ const FfiConverterTypeCoreError = (() => {
   return new FFIConverter();
 })();
 
+// Enum: Day1Notification
+export enum Day1Notification_Tags {
+  Keep = 'Keep',
+  Arm = 'Arm',
+  Disarm = 'Disarm',
+}
+export const Day1Notification = (() => {
+  type Keep__interface = {
+    tag: Day1Notification_Tags.Keep;
+  };
+  /**
+   * Nothing to do: already fired, not armed yet without permission, or 1.x armed it.
+   */
+  class Keep_ extends UniffiEnum implements Keep__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Day1Notification';
+    readonly tag = Day1Notification_Tags.Keep;
+    constructor() {
+      super('Day1Notification', 'Keep');
+    }
+
+    static new(): Keep_ {
+      return new Keep_();
+    }
+
+    static instanceOf(obj: any): obj is Keep_ {
+      return obj.tag === Day1Notification_Tags.Keep;
+    }
+  }
+
+  type Arm__interface = {
+    tag: Day1Notification_Tags.Arm;
+    inner: Readonly<{ id: string; delaySeconds: number; deepLink: string }>;
+  };
+  /**
+   * Schedule it `delay_seconds` from now; the same id replaces one already armed.
+   */
+  class Arm_ extends UniffiEnum implements Arm__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Day1Notification';
+    readonly tag = Day1Notification_Tags.Arm;
+    readonly inner: Readonly<{
+      id: string;
+      delaySeconds: number;
+      deepLink: string;
+    }>;
+    constructor(inner: { id: string; delaySeconds: number; deepLink: string }) {
+      super('Day1Notification', 'Arm');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: {
+      id: string;
+      delaySeconds: number;
+      deepLink: string;
+    }): Arm_ {
+      return new Arm_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Arm_ {
+      return obj.tag === Day1Notification_Tags.Arm;
+    }
+  }
+
+  type Disarm__interface = {
+    tag: Day1Notification_Tags.Disarm;
+    inner: Readonly<{ id: string }>;
+  };
+  /**
+   * Cancel it in the OS.
+   */
+  class Disarm_ extends UniffiEnum implements Disarm__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Day1Notification';
+    readonly tag = Day1Notification_Tags.Disarm;
+    readonly inner: Readonly<{ id: string }>;
+    constructor(inner: { id: string }) {
+      super('Day1Notification', 'Disarm');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { id: string }): Disarm_ {
+      return new Disarm_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Disarm_ {
+      return obj.tag === Day1Notification_Tags.Disarm;
+    }
+  }
+
+  function instanceOf(obj: any): obj is Day1Notification {
+    return obj[uniffiTypeNameSymbol] === 'Day1Notification';
+  }
+
+  return Object.freeze({
+    instanceOf,
+    Keep: Keep_,
+    Arm: Arm_,
+    Disarm: Disarm_,
+  });
+})();
+export type Day1Notification = InstanceType<
+  (typeof Day1Notification)['Keep' | 'Arm' | 'Disarm']
+>;
+
+// FfiConverter for enum Day1Notification
+const FfiConverterTypeDay1Notification = (() => {
+  type TypeName = Day1Notification;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return new Day1Notification.Keep();
+        case 2:
+          return new Day1Notification.Arm({
+            id: FfiConverterString.readFromCursor(c),
+            delaySeconds: FfiConverterUInt32.readFromCursor(c),
+            deepLink: FfiConverterString.readFromCursor(c),
+          });
+        case 3:
+          return new Day1Notification.Disarm({
+            id: FfiConverterString.readFromCursor(c),
+          });
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value.tag) {
+        case Day1Notification_Tags.Keep: {
+          c.writeI32(1);
+          return;
+        }
+        case Day1Notification_Tags.Arm: {
+          c.writeI32(2);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.id, c);
+          FfiConverterUInt32.writeIntoCursor(inner.delaySeconds, c);
+          FfiConverterString.writeIntoCursor(inner.deepLink, c);
+          return;
+        }
+        case Day1Notification_Tags.Disarm: {
+          c.writeI32(3);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.id, c);
+          return;
+        }
+        default:
+          // Throwing from here means that Day1Notification_Tags hasn't matched an ordinal.
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    allocationSize(value: TypeName): number {
+      switch (value.tag) {
+        case Day1Notification_Tags.Keep: {
+          return 4;
+        }
+        case Day1Notification_Tags.Arm: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.id);
+          size += FfiConverterUInt32.allocationSize(inner.delaySeconds);
+          size += FfiConverterString.allocationSize(inner.deepLink);
+          return size;
+        }
+        case Day1Notification_Tags.Disarm: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.id);
+          return size;
+        }
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+  }
+  return new FFIConverter();
+})();
+
 // Enum: Decision
 export enum Decision_Tags {
   Keep = 'Keep',
@@ -11380,6 +11610,10 @@ export interface AppListener {
    * A tag for every later crash report; `None` removes it. Batched by the core.
    */
   reportTag(key: string, value: string | undefined): void;
+  /**
+   * The remote feature flags were fetched, or failed and keep their defaults.
+   */
+  flagsLoaded(): void;
 }
 
 /**
@@ -11649,6 +11883,21 @@ export class AppListenerImpl
             value,
             nativeModule().rustbuffer_alloc,
           ),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+  }
+
+  /**
+   * The remote feature flags were fetched, or failed and keep their defaults.
+   */
+  flagsLoaded(): void {
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        nativeModule().ubrn_uniffi_dcl_core_fn_method_applistener_flags_loaded(
+          uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
           callStatus,
         );
       },
@@ -12067,6 +12316,25 @@ const uniffiCallbackInterfaceAppListener: {
       );
       return uniffiResult;
     },
+    flags_loaded: (uniffiHandle: bigint) => {
+      const uniffiMakeCall = (): void => {
+        const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
+        return jsCallback.flagsLoaded();
+      };
+      const uniffiResult = UniffiResult.ready<void>();
+      const uniffiHandleSuccess = (obj: any) => {};
+      const uniffiHandleError = (code: number, errBuf: UniffiByteArray) => {
+        UniffiResult.writeError(uniffiResult, code, errBuf);
+      };
+      uniffiTraitInterfaceCall(
+        /*makeCall:*/ uniffiMakeCall,
+        /*handleSuccess:*/ uniffiHandleSuccess,
+        /*handleError:*/ uniffiHandleError,
+        /*lowerString:*/ FfiConverterString.lower.bind(FfiConverterString),
+        /*alloc:*/ nativeModule().rustbuffer_alloc,
+      );
+      return uniffiResult;
+    },
     uniffi_free: (uniffiHandle: UniffiHandle): void => {
       // this will throw a stale handle error if the handle isn't found.
       FfiConverterTypeAppListener.drop(uniffiHandle);
@@ -12395,6 +12663,14 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_current_scene',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_day1_notification() !==
+    39747
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_day1_notification',
     );
   }
   if (
@@ -13016,6 +13292,14 @@ function uniffiEnsureInitialized() {
       'uniffi_dcl_core_checksum_method_applistener_report_tag',
     );
   }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_flags_loaded() !==
+    15556
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_method_applistener_flags_loaded',
+    );
+  }
 
   uniffiCallbackInterfaceAppListener.register();
 }
@@ -13046,6 +13330,7 @@ export default Object.freeze({
     FfiConverterTypeCoreError,
     FfiConverterTypeCreditsBalance,
     FfiConverterTypeCurrentScene,
+    FfiConverterTypeDay1Notification,
     FfiConverterTypeDecision,
     FfiConverterTypeDestination,
     FfiConverterTypeDestinationKind,

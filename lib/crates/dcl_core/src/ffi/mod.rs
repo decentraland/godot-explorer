@@ -100,6 +100,8 @@ pub trait AppListener: Send + Sync {
     fn report(&self, payload: crate::hub::ReportPayload);
     /// A tag for every later crash report; `None` removes it. Batched by the core.
     fn report_tag(&self, key: String, value: Option<String>);
+    /// The remote feature flags were fetched, or failed and keep their defaults.
+    fn flags_loaded(&self);
 }
 
 /// Hands the app's events to the shell from a thread of its own, in order. The app fires events
@@ -205,6 +207,9 @@ impl AppEvents for ListenerAdapter {
     fn scene_crashed(&self) {
         self.deliver(|l| l.scene_crashed());
     }
+    fn flags_loaded(&self) {
+        self.deliver(|l| l.flags_loaded());
+    }
 }
 
 pub(crate) fn core() -> Result<&'static Core, CoreError> {
@@ -309,6 +314,7 @@ mod adapter_tests {
         fn engine_notice(&self, _: crate::app::EngineNotice) {}
         fn report(&self, _: crate::hub::ReportPayload) {}
         fn report_tag(&self, _: String, _: Option<String>) {}
+        fn flags_loaded(&self) {}
     }
 
     #[test]

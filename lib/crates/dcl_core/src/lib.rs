@@ -8,6 +8,7 @@ pub mod cache;
 pub mod clock;
 pub mod connection;
 mod core;
+pub mod day1_notification;
 pub mod deep_link;
 pub mod deep_link_route;
 pub mod destination;

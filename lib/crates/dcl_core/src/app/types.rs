@@ -217,6 +217,8 @@ pub trait AppEvents: Send + Sync {
     /// A tag to add to (or, with `None`, remove from) every later crash report. Batched by the
     /// core: the latest value per key, at most a few times a second.
     fn report_tag(&self, _key: &str, _value: Option<&str>) {}
+    /// The remote feature flags were fetched, or failed and keep their defaults.
+    fn flags_loaded(&self) {}
 }
 
 #[derive(Debug, PartialEq)]

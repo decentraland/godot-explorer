@@ -92,6 +92,7 @@ particle_quality=2
 audio_general_volume=80.0
 audio_scene_volume=100
 audio_music_volume=0.0
+day1_notification_scheduled=true
 
 [user]
 
@@ -119,7 +120,8 @@ last_places={
         assert_eq!(v[&K::AudioSceneVolume], V::Float(100.0));
         assert_eq!(v[&K::AudioMusicVolume], V::Float(0.0));
         assert_eq!(v[&K::ProcessTickQuotaMs], V::Int(10));
-        assert_eq!(v.len(), 14);
+        assert_eq!(v[&K::Day1NotificationScheduled], V::Bool(true));
+        assert_eq!(v.len(), 15);
     }
 
     #[test]

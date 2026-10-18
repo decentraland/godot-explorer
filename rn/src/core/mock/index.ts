@@ -1,5 +1,5 @@
 import type { CoreApi } from '../api';
-import { Quality, State } from '../native';
+import { Day1Notification, Quality, State } from '../native';
 import { createMockAvatar } from './avatar';
 import { createMockAvatarApi } from './avatarApi';
 import { createMockControl } from './control';
@@ -28,6 +28,7 @@ export function createMockCore(options: { signedIn?: boolean } = {}): CoreApi {
     ...createMockProfile(),
     ...createMockPlaces(),
     setPushRegistration: () => {},
+    day1Notification: () => new Day1Notification.Keep(),
     sessionLaunched: () => {},
     sessionForegrounded: () => {},
     sessionBackgrounded: () => {},

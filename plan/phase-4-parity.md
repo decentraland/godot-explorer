@@ -55,6 +55,7 @@ in phase 3 and not run again here. Rows marked "not done" are the work left befo
 | Chat, mentions | RN `hud/ChatPanel` | Ran: opens | Sending and mentions not run |
 | Notification list, mark read | RN `menu/` + core | Phase 3 pass | In-world toasts and polling not done |
 | Push (token, permission, remote push) | `DclPush` + core registration | Ran: permission prompt, grant | Identify delivery, push with the app killed |
+| Day 1 welcome local notification, `day1-notification` kill switch (main #3060) | `dcl_core::day1_notification` + RN `syncDay1Notification` (`DclPush`) | Not run | iOS: no `DclPush` yet (shared with event reminders, 4.6) |
 | Bug report | RN form + `places::bug_report` | Not run | Ticket creation not run |
 | Report content | External form | Phase 3 pass | |
 | Credits balance | Core `credits_balance` | Phase 3 pass | Shop and purchase: deferred (4.8, 6/7) |

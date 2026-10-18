@@ -10,6 +10,8 @@ use std::{
 
 use serde_json::{Map, Value};
 
+use crate::app::AppEvents;
+
 use crate::http::{
     request_response::{HttpResponse, RequestOption, ResponseEnum, ResponseType},
     HttpQueueRequester,
@@ -79,6 +81,9 @@ fn store(flags: Map<String, Value>) {
     state.loaded = true;
     drop(state);
     crate::analytics::push::on_flags_loaded();
+    if let Some(core) = crate::Core::try_get() {
+        core.hub().events().flags_loaded();
+    }
 }
 
 fn flags_from_response(response: HttpResponse) -> Result<Map<String, Value>, String> {

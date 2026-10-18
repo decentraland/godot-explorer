@@ -43,10 +43,13 @@ pub enum SettingKey {
     InstallReferrerSent,
     DebugRotateGuestAnchor,
     LocalAssetsCacheVersion,
+    Day1NotificationScheduled,
+    /// Unix seconds the Day 1 welcome fires at; 0 when 1.x scheduled it without saying when.
+    Day1NotificationAt,
 }
 
 impl SettingKey {
-    pub const ALL: [SettingKey; 38] = [
+    pub const ALL: [SettingKey; 40] = [
         Self::SubmitMessageClosesChat,
         Self::Locale,
         Self::GraphicProfile,
@@ -85,6 +88,8 @@ impl SettingKey {
         Self::InstallReferrerSent,
         Self::DebugRotateGuestAnchor,
         Self::LocalAssetsCacheVersion,
+        Self::Day1NotificationScheduled,
+        Self::Day1NotificationAt,
     ];
 
     /// The name used by `settings.cfg` and the shell's `keys.ts`.
@@ -128,6 +133,8 @@ impl SettingKey {
             Self::InstallReferrerSent => "install_referrer_sent",
             Self::DebugRotateGuestAnchor => "debug_rotate_guest_anchor",
             Self::LocalAssetsCacheVersion => "local_assets_cache_version",
+            Self::Day1NotificationScheduled => "day1_notification_scheduled",
+            Self::Day1NotificationAt => "day1_notification_at",
         }
     }
 
@@ -145,7 +152,8 @@ impl SettingKey {
             | Self::FirstLaunchCompleted
             | Self::FirstMoveInWorldSent
             | Self::InstallReferrerSent
-            | Self::DebugRotateGuestAnchor => SettingKind::Bool,
+            | Self::DebugRotateGuestAnchor
+            | Self::Day1NotificationScheduled => SettingKind::Bool,
             Self::Locale | Self::LastRealmJoined => SettingKind::Text,
             Self::GraphicProfile
             | Self::SkyboxTime
@@ -161,7 +169,8 @@ impl SettingKey {
             | Self::TextureQuality
             | Self::LastParcelX
             | Self::LastParcelY
-            | Self::LocalAssetsCacheVersion => SettingKind::Int,
+            | Self::LocalAssetsCacheVersion
+            | Self::Day1NotificationAt => SettingKind::Int,
             Self::ViewDistance
             | Self::AudioGeneralVolume
             | Self::AudioSceneVolume
@@ -216,6 +225,8 @@ impl SettingKey {
             Self::InstallReferrerSent => SettingValue::Bool(false),
             Self::DebugRotateGuestAnchor => SettingValue::Bool(false),
             Self::LocalAssetsCacheVersion => SettingValue::Int(0),
+            Self::Day1NotificationScheduled => SettingValue::Bool(false),
+            Self::Day1NotificationAt => SettingValue::Int(0),
         }
     }
 

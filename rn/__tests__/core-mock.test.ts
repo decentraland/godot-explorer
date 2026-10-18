@@ -80,6 +80,7 @@ describe('mock core', () => {
       engineNotice: () => {},
       report: () => {},
       reportTag: () => {},
+      flagsLoaded: () => {},
     });
     core().removeListener(id);
     core().signOut();

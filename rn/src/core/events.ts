@@ -51,6 +51,7 @@ function ensureRegistered() {
       handlers.forEach(h => h.report?.(payload)),
     reportTag: (key: string, value: string | undefined) =>
       handlers.forEach(h => h.reportTag?.(key, value)),
+    flagsLoaded: () => handlers.forEach(h => h.flagsLoaded?.()),
   });
 }
 

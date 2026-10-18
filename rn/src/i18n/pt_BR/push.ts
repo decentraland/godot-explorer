@@ -9,6 +9,8 @@ export const push: Partial<Record<keyof typeof en, string>> = {
   NOTIF_LOCAL_BODY_HOP_IN: 'Entre agora e não perca nada!',
   NOTIF_LOCAL_BODY_JOIN_YOUR_FRIENDS: 'Reúna amigos e conheça gente nova!',
   NOTIF_LOCAL_BODY_MEET_YOUR_PEOPLE: 'Junte-se à sua turma aqui',
+  NOTIF_LOCAL_DAY1_BODY: 'Tem gente se encontrando na Decentraland.',
+  NOTIF_LOCAL_DAY1_TITLE: 'Venha dar um oi 👋',
   NOTIF_LOCAL_EVENT_BEGINS: '{event} começa!',
   NOTIF_LOCAL_EVENT_IS_LIVE: '{event} ao vivo!',
   NOTIF_LOCAL_EVENT_IS_ON: '{event} no ar!',

@@ -90,6 +90,9 @@ protected:
   jsi::Value cpp_uniffi_dcl_core_fn_method_applistener_report_tag(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_method_applistener_flags_loaded(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
   jsi::Value cpp_uniffi_dcl_core_fn_func_add_listener(jsi::Runtime &rt,
                                                       const jsi::Value &thisVal,
                                                       const jsi::Value *args,
@@ -230,6 +233,9 @@ protected:
                                                       const jsi::Value &thisVal,
                                                       const jsi::Value *args,
                                                       size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_day1_notification(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
   jsi::Value cpp_uniffi_dcl_core_fn_func_mark_notifications_read(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
@@ -695,6 +701,9 @@ protected:
   jsi::Value cpp_uniffi_dcl_core_checksum_func_version_gate(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_day1_notification(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_func_mark_notifications_read(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
@@ -884,6 +893,9 @@ protected:
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_method_applistener_report_tag(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_method_applistener_flags_loaded(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_ffi_dcl_core_uniffi_contract_version(jsi::Runtime &rt,

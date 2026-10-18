@@ -112,6 +112,9 @@ impl AppEvents for HostEvents {
     fn report_tag(&self, key: &str, value: Option<&str>) {
         self.each(|l| l.report_tag(key, value));
     }
+    fn flags_loaded(&self) {
+        self.each(|l| l.flags_loaded());
+    }
 }
 
 /// An `EngineSink` that any thread can push to and the engine's main thread drains each frame.

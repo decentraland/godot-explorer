@@ -231,6 +231,10 @@ interface NativeModuleInterface {
   ): void;
   ubrn_uniffi_dcl_core_fn_func_credits_balance(): bigint;
   ubrn_uniffi_dcl_core_fn_func_current_scene(): bigint;
+  ubrn_uniffi_dcl_core_fn_func_day1_notification(
+    permissionGranted: number,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
   ubrn_uniffi_dcl_core_fn_func_debug_delay(millis: number): bigint;
   ubrn_uniffi_dcl_core_fn_func_debug_fire_events(
     count: number,
@@ -525,6 +529,10 @@ interface NativeModuleInterface {
     value: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
+  ubrn_uniffi_dcl_core_fn_method_applistener_flags_loaded(
+    uniffiSelf: bigint,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
   ubrn_ffi_dcl_core_uniffi_contract_version(): number;
   ubrn_uniffi_dcl_core_checksum_func_accept_terms(): number;
   ubrn_uniffi_dcl_core_checksum_func_add_listener(): number;
@@ -547,6 +555,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_control(): number;
   ubrn_uniffi_dcl_core_checksum_func_credits_balance(): number;
   ubrn_uniffi_dcl_core_checksum_func_current_scene(): number;
+  ubrn_uniffi_dcl_core_checksum_func_day1_notification(): number;
   ubrn_uniffi_dcl_core_checksum_func_debug_delay(): number;
   ubrn_uniffi_dcl_core_checksum_func_debug_fire_events(): number;
   ubrn_uniffi_dcl_core_checksum_func_delete_account(): number;
@@ -631,6 +640,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_method_applistener_engine_notice(): number;
   ubrn_uniffi_dcl_core_checksum_method_applistener_report(): number;
   ubrn_uniffi_dcl_core_checksum_method_applistener_report_tag(): number;
+  ubrn_uniffi_dcl_core_checksum_method_applistener_flags_loaded(): number;
   ubrn_uniffi_internal_fn_method_applistener_ffi__bless_pointer(
     pointer: bigint,
     uniffi_out_err: UniffiRustCallStatus,
@@ -722,6 +732,9 @@ type UniffiCallbackInterfaceDclCoreAppListenerMethod15 = (
   key: Uint8Array,
   value: Uint8Array,
 ) => UniffiResult<void>;
+type UniffiCallbackInterfaceDclCoreAppListenerMethod16 = (
+  uniffiHandle: bigint,
+) => UniffiResult<void>;
 type UniffiCallbackInterfaceCloneDclCoreAppListener = (
   handle: bigint,
 ) => UniffiResult<void>;
@@ -745,6 +758,7 @@ export type UniffiVTableCallbackInterfaceDclCoreAppListener = {
   engine_notice: UniffiCallbackInterfaceDclCoreAppListenerMethod13;
   report: UniffiCallbackInterfaceDclCoreAppListenerMethod14;
   report_tag: UniffiCallbackInterfaceDclCoreAppListenerMethod15;
+  flags_loaded: UniffiCallbackInterfaceDclCoreAppListenerMethod16;
 };
 
 // UniffiRustFutureContinuationCallback is generated as part of the component interface's

@@ -53,6 +53,7 @@ export async function runCoreSelfTest(): Promise<void> {
         engineNotice: () => {},
         report: () => {},
         reportTag: () => {},
+        flagsLoaded: () => {},
       };
       const id = core.addListener(listener);
       const fired = await withTimeout(
