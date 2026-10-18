@@ -2,12 +2,11 @@
 //! every mesh drawable, then fades it in as a whole. The dither is the `own_fade` instance uniform:
 //! same material, pass and pipelines as the final look, so the hold itself warms them.
 
-use godot::classes::MeshInstance3D;
+use godot::classes::{MeshInstance3D, RenderingServer};
 use godot::prelude::*;
 
 use super::assembly::is_background;
 use crate::avatars::proximity_fade::AvatarProximityFade;
-use crate::engine::engine_fork;
 use crate::engine::local_task::{next_frame, spawn_local};
 use crate::godot_classes::dcl_avatar::DclAvatar;
 
@@ -50,7 +49,7 @@ pub fn start(avatar: &Gd<DclAvatar>) {
     let Some(generation) = bump_generation(avatar) else {
         return;
     };
-    if !is_background(avatar) || !engine_fork::has_draw_ready() {
+    if !is_background(avatar) {
         return;
     }
     let Some(mut fade) = fade_of(avatar) else {
@@ -72,9 +71,10 @@ async fn run(avatar: Gd<DclAvatar>, mut fade: Gd<AvatarProximityFade>, generatio
         if !expects_draw(&avatar, &meshes) {
             continue;
         }
+        let rendering_server = RenderingServer::singleton();
         let pending = meshes
             .iter()
-            .filter(|mesh| !engine_fork::instance_geometry_is_draw_ready(mesh.get_instance()))
+            .filter(|mesh| !rendering_server.instance_geometry_is_draw_ready(mesh.get_instance()))
             .count();
         if pending > 0 {
             waited += avatar.get_process_delta_time();

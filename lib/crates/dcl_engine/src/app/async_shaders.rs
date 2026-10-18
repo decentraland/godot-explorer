@@ -5,10 +5,10 @@
 use std::cell::Cell;
 
 use dcl_core::Core;
+use godot::classes::RenderingServer;
 use godot::prelude::*;
 
 use super::deep_link::truthy;
-use crate::engine::engine_fork;
 use crate::fetcher::globals;
 use crate::godot_classes::dcl_global::DclGlobal;
 
@@ -76,9 +76,10 @@ fn enable() -> bool {
         "ios" => 2,
         _ => return false,
     };
-    if !engine_fork::enable_async_shader_compilation(threads) {
-        return false;
-    }
+    RenderingServer::singleton()
+        .enable_async_shader_compilation_ex()
+        .shader_compile_threads(threads)
+        .done();
     ENABLED.set(true);
     godot_print!("[FeatureFlags] async shader compilation: enabled ({threads} threads)");
     true
