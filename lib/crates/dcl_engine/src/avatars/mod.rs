@@ -2,6 +2,7 @@ pub mod avatar;
 pub mod avatar_scene;
 pub mod avatar_sink;
 pub mod avatar_type;
+pub mod collision_layers;
 pub mod dcl_user_profile;
 pub mod emote_mask;
 pub mod emotes;

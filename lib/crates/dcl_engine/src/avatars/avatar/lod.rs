@@ -51,6 +51,8 @@ pub struct LodRuntime {
     pub throttle_acc: f64,
     pub throttle_counter: u32,
     pub throttle_active: bool,
+    /// To the view camera, refreshed with the LOD state.
+    pub distance: f32,
 }
 
 impl Default for LodRuntime {
@@ -71,6 +73,7 @@ impl Default for LodRuntime {
             throttle_acc: 0.0,
             throttle_counter: 0,
             throttle_active: false,
+            distance: 0.0,
         }
     }
 }
@@ -89,16 +92,6 @@ pub fn resolve_anim_drive(on_screen: bool, state: LodState) -> (bool, bool) {
         LodState::Mid => (true, true),
         LodState::Far => (false, false),
     }
-}
-
-/// Locomotion conditions: only grounded avatars walk, jog or run.
-pub fn locomotion_conditions(
-    walk: bool,
-    jog: bool,
-    run: bool,
-    grounded: bool,
-) -> (bool, bool, bool) {
-    (walk && grounded, jog && grounded, run && grounded)
 }
 
 /// The tier a camera distance maps to: `(state, dither_alpha, fade_alpha, tint)`.
@@ -387,6 +380,7 @@ impl DclAvatar {
         let dist = camera
             .get_global_position()
             .distance_to(self.base().get_global_position());
+        self.lod.distance = dist;
         let band = with_rank_cap(bands_for_distance(dist), self.lod.rank_cap);
         self.apply_lod_state(band.0, band.1, band.2, band.3, dist);
         // Reconcile against the notifier in case a screen signal was missed.
@@ -469,7 +463,11 @@ impl DclAvatar {
 
     /// The outfit changed: the cached impostor texture is stale.
     pub(crate) fn refresh_impostor_texture(&mut self) {
-        if self.lod.impostor_layer >= 0 && !self.lod.layer_is_overflow {
+        // Never mid spawn-reveal (#1554): the bake would stick the ghost as the billboard.
+        if self.lod.impostor_layer >= 0
+            && !self.lod.layer_is_overflow
+            && self.spawn_reveal.is_idle()
+        {
             let id = self.base().instance_id().to_i64();
             let key = GString::from(&self.get_impostor_cache_key());
             globals::avatars_scene()
@@ -480,6 +478,11 @@ impl DclAvatar {
     }
 
     fn on_lod_state_changed(&mut self, state: LodState, _previous: LodState) {
+        // A spawn reveal owns mesh visibility while it runs; leaving FULL hands rendering to the
+        // impostor, so the reveal ends cleanly.
+        if !self.spawn_reveal.is_idle() && state != LodState::Full {
+            self.spawn_reveal_end();
+        }
         // At FAR the tree stops advancing, so a running emote would never reach its end and the
         // scene would wait forever for a terminal EmoteState: report it interrupted now.
         if state == LodState::Far && self.emote.is_playing() {
@@ -543,18 +546,6 @@ mod tests {
         assert_eq!(resolve_anim_drive(true, LodState::Full), (true, false));
         assert_eq!(resolve_anim_drive(true, LodState::Mid), (true, true));
         assert_eq!(resolve_anim_drive(true, LodState::Far), (false, false));
-    }
-
-    #[test]
-    fn only_grounded_avatars_walk() {
-        assert_eq!(
-            locomotion_conditions(true, false, true, true),
-            (true, false, true)
-        );
-        assert_eq!(
-            locomotion_conditions(true, true, true, false),
-            (false, false, false)
-        );
     }
 
     #[test]

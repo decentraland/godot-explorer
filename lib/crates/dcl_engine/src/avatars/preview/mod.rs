@@ -231,6 +231,8 @@ impl ISubViewportContainer for AvatarPreview {
         let hide_name = self.hide_name;
         if let Some(avatar) = self.avatar.as_mut() {
             avatar.bind_mut().set_hide_name(hide_name);
+            // The preview shows a profile that never spawned: no hologram.
+            avatar.bind_mut().spawn_reveal.enabled = false;
         }
         if let Some(platform) = self.platform.as_mut() {
             platform.set_visible(self.show_platform);

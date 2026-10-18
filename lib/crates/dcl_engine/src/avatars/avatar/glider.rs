@@ -1,4 +1,5 @@
-//! The glider prop and the double-jump sound, driven by the wire's `jump_count` and `glide_state`.
+//! The glider prop (Unity's wings: visibility, the Start/Idle/Forward/End clips and the open, close
+//! and idle audio) and the double-jump sound, driven by `glide_state` edges.
 
 use godot::classes::{AnimationPlayer, AudioStreamPlayer3D};
 use godot::prelude::*;
@@ -14,28 +15,19 @@ const CLOSING: i32 = 3;
 const HIDE_DELAY_SECONDS: f64 = 0.25;
 
 pub struct GliderState {
-    /// Previous `jump_count`, for the rising edge of the double-jump sound.
-    pub last_jump_count: i32,
-    /// The first tick must not read a wire `jump_count >= 2` as a rising edge: a remote first
-    /// seen mid-double-jump would play the sound out of nothing.
-    pub jump_sync_pending: bool,
     /// Latched so the close audio, the end clip and the hide timer are not repeated.
     pub close_initiated: bool,
     pub prop_last_state: i32,
     /// The first tick adopts the state that came in without firing open or close sounds.
     pub prop_sync_pending: bool,
-    pub forward_blend: f32,
 }
 
 impl Default for GliderState {
     fn default() -> Self {
         Self {
-            last_jump_count: 0,
-            jump_sync_pending: true,
             close_initiated: false,
             prop_last_state: CLOSED,
             prop_sync_pending: true,
-            forward_blend: 0.0,
         }
     }
 }

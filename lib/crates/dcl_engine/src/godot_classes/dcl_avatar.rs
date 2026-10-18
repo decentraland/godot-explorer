@@ -10,8 +10,11 @@ use crate::avatars::avatar::anchors::Anchors;
 use crate::avatars::avatar::emote::EmoteState;
 use crate::avatars::avatar::emote_load::SceneEmoteContent;
 use crate::avatars::avatar::glider::GliderState;
+use crate::avatars::avatar::ik::AvatarIk;
+use crate::avatars::avatar::locomotion::LocomotionState;
 use crate::avatars::avatar::lod::LodRuntime;
 use crate::avatars::avatar::nametag::NametagState;
+use crate::avatars::avatar::spawn_reveal::SpawnReveal;
 use crate::avatars::avatar::{AvatarNodes, PendingEmote};
 use crate::avatars::avatar_type::DclAvatarWireFormat;
 use crate::avatars::loaders::WearableLoader;
@@ -335,6 +338,9 @@ pub struct DclAvatar {
     pub(crate) force_hide_name: bool,
     pub(crate) lod: LodRuntime,
     pub(crate) glider: GliderState,
+    pub(crate) locomotion: LocomotionState,
+    pub(crate) ik: AvatarIk,
+    pub(crate) spawn_reveal: SpawnReveal,
     pub(crate) nametag: NametagState,
     pub(crate) anchors: Anchors,
     pub(crate) nodes: Option<AvatarNodes>,
@@ -389,6 +395,9 @@ impl INode3D for DclAvatar {
             force_hide_name: false,
             lod: LodRuntime::default(),
             glider: GliderState::default(),
+            locomotion: LocomotionState::default(),
+            ik: AvatarIk::default(),
+            spawn_reveal: SpawnReveal::default(),
             nametag: NametagState::default(),
             anchors: Anchors::new(),
             nodes: None,

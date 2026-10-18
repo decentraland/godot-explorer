@@ -257,7 +257,7 @@ impl DclAvatar {
         }
     }
 
-    fn locomotion_playback(&self) -> Option<Gd<AnimationNodeStateMachinePlayback>> {
+    pub(crate) fn locomotion_playback(&self) -> Option<Gd<AnimationNodeStateMachinePlayback>> {
         self.nodes
             .as_ref()?
             .animation_tree
@@ -622,7 +622,7 @@ impl DclAvatar {
         };
         // A state machine that has not started needs a frame: start it and retry deferred.
         if playback.get_current_node().is_empty() {
-            playback.start_ex("Idle").reset(true).done();
+            playback.start_ex("Grounded").reset(true).done();
             let avatar = self.to_gd();
             let urn = urn.to_string();
             crate::engine::local_task::spawn_local(async move {
@@ -830,7 +830,7 @@ impl DclAvatar {
         nodes
             .animation_player
             .play_ex()
-            .name("Idle")
+            .name("loco/Idle")
             .custom_blend(-1.0)
             .custom_speed(0.0)
             .done();
