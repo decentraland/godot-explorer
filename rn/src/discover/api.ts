@@ -3,6 +3,7 @@ import { core } from '../core';
 export const mainRealm = (): string => core().urls().mainRealm;
 export const placesApi = (): string => core().urls().places;
 export const eventsApi = (): string => core().urls().eventsApi;
+export const destinationsApi = (): string => core().urls().destinationsApi;
 
 export const featuredUrl = (): string =>
   `${placesApi()}?only_highlighted=true&limit=12&order_by=like_score`;

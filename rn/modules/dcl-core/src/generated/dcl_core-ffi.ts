@@ -229,8 +229,17 @@ interface NativeModuleInterface {
     command: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
+  ubrn_uniffi_dcl_core_fn_func_controls_ftue_dismissed(
+    elements: Uint8Array,
+    secondsShown: number,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
   ubrn_uniffi_dcl_core_fn_func_credits_balance(): bigint;
   ubrn_uniffi_dcl_core_fn_func_current_scene(): bigint;
+  ubrn_uniffi_dcl_core_fn_func_day1_notification(
+    permissionGranted: number,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
   ubrn_uniffi_dcl_core_fn_func_debug_delay(millis: number): bigint;
   ubrn_uniffi_dcl_core_fn_func_debug_fire_events(
     count: number,
@@ -266,6 +275,16 @@ interface NativeModuleInterface {
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
   ubrn_uniffi_dcl_core_fn_func_flush_analytics(): bigint;
+  ubrn_uniffi_dcl_core_fn_func_ftue_mark_new_player(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_ftue_scene_entered(
+    blocked: number,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_ftue_tuning(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
   ubrn_uniffi_dcl_core_fn_func_handle_deep_link(
     url: Uint8Array,
     start: Uint8Array,
@@ -427,9 +446,34 @@ interface NativeModuleInterface {
     props: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
+  ubrn_uniffi_dcl_core_fn_func_track_ftue_bypass(
+    placeId: Uint8Array,
+    booted: number,
+  ): bigint;
   ubrn_uniffi_dcl_core_fn_func_track_screen(
     name: Uint8Array,
     props: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_tutorial_completed(
+    isReplay: number,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_tutorial_replay_requested(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_tutorial_skipped(
+    step: Uint8Array,
+    isReplay: number,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_tutorial_step_entered(
+    step: Uint8Array,
+    isReplay: number,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_tutorial_welcome_answered(
+    start: number,
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
   ubrn_uniffi_dcl_core_fn_func_urls(
@@ -525,6 +569,10 @@ interface NativeModuleInterface {
     value: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
+  ubrn_uniffi_dcl_core_fn_method_applistener_flags_loaded(
+    uniffiSelf: bigint,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
   ubrn_ffi_dcl_core_uniffi_contract_version(): number;
   ubrn_uniffi_dcl_core_checksum_func_accept_terms(): number;
   ubrn_uniffi_dcl_core_checksum_func_add_listener(): number;
@@ -545,8 +593,10 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_connection_retry(): number;
   ubrn_uniffi_dcl_core_checksum_func_consume_campaign(): number;
   ubrn_uniffi_dcl_core_checksum_func_control(): number;
+  ubrn_uniffi_dcl_core_checksum_func_controls_ftue_dismissed(): number;
   ubrn_uniffi_dcl_core_checksum_func_credits_balance(): number;
   ubrn_uniffi_dcl_core_checksum_func_current_scene(): number;
+  ubrn_uniffi_dcl_core_checksum_func_day1_notification(): number;
   ubrn_uniffi_dcl_core_checksum_func_debug_delay(): number;
   ubrn_uniffi_dcl_core_checksum_func_debug_fire_events(): number;
   ubrn_uniffi_dcl_core_checksum_func_delete_account(): number;
@@ -560,6 +610,9 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_favorite_places(): number;
   ubrn_uniffi_dcl_core_checksum_func_first_screen_drawn(): number;
   ubrn_uniffi_dcl_core_checksum_func_flush_analytics(): number;
+  ubrn_uniffi_dcl_core_checksum_func_ftue_mark_new_player(): number;
+  ubrn_uniffi_dcl_core_checksum_func_ftue_scene_entered(): number;
+  ubrn_uniffi_dcl_core_checksum_func_ftue_tuning(): number;
   ubrn_uniffi_dcl_core_checksum_func_handle_deep_link(): number;
   ubrn_uniffi_dcl_core_checksum_func_hide_avatar_preview(): number;
   ubrn_uniffi_dcl_core_checksum_func_installs(): number;
@@ -610,7 +663,13 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_terms_accepted_version(): number;
   ubrn_uniffi_dcl_core_checksum_func_terms_version(): number;
   ubrn_uniffi_dcl_core_checksum_func_track(): number;
+  ubrn_uniffi_dcl_core_checksum_func_track_ftue_bypass(): number;
   ubrn_uniffi_dcl_core_checksum_func_track_screen(): number;
+  ubrn_uniffi_dcl_core_checksum_func_tutorial_completed(): number;
+  ubrn_uniffi_dcl_core_checksum_func_tutorial_replay_requested(): number;
+  ubrn_uniffi_dcl_core_checksum_func_tutorial_skipped(): number;
+  ubrn_uniffi_dcl_core_checksum_func_tutorial_step_entered(): number;
+  ubrn_uniffi_dcl_core_checksum_func_tutorial_welcome_answered(): number;
   ubrn_uniffi_dcl_core_checksum_func_urls(): number;
   ubrn_uniffi_dcl_core_checksum_func_version(): number;
   ubrn_uniffi_dcl_core_checksum_func_version_gate(): number;
@@ -631,6 +690,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_method_applistener_engine_notice(): number;
   ubrn_uniffi_dcl_core_checksum_method_applistener_report(): number;
   ubrn_uniffi_dcl_core_checksum_method_applistener_report_tag(): number;
+  ubrn_uniffi_dcl_core_checksum_method_applistener_flags_loaded(): number;
   ubrn_uniffi_internal_fn_method_applistener_ffi__bless_pointer(
     pointer: bigint,
     uniffi_out_err: UniffiRustCallStatus,
@@ -722,6 +782,9 @@ type UniffiCallbackInterfaceDclCoreAppListenerMethod15 = (
   key: Uint8Array,
   value: Uint8Array,
 ) => UniffiResult<void>;
+type UniffiCallbackInterfaceDclCoreAppListenerMethod16 = (
+  uniffiHandle: bigint,
+) => UniffiResult<void>;
 type UniffiCallbackInterfaceCloneDclCoreAppListener = (
   handle: bigint,
 ) => UniffiResult<void>;
@@ -745,6 +808,7 @@ export type UniffiVTableCallbackInterfaceDclCoreAppListener = {
   engine_notice: UniffiCallbackInterfaceDclCoreAppListenerMethod13;
   report: UniffiCallbackInterfaceDclCoreAppListenerMethod14;
   report_tag: UniffiCallbackInterfaceDclCoreAppListenerMethod15;
+  flags_loaded: UniffiCallbackInterfaceDclCoreAppListenerMethod16;
 };
 
 // UniffiRustFutureContinuationCallback is generated as part of the component interface's

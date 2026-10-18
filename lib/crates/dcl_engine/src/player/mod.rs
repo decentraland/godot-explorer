@@ -7,6 +7,7 @@ pub mod camera_mode_detector;
 pub mod desktop_input;
 pub mod free_look_camera;
 pub mod mobile_input;
+pub mod movement_systems;
 pub mod outline_system;
 pub mod rig;
 pub mod step_up;

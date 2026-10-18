@@ -22,6 +22,7 @@ const silent: AppListener = {
   engineNotice: nothing,
   report: nothing,
   reportTag: nothing,
+  flagsLoaded: nothing,
 };
 
 function setup(initial: State = new State.SignedIn()) {

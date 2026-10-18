@@ -1,14 +1,16 @@
 //! The avatar's nameplate: when it shows, what it says, and where it floats.
 
 use godot::classes::control::{LayoutPreset, MouseFilter};
-use godot::classes::{CollisionObject3D, Engine, MeshInstance3D};
+use godot::classes::{CollisionObject3D, MeshInstance3D};
 use godot::prelude::*;
 
 use crate::avatars::impostor::LodState;
 use crate::avatars::nameplate::{
     self, with_solver, ANCHOR_HEIGHT_FACTOR, DEBUG_DISABLE_OCCLUSION, FADE_END, FADE_SPEED,
-    FADE_START, NAMETAG_MARGIN, OCCLUSION_PERIOD, SCALE,
+    FADE_START, FAR_SKIP_DISTANCE, NAMETAG_MARGIN, SCALE,
 };
+use crate::avatars::nameplate_occlusion;
+use crate::avatars::proximity_fade::AvatarProximityFade;
 use crate::godot_classes::dcl_avatar::DclAvatar;
 use crate::godot_classes::dcl_global::DclGlobal;
 
@@ -60,6 +62,9 @@ impl DclAvatar {
     /// Recomputed on `skeleton_updated`. The basis Y row is constant while the avatar only yaws
     /// and moves, so the per-frame cost is adding the skeleton's world origin.
     pub(crate) fn recompute_nametag_posed_top(&mut self) {
+        if !self.nametag.gate_visible {
+            return;
+        }
         let Some(nodes) = self.nodes.as_ref() else {
             return;
         };
@@ -236,10 +241,12 @@ impl DclAvatar {
         ui.set_modulate(Color::from_rgba(1.0, 1.0, 1.0, 0.0));
         ui.hide();
         nameplate::layer_root().add_child(&ui);
+        nameplate_occlusion::add(self.to_gd());
     }
 
     /// Frees the reparented plate: it lives in the shared layer, not under the avatar.
     pub(crate) fn nameplate_detach(&mut self) {
+        nameplate_occlusion::remove(self.base().instance_id());
         if let Some(nodes) = self.nodes.as_ref() {
             if nodes.nickname_ui.is_instance_valid() {
                 with_solver(|s| s.untrack(nodes.nickname_ui.instance_id().to_i64()));
@@ -285,9 +292,22 @@ impl DclAvatar {
             return;
         }
         let id = ui.instance_id().to_i64();
+        let me = self.to_gd();
         let viewport = self.base().get_viewport();
         let camera = viewport.as_ref().and_then(|v| v.get_camera_3d());
         let mut target_alpha = 0.0_f32;
+        let mut on_screen = false;
+        if let Some(camera) = camera.as_ref() {
+            let quad = nodes.nickname_quad.get_global_position();
+            if ui.get_modulate().a == 0.0
+                && camera.get_global_position().distance_to(quad) > FAR_SKIP_DISTANCE
+            {
+                with_solver(|s| s.untrack(id));
+                nameplate_occlusion::set_on_screen(&me, false);
+                ui.set_visible(false);
+                return;
+            }
+        }
 
         match (camera, viewport) {
             (Some(camera), Some(viewport)) if self.nametag.gate_visible => {
@@ -301,9 +321,11 @@ impl DclAvatar {
                     let mut pos = camera.unproject_position(anchor)
                         - Vector2::new(screen_size.x * 0.5, screen_size.y * ANCHOR_HEIGHT_FACTOR);
                     let view_size = viewport.get_visible_rect().size;
-                    let on_screen = Rect2::new(Vector2::ZERO, view_size)
+                    on_screen = Rect2::new(Vector2::ZERO, view_size)
                         .intersects(Rect2::new(pos, screen_size));
-                    if on_screen && !self.nametag.occluded {
+                    nameplate_occlusion::set_on_screen(&me, on_screen);
+                    let untested = nameplate_occlusion::is_untested(me.instance_id());
+                    if on_screen && !self.nametag.occluded && !untested {
                         // Soft-constrain against the other plates so close-together avatars'
                         // tags (and their chat bubbles) stay readable.
                         pos = with_solver(|s| {
@@ -328,6 +350,17 @@ impl DclAvatar {
             }
             _ => with_solver(|s| s.untrack(id)),
         }
+        if !on_screen {
+            nameplate_occlusion::set_on_screen(&me, false);
+        }
+        // The plate follows the GPU-ready hold: it never floats over an avatar not drawn yet.
+        let fade = self
+            .base()
+            .get_node_or_null("AvatarProximityFade")
+            .and_then(|n| n.try_cast::<AvatarProximityFade>().ok());
+        if let Some(fade) = fade {
+            target_alpha *= 1.0 - fade.bind().get_hold();
+        }
 
         let step = self.base().get_process_delta_time() as f32 * FADE_SPEED;
         let mut modulate = ui.get_modulate();
@@ -336,19 +369,14 @@ impl DclAvatar {
         ui.set_visible(modulate.a > 0.01);
     }
 
-    /// Throttled occlusion raycast. Must run from `_physics_process`: the direct space state
-    /// crashes when queried from an idle frame.
+    /// Occlusion raycast for this plate; the occlusion driver throttles it. Must run in a physics
+    /// step: the direct space state crashes when queried from an idle frame.
     pub(crate) fn nameplate_update_occlusion(&mut self) {
         if DEBUG_DISABLE_OCCLUSION.load(std::sync::atomic::Ordering::Relaxed) {
             self.nametag.occluded = false;
             return;
         }
         if !self.nametag.gate_visible {
-            return;
-        }
-        if !(Engine::singleton().get_physics_frames() + self.unique_id as u64)
-            .is_multiple_of(OCCLUSION_PERIOD)
-        {
             return;
         }
         let Some(camera) = self.base().get_viewport().and_then(|v| v.get_camera_3d()) else {
@@ -430,44 +458,36 @@ impl DclAvatar {
     fn blocked_by_avatar(&self, from: Vector3, to: Vector3) -> bool {
         let me = self.base().instance_id();
         let my_world = self.base().get_world_3d().map(|w| w.instance_id());
-        let others = crate::avatars::impostor_capture::registered();
         let delta = to - from;
         let delta_xz = Vector2::new(delta.x, delta.z);
         let len_sq = delta_xz.length_squared();
-        for other in others {
-            if other.instance_id() == me || !other.is_instance_valid() || !other.is_visible() {
-                continue;
-            }
-            // Avatars of another world (a backpack preview) cannot block this one.
-            if other.get_world_3d().map(|w| w.instance_id()) != my_world {
-                continue;
-            }
-            let other = other.bind();
-            let origin = other.base().get_global_position();
-            let radius = other.occlusion_radius;
-            let top = other.get_bounds_top_y().min(origin.y + 3.0);
-            // Closest point (in XZ) of the segment to the other's vertical axis.
-            let t = if len_sq > 0.0001 {
-                (Vector2::new(origin.x - from.x, origin.z - from.z).dot(delta_xz) / len_sq)
-                    .clamp(0.0, 1.0)
-            } else {
-                0.0
-            };
-            let closest = from + delta * t;
-            // The camera inside an avatar (spring arm collapsed on a wall) must not blank every
-            // tag on screen: the #2321 symptom with a smaller trigger.
-            if from.distance_squared_to(closest) < 0.25 {
-                continue;
-            }
-            if closest.y < origin.y - 0.1 || closest.y > top {
-                continue;
-            }
-            let (dx, dz) = (closest.x - origin.x, closest.z - origin.z);
-            if dx * dx + dz * dz < radius * radius {
-                return true;
-            }
-        }
-        false
+        nameplate_occlusion::with_occluders(|occluders| {
+            occluders.iter().any(|other| {
+                // Avatars of another world (a backpack preview) cannot block this one.
+                if other.id == me || other.world != my_world {
+                    return false;
+                }
+                let origin = other.origin;
+                // Closest point (in XZ) of the segment to the other's vertical axis.
+                let t = if len_sq > 0.0001 {
+                    (Vector2::new(origin.x - from.x, origin.z - from.z).dot(delta_xz) / len_sq)
+                        .clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                let closest = from + delta * t;
+                // The camera inside an avatar (spring arm collapsed on a wall) must not blank every
+                // tag on screen: the #2321 symptom with a smaller trigger.
+                if from.distance_squared_to(closest) < 0.25 {
+                    return false;
+                }
+                if closest.y < origin.y - 0.1 || closest.y > other.top {
+                    return false;
+                }
+                let (dx, dz) = (closest.x - origin.x, closest.z - origin.z);
+                dx * dx + dz * dz < other.radius * other.radius
+            })
+        })
     }
 }
 

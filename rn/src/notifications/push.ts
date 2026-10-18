@@ -1,6 +1,6 @@
 import { NativeModules, Platform } from 'react-native';
 import { core } from '../core';
-import { PushPlatform } from '../core/native';
+import { Day1Notification_Tags, PushPlatform } from '../core/native';
 import { t } from '../i18n';
 import type { I18nKey } from '../i18n';
 
@@ -135,4 +135,26 @@ export async function syncEventReminder(
   await askNotificationPermission(now);
   const { title, body } = reminderText(event.title);
   await push.schedule(reminderId(event.id), title, body, delay, link);
+}
+
+/** Arms, re-arms or disarms the Day 1 welcome as the core decides. Called whenever the permission
+ * or the flags may have changed. */
+export async function syncDay1Notification(): Promise<void> {
+  const push = native();
+  if (!push) {
+    return;
+  }
+  const action = core().day1Notification(await push.hasPermission());
+  if (action.tag === Day1Notification_Tags.Arm) {
+    const { id, delaySeconds, deepLink } = action.inner;
+    await push.schedule(
+      id,
+      t('NOTIF_LOCAL_DAY1_TITLE'),
+      t('NOTIF_LOCAL_DAY1_BODY'),
+      delaySeconds,
+      deepLink,
+    );
+  } else if (action.tag === Day1Notification_Tags.Disarm) {
+    await push.cancel(action.inner.id);
+  }
 }

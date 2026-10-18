@@ -10,6 +10,7 @@ use godot::classes::{
 use godot::prelude::*;
 
 use super::{AvatarNodes, EmoteAudio};
+use crate::avatars::collision_layers::{CL_MAIN_PLAYER, CL_PLAYER};
 use crate::avatars::exclude_ids::is_excluded;
 use crate::avatars::impostor::{LodState, DISTANCE_CHECK_PERIOD_FRAMES};
 use crate::avatars::impostor_capture;
@@ -22,11 +23,6 @@ use crate::fetcher::globals;
 use crate::godot_classes::dcl_avatar::DclAvatar;
 use crate::godot_classes::dcl_avatar_modifier_area_3d::DclAvatarModifierArea3D;
 use crate::godot_classes::dcl_global::DclGlobal;
-
-// Collision layers, mirroring `decentraland.sdk.components.ColliderLayer`. CL_PLAYER is on every
-// avatar; CL_MAIN_PLAYER is added for the local player so scenes can tell it from the rest.
-const CL_PLAYER: u32 = 4;
-const CL_MAIN_PLAYER: u32 = 8;
 
 // AvatarModifierType.
 const MODIFIER_HIDE_AVATAR: i32 = 0;
@@ -82,6 +78,8 @@ impl DclAvatar {
         self.mesh_assembler = Some(MeshAssembler::new(skeleton.clone()));
 
         if let Some(nodes) = self.nodes.as_mut() {
+            // #1554: hidden from birth; the profile resolves and the spawn hologram swaps it in.
+            nodes.skeleton.set_visible(false);
             apply_toon_material_recursive(&nodes.glider_prop.clone().upcast());
             // One evaluation so an avatar that spawns off screen or FAR (tree frozen at once)
             // still gets a pose instead of the bind pose.
@@ -104,6 +102,8 @@ impl DclAvatar {
         self.base_mut().add_child(&fade);
 
         self.setup_emotes();
+        self.locomotion_setup();
+        self.spawn_reveal_ready();
         let this = self.to_gd();
         let skeleton_node = skeleton;
         skeleton_node
@@ -185,6 +185,7 @@ impl DclAvatar {
     /// Per frame, after the movement lerp: nameplate, LOD, animation drive and the AnimationTree
     /// conditions.
     pub(crate) fn life_process(&mut self, delta: f64) {
+        self.spawn_reveal_tick(delta);
         self.advance_movement(delta);
         if self.nodes.is_none() {
             return;
@@ -217,96 +218,16 @@ impl DclAvatar {
         if self.is_local_player {
             globals::comms().bind_mut().set_emoting(emoting);
         }
-        self.drive_animation_tree(idle, delta);
-    }
-
-    fn drive_animation_tree(&mut self, idle: bool, delta: f64) {
-        let (single, mixed) = (self.emote.playing_single, self.emote.playing_mixed);
-        let (walk, jog, run) = crate::avatars::avatar::lod::locomotion_conditions(
-            self.walk,
-            self.jog,
-            self.run,
-            self.is_grounded,
-        );
-
-        // Rising edge of the double jump; the first observation is suppressed so state from
-        // before we started watching does not play its sound.
-        let mut jump_edge = self.jump_count > self.glider.last_jump_count && self.jump_count >= 2;
-        if self.glider.jump_sync_pending {
-            jump_edge = false;
-            self.glider.jump_sync_pending = false;
-        }
-        self.glider.last_jump_count = self.jump_count;
-        let gliding = self.glide_state == 1 || self.glide_state == 2;
-
-        let moving = self.walk || self.jog || self.run;
-        let target = if moving { 1.0 } else { 0.0 };
-        let step = delta as f32 * 4.0;
-        let blend = self.glider.forward_blend;
-        self.glider.forward_blend = if (target - blend).abs() <= step {
-            target
-        } else {
-            blend + (target - blend).signum() * step
-        };
-        let forward_blend = self.glider.forward_blend;
-
-        let (rise, fall, land, grounded) = (self.rise, self.fall, self.land, self.is_grounded);
-        let Some(nodes) = self.nodes.as_mut() else {
-            return;
-        };
-        let tree = &mut nodes.animation_tree;
-        let mut set = |param: &str, value: Variant| tree.set(param, &value);
-        set("parameters/Locomotion/conditions/idle", idle.to_variant());
-        set(
-            "parameters/Locomotion/conditions/emote",
-            single.to_variant(),
-        );
-        set(
-            "parameters/Locomotion/conditions/nemote",
-            (!single).to_variant(),
-        );
-        set("parameters/Locomotion/conditions/emix", mixed.to_variant());
-        set(
-            "parameters/Locomotion/conditions/nemix",
-            (!mixed).to_variant(),
-        );
-        set("parameters/Locomotion/conditions/run", run.to_variant());
-        set("parameters/Locomotion/conditions/jog", jog.to_variant());
-        set("parameters/Locomotion/conditions/walk", walk.to_variant());
-        set("parameters/Locomotion/conditions/rise", rise.to_variant());
-        set("parameters/Locomotion/conditions/fall", fall.to_variant());
-        set("parameters/Locomotion/conditions/land", land.to_variant());
-        // `nfall` reads is_grounded, not `land`: `land` is a short pulse locally and was
-        // overridden to is_grounded for remotes. is_grounded has the same shape on both sides.
-        set(
-            "parameters/Locomotion/conditions/nfall",
-            grounded.to_variant(),
-        );
-        set(
-            "parameters/Locomotion/conditions/double_jump",
-            jump_edge.to_variant(),
-        );
-        set(
-            "parameters/Locomotion/conditions/gliding",
-            gliding.to_variant(),
-        );
-        set(
-            "parameters/Locomotion/conditions/ngliding",
-            (!gliding).to_variant(),
-        );
-        set(
-            "parameters/Locomotion/Gliding_Idle/Blend2/blend_amount",
-            forward_blend.to_variant(),
-        );
-        if jump_edge {
-            self.play_double_jump();
-        }
+        let (grounded, stunned) = self.locomotion_process(delta);
         self.update_glider_prop();
-    }
 
-    pub(crate) fn life_physics_process(&mut self) {
-        // The occlusion raycast must run here: the direct space state crashes from an idle frame.
-        self.nameplate_update_occlusion();
+        // The rig is free for the IK when nothing else owns the pose.
+        let rig_free = self.lod.state == LodState::Full
+            && self.spawn_reveal.is_idle()
+            && !crate::avatars::avatar::spawn_reveal::world_is_loading()
+            && !self.emote.is_playing();
+        self.ik_process(delta, rig_free, grounded, stunned);
+        self.spawn_reveal_trigger();
     }
 
     pub(crate) fn life_input(&mut self, event: Gd<InputEvent>) {

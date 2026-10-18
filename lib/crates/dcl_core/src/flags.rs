@@ -10,6 +10,8 @@ use std::{
 
 use serde_json::{Map, Value};
 
+use crate::app::AppEvents;
+
 use crate::http::{
     request_response::{HttpResponse, RequestOption, ResponseEnum, ResponseType},
     HttpQueueRequester,
@@ -65,6 +67,16 @@ pub fn get_number(name: &str, default: f64) -> f64 {
         .unwrap_or(default)
 }
 
+/// `default` is returned while the flags are not loaded, when the flag is absent or not a string.
+pub fn get_text(name: &str, default: &str) -> String {
+    read()
+        .flags
+        .get(name)
+        .and_then(Value::as_str)
+        .unwrap_or(default)
+        .to_string()
+}
+
 pub fn is_loaded() -> bool {
     read().loaded
 }
@@ -79,6 +91,9 @@ fn store(flags: Map<String, Value>) {
     state.loaded = true;
     drop(state);
     crate::analytics::push::on_flags_loaded();
+    if let Some(core) = crate::Core::try_get() {
+        core.hub().events().flags_loaded();
+    }
 }
 
 fn flags_from_response(response: HttpResponse) -> Result<Map<String, Value>, String> {
@@ -171,5 +186,7 @@ mod tests {
             1.0,
             "a non-number keeps the default"
         );
+        assert_eq!(get_text("name", "d"), "x");
+        assert_eq!(get_text("rate", "d"), "d", "a non-string keeps the default");
     }
 }

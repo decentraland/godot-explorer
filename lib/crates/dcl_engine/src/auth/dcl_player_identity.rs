@@ -13,6 +13,7 @@ use crate::dcl::scene_apis::RpcResultSender;
 use crate::engine::local_task::defer_from_any_thread;
 use crate::godot_classes::dcl_global::DclGlobal;
 use crate::godot_classes::promise::Promise;
+use crate::godot_classes::promise::PromiseDeferred;
 use crate::http_request::request_response::RequestResponse;
 use dcl_core::hub::{GuestLoginReport, SessionObserver};
 use dcl_core::Core;
@@ -316,9 +317,7 @@ impl DclPlayerIdentity {
                         });
                     }
 
-                    promise
-                        .bind_mut()
-                        .resolve_with_data(address_str.to_variant());
+                    promise.resolve_with_data_deferred(address_str.to_variant());
                 }
                 Err(e) => {
                     tracing::error!("thirdweb guest_login failed: {:?}", e);
@@ -332,9 +331,7 @@ impl DclPlayerIdentity {
                                 .emit("failure", false, &reason, status, duration);
                         });
                     }
-                    promise
-                        .bind_mut()
-                        .reject(GString::from(&format!("Guest login failed: {}", e)));
+                    promise.reject_deferred(GString::from(&format!("Guest login failed: {}", e)));
                 }
             }
         });
@@ -375,13 +372,11 @@ impl DclPlayerIdentity {
 
             match result {
                 Ok(()) => {
-                    promise.bind_mut().resolve_with_data(true.to_variant());
+                    promise.resolve_with_data_deferred(true.to_variant());
                 }
                 Err(e) => {
                     tracing::error!("thirdweb email_initiate failed: {:?}", e);
-                    promise
-                        .bind_mut()
-                        .reject(GString::from(&format!("Could not send code: {}", e)));
+                    promise.reject_deferred(GString::from(&format!("Could not send code: {}", e)));
                 }
             }
         });
@@ -442,15 +437,12 @@ impl DclPlayerIdentity {
                     on_main(instance_id, |node| {
                         node.set_thirdweb_guest_upgraded_flag(true)
                     });
-                    promise
-                        .bind_mut()
-                        .resolve_with_data(format!("{:#x}", address).to_variant());
+                    promise.resolve_with_data_deferred(format!("{:#x}", address).to_variant());
                 }
                 Err(e) => {
                     tracing::error!("thirdweb link_email failed: {:?}", e);
                     promise
-                        .bind_mut()
-                        .reject(GString::from(&format!("Could not verify code: {}", e)));
+                        .reject_deferred(GString::from(&format!("Could not verify code: {}", e)));
                 }
             }
         });
@@ -502,15 +494,12 @@ impl DclPlayerIdentity {
                         node.try_set_remote_wallet(&address, 1, &ephemeral_chain_json);
                     });
 
-                    promise
-                        .bind_mut()
-                        .resolve_with_data(address_str.to_variant());
+                    promise.resolve_with_data_deferred(address_str.to_variant());
                 }
                 Err(e) => {
                     tracing::warn!("thirdweb email_login failed: {:?}", e);
                     promise
-                        .bind_mut()
-                        .reject(GString::from(&format!("Could not verify code: {}", e)));
+                        .reject_deferred(GString::from(&format!("Could not verify code: {}", e)));
                 }
             }
         });
@@ -557,11 +546,11 @@ impl DclPlayerIdentity {
                     on_main(instance_id, move |node| {
                         node.set_thirdweb_guest_upgraded_flag(upgraded)
                     });
-                    promise.bind_mut().resolve_with_data(upgraded.to_variant());
+                    promise.resolve_with_data_deferred(upgraded.to_variant());
                 }
                 Err(e) => {
                     tracing::warn!("thirdweb refresh upgrade state failed: {:?}", e);
-                    promise.bind_mut().reject(GString::from(&format!(
+                    promise.reject_deferred(GString::from(&format!(
                         "Could not check upgrade state: {}",
                         e
                     )));
@@ -609,12 +598,12 @@ impl DclPlayerIdentity {
             match result {
                 Ok(()) => {
                     tracing::info!("thirdweb delete_guest: guest account deleted");
-                    promise.bind_mut().resolve_with_data(true.to_variant());
+                    promise.resolve_with_data_deferred(true.to_variant());
                 }
                 Err(e) => {
                     // Non-fatal: the caller wipes local state + signs out anyway.
                     tracing::warn!("thirdweb delete_guest failed (non-fatal): {:?}", e);
-                    promise.bind_mut().resolve_with_data(false.to_variant());
+                    promise.resolve_with_data_deferred(false.to_variant());
                 }
             }
         });
@@ -657,12 +646,12 @@ impl DclPlayerIdentity {
             match result {
                 Ok(()) => {
                     tracing::info!("thirdweb delete_upgraded: upgraded account deleted");
-                    promise.bind_mut().resolve_with_data(true.to_variant());
+                    promise.resolve_with_data_deferred(true.to_variant());
                 }
                 Err(e) => {
                     // Non-fatal: the caller wipes local state + signs out anyway.
                     tracing::warn!("thirdweb delete_upgraded failed (non-fatal): {:?}", e);
-                    promise.bind_mut().resolve_with_data(false.to_variant());
+                    promise.resolve_with_data_deferred(false.to_variant());
                 }
             }
         });
@@ -1159,9 +1148,10 @@ impl DclPlayerIdentity {
                                 tracing::error!("error getting promise");
                                 return;
                             };
-                            promise
-                                .bind_mut()
-                                .reject(GString::from(&format!("Invalid metadata JSON: {}", e)));
+                            promise.reject_deferred(GString::from(&format!(
+                                "Invalid metadata JSON: {}",
+                                e
+                            )));
                             return;
                         }
                     }
@@ -1186,7 +1176,7 @@ impl DclPlayerIdentity {
                     return;
                 };
 
-                promise.bind_mut().resolve_with_data(dict.to_variant());
+                promise.resolve_with_data_deferred(dict.to_variant());
             });
         } else {
             let mut promise_clone = promise.clone();

@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { act, create } from 'react-test-renderer';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import '../src/ftue/gallery';
 import '../src/hud/gallery';
 import { getPreview, previewIds } from '../src/gallery/registry';
 

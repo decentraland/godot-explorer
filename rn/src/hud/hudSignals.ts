@@ -4,12 +4,14 @@ import { useSyncExternalStore } from 'react';
 export type HudIntent =
   | { type: 'open_menu' }
   | { type: 'open_profile'; address: string }
-  | { type: 'edit_emotes' };
+  | { type: 'edit_emotes' }
+  | { type: 'replay_tutorial' };
 
 const intentListeners = new Set<(intent: HudIntent) => void>();
 const stateListeners = new Set<() => void>();
 let menuOpen = false;
 let uiHidden = false;
+let chatOpen = false;
 
 export function emitIntent(intent: HudIntent): void {
   intentListeners.forEach(listener => listener(intent));
@@ -32,6 +34,14 @@ export function setUiHidden(hidden: boolean): void {
   stateListeners.forEach(listener => listener());
 }
 
+/** The HUD reports its chat panel, so the tutorial can follow it. */
+export function setChatOpen(open: boolean): void {
+  if (open !== chatOpen) {
+    chatOpen = open;
+    stateListeners.forEach(listener => listener());
+  }
+}
+
 const subscribeState = (listener: () => void) => {
   stateListeners.add(listener);
   return () => stateListeners.delete(listener);
@@ -42,3 +52,6 @@ export const useMenuOpen = (): boolean =>
 
 export const useUiHidden = (): boolean =>
   useSyncExternalStore(subscribeState, () => uiHidden);
+
+export const useChatOpen = (): boolean =>
+  useSyncExternalStore(subscribeState, () => chatOpen);

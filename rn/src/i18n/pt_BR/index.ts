@@ -3,6 +3,7 @@ import { backpack } from './backpack';
 import { common } from './common';
 import { discover } from './discover';
 import { flow } from './flow';
+import { ftue } from './ftue';
 import { hud } from './hud';
 import { menu } from './menu';
 import { modals } from './modals';
@@ -15,6 +16,7 @@ export const table: Record<string, string> = {
   ...common,
   ...discover,
   ...flow,
+  ...ftue,
   ...hud,
   ...menu,
   ...modals,

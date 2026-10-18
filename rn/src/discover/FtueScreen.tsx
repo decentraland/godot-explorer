@@ -7,6 +7,7 @@ import { t } from '../i18n';
 import { Place } from './api';
 import { useApi } from './ApiContext';
 import { DiscoverBackground } from './DiscoverBackground';
+import { ftuePlaces } from './ftue';
 import { JumpGlyph } from './JumpGlyph';
 import { Thumb } from './Thumb';
 
@@ -47,8 +48,8 @@ function Caption({ place }: { place: Place }) {
 }
 
 /**
- * First-run welcome: the featured places as a snap carousel (a single place is a static card), JUMP IN
- * for the centred one and a Skip link to Discover. `places` defaults to the featured banners.
+ * First-run welcome: the `ftue` places as a snap carousel (a single place is a static card), JUMP IN
+ * for the centred one and a Skip link to Discover. Without `places` it fills when the list lands.
  */
 export function FtueScreen({
   username,
@@ -71,10 +72,7 @@ export function FtueScreen({
   const [index, setIndex] = useState(initialIndex);
   useEffect(() => {
     if (!places) {
-      api
-        .banners()
-        .then(banners => setLoaded(banners.map(b => b.place)))
-        .catch(() => undefined);
+      ftuePlaces(api).then(setLoaded);
     }
   }, [api, places]);
 

@@ -3,6 +3,7 @@
 import '../backpack/gallery';
 import '../discover/gallery';
 import '../flow/gallery';
+import '../ftue/gallery';
 import { AccountScreen, TermsScreen, WaitScreen } from '../flow/screens';
 import '../hud/gallery';
 import '../menu/gallery';

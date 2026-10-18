@@ -24,16 +24,13 @@ export const GAMEPAD_ZONE = { minX: 1180, minY: 380 } as const;
 /** Native floating-joystick area (left ~40%, below the chat column); only the emote button sits inside. */
 export const JOYSTICK_ZONE = { x: 0, y: 380, width: 640, height: 340 } as const;
 
-/** Resting joystick base, used to place the coach marks. */
+/** Resting joystick base, which the controls overlay and the tutorial point at. */
 export const JOYSTICK_BASE = {
   x: 161,
   y: 442,
   width: 172,
   height: 170,
 } as const;
-
-/** Where the "Controls" coach mark sits (above the gamepad's top satellite). */
-export const GAMEPAD_LABEL = { x: 1405, y: 411 } as const;
 
 export const HUD_SIZES = {
   menu: 82,
@@ -45,6 +42,47 @@ export const HUD_SIZES = {
   chatPanelWidth: 420,
   notificationsWidth: 337,
 } as const;
+
+export type Rect = { left: number; top: number; width: number; height: number };
+
+/** Figma px of the HUD frame -> dp from the screen's top-left, on the same floor as the buttons. */
+export function hudPoint(x: number, y: number, insets: Insets) {
+  return {
+    x: insets.left + u((x - HUD_MARGIN_FLOOR.left) / 2),
+    y: insets.top + u((y - HUD_MARGIN_FLOOR.top) / 2),
+  };
+}
+
+/** Where the Menu and Chat buttons sit: one row at the HUD's top-left corner, centred vertically. */
+export function hudButtonRects(insets: Insets): { menu: Rect; chat: Rect } {
+  const menu = u(HUD_SIZES.menu / 2);
+  const chat = u(HUD_SIZES.chat / 2);
+  return {
+    menu: { left: insets.left, top: insets.top, width: menu, height: menu },
+    chat: {
+      left: insets.left + menu + u(HUD_SIZES.groupGap / 2),
+      top: insets.top + (menu - chat) / 2,
+      width: chat,
+      height: chat,
+    },
+  };
+}
+
+/** Centre of the resting joystick base. */
+export const joystickCenter = (insets: Insets) =>
+  hudPoint(
+    JOYSTICK_BASE.x + JOYSTICK_BASE.width / 2,
+    JOYSTICK_BASE.y + JOYSTICK_BASE.height / 2,
+    insets,
+  );
+
+/** Where a touch reaches the native joystick, down to the screen's bottom edge. */
+export const joystickZone = (screenHeight: number): Rect => ({
+  left: 0,
+  top: u(JOYSTICK_ZONE.y / 2),
+  width: u(JOYSTICK_ZONE.width / 2),
+  height: screenHeight - u(JOYSTICK_ZONE.y / 2),
+});
 
 /** Effective HUD insets in dp: the larger of the device inset and the Godot margin floor. */
 export function hudInsets(device: Insets): Insets {

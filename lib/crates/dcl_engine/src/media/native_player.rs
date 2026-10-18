@@ -6,6 +6,9 @@
 use godot::classes::{ExternalTexture, INode, Node, Os, Texture2D};
 use godot::prelude::*;
 
+use crate::engine::frame_budget;
+use crate::engine::local_task::spawn_local;
+
 /// The platform player a node drives.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Flavor {
@@ -321,13 +324,11 @@ impl NativePlayer {
         if !self.ready_player() {
             return false;
         }
-        if self.call("HasVideoSizeChanged", &[]).booleanize() {
-            let width: i32 = self.call("GetVideoWidth", &[]).try_to().unwrap_or(0);
-            let height: i32 = self.call("GetVideoHeight", &[]).try_to().unwrap_or(0);
-            if width > 0 && height > 0 && (width != self.video_width || height != self.video_height)
-            {
-                self.reinitialize_surface(width, height);
-            }
+        if !self.reinitializing_surface && self.call("HasVideoSizeChanged", &[]).booleanize() {
+            // The surface swap is a heavy one-off: frames are not consumed while it waits its
+            // frame-budget turn.
+            self.reinitializing_surface = true;
+            spawn_local(reinitialize_when_budget_allows(self.to_gd()));
         }
         if self.reinitializing_surface {
             return false;
@@ -365,6 +366,15 @@ impl NativePlayer {
         true
     }
 
+    fn reinitialize_to_video_size(&mut self) {
+        let width: i32 = self.call("GetVideoWidth", &[]).try_to().unwrap_or(0);
+        let height: i32 = self.call("GetVideoHeight", &[]).try_to().unwrap_or(0);
+        if width > 0 && height > 0 && (width != self.video_width || height != self.video_height) {
+            self.reinitialize_surface(width, height);
+        }
+        self.reinitializing_surface = false;
+    }
+
     /// Rebuilds the surface and the texture at the new size. The external buffer is cleared first:
     /// resizing with the old buffer referenced fails the GPU allocation (VK_ERROR_OUT_OF_DEVICE_MEMORY
     /// on Vulkan) over a size mismatch.
@@ -393,6 +403,13 @@ impl NativePlayer {
         texture.set_size(Vector2::new(width as f32, height as f32));
         // The next frame from the new surface is valid.
         self.reinitializing_surface = false;
+    }
+}
+
+async fn reinitialize_when_budget_allows(player: Gd<NativePlayer>) {
+    frame_budget::acquire(Some(player.instance_id()), false).await;
+    if player.is_instance_valid() && player.bind().ready_player() {
+        player.clone().bind_mut().reinitialize_to_video_size();
     }
 }
 

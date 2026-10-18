@@ -501,6 +501,34 @@ export function control(command: Control): void /*throws*/ {
 }
 
 /**
+ * The player closed the controls overlay with a tap after `seconds_shown`.
+ */
+export function controlsFtueDismissed(
+  elements: Array<ControlsFtueElement>,
+  secondsShown: number,
+): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_controls_ftue_dismissed(
+        FfiConverterSequenceTypeControlsFtueElement.lower(
+          elements,
+          nativeModule().rustbuffer_alloc,
+        ),
+        FfiConverterFloat64.lower(
+          secondsShown,
+          nativeModule().rustbuffer_alloc,
+        ),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
  * Spendable credits of the signed-in wallet.
  */
 export async function creditsBalance(asyncOpts_?: {
@@ -598,6 +626,35 @@ export async function currentScene(asyncOpts_?: {
       __error.stack = __stack;
     }
     throw __error;
+  }
+}
+
+/**
+ * What the Day 1 welcome needs from the OS right now. The shell calls it whenever the permission
+ * or the flags may have changed; arming again with the same id is harmless.
+ */
+export function day1Notification(
+  permissionGranted: boolean,
+): Day1Notification /*throws*/ {
+  const __rb: Uint8Array = uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_day1_notification(
+        FfiConverterBool.lower(
+          permissionGranted,
+          nativeModule().rustbuffer_alloc,
+        ),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterTypeDay1Notification.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
   }
 }
 
@@ -1047,6 +1104,66 @@ export async function flushAnalytics(asyncOpts_?: {
       __error.stack = __stack;
     }
     throw __error;
+  }
+}
+
+/**
+ * A profile-less account finished its avatar on this install: the tutorial's "new player".
+ */
+export function ftueMarkNewPlayer(): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_ftue_mark_new_player(
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * Once per scene entry, after the loading cover, the first HUD report and any modal. `blocked`:
+ * a menu is open, the phone is in portrait or the HUD is hidden.
+ */
+export function ftueSceneEntered(blocked: boolean): SceneEntryFtue /*throws*/ {
+  const __rb: Uint8Array = uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_ftue_scene_entered(
+        FfiConverterBool.lower(blocked, nativeModule().rustbuffer_alloc),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterTypeSceneEntryFtue.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
+ * The remote tunables of the overlay and the tutorial.
+ */
+export function ftueTuning(): FtueTuning {
+  const __rb: Uint8Array = uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_ftue_tuning(
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterTypeFtueTuning.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
   }
 }
 
@@ -2511,6 +2628,46 @@ export function track(event: string, props: Array<Property>): void /*throws*/ {
 }
 
 /**
+ * The first-run flow skipped the FTUE carousel and jumped into its only place (#3022): a
+ * `DISCOVER_FTUE_BYPASS` screen view with the place, whether the boot went ahead and the
+ * campaign context, as 1.x reports it.
+ */
+export async function trackFtueBypass(
+  placeId: string,
+  booted: boolean,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<void> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_track_ftue_bypass(
+          FfiConverterString.lower(placeId, nativeModule().rustbuffer_alloc),
+          FfiConverterBool.lower(booted, nativeModule().rustbuffer_alloc),
+        );
+      },
+      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
+      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_void,
+      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
+      /*liftFunc:*/ _v => {},
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
  * Queues a "Screen Viewed" for `name`.
  */
 export function trackScreen(
@@ -2528,6 +2685,94 @@ export function trackScreen(
           props,
           nativeModule().rustbuffer_alloc,
         ),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+export function tutorialCompleted(isReplay: boolean): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_tutorial_completed(
+        FfiConverterBool.lower(isReplay, nativeModule().rustbuffer_alloc),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * Settings › Gameplay › Replay.
+ */
+export function tutorialReplayRequested(): void {
+  uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_tutorial_replay_requested(
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+export function tutorialSkipped(
+  step: TutorialStep,
+  isReplay: boolean,
+): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_tutorial_skipped(
+        FfiConverterTypeTutorialStep.lower(
+          step,
+          nativeModule().rustbuffer_alloc,
+        ),
+        FfiConverterBool.lower(isReplay, nativeModule().rustbuffer_alloc),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+export function tutorialStepEntered(
+  step: TutorialStep,
+  isReplay: boolean,
+): void {
+  uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_tutorial_step_entered(
+        FfiConverterTypeTutorialStep.lower(
+          step,
+          nativeModule().rustbuffer_alloc,
+        ),
+        FfiConverterBool.lower(isReplay, nativeModule().rustbuffer_alloc),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * START (`true`) or SKIP on the welcome card.
+ */
+export function tutorialWelcomeAnswered(start: boolean): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_tutorial_welcome_answered(
+        FfiConverterBool.lower(start, nativeModule().rustbuffer_alloc),
         callStatus,
       );
     },
@@ -3790,6 +4035,89 @@ const FfiConverterTypeDeviceSupport = (() => {
 })();
 
 /**
+ * The remote tunables of both, already clamped to what 1.x accepted.
+ */
+export type FtueTuning = {
+  /**
+   * Between the last label appearing and the tap prompt; every touch is swallowed meanwhile.
+   */
+  overlayLockSeconds: number;
+  /**
+   * The closing tap also presses the control under it.
+   */
+  overlayTapThrough: boolean;
+  moveMeters: number;
+  cameraDegrees: number;
+  /**
+   * How long Social stays open before the Backpack step.
+   */
+  socialSeconds: number;
+  /**
+   * Pause with nothing on screen after the move, camera and pinch steps.
+   */
+  stepDelaySeconds: number;
+  /**
+   * After the chat opens, how long touches are ignored so a stray tap cannot close it.
+   */
+  chatSeconds: number;
+};
+
+/**
+ * Generated factory for {@link FtueTuning} record objects.
+ */
+export const FtueTuning = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<FtueTuning, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<FtueTuning>,
+  });
+})();
+
+const FfiConverterTypeFtueTuning = (() => {
+  type TypeName = FtueTuning;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        overlayLockSeconds: FfiConverterFloat64.readFromCursor(c),
+        overlayTapThrough: FfiConverterBool.readFromCursor(c),
+        moveMeters: FfiConverterFloat64.readFromCursor(c),
+        cameraDegrees: FfiConverterFloat64.readFromCursor(c),
+        socialSeconds: FfiConverterFloat64.readFromCursor(c),
+        stepDelaySeconds: FfiConverterFloat64.readFromCursor(c),
+        chatSeconds: FfiConverterFloat64.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterFloat64.writeIntoCursor(value.overlayLockSeconds, c);
+      FfiConverterBool.writeIntoCursor(value.overlayTapThrough, c);
+      FfiConverterFloat64.writeIntoCursor(value.moveMeters, c);
+      FfiConverterFloat64.writeIntoCursor(value.cameraDegrees, c);
+      FfiConverterFloat64.writeIntoCursor(value.socialSeconds, c);
+      FfiConverterFloat64.writeIntoCursor(value.stepDelaySeconds, c);
+      FfiConverterFloat64.writeIntoCursor(value.chatSeconds, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterFloat64.allocationSize(value.overlayLockSeconds) +
+        FfiConverterBool.allocationSize(value.overlayTapThrough) +
+        FfiConverterFloat64.allocationSize(value.moveMeters) +
+        FfiConverterFloat64.allocationSize(value.cameraDegrees) +
+        FfiConverterFloat64.allocationSize(value.socialSeconds) +
+        FfiConverterFloat64.allocationSize(value.stepDelaySeconds) +
+        FfiConverterFloat64.allocationSize(value.chatSeconds)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
  * The physical pixels the HUD keeps clear on each side (notch, gesture bar, joypad).
  */
 export type HudInsets = {
@@ -3890,6 +4218,47 @@ const FfiConverterTypeVec3 = (() => {
   return new FFIConverter();
 })();
 
+export enum CameraMode {
+  FirstPerson,
+  ThirdPerson,
+  /**
+   * A scene's virtual camera holds the view.
+   */
+  Cinematic,
+}
+
+const FfiConverterTypeCameraMode = (() => {
+  type TypeName = CameraMode;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return CameraMode.FirstPerson;
+        case 2:
+          return CameraMode.ThirdPerson;
+        case 3:
+          return CameraMode.Cinematic;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case CameraMode.FirstPerson:
+          return c.writeI32(1);
+        case CameraMode.ThirdPerson:
+          return c.writeI32(2);
+        case CameraMode.Cinematic:
+          return c.writeI32(3);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
 /**
  * The player's whereabouts, sent a few times a second while in a world.
  */
@@ -3898,6 +4267,24 @@ export type HudSnapshot = {
   realm: string;
   fps: number;
   position: Vec3;
+  /**
+   * Base parcel of the scene the player is in; `None` while no scene is loaded there.
+   */
+  sceneBase?: Parcel;
+  /**
+   * Degrees; yaw around the up axis, pitch up and down.
+   */
+  cameraYaw: number;
+  cameraPitch: number;
+  cameraMode: CameraMode;
+  /**
+   * A scene fixed the camera mode, so pinching does not switch it.
+   */
+  cameraModeLocked: boolean;
+  /**
+   * The movement joystick is on screen (a scene can hide it).
+   */
+  joystickVisible: boolean;
 };
 
 /**
@@ -3926,6 +4313,12 @@ const FfiConverterTypeHudSnapshot = (() => {
         realm: FfiConverterString.readFromCursor(c),
         fps: FfiConverterFloat32.readFromCursor(c),
         position: FfiConverterTypeVec3.readFromCursor(c),
+        sceneBase: FfiConverterOptionalTypeParcel.readFromCursor(c),
+        cameraYaw: FfiConverterFloat32.readFromCursor(c),
+        cameraPitch: FfiConverterFloat32.readFromCursor(c),
+        cameraMode: FfiConverterTypeCameraMode.readFromCursor(c),
+        cameraModeLocked: FfiConverterBool.readFromCursor(c),
+        joystickVisible: FfiConverterBool.readFromCursor(c),
       };
     }
     writeIntoCursor(value: TypeName, c: Cursor): void {
@@ -3933,13 +4326,25 @@ const FfiConverterTypeHudSnapshot = (() => {
       FfiConverterString.writeIntoCursor(value.realm, c);
       FfiConverterFloat32.writeIntoCursor(value.fps, c);
       FfiConverterTypeVec3.writeIntoCursor(value.position, c);
+      FfiConverterOptionalTypeParcel.writeIntoCursor(value.sceneBase, c);
+      FfiConverterFloat32.writeIntoCursor(value.cameraYaw, c);
+      FfiConverterFloat32.writeIntoCursor(value.cameraPitch, c);
+      FfiConverterTypeCameraMode.writeIntoCursor(value.cameraMode, c);
+      FfiConverterBool.writeIntoCursor(value.cameraModeLocked, c);
+      FfiConverterBool.writeIntoCursor(value.joystickVisible, c);
     }
     allocationSize(value: TypeName): number {
       return (
         FfiConverterTypeParcel.allocationSize(value.parcel) +
         FfiConverterString.allocationSize(value.realm) +
         FfiConverterFloat32.allocationSize(value.fps) +
-        FfiConverterTypeVec3.allocationSize(value.position)
+        FfiConverterTypeVec3.allocationSize(value.position) +
+        FfiConverterOptionalTypeParcel.allocationSize(value.sceneBase) +
+        FfiConverterFloat32.allocationSize(value.cameraYaw) +
+        FfiConverterFloat32.allocationSize(value.cameraPitch) +
+        FfiConverterTypeCameraMode.allocationSize(value.cameraMode) +
+        FfiConverterBool.allocationSize(value.cameraModeLocked) +
+        FfiConverterBool.allocationSize(value.joystickVisible)
       );
     }
   }
@@ -6530,6 +6935,8 @@ export enum ConfigParam_Tags {
   EnableUpgradedDeletion = 'EnableUpgradedDeletion',
   GpBenchmark = 'GpBenchmark',
   SafeMarginDebug = 'SafeMarginDebug',
+  ControlsFtueShow = 'ControlsFtueShow',
+  FtueTutorialStart = 'FtueTutorialStart',
 }
 /**
  * A setting a link carries, for the owner of that setting to apply.
@@ -6957,6 +7364,64 @@ export const ConfigParam = (() => {
     }
   }
 
+  type ControlsFtueShow__interface = {
+    tag: ConfigParam_Tags.ControlsFtueShow;
+  };
+  /**
+   * Non-production: label every visible HUD control on the next scene entry.
+   */
+  class ControlsFtueShow_
+    extends UniffiEnum
+    implements ControlsFtueShow__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.ControlsFtueShow;
+    constructor() {
+      super('ConfigParam', 'ControlsFtueShow');
+    }
+
+    static new(): ControlsFtueShow_ {
+      return new ControlsFtueShow_();
+    }
+
+    static instanceOf(obj: any): obj is ControlsFtueShow_ {
+      return obj.tag === ConfigParam_Tags.ControlsFtueShow;
+    }
+  }
+
+  type FtueTutorialStart__interface = {
+    tag: ConfigParam_Tags.FtueTutorialStart;
+  };
+  /**
+   * Non-production: offer the guided tutorial on the next scene entry.
+   */
+  class FtueTutorialStart_
+    extends UniffiEnum
+    implements FtueTutorialStart__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.FtueTutorialStart;
+    constructor() {
+      super('ConfigParam', 'FtueTutorialStart');
+    }
+
+    static new(): FtueTutorialStart_ {
+      return new FtueTutorialStart_();
+    }
+
+    static instanceOf(obj: any): obj is FtueTutorialStart_ {
+      return obj.tag === ConfigParam_Tags.FtueTutorialStart;
+    }
+  }
+
   function instanceOf(obj: any): obj is ConfigParam {
     return obj[uniffiTypeNameSymbol] === 'ConfigParam';
   }
@@ -6979,6 +7444,8 @@ export const ConfigParam = (() => {
     EnableUpgradedDeletion: EnableUpgradedDeletion_,
     GpBenchmark: GpBenchmark_,
     SafeMarginDebug: SafeMarginDebug_,
+    ControlsFtueShow: ControlsFtueShow_,
+    FtueTutorialStart: FtueTutorialStart_,
   });
 })();
 /**
@@ -7001,7 +7468,9 @@ export type ConfigParam = InstanceType<
     | 'TouchFeedback'
     | 'EnableUpgradedDeletion'
     | 'GpBenchmark'
-    | 'SafeMarginDebug']
+    | 'SafeMarginDebug'
+    | 'ControlsFtueShow'
+    | 'FtueTutorialStart']
 >;
 
 // FfiConverter for enum ConfigParam
@@ -7064,6 +7533,10 @@ const FfiConverterTypeConfigParam = (() => {
           return new ConfigParam.GpBenchmark();
         case 16:
           return new ConfigParam.SafeMarginDebug();
+        case 17:
+          return new ConfigParam.ControlsFtueShow();
+        case 18:
+          return new ConfigParam.FtueTutorialStart();
         default:
           throw new UniffiInternalError.UnexpectedEnumCase();
       }
@@ -7156,6 +7629,14 @@ const FfiConverterTypeConfigParam = (() => {
           c.writeI32(16);
           return;
         }
+        case ConfigParam_Tags.ControlsFtueShow: {
+          c.writeI32(17);
+          return;
+        }
+        case ConfigParam_Tags.FtueTutorialStart: {
+          c.writeI32(18);
+          return;
+        }
         default:
           // Throwing from here means that ConfigParam_Tags hasn't matched an ordinal.
           throw new UniffiInternalError.UnexpectedEnumCase();
@@ -7242,6 +7723,12 @@ const FfiConverterTypeConfigParam = (() => {
           return 4;
         }
         case ConfigParam_Tags.SafeMarginDebug: {
+          return 4;
+        }
+        case ConfigParam_Tags.ControlsFtueShow: {
+          return 4;
+        }
+        case ConfigParam_Tags.FtueTutorialStart: {
           return 4;
         }
         default:
@@ -7989,6 +8476,15 @@ export enum SettingKey {
   InstallReferrerSent,
   DebugRotateGuestAnchor,
   LocalAssetsCacheVersion,
+  Day1NotificationScheduled,
+  /**
+   * Unix seconds the Day 1 welcome fires at; 0 when 1.x scheduled it without saying when.
+   */
+  Day1NotificationAt,
+  ControlsFtueShown,
+  FtueTutorialOffered,
+  FtueTutorialCompleted,
+  FtueNewPlayerWallet,
 }
 
 const FfiConverterTypeSettingKey = (() => {
@@ -8072,6 +8568,18 @@ const FfiConverterTypeSettingKey = (() => {
           return SettingKey.DebugRotateGuestAnchor;
         case 38:
           return SettingKey.LocalAssetsCacheVersion;
+        case 39:
+          return SettingKey.Day1NotificationScheduled;
+        case 40:
+          return SettingKey.Day1NotificationAt;
+        case 41:
+          return SettingKey.ControlsFtueShown;
+        case 42:
+          return SettingKey.FtueTutorialOffered;
+        case 43:
+          return SettingKey.FtueTutorialCompleted;
+        case 44:
+          return SettingKey.FtueNewPlayerWallet;
         default:
           throw new UniffiInternalError.UnexpectedEnumCase();
       }
@@ -8154,6 +8662,18 @@ const FfiConverterTypeSettingKey = (() => {
           return c.writeI32(37);
         case SettingKey.LocalAssetsCacheVersion:
           return c.writeI32(38);
+        case SettingKey.Day1NotificationScheduled:
+          return c.writeI32(39);
+        case SettingKey.Day1NotificationAt:
+          return c.writeI32(40);
+        case SettingKey.ControlsFtueShown:
+          return c.writeI32(41);
+        case SettingKey.FtueTutorialOffered:
+          return c.writeI32(42);
+        case SettingKey.FtueTutorialCompleted:
+          return c.writeI32(43);
+        case SettingKey.FtueNewPlayerWallet:
+          return c.writeI32(44);
       }
     }
     allocationSize(value: TypeName): number {
@@ -9902,6 +10422,52 @@ const FfiConverterTypeControl = (() => {
   return new FFIConverter();
 })();
 
+/**
+ * A HUD control the overlay labels, in its entrance order.
+ */
+export enum ControlsFtueElement {
+  Menu,
+  Chat,
+  Movement,
+  Emotes,
+}
+
+const FfiConverterTypeControlsFtueElement = (() => {
+  type TypeName = ControlsFtueElement;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return ControlsFtueElement.Menu;
+        case 2:
+          return ControlsFtueElement.Chat;
+        case 3:
+          return ControlsFtueElement.Movement;
+        case 4:
+          return ControlsFtueElement.Emotes;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case ControlsFtueElement.Menu:
+          return c.writeI32(1);
+        case ControlsFtueElement.Chat:
+          return c.writeI32(2);
+        case ControlsFtueElement.Movement:
+          return c.writeI32(3);
+        case ControlsFtueElement.Emotes:
+          return c.writeI32(4);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
 // Error type: CoreError
 export enum CoreError_Tags {
   NotInstalled = 'NotInstalled',
@@ -10080,6 +10646,194 @@ const FfiConverterTypeCoreError = (() => {
           let size = 4;
           size += FfiConverterString.allocationSize(inner.code);
           size += FfiConverterString.allocationSize(inner.detail);
+          return size;
+        }
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+  }
+  return new FFIConverter();
+})();
+
+// Enum: Day1Notification
+export enum Day1Notification_Tags {
+  Keep = 'Keep',
+  Arm = 'Arm',
+  Disarm = 'Disarm',
+}
+export const Day1Notification = (() => {
+  type Keep__interface = {
+    tag: Day1Notification_Tags.Keep;
+  };
+  /**
+   * Nothing to do: already fired, not armed yet without permission, or 1.x armed it.
+   */
+  class Keep_ extends UniffiEnum implements Keep__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Day1Notification';
+    readonly tag = Day1Notification_Tags.Keep;
+    constructor() {
+      super('Day1Notification', 'Keep');
+    }
+
+    static new(): Keep_ {
+      return new Keep_();
+    }
+
+    static instanceOf(obj: any): obj is Keep_ {
+      return obj.tag === Day1Notification_Tags.Keep;
+    }
+  }
+
+  type Arm__interface = {
+    tag: Day1Notification_Tags.Arm;
+    inner: Readonly<{ id: string; delaySeconds: number; deepLink: string }>;
+  };
+  /**
+   * Schedule it `delay_seconds` from now; the same id replaces one already armed.
+   */
+  class Arm_ extends UniffiEnum implements Arm__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Day1Notification';
+    readonly tag = Day1Notification_Tags.Arm;
+    readonly inner: Readonly<{
+      id: string;
+      delaySeconds: number;
+      deepLink: string;
+    }>;
+    constructor(inner: { id: string; delaySeconds: number; deepLink: string }) {
+      super('Day1Notification', 'Arm');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: {
+      id: string;
+      delaySeconds: number;
+      deepLink: string;
+    }): Arm_ {
+      return new Arm_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Arm_ {
+      return obj.tag === Day1Notification_Tags.Arm;
+    }
+  }
+
+  type Disarm__interface = {
+    tag: Day1Notification_Tags.Disarm;
+    inner: Readonly<{ id: string }>;
+  };
+  /**
+   * Cancel it in the OS.
+   */
+  class Disarm_ extends UniffiEnum implements Disarm__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Day1Notification';
+    readonly tag = Day1Notification_Tags.Disarm;
+    readonly inner: Readonly<{ id: string }>;
+    constructor(inner: { id: string }) {
+      super('Day1Notification', 'Disarm');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { id: string }): Disarm_ {
+      return new Disarm_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Disarm_ {
+      return obj.tag === Day1Notification_Tags.Disarm;
+    }
+  }
+
+  function instanceOf(obj: any): obj is Day1Notification {
+    return obj[uniffiTypeNameSymbol] === 'Day1Notification';
+  }
+
+  return Object.freeze({
+    instanceOf,
+    Keep: Keep_,
+    Arm: Arm_,
+    Disarm: Disarm_,
+  });
+})();
+export type Day1Notification = InstanceType<
+  (typeof Day1Notification)['Keep' | 'Arm' | 'Disarm']
+>;
+
+// FfiConverter for enum Day1Notification
+const FfiConverterTypeDay1Notification = (() => {
+  type TypeName = Day1Notification;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return new Day1Notification.Keep();
+        case 2:
+          return new Day1Notification.Arm({
+            id: FfiConverterString.readFromCursor(c),
+            delaySeconds: FfiConverterUInt32.readFromCursor(c),
+            deepLink: FfiConverterString.readFromCursor(c),
+          });
+        case 3:
+          return new Day1Notification.Disarm({
+            id: FfiConverterString.readFromCursor(c),
+          });
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value.tag) {
+        case Day1Notification_Tags.Keep: {
+          c.writeI32(1);
+          return;
+        }
+        case Day1Notification_Tags.Arm: {
+          c.writeI32(2);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.id, c);
+          FfiConverterUInt32.writeIntoCursor(inner.delaySeconds, c);
+          FfiConverterString.writeIntoCursor(inner.deepLink, c);
+          return;
+        }
+        case Day1Notification_Tags.Disarm: {
+          c.writeI32(3);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.id, c);
+          return;
+        }
+        default:
+          // Throwing from here means that Day1Notification_Tags hasn't matched an ordinal.
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    allocationSize(value: TypeName): number {
+      switch (value.tag) {
+        case Day1Notification_Tags.Keep: {
+          return 4;
+        }
+        case Day1Notification_Tags.Arm: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.id);
+          size += FfiConverterUInt32.allocationSize(inner.delaySeconds);
+          size += FfiConverterString.allocationSize(inner.deepLink);
+          return size;
+        }
+        case Day1Notification_Tags.Disarm: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.id);
           return size;
         }
         default:
@@ -10636,6 +11390,176 @@ const FfiConverterTypeRail = (() => {
     }
     allocationSize(value: TypeName): number {
       return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+// Enum: SceneEntryFtue
+export enum SceneEntryFtue_Tags {
+  Nothing = 'Nothing',
+  Tutorial = 'Tutorial',
+  Controls = 'Controls',
+}
+/**
+ * What a scene entry gets.
+ */
+export const SceneEntryFtue = (() => {
+  type Nothing__interface = {
+    tag: SceneEntryFtue_Tags.Nothing;
+  };
+  class Nothing_ extends UniffiEnum implements Nothing__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'SceneEntryFtue';
+    readonly tag = SceneEntryFtue_Tags.Nothing;
+    constructor() {
+      super('SceneEntryFtue', 'Nothing');
+    }
+
+    static new(): Nothing_ {
+      return new Nothing_();
+    }
+
+    static instanceOf(obj: any): obj is Nothing_ {
+      return obj.tag === SceneEntryFtue_Tags.Nothing;
+    }
+  }
+
+  type Tutorial__interface = {
+    tag: SceneEntryFtue_Tags.Tutorial;
+  };
+  /**
+   * The welcome card that offers the tutorial.
+   */
+  class Tutorial_ extends UniffiEnum implements Tutorial__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'SceneEntryFtue';
+    readonly tag = SceneEntryFtue_Tags.Tutorial;
+    constructor() {
+      super('SceneEntryFtue', 'Tutorial');
+    }
+
+    static new(): Tutorial_ {
+      return new Tutorial_();
+    }
+
+    static instanceOf(obj: any): obj is Tutorial_ {
+      return obj.tag === SceneEntryFtue_Tags.Tutorial;
+    }
+  }
+
+  type Controls__interface = {
+    tag: SceneEntryFtue_Tags.Controls;
+    inner: Readonly<{ elements: Array<ControlsFtueElement> }>;
+  };
+  class Controls_ extends UniffiEnum implements Controls__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'SceneEntryFtue';
+    readonly tag = SceneEntryFtue_Tags.Controls;
+    readonly inner: Readonly<{ elements: Array<ControlsFtueElement> }>;
+    constructor(inner: { elements: Array<ControlsFtueElement> }) {
+      super('SceneEntryFtue', 'Controls');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { elements: Array<ControlsFtueElement> }): Controls_ {
+      return new Controls_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Controls_ {
+      return obj.tag === SceneEntryFtue_Tags.Controls;
+    }
+  }
+
+  function instanceOf(obj: any): obj is SceneEntryFtue {
+    return obj[uniffiTypeNameSymbol] === 'SceneEntryFtue';
+  }
+
+  return Object.freeze({
+    instanceOf,
+    Nothing: Nothing_,
+    Tutorial: Tutorial_,
+    Controls: Controls_,
+  });
+})();
+/**
+ * What a scene entry gets.
+ */
+export type SceneEntryFtue = InstanceType<
+  (typeof SceneEntryFtue)['Nothing' | 'Tutorial' | 'Controls']
+>;
+
+// FfiConverter for enum SceneEntryFtue
+const FfiConverterTypeSceneEntryFtue = (() => {
+  type TypeName = SceneEntryFtue;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return new SceneEntryFtue.Nothing();
+        case 2:
+          return new SceneEntryFtue.Tutorial();
+        case 3:
+          return new SceneEntryFtue.Controls({
+            elements:
+              FfiConverterSequenceTypeControlsFtueElement.readFromCursor(c),
+          });
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value.tag) {
+        case SceneEntryFtue_Tags.Nothing: {
+          c.writeI32(1);
+          return;
+        }
+        case SceneEntryFtue_Tags.Tutorial: {
+          c.writeI32(2);
+          return;
+        }
+        case SceneEntryFtue_Tags.Controls: {
+          c.writeI32(3);
+          const inner = value.inner;
+          FfiConverterSequenceTypeControlsFtueElement.writeIntoCursor(
+            inner.elements,
+            c,
+          );
+          return;
+        }
+        default:
+          // Throwing from here means that SceneEntryFtue_Tags hasn't matched an ordinal.
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    allocationSize(value: TypeName): number {
+      switch (value.tag) {
+        case SceneEntryFtue_Tags.Nothing: {
+          return 4;
+        }
+        case SceneEntryFtue_Tags.Tutorial: {
+          return 4;
+        }
+        case SceneEntryFtue_Tags.Controls: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterSequenceTypeControlsFtueElement.allocationSize(
+            inner.elements,
+          );
+          return size;
+        }
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
     }
   }
   return new FFIConverter();
@@ -11340,6 +12264,69 @@ const FfiConverterTypeTrigger = (() => {
   return new FFIConverter();
 })();
 
+export enum TutorialStep {
+  Move,
+  Camera,
+  Pinch,
+  Chat,
+  Menu,
+  Social,
+  Backpack,
+  Equip,
+}
+
+const FfiConverterTypeTutorialStep = (() => {
+  type TypeName = TutorialStep;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return TutorialStep.Move;
+        case 2:
+          return TutorialStep.Camera;
+        case 3:
+          return TutorialStep.Pinch;
+        case 4:
+          return TutorialStep.Chat;
+        case 5:
+          return TutorialStep.Menu;
+        case 6:
+          return TutorialStep.Social;
+        case 7:
+          return TutorialStep.Backpack;
+        case 8:
+          return TutorialStep.Equip;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case TutorialStep.Move:
+          return c.writeI32(1);
+        case TutorialStep.Camera:
+          return c.writeI32(2);
+        case TutorialStep.Pinch:
+          return c.writeI32(3);
+        case TutorialStep.Chat:
+          return c.writeI32(4);
+        case TutorialStep.Menu:
+          return c.writeI32(5);
+        case TutorialStep.Social:
+          return c.writeI32(6);
+        case TutorialStep.Backpack:
+          return c.writeI32(7);
+        case TutorialStep.Equip:
+          return c.writeI32(8);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
 /**
  * Implemented by the JS shell only: a foreign trait has one vtable per process, so the host's
  * events are a different trait (`dcl_host::HostListener`). Called from a core thread; the
@@ -11380,6 +12367,10 @@ export interface AppListener {
    * A tag for every later crash report; `None` removes it. Batched by the core.
    */
   reportTag(key: string, value: string | undefined): void;
+  /**
+   * The remote feature flags were fetched, or failed and keep their defaults.
+   */
+  flagsLoaded(): void;
 }
 
 /**
@@ -11649,6 +12640,21 @@ export class AppListenerImpl
             value,
             nativeModule().rustbuffer_alloc,
           ),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+  }
+
+  /**
+   * The remote feature flags were fetched, or failed and keep their defaults.
+   */
+  flagsLoaded(): void {
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        nativeModule().ubrn_uniffi_dcl_core_fn_method_applistener_flags_loaded(
+          uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
           callStatus,
         );
       },
@@ -12067,6 +13073,25 @@ const uniffiCallbackInterfaceAppListener: {
       );
       return uniffiResult;
     },
+    flags_loaded: (uniffiHandle: bigint) => {
+      const uniffiMakeCall = (): void => {
+        const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
+        return jsCallback.flagsLoaded();
+      };
+      const uniffiResult = UniffiResult.ready<void>();
+      const uniffiHandleSuccess = (obj: any) => {};
+      const uniffiHandleError = (code: number, errBuf: UniffiByteArray) => {
+        UniffiResult.writeError(uniffiResult, code, errBuf);
+      };
+      uniffiTraitInterfaceCall(
+        /*makeCall:*/ uniffiMakeCall,
+        /*handleSuccess:*/ uniffiHandleSuccess,
+        /*handleError:*/ uniffiHandleError,
+        /*lowerString:*/ FfiConverterString.lower.bind(FfiConverterString),
+        /*alloc:*/ nativeModule().rustbuffer_alloc,
+      );
+      return uniffiResult;
+    },
     uniffi_free: (uniffiHandle: UniffiHandle): void => {
       // this will throw a stale handle error if the handle isn't found.
       FfiConverterTypeAppListener.drop(uniffiHandle);
@@ -12162,6 +13187,11 @@ const FfiConverterSequenceTypeParamPair = new FfiConverterArray(
 // FfiConverter for Array<Effect>
 const FfiConverterSequenceTypeEffect = new FfiConverterArray(
   FfiConverterTypeEffect,
+);
+
+// FfiConverter for Array<ControlsFtueElement>
+const FfiConverterSequenceTypeControlsFtueElement = new FfiConverterArray(
+  FfiConverterTypeControlsFtueElement,
 );
 
 // FfiConverter for AvatarState | undefined
@@ -12383,6 +13413,14 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_controls_ftue_dismissed() !==
+    28525
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_controls_ftue_dismissed',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_credits_balance() !==
     15557
   ) {
@@ -12395,6 +13433,14 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_current_scene',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_day1_notification() !==
+    39747
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_day1_notification',
     );
   }
   if (
@@ -12489,6 +13535,29 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_flush_analytics',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_ftue_mark_new_player() !==
+    49820
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_ftue_mark_new_player',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_ftue_scene_entered() !==
+    28145
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_ftue_scene_entered',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_ftue_tuning() !== 43429
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_ftue_tuning',
     );
   }
   if (
@@ -12860,10 +13929,58 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_track_ftue_bypass() !==
+    19711
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_track_ftue_bypass',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_track_screen() !== 1070
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_track_screen',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_tutorial_completed() !==
+    55288
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_tutorial_completed',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_tutorial_replay_requested() !==
+    14324
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_tutorial_replay_requested',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_tutorial_skipped() !==
+    54615
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_tutorial_skipped',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_tutorial_step_entered() !==
+    59401
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_tutorial_step_entered',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_tutorial_welcome_answered() !==
+    54634
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_tutorial_welcome_answered',
     );
   }
   if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_urls() !== 18044) {
@@ -13016,6 +14133,14 @@ function uniffiEnsureInitialized() {
       'uniffi_dcl_core_checksum_method_applistener_report_tag',
     );
   }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_flags_loaded() !==
+    15556
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_method_applistener_flags_loaded',
+    );
+  }
 
   uniffiCallbackInterfaceAppListener.register();
 }
@@ -13033,6 +14158,7 @@ export default Object.freeze({
     FfiConverterTypeBuildEnvironment,
     FfiConverterTypeCacheSize,
     FfiConverterTypeCameraFocus,
+    FfiConverterTypeCameraMode,
     FfiConverterTypeCampaign,
     FfiConverterTypeCampaignFallback,
     FfiConverterTypeCampaignKind,
@@ -13043,9 +14169,11 @@ export default Object.freeze({
     FfiConverterTypeColorTarget,
     FfiConverterTypeConfigParam,
     FfiConverterTypeControl,
+    FfiConverterTypeControlsFtueElement,
     FfiConverterTypeCoreError,
     FfiConverterTypeCreditsBalance,
     FfiConverterTypeCurrentScene,
+    FfiConverterTypeDay1Notification,
     FfiConverterTypeDecision,
     FfiConverterTypeDestination,
     FfiConverterTypeDestinationKind,
@@ -13056,6 +14184,7 @@ export default Object.freeze({
     FfiConverterTypeEngineNotice,
     FfiConverterTypeEntryRefusal,
     FfiConverterTypeEnvironment,
+    FfiConverterTypeFtueTuning,
     FfiConverterTypeHudInsets,
     FfiConverterTypeHudSnapshot,
     FfiConverterTypeIssueType,
@@ -13092,6 +14221,7 @@ export default Object.freeze({
     FfiConverterTypeResolveFailure,
     FfiConverterTypeResolvedDestination,
     FfiConverterTypeRouted,
+    FfiConverterTypeSceneEntryFtue,
     FfiConverterTypeSceneRequest,
     FfiConverterTypeSettingEntry,
     FfiConverterTypeSettingKey,
@@ -13103,6 +14233,7 @@ export default Object.freeze({
     FfiConverterTypeSupportModal,
     FfiConverterTypeSupportStatus,
     FfiConverterTypeTrigger,
+    FfiConverterTypeTutorialStep,
     FfiConverterTypeUiState,
     FfiConverterTypeUpdateDecision,
     FfiConverterTypeUrls,

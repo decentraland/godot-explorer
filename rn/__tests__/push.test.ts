@@ -5,12 +5,13 @@ import {
   registerPush,
   reminderDelay,
   reminderText,
+  syncDay1Notification,
   syncEventReminder,
 } from '../src/notifications/push';
 import { setCoreForTests } from '../src/core';
 import { createMockCore } from '../src/core/mock';
 import type { CoreApi } from '../src/core';
-import { PushPlatform } from '../src/core/native';
+import { Day1Notification, PushPlatform } from '../src/core/native';
 import { NativeModules, Platform } from 'react-native';
 
 const fake = () => ({
@@ -111,6 +112,37 @@ describe('with the Android module', () => {
       now,
     );
     expect(module.schedule).not.toHaveBeenCalled();
+  });
+
+  it('does what the core decides for the Day 1 welcome, passing the permission', async () => {
+    const day1Notification = jest
+      .fn()
+      .mockReturnValueOnce(
+        new Day1Notification.Arm({
+          id: 'day1_welcome',
+          delaySeconds: 86_400,
+          deepLink: 'decentraland://open?position=0,0',
+        }),
+      )
+      .mockReturnValueOnce(new Day1Notification.Disarm({ id: 'day1_welcome' }))
+      .mockReturnValueOnce(new Day1Notification.Keep());
+    setCoreForTests({ ...createMockCore(), day1Notification } as CoreApi);
+    module.hasPermission.mockResolvedValue(true);
+
+    await syncDay1Notification();
+    expect(day1Notification).toHaveBeenCalledWith(true);
+    expect(module.schedule).toHaveBeenCalledWith(
+      'day1_welcome',
+      'Come and say hi 👋',
+      'People are hanging out in Decentraland.',
+      86_400,
+      'decentraland://open?position=0,0',
+    );
+    await syncDay1Notification();
+    expect(module.cancel).toHaveBeenCalledWith('day1_welcome');
+    await syncDay1Notification();
+    expect(module.schedule).toHaveBeenCalledTimes(1);
+    expect(module.cancel).toHaveBeenCalledTimes(1);
   });
 });
 

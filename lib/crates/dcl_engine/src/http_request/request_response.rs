@@ -3,7 +3,7 @@ use godot::{
     prelude::{GString, Variant},
 };
 
-use crate::godot_classes::promise::Promise;
+use crate::godot_classes::promise::{Promise, PromiseDeferred};
 
 pub use dcl_core::http::request_response::{
     HttpError, HttpResponse, RequestOption, ResponseEnum, ResponseType,
@@ -122,36 +122,32 @@ impl RequestResponseError {
     }
 }
 
+/// Runs on a tokio task: the promise is resolved through the main thread
+/// (`PromiseDeferred`), never by binding it mutably from here.
 pub fn send_result_to_promise(result: Result<HttpResponse, HttpError>, mut promise: Gd<Promise>) {
-    let mut promise = promise.bind_mut();
     match result {
         Ok(response) => {
             let response = RequestResponse::new(response);
             let status_code = response.status_code();
             if response.is_error() {
-                promise.reject(response.get_error());
+                promise.reject_deferred(response.get_error());
             } else if !(200..=299).contains(&status_code) {
                 let payload = response.get_response_as_string();
                 if payload.is_nil() {
-                    let mut rejected = false;
-                    if let Ok(status_code) = http::StatusCode::from_u16(status_code as u16) {
-                        if let Some(reason) = status_code.canonical_reason() {
-                            promise.reject(GString::from(reason));
-                            rejected = true;
-                        }
-                    }
-                    if !rejected {
-                        promise.reject(GString::from("unknown reason"));
-                    }
+                    let reason = http::StatusCode::from_u16(status_code as u16)
+                        .ok()
+                        .and_then(|code| code.canonical_reason())
+                        .unwrap_or("unknown reason");
+                    promise.reject_deferred(GString::from(reason));
                 } else {
-                    promise.reject(payload.to_string().as_str().into());
+                    promise.reject_deferred(payload.to_string().as_str().into());
                 }
             } else {
-                promise.resolve_with_data(Variant::from(Gd::from_object(response)));
+                promise.resolve_with_data_deferred(Variant::from(Gd::from_object(response)));
             }
         }
         Err(error) => {
-            promise.reject(RequestResponseError::new(error).get_error_message());
+            promise.reject_deferred(RequestResponseError::new(error).get_error_message());
         }
     }
 }

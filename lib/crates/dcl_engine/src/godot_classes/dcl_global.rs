@@ -14,7 +14,7 @@ use crate::{
     avatars::avatar_scene::AvatarScene,
     comms::communication_manager::CommunicationManager,
     content::content_provider::ContentProvider,
-    dcl::common::set_scene_log_enabled,
+    dcl::common::{set_scene_log_enabled, set_scene_perf_warnings_enabled},
     godot_classes::dcl_avatar::DclAvatar,
     http_request::rust_http_queue_requester::RustHttpQueueRequester,
     profile::profile_service::ProfileService,
@@ -394,6 +394,9 @@ impl INode for DclGlobal {
         }
 
         set_scene_log_enabled(preview_mode || testing_scene_mode || developer_mode);
+        // Creator-facing frame-sync warnings: preview sessions, or a `scene-stats` deeplink
+        // (deep_link.rs).
+        set_scene_perf_warnings_enabled(preview_mode);
 
         let is_mobile = Os::singleton().has_feature("mobile") || force_mobile;
         let is_android = std::env::consts::OS == "android";
@@ -527,6 +530,13 @@ impl DclGlobal {
     #[func]
     fn set_scene_log_enabled(&self, enabled: bool) {
         set_scene_log_enabled(enabled);
+    }
+
+    /// Creator-facing scene performance warnings on the in-app console (slow
+    /// `onUpdate` / missed frames, see scene_manager.rs). Preview-only.
+    #[func]
+    fn set_scene_perf_warnings_enabled(&self, enabled: bool) {
+        set_scene_perf_warnings_enabled(enabled);
     }
 
     /// Logging self-test for the **Rust stack**: emit every `tracing` level plus

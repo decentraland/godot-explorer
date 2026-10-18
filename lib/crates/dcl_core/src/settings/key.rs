@@ -43,10 +43,17 @@ pub enum SettingKey {
     InstallReferrerSent,
     DebugRotateGuestAnchor,
     LocalAssetsCacheVersion,
+    Day1NotificationScheduled,
+    /// Unix seconds the Day 1 welcome fires at; 0 when 1.x scheduled it without saying when.
+    Day1NotificationAt,
+    ControlsFtueShown,
+    FtueTutorialOffered,
+    FtueTutorialCompleted,
+    FtueNewPlayerWallet,
 }
 
 impl SettingKey {
-    pub const ALL: [SettingKey; 38] = [
+    pub const ALL: [SettingKey; 44] = [
         Self::SubmitMessageClosesChat,
         Self::Locale,
         Self::GraphicProfile,
@@ -85,6 +92,12 @@ impl SettingKey {
         Self::InstallReferrerSent,
         Self::DebugRotateGuestAnchor,
         Self::LocalAssetsCacheVersion,
+        Self::Day1NotificationScheduled,
+        Self::Day1NotificationAt,
+        Self::ControlsFtueShown,
+        Self::FtueTutorialOffered,
+        Self::FtueTutorialCompleted,
+        Self::FtueNewPlayerWallet,
     ];
 
     /// The name used by `settings.cfg` and the shell's `keys.ts`.
@@ -128,6 +141,12 @@ impl SettingKey {
             Self::InstallReferrerSent => "install_referrer_sent",
             Self::DebugRotateGuestAnchor => "debug_rotate_guest_anchor",
             Self::LocalAssetsCacheVersion => "local_assets_cache_version",
+            Self::Day1NotificationScheduled => "day1_notification_scheduled",
+            Self::Day1NotificationAt => "day1_notification_at",
+            Self::ControlsFtueShown => "controls_ftue_shown",
+            Self::FtueTutorialOffered => "ftue_tutorial_offered",
+            Self::FtueTutorialCompleted => "ftue_tutorial_completed",
+            Self::FtueNewPlayerWallet => "ftue_new_player_wallet",
         }
     }
 
@@ -145,8 +164,14 @@ impl SettingKey {
             | Self::FirstLaunchCompleted
             | Self::FirstMoveInWorldSent
             | Self::InstallReferrerSent
-            | Self::DebugRotateGuestAnchor => SettingKind::Bool,
-            Self::Locale | Self::LastRealmJoined => SettingKind::Text,
+            | Self::DebugRotateGuestAnchor
+            | Self::Day1NotificationScheduled
+            | Self::FtueTutorialOffered
+            | Self::FtueTutorialCompleted => SettingKind::Bool,
+            Self::Locale
+            | Self::LastRealmJoined
+            | Self::ControlsFtueShown
+            | Self::FtueNewPlayerWallet => SettingKind::Text,
             Self::GraphicProfile
             | Self::SkyboxTime
             | Self::ParticleQuality
@@ -161,7 +186,8 @@ impl SettingKey {
             | Self::TextureQuality
             | Self::LastParcelX
             | Self::LastParcelY
-            | Self::LocalAssetsCacheVersion => SettingKind::Int,
+            | Self::LocalAssetsCacheVersion
+            | Self::Day1NotificationAt => SettingKind::Int,
             Self::ViewDistance
             | Self::AudioGeneralVolume
             | Self::AudioSceneVolume
@@ -216,6 +242,12 @@ impl SettingKey {
             Self::InstallReferrerSent => SettingValue::Bool(false),
             Self::DebugRotateGuestAnchor => SettingValue::Bool(false),
             Self::LocalAssetsCacheVersion => SettingValue::Int(0),
+            Self::Day1NotificationScheduled => SettingValue::Bool(false),
+            Self::Day1NotificationAt => SettingValue::Int(0),
+            Self::FtueTutorialOffered | Self::FtueTutorialCompleted => SettingValue::Bool(false),
+            Self::ControlsFtueShown | Self::FtueNewPlayerWallet => {
+                SettingValue::Text(String::new())
+            }
         }
     }
 

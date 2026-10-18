@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import type { SocialTab } from './social';
 
 /** Rail items; the last three leave the drawer for fullscreen pages. */
 export type MenuSection =
@@ -9,9 +10,19 @@ export type MenuSection =
   | 'settings'
   | 'profile';
 
-export type DrawerState = { open: boolean; section: MenuSection };
+export type DrawerState = {
+  open: boolean;
+  section: MenuSection;
+  socialTab: SocialTab;
+};
 
-let state: DrawerState = { open: false, section: 'discover' };
+const INITIAL: DrawerState = {
+  open: false,
+  section: 'discover',
+  socialTab: 'friends',
+};
+
+let state: DrawerState = INITIAL;
 const listeners = new Set<() => void>();
 
 function set(next: DrawerState) {
@@ -21,7 +32,7 @@ function set(next: DrawerState) {
 
 /** The HUD avatar button calls this. */
 export function openMenu(section: MenuSection = state.section): void {
-  set({ open: true, section });
+  set({ open: true, section, socialTab: 'friends' });
 }
 
 export function closeMenu(): void {
@@ -30,8 +41,12 @@ export function closeMenu(): void {
   }
 }
 
-export function selectSection(section: MenuSection): void {
-  set({ ...state, section });
+/** `socialTab` picks the Social tab the panel opens on. */
+export function selectSection(
+  section: MenuSection,
+  socialTab: SocialTab = state.socialTab,
+): void {
+  set({ ...state, section, socialTab });
 }
 
 export function useDrawerState(): DrawerState {
@@ -45,7 +60,7 @@ export function useDrawerState(): DrawerState {
 }
 
 export function resetDrawerForTests(): void {
-  state = { open: false, section: 'discover' };
+  state = INITIAL;
   listeners.clear();
 }
 

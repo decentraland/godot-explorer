@@ -153,6 +153,11 @@ pub fn apply_link_settings(obj: &Gd<DclParseDeepLink>) {
         spawn_gp_benchmark();
     }
     DclGlobal::maybe_run_logging_selftest(&param(obj, "test-logging"));
+    super::async_shaders::update();
+    // Frame-sync warnings (slow onUpdate, missed frames) follow the scene-stats availability.
+    if obj.bind().get_scene_stats() {
+        crate::dcl::common::set_scene_perf_warnings_enabled(true);
+    }
 }
 
 /// The Genesis Plaza profiling benchmark (issue #1862). The CLI path starts the runner at boot,

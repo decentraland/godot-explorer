@@ -23,4 +23,9 @@ export const hud: Partial<Record<keyof typeof en, string>> = {
   CHAT_WRITE_A_MESSAGE: 'Escribe un mensaje',
   CHAT_WRITE_A_MESSAGE_ELLIPSIS: 'Escribe un mensaje...',
   CHAT_SEND: 'ENVIAR',
+  CONTROLS_FTUE_CHAT: 'Chat',
+  CONTROLS_FTUE_EMOTES: 'Emotes',
+  CONTROLS_FTUE_MENU: 'Menú',
+  CONTROLS_FTUE_MOVEMENT: 'Movimiento del personaje',
+  CONTROLS_FTUE_TAP_TO_START: 'Toca la pantalla para empezar a explorar',
 };

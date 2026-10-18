@@ -79,6 +79,17 @@ pub fn scenes_summary() -> Value {
         };
         let runner = runner.bind();
         let base = runner.get_scene_base_parcel(scene_id);
+        let tick = runner.get_scene_tick_stats(scene_id);
+        let int = |key: &str| {
+            tick.get(key)
+                .and_then(|v| v.try_to::<i64>().ok())
+                .unwrap_or(0)
+        };
+        let ms = |key: &str| {
+            tick.get(key)
+                .and_then(|v| v.try_to::<f64>().ok())
+                .unwrap_or(0.0)
+        };
         out.push(json!({
             "scene_id": scene_id,
             "is_global": is_global,
@@ -87,6 +98,12 @@ pub fn scenes_summary() -> Value {
             "base_parcel": [base.x, base.y],
             "entity_count": runner.debug_list_entities(scene_id).len(),
             "paused": runner.get_scene_is_paused(scene_id),
+            "ticks": int("ticks"),
+            "js_tick_p95_ms": ms("js_tick_p95_ms"),
+            "round_trip_p95_ms": ms("round_trip_p95_ms"),
+            "apply_p95_ms": ms("apply_p95_ms"),
+            "missed_pct": ms("missed_pct"),
+            "skipped_ticks": int("skipped_ticks"),
         }));
     }
     Value::Array(out)

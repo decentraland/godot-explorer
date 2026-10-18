@@ -28,7 +28,7 @@ fn voice_frame(samples: &[i16]) -> PackedVector2Array {
 impl AvatarSink for Gd<AvatarScene> {
     fn add_avatar(&mut self, alias: u32, address: &H160) {
         self.bind_mut()
-            .add_avatar(alias, GString::from(&format!("{:#x}", address)));
+            .queue_avatar(alias, GString::from(&format!("{:#x}", address)));
     }
 
     fn remove_avatar(&mut self, alias: u32) {

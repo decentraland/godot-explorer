@@ -118,3 +118,41 @@ impl Promise {
         })
     }
 }
+
+/// Resolve or reject a promise from a thread other than the main thread.
+///
+/// Never `bind_mut()` a promise off the main thread: a main-thread `bind()` racing the guard's
+/// drop can miss the wake-up and sleep forever (seen in the scene-test harness after a few
+/// thousand HTTP responses). These settle it on the main thread, looked up by id.
+pub trait PromiseDeferred {
+    fn resolve_deferred(&mut self);
+    fn resolve_with_data_deferred(&mut self, data: Variant);
+    fn reject_deferred(&mut self, reason: GString);
+}
+
+fn settle_on_main(promise: &Gd<Promise>, args: &[Variant], f: fn(&mut Promise, &[&Variant])) {
+    let id = promise.instance_id();
+    defer_from_any_thread(args, move |args| {
+        if let Ok(mut promise) = Gd::<Promise>::try_from_instance_id(id) {
+            f(&mut promise.bind_mut(), args);
+        }
+    });
+}
+
+impl PromiseDeferred for Gd<Promise> {
+    fn resolve_deferred(&mut self) {
+        settle_on_main(self, &[], |promise, _| promise.resolve());
+    }
+
+    fn resolve_with_data_deferred(&mut self, data: Variant) {
+        settle_on_main(self, &[data], |promise, args| {
+            promise.resolve_with_data(args[0].clone())
+        });
+    }
+
+    fn reject_deferred(&mut self, reason: GString) {
+        settle_on_main(self, &[reason.to_variant()], |promise, args| {
+            promise.reject(args[0].to::<GString>())
+        });
+    }
+}

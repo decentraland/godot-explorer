@@ -25,6 +25,7 @@ in phase 3 and not run again here. Rows marked "not done" are the work left befo
 | Loading screen, tips, place card | RN `world/LoadingCover` over `loading_detail` | Ran: Genesis | |
 | Loading timeout modal | `LoadingCover` slow state | Phase 3 pass | The core-driven timeout verdict is not done |
 | Discover, search, categories, FTUE | RN `discover/` | Ran: Discover, place sheet | |
+| FTUE list (`ftue` tag) and single-place bypass, `DISCOVER_FTUE_BYPASS` (main #3047) | RN `discover/ftue.ts`, `flow/FtueStep` + core `track_ftue_bypass` | Not run | The ad-campaign bypass (#2788) is not wired in the RN entry flow, so it cannot win first yet |
 | Event reminders | Core `set_event_reminder` + OS reminder (`DclPush`) | Not run | Reminder delivery unverified |
 | Friends rows | Mock data (D-43) | | Real friends: 6.9 |
 | Last-visited list | Dropped with the GDScript discover | | Not in RN yet |
@@ -55,6 +56,7 @@ in phase 3 and not run again here. Rows marked "not done" are the work left befo
 | Chat, mentions | RN `hud/ChatPanel` | Ran: opens | Sending and mentions not run |
 | Notification list, mark read | RN `menu/` + core | Phase 3 pass | In-world toasts and polling not done |
 | Push (token, permission, remote push) | `DclPush` + core registration | Ran: permission prompt, grant | Identify delivery, push with the app killed |
+| Day 1 welcome local notification, `day1-notification` kill switch (main #3060) | `dcl_core::day1_notification` + RN `syncDay1Notification` (`DclPush`) | Not run | iOS: no `DclPush` yet (shared with event reminders, 4.6) |
 | Bug report | RN form + `places::bug_report` | Not run | Ticket creation not run |
 | Report content | External form | Phase 3 pass | |
 | Credits balance | Core `credits_balance` | Phase 3 pass | Shop and purchase: deferred (4.8, 6/7) |
@@ -68,7 +70,8 @@ in phase 3 and not run again here. Rows marked "not done" are the work left befo
 | Menu, chat, emote buttons | RN `hud/` | Ran | |
 | Version and FPS line | RN `VersionFps` | Not run | |
 | Hide UI | RN `HideUi` control | Not run | The sub-toggles were dropped |
-| Coach marks | RN `CoachMarks` | Ran: shown | |
+| Controls overlay on first scene entry (main #3032) | RN `ftue/ControlsOverlay` + `dcl_core::ftue` | Not run (jest, gallery) | `ftue-overlay-tap-through` not honoured; device run |
+| Guided tutorial for new players (main #3041) | RN `ftue/TutorialLayer` + `dcl_core::ftue` | Not run (jest, gallery) | Reward card and claim (no rewards client on 2.x; guests need Add Email, 6.8); joystick resting-base redraw; device run of all 7 steps |
 | Avatar tap opens a profile | Not done | | Needs a player-profile screen |
 | Scene request (link, teleport, realm change, NFT) | `CoreModals` + `AnswerSceneRequest` | Not run | Needs a scene that asks; NFT card not ported |
 | Private world / place not found | Destination check + engine notice | Ran: not found (deep link) | Private and password not run |

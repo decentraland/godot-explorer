@@ -15,6 +15,11 @@ const FADE_START_DISTANCE: f32 = 0.6;
 const FADE_GONE_DISTANCE: f32 = 0.3;
 /// Head height above the avatar origin: close to the local player's Mount pivot for any avatar.
 const HEAD_HEIGHT: f32 = 1.7;
+/// Remote avatars farther than this stop polling for a while: the camera cannot close the gap
+/// faster than MAX_APPROACH_SPEED, and the sleep is capped at MAX_SLEEP_SECONDS.
+const SLEEP_DISTANCE: f32 = 4.0;
+const MAX_APPROACH_SPEED: f32 = 20.0;
+const MAX_SLEEP_SECONDS: f32 = 0.5;
 
 /// The own_fade value at `distance` from the head: 0 outside the start, 1 inside the gone one.
 pub fn fade_for_distance(distance: f32) -> f32 {
@@ -26,6 +31,8 @@ pub fn fade_for_distance(distance: f32) -> f32 {
 pub struct AvatarProximityFade {
     meshes: Vec<Gd<MeshInstance3D>>,
     last_fade: Option<f32>,
+    /// Floor for the fade, set by the GPU-ready gate while the renderer warms the pipelines.
+    hold: f32,
     base: Base<Node>,
 }
 
@@ -53,42 +60,8 @@ impl INode for AvatarProximityFade {
     }
 
     fn process(&mut self, _delta: f64) {
-        let Some(avatar) = self
-            .base()
-            .get_parent()
-            .and_then(|p| p.try_cast::<Node3D>().ok())
-        else {
-            return;
-        };
-        // Only avatars in the world fade: previews live in SubViewports with their own cameras.
-        let Some(viewport) = self.base().get_viewport() else {
-            return;
-        };
-        let in_world = self
-            .base()
-            .get_tree_or_null()
-            .and_then(|t| t.get_root())
-            .is_some_and(|root| root.instance_id() == viewport.instance_id());
-        if !in_world {
-            return;
-        }
-        let Some(camera) = viewport.get_camera_3d() else {
-            return;
-        };
-        let head = avatar.get_global_position() + Vector3::new(0.0, HEAD_HEIGHT, 0.0);
-        let fade = fade_for_distance(camera.get_global_position().distance_to(head));
-        if self
-            .last_fade
-            .is_some_and(|last| (last - fade).abs() < 1e-5)
-        {
-            return;
-        }
-        self.last_fade = Some(fade);
-        // A wearable swap frees meshes before the next recollect (GODOT-EXPLORER-303).
-        self.meshes.retain(|m| m.is_instance_valid());
-        for mesh in &mut self.meshes {
-            mesh.set_instance_shader_parameter("own_fade", &fade.to_variant());
-        }
+        let fade = self.camera_fade(true);
+        self.apply(fade.max(self.hold));
     }
 }
 
@@ -110,10 +83,95 @@ impl AvatarProximityFade {
         if let Some(avatar) = self.base().get_parent() {
             self.walk(&avatar);
         }
+        // New meshes start at own_fade 0: anything else must be written again.
+        if self.last_fade != Some(0.0) {
+            self.last_fade = None;
+        }
     }
 }
 
 impl AvatarProximityFade {
+    pub fn get_hold(&self) -> f32 {
+        self.hold
+    }
+
+    /// Keeps the avatar faded by at least `value` whatever the camera distance (0 releases it).
+    pub fn set_hold(&mut self, value: f32) {
+        if self.hold == 0.0 && value > 0.0 {
+            self.collect_meshes();
+        }
+        self.hold = value;
+        let fade = self.camera_fade(false);
+        self.apply(fade.max(self.hold));
+    }
+
+    /// The fade the world camera asks for. `may_sleep` lets a far remote avatar stop polling.
+    fn camera_fade(&mut self, may_sleep: bool) -> f32 {
+        let Some(avatar) = self
+            .base()
+            .get_parent()
+            .and_then(|p| p.try_cast::<Node3D>().ok())
+        else {
+            return 0.0;
+        };
+        // Only avatars in the world fade: previews live in SubViewports with their own cameras.
+        let Some(viewport) = self.base().get_viewport() else {
+            return 0.0;
+        };
+        let in_world = self
+            .base()
+            .get_tree_or_null()
+            .and_then(|t| t.get_root())
+            .is_some_and(|root| root.instance_id() == viewport.instance_id());
+        if !in_world {
+            return 0.0;
+        }
+        let Some(camera) = viewport.get_camera_3d() else {
+            return 0.0;
+        };
+        let head = avatar.get_global_position() + Vector3::new(0.0, HEAD_HEIGHT, 0.0);
+        let distance = camera.get_global_position().distance_to(head);
+        let fade = fade_for_distance(distance);
+        if may_sleep && fade == 0.0 && self.hold == 0.0 && distance > SLEEP_DISTANCE {
+            let local = avatar
+                .try_cast::<crate::godot_classes::dcl_avatar::DclAvatar>()
+                .is_ok_and(|a| a.bind().is_local_player);
+            if !local {
+                let seconds =
+                    ((distance - FADE_START_DISTANCE) / MAX_APPROACH_SPEED).min(MAX_SLEEP_SECONDS);
+                self.sleep(seconds as f64);
+            }
+        }
+        fade
+    }
+
+    fn apply(&mut self, fade: f32) {
+        if self
+            .last_fade
+            .is_some_and(|last| (last - fade).abs() < 1e-5)
+        {
+            return;
+        }
+        self.last_fade = Some(fade);
+        // A wearable swap frees meshes before the next recollect (GODOT-EXPLORER-303).
+        self.meshes.retain(|m| m.is_instance_valid());
+        for mesh in &mut self.meshes {
+            mesh.set_instance_shader_parameter("own_fade", &fade.to_variant());
+        }
+    }
+
+    fn sleep(&mut self, seconds: f64) {
+        self.base_mut().set_process(false);
+        let Some(mut tree) = self.base().get_tree_or_null() else {
+            return;
+        };
+        let me = self.to_gd();
+        tree.create_timer(seconds)
+            .signals()
+            .timeout()
+            .connect_other(&me, |this: &mut Self| this.base_mut().set_process(true));
+    }
+
     fn walk(&mut self, node: &Gd<Node>) {
         for child in node.get_children().iter_shared() {
             if let Ok(mesh) = child.clone().try_cast::<MeshInstance3D>() {

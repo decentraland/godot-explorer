@@ -297,8 +297,8 @@ pub const FADE_SPEED: f32 = 6.0;
 const CL_PHYSICS: u32 = 2;
 const CL_PLAYER: u32 = 4;
 const BODY_MASK: u32 = CL_PHYSICS | CL_PLAYER;
-/// Frames between occlusion raycasts per avatar (staggered).
-pub const OCCLUSION_PERIOD: u64 = 6;
+/// A plate with alpha 0 whose head is farther than this skips the anchor and projection work.
+pub const FAR_SKIP_DISTANCE: f32 = FADE_END + 5.0;
 pub const NAMETAG_MARGIN: f32 = 0.1;
 const STACK_PAD: f32 = 2.0;
 /// Fraction of the plate height left out (top and bottom) of the collision rect: the visible
@@ -432,6 +432,9 @@ pub fn layer_root() -> Gd<Control> {
         root.set_anchors_preset(LayoutPreset::FULL_RECT);
         root.set_mouse_filter(MouseFilter::IGNORE);
         layer.add_child(&root);
+        let mut driver = super::nameplate_occlusion::NameplateOcclusionDriver::new_alloc();
+        driver.set_name("OcclusionDriver");
+        layer.add_child(&driver);
         DclGlobal::singleton().add_child(&layer);
         *slot.borrow_mut() = Some(root.clone());
         root

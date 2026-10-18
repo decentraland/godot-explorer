@@ -1,4 +1,5 @@
 import { StyleSheet, View } from 'react-native';
+import { TutorialLayer } from '../ftue/TutorialLayer';
 import { WorldScreen } from '../world/WorldScreen';
 import { HomeTabs } from './HomeTabs';
 import { useNav } from './NavProvider';
@@ -31,6 +32,7 @@ export function Shell({
             <View key={key} style={styles.fill} pointerEvents="box-none">
               <WorldScreen place={route.params.place} onLeave={onLeave} />
               {Drawer ? <Drawer params={undefined as never} /> : null}
+              <TutorialLayer />
             </View>
           );
         }

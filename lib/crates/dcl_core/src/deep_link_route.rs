@@ -134,6 +134,10 @@ pub enum ConfigParam {
     EnableUpgradedDeletion,
     GpBenchmark,
     SafeMarginDebug,
+    /// Non-production: label every visible HUD control on the next scene entry.
+    ControlsFtueShow,
+    /// Non-production: offer the guided tutorial on the next scene entry.
+    FtueTutorialStart,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -386,6 +390,12 @@ fn process_effects(
     }
     if !ctx.production && param(link, "rotate-guest").eq_ignore_ascii_case("true") {
         out.push(cfg(ConfigParam::RotateGuest));
+    }
+    if !ctx.production && param(link, "controls-ftue") == "show" {
+        out.push(cfg(ConfigParam::ControlsFtueShow));
+    }
+    if !ctx.production && param(link, "ftue-tutorial") == "start" {
+        out.push(cfg(ConfigParam::FtueTutorialStart));
     }
     let token = param(link, "c").trim();
     if is_valid_campaign_token(token) {
@@ -826,6 +836,8 @@ mod tests {
             ("gp-benchmark=true", ConfigParam::GpBenchmark),
             ("safemargindebug=1", ConfigParam::SafeMarginDebug),
             ("rotate-guest=true", ConfigParam::RotateGuest),
+            ("controls-ftue=show", ConfigParam::ControlsFtueShow),
+            ("ftue-tutorial=start", ConfigParam::FtueTutorialStart),
             (
                 "c=summer-24",
                 ConfigParam::CampaignToken {
@@ -845,6 +857,8 @@ mod tests {
             "enable-upgraded-deletion=false",
             "enable-upgraded-deletion=",
             "rotate-guest=false",
+            "controls-ftue=hide",
+            "ftue-tutorial=reward",
             "c=Bad_Token",
             "c=-x",
             "c=a--b",
@@ -868,6 +882,13 @@ mod tests {
         };
         assert_eq!(
             cfg_of(&run("decentraland://open?rotate-guest=true", &ctx)),
+            vec![]
+        );
+        assert_eq!(
+            cfg_of(&run(
+                "decentraland://open?controls-ftue=show&ftue-tutorial=start",
+                &ctx
+            )),
             vec![]
         );
     }

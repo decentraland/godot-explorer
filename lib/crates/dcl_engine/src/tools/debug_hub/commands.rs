@@ -164,10 +164,13 @@ fn ping() -> Value {
         .get("string")
         .map(|v| v.stringify().to_string())
         .unwrap_or_default();
+    let runner = globals::scene_runner();
+    let runner = runner.bind();
     json!({
         "version": version,
         "engine": engine,
-        "scenes_loaded": globals::scene_runner().bind().debug_get_loaded_scene_ids().len(),
+        "scenes_loaded": runner.debug_get_loaded_scene_ids().len(),
+        "frame_sync": super::json::variant_to_json(&runner.get_frame_sync_stats().to_variant()),
     })
 }
 

@@ -14,6 +14,10 @@ const LAND_COUNT: usize = 2;
 const WALK_INTERVAL_MS: u64 = 500;
 const JOG_INTERVAL_MS: u64 = 350;
 const RUN_INTERVAL_MS: u64 = 300;
+/// Past max_distance (plus a margin for movement during one recheck) nothing is audible, so the
+/// polling sleeps and only rechecks the camera (the listener) distance.
+const AUDIBLE_MARGIN: f32 = 10.0;
+const RANGE_RECHECK_MS: u64 = 500;
 
 fn sound(kind: &str, index: usize) -> Gd<AudioStream> {
     load(
@@ -46,6 +50,7 @@ pub struct AvatarSfxs {
     jog_index: usize,
     run_index: usize,
     last_land: bool,
+    next_range_check: u64,
     base: Base<Node3D>,
 }
 
@@ -82,6 +87,14 @@ impl INode3D for AvatarSfxs {
             return;
         };
         let now = Time::singleton().get_ticks_msec();
+        if now >= self.next_range_check {
+            self.next_range_check = now + RANGE_RECHECK_MS;
+            if !self.in_audible_range(&steps) {
+                self.base_mut().set_process(false);
+                self.schedule_range_recheck();
+                return;
+            }
+        }
         if !steps.is_playing() && land && now > self.next_tick {
             if run {
                 steps.set_stream(&sound("run", self.run_index));
@@ -126,6 +139,47 @@ impl AvatarSfxs {
 
     fn player(&self, name: &str) -> Option<Gd<AudioStreamPlayer3D>> {
         self.base().get_node_or_null(name)?.try_cast().ok()
+    }
+
+    fn in_audible_range(&self, steps: &Gd<AudioStreamPlayer3D>) -> bool {
+        let Some(camera) = self.base().get_viewport().and_then(|v| v.get_camera_3d()) else {
+            return true;
+        };
+        let max_distance = steps.get_max_distance() + AUDIBLE_MARGIN;
+        camera
+            .get_global_position()
+            .distance_squared_to(steps.get_global_position())
+            < max_distance * max_distance
+    }
+
+    fn schedule_range_recheck(&mut self) {
+        let Some(mut tree) = self.base().get_tree_or_null() else {
+            return;
+        };
+        let me = self.to_gd();
+        tree.create_timer(RANGE_RECHECK_MS as f64 / 1000.0)
+            .signals()
+            .timeout()
+            .connect_other(&me, |this: &mut Self| this.on_range_recheck());
+    }
+
+    fn on_range_recheck(&mut self) {
+        if !self.base().is_inside_tree() {
+            self.base_mut().set_process(true);
+            return;
+        }
+        let in_range = self
+            .player("AudioPlayer_Steps")
+            .is_none_or(|steps| self.in_audible_range(&steps));
+        if !in_range {
+            self.schedule_range_recheck();
+            return;
+        }
+        // Landing changes while asleep were inaudible: do not replay them on wake.
+        if let Some(avatar) = self.avatar() {
+            self.last_land = avatar.bind().land;
+        }
+        self.base_mut().set_process(true);
     }
 }
 

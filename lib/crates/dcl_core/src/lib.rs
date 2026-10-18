@@ -8,6 +8,7 @@ pub mod cache;
 pub mod clock;
 pub mod connection;
 mod core;
+pub mod day1_notification;
 pub mod deep_link;
 pub mod deep_link_route;
 pub mod destination;
@@ -15,6 +16,7 @@ pub mod env;
 #[cfg(feature = "ffi")]
 pub mod ffi;
 pub mod flags;
+pub mod ftue;
 pub mod gates;
 pub mod http;
 pub mod hub;

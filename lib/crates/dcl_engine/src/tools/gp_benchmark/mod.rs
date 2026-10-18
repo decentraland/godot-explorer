@@ -211,6 +211,16 @@ impl GpBenchmarkRunner {
             let mut runner = runner.bind_mut();
             runner.bench_disable_tweens = self.config.toggle("disable_tweens");
             runner.bench_disable_transforms = self.config.toggle("disable_transforms");
+            // Ms the frame may wait for the current scene's tick (0 = never wait, -1 or absent =
+            // one frame at the fps cap), so A/B runs can compare both.
+            let budget = self
+                .config
+                .0
+                .get("toggles")
+                .and_then(|t| t.get("scene_tick_budget_ms"));
+            if let Some(budget) = budget.and_then(Value::as_f64) {
+                runner.set_frame_sync_tick_budget_ms(budget as f32);
+            }
         }
         self.load_started_ms = now_ms();
         self.set_phase(Phase::WaitingForLoad);
@@ -315,6 +325,7 @@ impl GpBenchmarkRunner {
             let mut runner = runner.bind_mut();
             runner.reset_state_timing();
             runner.reset_crdt_metrics();
+            runner.reset_frame_sync_metrics();
         }
         let cli = globals::cli();
         if cli.bind().skip_gltf_load {
@@ -432,13 +443,16 @@ impl GpBenchmarkRunner {
         log(&format!("sampling done: {} samples", self.samples.len()));
         self.set_phase(Phase::Done);
         // The per-state CPU timing and the CRDT throughput of the sampling window only.
-        let (state_timing, crdt_metrics, crdt_breakdown) = {
+        // Frame-sync wait and miss totals apart from state_timing, so the blocking wait is never
+        // attributed to an apply state.
+        let (state_timing, crdt_metrics, crdt_breakdown, frame_sync_metrics) = {
             let mut runner = globals::scene_runner();
             let mut runner = runner.bind_mut();
             (
                 runner.drain_state_timing().to_string(),
                 runner.drain_crdt_metrics().to_string(),
                 runner.drain_crdt_component_breakdown().to_string(),
+                runner.drain_frame_sync_metrics().to_string(),
             )
         };
         let summary = summarize(&self.samples);
@@ -449,6 +463,7 @@ impl GpBenchmarkRunner {
             "state_timing_us": state_timing,
             "crdt_metrics": crdt_metrics,
             "crdt_component_breakdown": crdt_breakdown,
+            "frame_sync_metrics": frame_sync_metrics,
             "warmup_seconds": self.config.seconds("warmup_seconds", 0),
             "sample_seconds": self.config.seconds("sample_seconds", 0),
             "samples_collected": self.samples.len(),
@@ -676,6 +691,21 @@ fn collect_sample(elapsed_ms: u64) -> Map<String, Value> {
         .scene_fetcher
         .clone()
         .map_or(0, |f| f.bind().get_loaded_scene_count());
+    // Frame-locked scene ticks: the current parcel's onUpdate cost and how often the frame waited
+    // for or missed it.
+    let (tick, frame_sync) = {
+        let runner = globals::scene_runner();
+        let runner = runner.bind();
+        (
+            runner.get_scene_tick_stats(runner.get_current_parcel_scene_id()),
+            runner.get_frame_sync_stats(),
+        )
+    };
+    let tick_ms = |key: &str| {
+        tick.get(key)
+            .and_then(|v| v.try_to::<f64>().ok())
+            .unwrap_or(0.0)
+    };
     let mut sample = Map::new();
     let mut put = |key: &str, value: Value| {
         sample.insert(key.to_string(), value);
@@ -769,6 +799,26 @@ fn collect_sample(elapsed_ms: u64) -> Map<String, Value> {
     put(
         "engine_physics_ticks",
         json!(Engine::singleton().get_physics_ticks_per_second()),
+    );
+    put("scene_js_p95_ms", json!(tick_ms("js_tick_p95_ms")));
+    put(
+        "scene_round_trip_p95_ms",
+        json!(tick_ms("round_trip_p95_ms")),
+    );
+    put("scene_apply_p95_ms", json!(tick_ms("apply_p95_ms")));
+    put(
+        "scene_wait_ms",
+        json!(frame_sync
+            .get("last_frame_wait_ms")
+            .and_then(|v| v.try_to::<f64>().ok())
+            .unwrap_or(0.0)),
+    );
+    put(
+        "scene_missed",
+        json!(frame_sync
+            .get("last_frame_missed")
+            .and_then(|v| v.try_to::<i64>().ok())
+            .unwrap_or(0)),
     );
     put(
         "vsync_mode",

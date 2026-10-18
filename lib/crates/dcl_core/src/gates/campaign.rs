@@ -68,6 +68,20 @@ pub struct CampaignResolution {
     pub fallback: Option<CampaignFallback>,
 }
 
+impl CampaignFallback {
+    /// The name the first-run metrics ship, shared with 1.x's dashboards.
+    pub fn metrics_name(self) -> &'static str {
+        match self {
+            Self::NoToken => "no_token",
+            Self::UnknownToken => "unknown_token",
+            Self::ExpiredToken => "expired_token",
+            Self::AlreadyConsumed => "already_consumed",
+            Self::ResolverUnavailable => "resolver_unavailable",
+            Self::UnusableTarget => "unusable_target",
+        }
+    }
+}
+
 impl CampaignResolution {
     fn fallback(token: &str, reason: CampaignFallback) -> Self {
         Self {
@@ -75,6 +89,20 @@ impl CampaignResolution {
             campaign: None,
             fallback: Some(reason),
         }
+    }
+
+    /// The campaign context every first-run metric carries.
+    pub fn metrics_context(&self) -> Map<String, Value> {
+        let mut context = Map::new();
+        context.insert("campaign_token".into(), self.token.clone().into());
+        context.insert("campaign_resolved".into(), self.campaign.is_some().into());
+        context.insert(
+            "campaign_fallback_reason".into(),
+            self.fallback
+                .map_or("", CampaignFallback::metrics_name)
+                .into(),
+        );
+        context
     }
 }
 
@@ -377,6 +405,21 @@ mod tests {
             found.campaign.unwrap().destination.parcel,
             Some(Parcel::new(1, 2))
         );
+    }
+
+    #[test]
+    fn the_metrics_context_names_the_fallback_as_1x_does() {
+        let unknown = CampaignResolution::fallback("ghost", CampaignFallback::UnknownToken);
+        assert_eq!(
+            Value::Object(unknown.metrics_context()),
+            json!({"campaign_token": "ghost", "campaign_resolved": false,
+                "campaign_fallback_reason": "unknown_token"})
+        );
+        let map =
+            parse_response(&json!({"ok": true, "data": {"campaigns": {"good": genesis("1,2")}}}));
+        let found = resolve(Some(&map), &state("good", 1, false));
+        assert_eq!(found.metrics_context()["campaign_resolved"], true);
+        assert_eq!(found.metrics_context()["campaign_fallback_reason"], "");
     }
 
     #[tokio::test]

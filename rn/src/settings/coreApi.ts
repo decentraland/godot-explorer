@@ -74,7 +74,10 @@ export function createCoreSettingsApi(): SettingsApi {
       }
       core().setSetting(coreKey, toCoreValue(value), commit);
     },
-    getEnv: async () => defaultEnv(),
+    getEnv: async () => ({
+      ...defaultEnv(),
+      tutorialReplay: core().state().tag === 'InWorld',
+    }),
     getAccount: async () => {
       const p = await core().profile(undefined);
       return {

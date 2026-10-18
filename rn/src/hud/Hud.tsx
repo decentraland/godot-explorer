@@ -16,17 +16,13 @@ import { useMenuUnread } from '../menu/useMenuUnread';
 import { getHudApi } from './activeApi';
 import { ChatPanel } from './ChatPanel';
 import { Segment } from './chatModel';
-import {
-  COACH_STEPS,
-  CoachStep,
-  getHudStorage,
-  loadCoachSeen,
-  saveCoachSeen,
-} from './coachMarks';
-import { CoachMarks } from './CoachMarks';
+import { ControlsOverlay } from '../ftue/ControlsOverlay';
+import { dismissControls, ftueTuning, useFtue } from '../ftue/store';
+import { GESTURE_STEPS } from '../ftue/tutorial';
 import type { HudApi } from './hudApi';
 import {
   emitIntent,
+  setChatOpen,
   setUiHidden,
   useMenuOpen,
   useUiHidden,
@@ -45,15 +41,12 @@ import { useNotificationRows } from './useNotificationRows';
 export function Hud({
   api = getHudApi(),
   initialUi = initialHud,
-  initialCoach,
   rowLifetimeMs = ROW_LIFETIME_MS,
   welcome = true,
   animate = true,
 }: {
   api?: HudApi;
   initialUi?: HudUiState;
-  /** Previews pin a coach step (or null for none); undefined runs the real first-run check. */
-  initialCoach?: CoachStep | null;
   rowLifetimeMs?: number;
   welcome?: boolean;
   animate?: boolean;
@@ -63,15 +56,16 @@ export function Hud({
   const menuOpen = useMenuOpen();
   const menuUnread = useMenuUnread();
   const hiddenByApp = useUiHidden();
+  const ftue = useFtue();
+  // The welcome line would land under the controls overlay's labels.
   const { feed, profiles, own, markRead } = useChatFeed(
     api,
     ui.chat !== 'closed',
-    welcome,
+    welcome && ftue.decided && !ftue.controls,
   );
   const rows = useNotificationRows(feed.lines, rowLifetimeMs);
   const [nearby, setNearby] = useState<ChatProfile[]>([]);
   const [pending, setPending] = useState<Segment | null>(null);
-  const [coach, setCoach] = useState<CoachStep | null>(initialCoach ?? null);
 
   useEffect(() => {
     dispatch({ type: 'menu', open: menuOpen });
@@ -92,13 +86,7 @@ export function Hud({
       }),
     [api],
   );
-  useEffect(() => {
-    if (initialCoach === undefined) {
-      loadCoachSeen(getHudStorage()).then(
-        seen => seen || setCoach(COACH_STEPS[0]),
-      );
-    }
-  }, [initialCoach]);
+  useEffect(() => setChatOpen(ui.chat !== 'closed'), [ui.chat]);
 
   useEffect(() => {
     if (ui.chat !== 'writing') {
@@ -181,17 +169,9 @@ export function Hud({
     setChat('closed');
   };
 
-  const nextCoach = () => {
-    const next = coach
-      ? COACH_STEPS[COACH_STEPS.indexOf(coach) + 1]
-      : undefined;
-    setCoach(next ?? null);
-    if (!next) {
-      saveCoachSeen(getHudStorage());
-    }
-  };
-
-  if (ui.hidden) {
+  const gesture = ftue.run !== null && GESTURE_STEPS.includes(ftue.run.step);
+  // Hide UI stays on through a replay, but the Chat and Menu steps point at those buttons.
+  if (ui.hidden && (ftue.run === null || gesture)) {
     return (
       <View
         style={[styles.corner, { top: ins.top, left: ins.left }]}
@@ -218,7 +198,10 @@ export function Hud({
         style={[styles.corner, { top: ins.top, left: ins.left }]}
         pointerEvents="box-none"
       >
-        <View style={styles.group} pointerEvents="box-none">
+        <View
+          style={[styles.group, gesture && styles.gone]}
+          pointerEvents={gesture ? 'none' : 'box-none'}
+        >
           <MenuButton
             face={own?.face}
             badge={menuUnread}
@@ -264,11 +247,12 @@ export function Hud({
         onCancel={() => setPending(null)}
         onConfirm={confirm}
       />
-      {coach && (
-        <CoachMarks
-          step={coach}
+      {ftue.controls && (
+        <ControlsOverlay
+          elements={ftue.controls}
           insets={ins}
-          onNext={nextCoach}
+          lockSeconds={ftueTuning().overlayLockSeconds}
+          onDismiss={dismissControls}
           animate={animate}
         />
       )}
@@ -284,4 +268,5 @@ const styles = StyleSheet.create({
     gap: u(HUD_SIZES.groupGap / 2),
     marginBottom: u(HUD_SIZES.listGap / 2),
   },
+  gone: { opacity: 0 },
 });

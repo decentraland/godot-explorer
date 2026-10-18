@@ -65,6 +65,8 @@ pub fn create_app_services(global: &mut Gd<DclGlobal>, session_id: &str, telemet
         global.bind_mut().metrics = metrics;
     }
 
+    // Hooked before the first load so the budget sees its loading_started.
+    crate::engine::frame_budget::ensure_driver();
     // Rewrites glTF references before an import; the registry keeps it alive.
     godot::classes::GltfDocument::register_gltf_document_extension(&CustomGltfImporter::new_gd());
     let mut fetcher = SceneFetcher::new_alloc();

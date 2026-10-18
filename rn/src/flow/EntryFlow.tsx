@@ -3,7 +3,8 @@ import { BackHandler, StyleSheet, View } from 'react-native';
 import { BackpackScreen } from '../backpack/BackpackScreen';
 import { PrimaryButton } from '../ds';
 import type { Place } from '../discover/api';
-import { FtueScreen } from '../discover/FtueScreen';
+import { useApi } from '../discover/ApiContext';
+import { ftuePlaces } from '../discover/ftue';
 import {
   acceptTerms,
   authCode,
@@ -19,6 +20,7 @@ import {
 } from './auth';
 import { core } from '../core';
 import { initialFlow, reduceFlow } from './flowMachine';
+import { FtueStep } from './FtueStep';
 import {
   AvatarCreateScreen,
   PreviewArea,
@@ -43,10 +45,18 @@ export function EntryFlow({
   onJumpIn,
 }: {
   onDone: () => void;
-  onJumpIn?: (place: Place) => void;
+  onJumpIn?: (place: Place) => Promise<boolean>;
 }) {
   const [flow, dispatch] = useReducer(reduceFlow, initialFlow);
   const { step, provider } = flow;
+  const api = useApi();
+
+  // Ahead of the FTUE gate, so deciding the single-place bypass never waits on the network.
+  useEffect(() => {
+    if (step === 'avatar_create') {
+      ftuePlaces(api);
+    }
+  }, [step, api]);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener(
@@ -67,6 +77,17 @@ export function EntryFlow({
       onDone();
     }
   }, [step, onDone]);
+
+  // Only an account without a profile reaches the welcome after its avatar: it was made here.
+  useEffect(() => {
+    if (step === 'ftue') {
+      try {
+        core().ftueMarkNewPlayer();
+      } catch {
+        // Signed out meanwhile: there is no account to remember.
+      }
+    }
+  }, [step]);
 
   const [busy, setBusy] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -259,13 +280,10 @@ export function EntryFlow({
       );
     case 'ftue':
       return (
-        <FtueScreen
+        <FtueStep
           username={flow.name || t('FLOW_GUEST_NAME')}
-          skipLabel="FTUE_SKIP_AND_EXPLORE"
-          onJump={place =>
-            onJumpIn ? onJumpIn(place) : dispatch({ type: 'finish' })
-          }
-          onSkip={() => dispatch({ type: 'finish' })}
+          onJumpIn={onJumpIn}
+          onFinish={() => dispatch({ type: 'finish' })}
         />
       );
     default:

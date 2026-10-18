@@ -4,7 +4,10 @@
 use godot::classes::{MeshInstance3D, ShaderMaterial, Skeleton3D, StandardMaterial3D};
 use godot::prelude::*;
 
-use super::emote_load::{async_play_expression_trigger, fetch_emote};
+use super::assembly;
+use super::emote_load::{
+    async_play_expression_trigger, fetch_emote, load_equipped_emotes, loads_emotes_lazily,
+};
 use crate::avatars::avatar_type::DclAvatarWireFormat;
 use crate::avatars::dcl_user_profile::DclUserProfile;
 use crate::avatars::mesh_assembler::apply_toon_material;
@@ -61,6 +64,8 @@ pub async fn update_from_profile(avatar: Gd<DclAvatar>, profile: Gd<DclUserProfi
         let mut avatar = avatar.clone();
         let mut this = avatar.bind_mut();
         this.nametag.profile_ready = true;
+        // The reveal waits for the body and the ground too: the give-up clock restarts here.
+        this.spawn_reveal.born_ms = godot::classes::Time::singleton().get_ticks_msec();
         if let Some(nodes) = this.nodes.as_mut() {
             nodes.nickname_ui.bind_mut().set_name_claimed(claimed);
         }
@@ -213,8 +218,10 @@ async fn fetch_wearables_dependencies(avatar: Gd<DclAvatar>) {
         (body_shape, ids, emotes, this.wearable_loader.clone())
     };
     let mut promises = Vec::new();
-    for urn in &emote_urns {
-        promises.extend(fetch_emote(urn, &body_shape));
+    if !loads_emotes_lazily(&avatar) {
+        for urn in &emote_urns {
+            promises.extend(fetch_emote(urn, &body_shape));
+        }
     }
     loader.load_wearables(&wearable_ids, &body_shape).await;
     if !alive(&avatar) {
@@ -229,15 +236,19 @@ async fn fetch_wearables_dependencies(avatar: Gd<DclAvatar>) {
 }
 
 /// Swaps the skeleton's meshes for the new body shape's.
-async fn set_body_shape(avatar: &Gd<DclAvatar>, hash: &str) {
+async fn set_body_shape(avatar: &Gd<DclAvatar>, hash: &str, build: u64) {
     if !alive(avatar) {
         return;
     }
     let loader = avatar.bind().wearable_loader.clone();
-    let Some(mut body) = loader.get_wearable_node(hash).await else {
+    let Some(mut body) = loader.get_wearable_node(hash, avatar).await else {
         godot_error!("Avatar: failed to load body shape {hash}");
         return;
     };
+    if !assembly::is_current(avatar, build) {
+        body.queue_free();
+        return;
+    }
     let Some(mut new_skeleton) = body
         .find_child("Skeleton3D")
         .and_then(|n| n.try_cast::<Skeleton3D>().ok())
@@ -277,6 +288,7 @@ async fn load_wearables(avatar: Gd<DclAvatar>) {
     if !alive(&avatar) {
         return;
     }
+    let build = assembly::begin_build(&avatar);
     let (body_shape, wearable_ids, force_render, show_only) = {
         let mut this = avatar.clone();
         let mut this = this.bind_mut();
@@ -330,6 +342,9 @@ async fn load_wearables(avatar: Gd<DclAvatar>) {
         if !alive(&avatar) {
             return;
         }
+        if !assembly::is_current(&avatar, build) {
+            return;
+        }
         let body_id = body_item.bind().get_id().to_string();
         loader
             .load_wearables(&curated.need_to_fetch, &body_id)
@@ -345,65 +360,44 @@ async fn load_wearables(avatar: Gd<DclAvatar>) {
         }
     }
 
+    // Hidden until fully assembled: the build spans several frames (frame budget).
+    if let Some(mut skeleton) = avatar.bind().body_shape_skeleton() {
+        skeleton.set_visible(false);
+    }
     let body_hash = wearables::get_item_main_file_hash(&body_item, &body_shape);
-    set_body_shape(&avatar, &body_hash).await;
+    set_body_shape(&avatar, &body_hash, build).await;
     curated.by_category.remove(category::BODY_SHAPE);
 
     let mut has_skin = false;
     let mut own = std::collections::HashSet::new();
     for (slot, item) in curated.by_category.iter() {
         if !alive(&avatar) {
+            if avatar.is_instance_valid() {
+                if let Some(mut skeleton) = avatar.bind().body_shape_skeleton() {
+                    skeleton.set_visible(true);
+                }
+            }
             return;
         }
         if wearables::is_texture(slot) {
             continue;
         }
         let hash = wearables::get_item_main_file_hash(item, &body_shape);
-        let Some(mut object) = loader.get_wearable_node(&hash).await else {
+        let Some(object) = loader.get_wearable_node(&hash, &avatar).await else {
             godot_error!("Avatar: failed to load wearable {slot} hash: {hash}");
             continue;
         };
-        {
-            let mut handle = avatar.clone();
-            let mut this = handle.bind_mut();
-            let Some(mut skeleton) = this.nodes.as_ref().map(|n| n.skeleton.clone()) else {
-                return;
-            };
-            for found in object.find_children("Skeleton3D").iter_shared() {
-                let Ok(wearable_skeleton) = found.try_cast::<Skeleton3D>() else {
-                    continue;
-                };
-                // Spring bones (ADR-316) and other extras must exist in the base skeleton before
-                // the meshes move, or their skins reference bone indices that do not exist.
-                if let Some(assembler) = this.mesh_assembler.as_mut() {
-                    assembler.merge_extra_bones(&wearable_skeleton);
-                }
-                let mut wearable_skeleton = wearable_skeleton;
-                for mut child in wearable_skeleton.get_children().iter_shared() {
-                    if let Ok(mut mesh) = child.clone().try_cast::<MeshInstance3D>() {
-                        if let Some(assembler) = this.mesh_assembler.as_ref() {
-                            assembler.rebind_skin_by_name(&mut mesh, &wearable_skeleton);
-                        }
-                    }
-                    wearable_skeleton.remove_child(&child);
-                    child.set_owner(Gd::null_arg());
-                    let name = format!(
-                        "{}{WEARABLE_NAME_PREFIX}{slot}",
-                        child.get_name().to_string().to_lowercase()
-                    );
-                    child.set_name(name.as_str());
-                    skeleton.add_child(&child);
-                }
-            }
+        let suffix = format!("{WEARABLE_NAME_PREFIX}{slot}");
+        if !assembly::attach_wearable(&avatar, object, &suffix, build).await {
+            return;
         }
-        object.queue_free();
         if slot == category::SKIN {
             has_skin = true;
         }
         own.insert(slot.clone());
     }
 
-    if !alive(&avatar) {
+    if !assembly::step(&avatar, build).await || !alive(&avatar) {
         return;
     }
     let hidden = curated.hidden_categories.clone();
@@ -413,55 +407,16 @@ async fn load_wearables(avatar: Gd<DclAvatar>) {
         this.wearables_by_category = curated.by_category.clone();
         this.finish_meshes(&hidden, has_skin, &own, show_only);
     }
+    assembly::end_build(&avatar);
 
-    // Emotes: the cached scenes of the equipped emote slots.
-    let emote_urns: Vec<String> = avatar
-        .bind()
-        .avatar_data
-        .bind()
-        .get_emotes()
-        .as_slice()
-        .iter()
-        .map(|s| s.to_string())
-        .filter(|urn| urn.starts_with("urn"))
-        .collect();
-    let emote_loader = avatar.bind().emote.loader.clone();
-    for urn in emote_urns {
-        let emote = globals::content_provider()
-            .bind_mut()
-            .get_wearable(urn.as_str().into());
-        let Some(emote) = emote else {
-            continue;
-        };
-        let hash = wearables::get_item_main_file_hash(&emote, &body_shape);
-        if hash.is_empty() {
-            continue;
-        }
-        let main_file = emote
-            .bind()
-            .get_representation_main_file(body_shape.clone())
-            .to_string();
-        let mapping = emote.bind().get_content_mapping();
-        let gltf = emote_loader
-            .get_emote_gltf(&hash, &main_file, Some(&mapping))
-            .await;
-        if let Some(gltf) = gltf {
-            if avatar.is_instance_valid() {
-                avatar
-                    .clone()
-                    .bind_mut()
-                    .load_emote_from_gltf(&urn, &gltf, &hash, false, false);
-            }
-        }
-    }
-    if !avatar.is_instance_valid() {
+    load_equipped_emotes(&avatar).await;
+    if !assembly::is_current(&avatar, build) {
         return;
     }
 
     let (pending_trigger, pending_emote) = {
         let mut handle = avatar.clone();
         let mut this = handle.bind_mut();
-        this.clean_unused_emotes();
         // The meshes were recreated: refresh the LOD state and the impostor.
         this.lod.mesh_visibility_captured = false;
         this.refresh_impostor_texture();
@@ -563,8 +518,10 @@ impl DclAvatar {
                 }
             }
         }
+        // #1554: during a spawn reveal the reveal owns the skeleton switch.
+        let visible = self.spawn_reveal.is_idle();
         if let Some(nodes) = self.nodes.as_mut() {
-            nodes.skeleton.set_visible(true);
+            nodes.skeleton.set_visible(visible);
         }
         self.recompute_nametag_clearance();
         self.finish_loading = true;

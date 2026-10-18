@@ -41,6 +41,19 @@ fn parse_value(raw: &str) -> Option<SettingValue> {
     if let Some(quoted) = raw.strip_prefix('"').and_then(|r| r.strip_suffix('"')) {
         return Some(SettingValue::Text(unescape(quoted)));
     }
+    // A string list (`controls_ftue_shown`) becomes comma-separated text; items carry no commas.
+    if let Some(items) = raw
+        .strip_prefix("PackedStringArray(")
+        .and_then(|r| r.strip_suffix(')'))
+    {
+        let items: Vec<String> = items
+            .split(',')
+            .map(str::trim)
+            .filter_map(|item| item.strip_prefix('"').and_then(|i| i.strip_suffix('"')))
+            .map(unescape)
+            .collect();
+        return Some(SettingValue::Text(items.join(",")));
+    }
     raw.parse::<i64>()
         .map(SettingValue::Int)
         .or_else(|_| raw.parse::<f64>().map(SettingValue::Float))
@@ -92,6 +105,7 @@ particle_quality=2
 audio_general_volume=80.0
 audio_scene_volume=100
 audio_music_volume=0.0
+day1_notification_scheduled=true
 
 [user]
 
@@ -119,7 +133,8 @@ last_places={
         assert_eq!(v[&K::AudioSceneVolume], V::Float(100.0));
         assert_eq!(v[&K::AudioMusicVolume], V::Float(0.0));
         assert_eq!(v[&K::ProcessTickQuotaMs], V::Int(10));
-        assert_eq!(v.len(), 14);
+        assert_eq!(v[&K::Day1NotificationScheduled], V::Bool(true));
+        assert_eq!(v.len(), 15);
     }
 
     #[test]
@@ -150,6 +165,20 @@ last_places={
             Some(V::Text("a\"b\\c\n".into()))
         );
         assert_eq!(parse_value(r#""""#), Some(V::Text(String::new())));
+    }
+
+    #[test]
+    fn imports_the_ftue_state_of_a_1x_install() {
+        let v = parse(
+            "[config]\ncontrols_ftue_shown=PackedStringArray(\"menu\", \"chat\")\nftue_tutorial_offered=true\nftue_new_player_wallet=\"0xabc\"\n",
+        );
+        assert_eq!(v[&K::ControlsFtueShown], V::Text("menu,chat".into()));
+        assert_eq!(v[&K::FtueTutorialOffered], V::Bool(true));
+        assert_eq!(v[&K::FtueNewPlayerWallet], V::Text("0xabc".into()));
+        assert_eq!(
+            parse_value("PackedStringArray()"),
+            Some(V::Text(String::new()))
+        );
     }
 
     #[test]

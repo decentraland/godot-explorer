@@ -25,6 +25,9 @@ use super::rig::{
 /// frames are skipped: clamping against the unresolved zero length would slam the camera to the
 /// pivot and slowly recover for no reason.
 const WARMUP_FRAMES: u32 = 3;
+/// Before the scene manager's kick (`SCENE_MANAGER_KICK_PROCESS_PRIORITY`, -5), so the camera pose
+/// the scenes receive this frame is the final, clamped one. Lower runs earlier.
+const PROCESS_PRIORITY: i32 = -20;
 
 #[derive(GodotClass)]
 #[class(base=Node3D)]
@@ -95,6 +98,7 @@ impl INode3D for CameraCollisionClamp {
     }
 
     fn ready(&mut self) {
+        self.base_mut().set_process_priority(PROCESS_PRIORITY);
         let mount = self
             .base()
             .get_parent()

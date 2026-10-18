@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use godot::classes::{Animation, AudioStream};
 use godot::prelude::*;
 
-use super::emote::{EmoteItemData, EMOTE_COOLDOWN_SECONDS};
+use super::emote::{EmoteItemData, EmoteRequest, EMOTE_COOLDOWN_SECONDS};
 use crate::avatars::emotes::{self, SceneEmoteUrn};
 use crate::avatars::loaders::fetch_emote_definition;
 use crate::avatars::wearables;
@@ -106,24 +106,11 @@ impl DclAvatar {
         if self.emote.loaded.contains_key(urn) {
             return;
         }
-        let (Some(nodes), Some(mut tree), mut player) = (
-            self.emote.nodes.as_ref().map(|n| n.library.clone()),
-            self.nodes.as_ref().map(|n| n.animation_tree.clone()),
-            self.nodes.as_ref().map(|n| n.animation_player.clone()),
-        ) else {
+        let Some(mut library) = self.emote.nodes.as_ref().map(|n| n.library.clone()) else {
             return;
         };
-        let mut library = nodes;
-
-        // Nothing may iterate the animations while they change.
-        self.emote.is_modifying = true;
-        let was_active = tree.is_active();
-        tree.set_active(false);
-        if let Some(player) = player.as_mut() {
-            player.stop();
-        }
-        self.reset_emote_nodes_to_idle();
-
+        // Adding a clip only extends the mixer's caches, so unlike a removal
+        // (`clean_unused_emotes`) this neither stops the tree nor resets the emote nodes.
         let gltf = gltf.bind();
         let mut armature_prop: Option<Gd<Node3D>> = None;
         if let Some(prop) = gltf.get_armature_prop() {
@@ -191,8 +178,6 @@ impl DclAvatar {
             godot_error!("default_animation is null for emote: {urn}");
         }
         self.emote.loaded.insert(urn.to_string(), item);
-
-        self.reactivate_animation_system_later(was_active);
     }
 
     /// Re-enables the tree after the library changed, then plays what was queued meanwhile.
@@ -210,12 +195,14 @@ impl DclAvatar {
                     nodes.animation_tree.set_active(true);
                 }
                 this.emote.is_modifying = false;
-                std::mem::take(&mut this.emote.queued_urn)
+                this.emote.queued_play.take()
             };
-            if !queued.is_empty() {
+            if let Some(queued) = queued {
                 next_frame().await;
                 if avatar.is_instance_valid() {
-                    avatar.bind_mut().play_emote(&queued, -1, -1);
+                    avatar
+                        .bind_mut()
+                        .play_emote(&queued.urn, queued.mask, queued.scene_id);
                 }
             }
         });
@@ -353,13 +340,13 @@ fn merge_animations(avatar_anim: &Gd<Animation>, prop_anim: &Gd<Animation>) -> G
     merged
 }
 
-/// Loads (if needed) and plays an emote id or urn; wearable and scene emotes alike.
+/// Loads (if needed) and plays an emote id or urn; wearable and scene emotes alike. While one
+/// load is in flight only the newest request waits for the next one.
 pub async fn async_play_emote(avatar: Gd<DclAvatar>, id: String, mask: i64, owner: i32) {
     if id.is_empty() {
         return;
     }
-    let stop_generation;
-    let urn;
+    let first;
     {
         let mut this = avatar.clone();
         let mut this = this.bind_mut();
@@ -368,12 +355,11 @@ pub async fn async_play_emote(avatar: Gd<DclAvatar>, id: String, mask: i64, owne
             return;
         }
         this.emote.last_emote_time = now;
-        if this.emote.is_loading {
-            return;
-        }
-        urn = if id.starts_with("urn") {
+        let urn = if id.starts_with("urn") {
             id.clone()
         } else if emotes::is_emote_utility(&id) {
+            this.emote.play_seq += 1;
+            this.emote.next_load = None;
             this.play_emote(&id, mask, owner);
             return;
         } else if emotes::is_emote_default(&id) {
@@ -382,38 +368,129 @@ pub async fn async_play_emote(avatar: Gd<DclAvatar>, id: String, mask: i64, owne
             godot_error!("Unknown emote: {id}");
             return;
         };
+        this.emote.play_seq += 1;
         if this.emote.loaded.contains_key(&urn) {
+            this.emote.next_load = None;
             this.play_emote(&urn, mask, owner);
             return;
         }
+        let request = EmoteRequest {
+            urn,
+            mask,
+            scene_id: owner,
+        };
+        if this.emote.is_loading {
+            this.emote.next_load = Some((request, this.emote.play_seq));
+            return;
+        }
         this.emote.is_loading = true;
-        stop_generation = this.emote.stop_generation;
+        first = (request, this.emote.play_seq);
     }
 
-    async_load_emote(avatar.clone(), &urn).await;
-    if !alive(&avatar) {
-        clear_loading(&avatar);
-        return;
+    let mut next = Some(first);
+    while let Some((request, seq)) = next {
+        avatar.clone().bind_mut().emote.next_load = None;
+        if !load_and_play(&avatar, request, seq).await {
+            break;
+        }
+        next = avatar.clone().bind_mut().emote.next_load.take();
     }
-    // Let the deferred table inserts land.
-    next_frame().await;
-    if !alive(&avatar) {
-        clear_loading(&avatar);
-        return;
+    if avatar.is_instance_valid() {
+        let mut this = avatar.clone();
+        let mut this = this.bind_mut();
+        this.emote.is_loading = false;
+        this.emote.next_load = None;
     }
-    let mut avatar = avatar;
-    let mut this = avatar.bind_mut();
-    this.emote.is_loading = false;
-    // A stop that arrived mid-download cancelled the emote: starting it now would resurrect it.
-    if stop_generation != this.emote.stop_generation {
-        return;
-    }
-    this.play_emote(&urn, mask, owner);
 }
 
-fn clear_loading(avatar: &Gd<DclAvatar>) {
+/// Loads the emote, then plays it unless a newer play or a stop arrived meanwhile. False when the
+/// avatar left the tree during the load.
+async fn load_and_play(avatar: &Gd<DclAvatar>, request: EmoteRequest, seq: u64) -> bool {
+    let (stop_generation, loaded) = {
+        let this = avatar.bind();
+        (
+            this.emote.stop_generation,
+            this.emote.loaded.contains_key(&request.urn),
+        )
+    };
+    if !loaded {
+        async_load_emote(avatar.clone(), &request.urn).await;
+    }
+    if !alive(avatar) {
+        return false;
+    }
+    next_frame().await;
+    if !alive(avatar) {
+        return false;
+    }
+    let mut handle = avatar.clone();
+    let mut this = handle.bind_mut();
+    // Superseded by a newer play, or stopped while downloading: starting it now would resurrect
+    // a cancelled emote (loops: forever).
+    if seq != this.emote.play_seq || stop_generation != this.emote.stop_generation {
+        return true;
+    }
+    this.play_emote(&request.urn, request.mask, request.scene_id);
+    true
+}
+
+/// Remote network avatars load emotes on first play; the local player, previews and scene NPCs
+/// load every equipped emote up front.
+pub fn loads_emotes_lazily(avatar: &Gd<DclAvatar>) -> bool {
+    super::assembly::is_background(avatar)
+}
+
+/// Adds the equipped emotes to the library (unless lazy), then drops the unequipped ones.
+pub async fn load_equipped_emotes(avatar: &Gd<DclAvatar>) {
+    if !loads_emotes_lazily(avatar) {
+        let (urns, body_shape, loader) = {
+            let this = avatar.bind();
+            let data = this.avatar_data.bind();
+            let urns: Vec<String> = data
+                .get_emotes()
+                .as_slice()
+                .iter()
+                .map(|s| s.to_string())
+                .filter(|urn| urn.starts_with("urn"))
+                .collect();
+            (
+                urns,
+                data.get_body_shape().to_string(),
+                this.emote.loader.clone(),
+            )
+        };
+        for urn in urns {
+            let emote = globals::content_provider()
+                .bind_mut()
+                .get_wearable(urn.as_str().into());
+            let Some(emote) = emote else {
+                continue;
+            };
+            let hash = wearables::get_item_main_file_hash(&emote, &body_shape);
+            if hash.is_empty() {
+                continue;
+            }
+            let main_file = emote
+                .bind()
+                .get_representation_main_file(body_shape.clone())
+                .to_string();
+            let mapping = emote.bind().get_content_mapping();
+            let gltf = loader
+                .get_emote_gltf(&hash, &main_file, Some(&mapping), avatar)
+                .await;
+            if !avatar.is_instance_valid() {
+                return;
+            }
+            if let Some(gltf) = gltf {
+                avatar
+                    .clone()
+                    .bind_mut()
+                    .load_emote_from_gltf(&urn, &gltf, &hash, false, false);
+            }
+        }
+    }
     if avatar.is_instance_valid() {
-        avatar.clone().bind_mut().emote.is_loading = false;
+        avatar.clone().bind_mut().clean_unused_emotes();
     }
 }
 
@@ -456,7 +533,7 @@ pub async fn async_load_emote(avatar: Gd<DclAvatar>, urn: &str) {
         .to_string();
     let mapping = emote.bind().get_content_mapping();
     let Some(gltf) = loader
-        .get_emote_gltf(&file_hash, &main_file, Some(&mapping))
+        .get_emote_gltf(&file_hash, &main_file, Some(&mapping), &avatar)
         .await
     else {
         godot_error!("failed to extract emote GLTF for: {urn} (hash: {file_hash})");
@@ -532,7 +609,10 @@ async fn async_load_scene_emote(avatar: Gd<DclAvatar>, urn: &str) {
         godot_error!("Failed to load scene emote: {urn}");
         return;
     }
-    let Some(gltf) = loader.get_emote_gltf(&resolved.glb_hash, "", None).await else {
+    let Some(gltf) = loader
+        .get_emote_gltf(&resolved.glb_hash, "", None, &avatar)
+        .await
+    else {
         godot_error!("Failed to extract emote GLTF for scene emote: {urn}");
         return;
     };

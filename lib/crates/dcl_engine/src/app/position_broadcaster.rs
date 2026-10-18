@@ -22,6 +22,11 @@ pub struct Sent {
     pub jump_count: i32,
     pub is_grounded: bool,
     pub glide_state: i32,
+    /// The head turn rides the movement message, so a standing avatar that keeps aiming its head
+    /// has to force a send too, or peers see it at the keepalive, one step behind.
+    pub head_ik_enabled: bool,
+    pub head_ik_yaw: f32,
+    pub head_ik_pitch: f32,
 }
 
 impl Default for Sent {
@@ -32,6 +37,9 @@ impl Default for Sent {
             jump_count: 0,
             is_grounded: true,
             glide_state: 0,
+            head_ik_enabled: false,
+            head_ik_yaw: 0.0,
+            head_ik_pitch: 0.0,
         }
     }
 }
@@ -56,7 +64,10 @@ pub fn should_send(last: &Sent, now: &Sent, idle_ticks: u32) -> bool {
         wrapped_angle_delta(now.rotation_y, last.rotation_y).abs() >= ROTATION_THRESHOLD;
     let anim_changed = now.jump_count != last.jump_count
         || now.is_grounded != last.is_grounded
-        || now.glide_state != last.glide_state;
+        || now.glide_state != last.glide_state
+        || now.head_ik_enabled != last.head_ik_enabled
+        || (now.head_ik_yaw - last.head_ik_yaw).abs() > 1e-5
+        || (now.head_ik_pitch - last.head_ik_pitch).abs() > 1e-5;
     position_changed || rotation_changed || anim_changed || idle_ticks + 1 >= IDLE_KEEPALIVE_TICKS
 }
 
@@ -101,7 +112,7 @@ impl PositionBroadcaster {
             godot_error!("No player avatar to broadcast");
             return;
         };
-        let (walk, run, jog, rise, fall, land, jump_count, glide_state, is_grounded) = {
+        let (walk, run, jog, rise, fall, land, now) = {
             let a = avatar.bind();
             (
                 a.walk,
@@ -110,17 +121,17 @@ impl PositionBroadcaster {
                 a.rise,
                 a.fall,
                 a.land,
-                a.jump_count,
-                a.glide_state,
-                a.is_grounded,
+                Sent {
+                    position,
+                    rotation_y,
+                    jump_count: a.jump_count,
+                    is_grounded: a.is_grounded,
+                    glide_state: a.glide_state,
+                    head_ik_enabled: a.head_ik_yaw_enabled,
+                    head_ik_yaw: a.head_ik_yaw,
+                    head_ik_pitch: a.head_ik_pitch,
+                },
             )
-        };
-        let now = Sent {
-            position,
-            rotation_y,
-            jump_count,
-            is_grounded,
-            glide_state,
         };
         if !should_send(&self.last, &now, self.idle_ticks) {
             self.idle_ticks += 1;
@@ -138,9 +149,9 @@ impl PositionBroadcaster {
             rise,
             fall,
             land,
-            jump_count,
-            glide_state,
-            is_grounded,
+            now.jump_count,
+            now.glide_state,
+            now.is_grounded,
         );
         self.last = now;
     }
@@ -188,6 +199,17 @@ mod tests {
         let mut gliding = at(1.0);
         gliding.glide_state = 2;
         assert!(should_send(&last, &gliding, 0));
+    }
+
+    #[test]
+    fn a_head_turn_while_standing_goes_out_on_the_next_tick() {
+        let last = at(1.0);
+        let mut aiming = at(1.0);
+        aiming.head_ik_enabled = true;
+        assert!(should_send(&last, &aiming, 0));
+        let mut turned = at(1.0);
+        turned.head_ik_yaw = 12.0;
+        assert!(should_send(&last, &turned, 0));
     }
 
     #[test]

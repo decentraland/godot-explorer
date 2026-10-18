@@ -1,11 +1,12 @@
 //! Applies the remote feature flags to the app. The rules and the fetch live in the core
 //! (`DclFeatureFlags`); this node starts the fetch at boot and pushes the flags that have runtime
-//! effects: comms, and the push registration.
+//! effects: comms, the push registration and async shader compilation.
 //!
 //! The fetch is fire-and-forget. Fail-open: a timeout, a network error or a malformed payload leaves
-//! every flag at its default and the feature enabled. Exception: `pulse` is fail-closed, active only
-//! when the payload explicitly enables it. If a flag lands after comms already connected, the
-//! Rust-side runtime toggles reconcile gracefully (archipelago goes down, scene rooms stay).
+//! every flag at its default and the feature enabled. Exceptions: `pulse` and
+//! `async-shader-compilation` are fail-closed, active only when the payload explicitly enables
+//! them. If a flag lands after comms already connected, the Rust-side runtime toggles reconcile
+//! gracefully (archipelago goes down, scene rooms stay).
 
 use godot::classes::{INode, Node};
 use godot::prelude::*;
@@ -32,7 +33,11 @@ pub struct FeatureFlags {
 #[godot_api]
 impl INode for FeatureFlags {
     fn ready(&mut self) {
-        self.run_deferred(|this| this.load_flags());
+        self.run_deferred(|this| {
+            // A local opt-in applies right away, without waiting for the fetch.
+            super::async_shaders::update();
+            this.load_flags();
+        });
     }
 }
 
@@ -114,5 +119,6 @@ impl FeatureFlags {
             .bind_mut()
             .set_push_enabled(self.enabled(FLAG_PUSH_ENABLED, true));
         let _ = &mut comms;
+        super::async_shaders::on_flags_applied();
     }
 }

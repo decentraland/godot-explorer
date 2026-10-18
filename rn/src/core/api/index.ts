@@ -1,5 +1,6 @@
 import type { AvatarApi } from './avatar';
 import type { ControlApi } from './control';
+import type { FtueApi } from './ftue';
 import type { SessionApi } from './session';
 import type { SettingsApi } from './settings';
 import type { ProfileApi } from './profile';
@@ -13,6 +14,7 @@ import type { SceneApi } from './scene';
 export type CoreApi = SessionApi &
   AvatarApi &
   ControlApi &
+  FtueApi &
   SettingsApi &
   ProfileApi &
   PlacesApi &

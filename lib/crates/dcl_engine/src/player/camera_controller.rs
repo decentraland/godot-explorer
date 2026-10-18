@@ -11,6 +11,10 @@ const DEFAULT_TRANSITION_TIME: f32 = 0.35;
 const DEFAULT_VIRTUAL_CAMERA_FOV: f32 = 60.0;
 /// The virtual camera sees everything but the outline layer (bit 19).
 const VIRTUAL_CAMERA_CULL_MASK: u32 = 0x7fff;
+/// After the camera clamp (-20) and before the scene manager's kick
+/// (`SCENE_MANAGER_KICK_PROCESS_PRIORITY`, -5), so a virtual-camera blend is final when the scenes
+/// receive the camera pose.
+const PROCESS_PRIORITY: i32 = -10;
 
 /// A camera that survives its parent being freed: when it leaves the tree it re-attaches itself to
 /// the viewport it was in, so a scene entity it was reparented under can disappear without
@@ -79,6 +83,7 @@ pub struct DclGlobalCameraController {
 #[godot_api]
 impl INode for DclGlobalCameraController {
     fn ready(&mut self) {
+        self.base_mut().set_process_priority(PROCESS_PRIORITY);
         self.last_camera_reached = true;
         let camera = self.create_virtual_camera();
         self.global_virtual_camera = Some(camera);

@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { forgetAll, recallPlace } from '../src/discover/catalog';
 import { createMockApi } from '../src/discover/mockApi';
 import { createPublicApi } from '../src/discover/publicApi';
@@ -107,6 +108,28 @@ describe('public api', () => {
     await api.setReminder('e1', true);
     expect((await api.eventDetail('e1')).reminder).toBe(true);
     expect(await api.friend('0x')).toBeNull();
+  });
+
+  it('reads the ftue list from the destinations service, bare arrays too', async () => {
+    const urls: string[] = [];
+    const ftue = createPublicApi((async (url: string) => {
+      urls.push(url);
+      return {
+        ok: true,
+        json: async () => [
+          place('solo', { world: true, world_name: 'solo.dcl.eth' }),
+        ],
+      };
+    }) as unknown as typeof fetch);
+    const found = await ftue.ftuePlaces();
+    expect(found.map(p => p.location)).toEqual(['solo.dcl.eth']);
+    expect(urls[0]).toMatch(
+      /\/destinations\/\?offset=0&tag=ftue&sdk=7&tag=allowed_ios$/,
+    );
+    Platform.OS = 'android';
+    await ftue.ftuePlaces();
+    Platform.OS = 'ios';
+    expect(urls[1]).toMatch(/\/destinations\/\?offset=0&tag=ftue&sdk=7$/);
   });
 
   it('fails when the service does', async () => {

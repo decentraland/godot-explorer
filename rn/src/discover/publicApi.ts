@@ -1,4 +1,6 @@
+import { Platform } from 'react-native';
 import {
+  destinationsApi,
   DiscoverEvent,
   eventsApi,
   featuredUrl,
@@ -69,6 +71,21 @@ export function createPublicApi(
         place,
         cta: 'arrow' as const,
       })),
+    ftuePlaces: async () => {
+      const ios = Platform.OS === 'ios' ? '&tag=allowed_ios' : '';
+      const payload = await get(
+        `${destinationsApi()}/?offset=0&tag=ftue&sdk=7${ios}`,
+      );
+      const found = parsePlaces(
+        Array.isArray(payload) ? { data: payload } : payload,
+      );
+      remember({ places: found });
+      for (let i = found.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [found[i], found[j]] = [found[j], found[i]];
+      }
+      return found;
+    },
     friends: async () => [],
     events: async () => {
       const lists = await Promise.allSettled([

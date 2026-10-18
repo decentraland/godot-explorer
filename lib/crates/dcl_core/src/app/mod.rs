@@ -17,8 +17,8 @@ use rand::{rngs::StdRng, SeedableRng};
 use crate::avatar::{self, Catalog};
 
 pub use control::{
-    AvatarState, CameraFocus, ChatLine, ChatProfile, ColorTarget, Control, HudInsets, HudSnapshot,
-    LoadingDetail, UiState, Vec3,
+    AvatarState, CameraFocus, CameraMode, ChatLine, ChatProfile, ColorTarget, Control, HudInsets,
+    HudSnapshot, LoadingDetail, UiState, Vec3,
 };
 pub use policy::EngineStartPolicy;
 pub use shared::{CommandQueue, HostEvents};
@@ -69,6 +69,11 @@ impl App {
     /// The equipped avatar as the engine last reported it.
     pub fn avatar(&self) -> Option<&AvatarState> {
         self.avatar.as_ref()
+    }
+
+    /// The engine's latest report of this world entry; `None` until the first one arrives.
+    pub fn last_hud(&self) -> Option<&HudSnapshot> {
+        self.last_hud.as_ref()
     }
 
     /// The wearables the avatar edits resolve against; set once the shell loaded them.
@@ -213,6 +218,7 @@ impl App {
             self.send(EngineCommand::HideAvatarPreview);
         }
         self.send(EngineCommand::EnterWorld(destination.clone()));
+        self.last_hud = None;
         self.set_state(State::Loading {
             destination,
             progress: 0.0,

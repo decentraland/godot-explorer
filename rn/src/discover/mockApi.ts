@@ -79,6 +79,7 @@ export function createMockApi(opts: MockOptions = {}): DiscoverApi {
         remember({ places: banners.map(b => b.place) });
         return banners;
       }),
+    ftuePlaces: () => run('ftuePlaces', () => BANNERS.map(b => b.place)),
     friends: () =>
       run('friends', () => {
         const friends = opts.noFriends ? [] : FRIENDS;

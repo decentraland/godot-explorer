@@ -3,7 +3,7 @@
 use serde_json::{json, Map, Value};
 
 /// The metrics summarized, as they are named in a sample.
-pub const SUMMARIZED: [&str; 21] = [
+pub const SUMMARIZED: [&str; 26] = [
     "fps",
     "frame_time_process_ms",
     "frame_time_physics_ms",
@@ -25,6 +25,11 @@ pub const SUMMARIZED: [&str; 21] = [
     "node_count",
     "draw_calls",
     "primitives",
+    "scene_js_p95_ms",
+    "scene_round_trip_p95_ms",
+    "scene_apply_p95_ms",
+    "scene_wait_ms",
+    "scene_missed",
 ];
 
 #[derive(Debug, PartialEq)]

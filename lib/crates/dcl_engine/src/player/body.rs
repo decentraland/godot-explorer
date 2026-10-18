@@ -7,6 +7,10 @@ use godot::prelude::*;
 use super::{
     camera_clamp::CameraCollisionClamp,
     desktop_input::PlayerDesktopInput,
+    movement_systems::{
+        gait_flags, MovementSystems, FALL_ANIM_SPEED, GLIDE_WIND_RESPONSE,
+        HARD_LANDING_FALL_HEIGHT, KIND_IDLE, KIND_JOG, KIND_RUN, KIND_WALK, LONG_FALL_ANIM_SPEED,
+    },
     outline_system::OutlineSystem,
     rig::{self, resolve_is_grounded, rig_targets},
     stuck_detector::StuckDetector,
@@ -25,6 +29,8 @@ pub const DEFAULT_CAMERA_FOV: f32 = 60.0;
 pub const SPRINTING_CAMERA_FOV: f32 = 75.0;
 
 // Double-jump and glide tuning (values mirror Unity CharacterControllerSettings.asset).
+// Air jumps are counted from 1, so a fall with no jump yet sits at 0 and still has MAX_AIR_JUMPS
+// presses left (Unity ApplyJump.cs:44, :76).
 pub const MAX_AIR_JUMPS: i32 = 1;
 pub const JUMP_BUFFER_WINDOW: f32 = 0.15;
 pub const JUMP_COOLDOWN: f32 = rig::JUMP_COOLDOWN;
@@ -33,9 +39,10 @@ pub const AIR_JUMP_DELAY: f32 = 0.2;
 pub const AIR_JUMP_DIRECTION_IMPULSE: f32 = 8.0;
 pub const GLIDE_MAX_FALL_SPEED: f32 = 1.0;
 pub const GLIDE_HORIZONTAL_SPEED: f32 = 6.0;
-pub const GLIDE_MIN_GROUND_DISTANCE: f32 = 1.0;
+// #2854: Unity settings values — 0.2 min ground distance, 0.2 re-open cooldown.
+pub const GLIDE_MIN_GROUND_DISTANCE: f32 = 0.2;
 pub const JUMP_TO_GLIDE_INTERVAL: f32 = 0.5;
-pub const GLIDE_COOLDOWN: f32 = 0.6;
+pub const GLIDE_COOLDOWN: f32 = 0.2;
 pub const GLIDE_OPENING_TIME: f32 = 0.5;
 pub const GLIDE_CLOSING_TIME: f32 = 0.15;
 
@@ -198,7 +205,7 @@ pub struct Player {
     stored_camera_mode_before_block: CameraMode,
 
     #[var(pub)]
-    current_direction: Vector3,
+    pub(super) current_direction: Vector3,
     #[var(pub)]
     time_falling: f32,
     #[var(pub)]
@@ -232,6 +239,7 @@ pub struct Player {
     crosshair_prev_mode: CameraMode,
     /// RIDs excluded from the ground and step probes: the body and the avatar's colliders.
     pub(super) raycast_exclude: Array<Rid>,
+    pub(super) movement: MovementSystems,
 
     // Pinch-to-zoom (mobile).
     pinch_accumulated_delta: f32,
@@ -300,6 +308,7 @@ impl ICharacterBody3D for Player {
             crosshair_transition_active: false,
             crosshair_prev_mode: CameraMode::ThirdPerson,
             raycast_exclude: Array::new(),
+            movement: MovementSystems::default(),
             pinch_accumulated_delta: 0.0,
             pinch_start_mode: CameraMode::ThirdPerson,
             camera_mode_tween: None,
@@ -429,6 +438,7 @@ impl ICharacterBody3D for Player {
         // ~0m at all times). The scene pointer raycast excludes the same set: with the
         // third-person avatar centered on screen, the ray from the camera would hit its back.
         self.build_raycast_exclude();
+        self.build_edge_slip_cast();
         runner
             .bind_mut()
             .set_pointer_raycast_exclude(self.raycast_exclude.clone());
@@ -725,8 +735,7 @@ impl Player {
             return JUMP_ACTION_NONE;
         }
         // Closed: an air-jump takes priority over glide-open.
-        if self.jump_count >= 1
-            && self.jump_count <= MAX_AIR_JUMPS
+        if self.jump_count <= MAX_AIR_JUMPS
             && !global.is_double_jump_disabled()
             && self.time_since_last_jump >= JUMP_COOLDOWN
         {
@@ -753,14 +762,14 @@ impl Player {
         }
         let global = DclGlobal::singleton();
         let global = global.bind();
-        // jump_count in [1..MAX_AIR_JUMPS] means the next press fires an air-jump, not glide-open.
+        // jump_count <= MAX_AIR_JUMPS means the next press fires an air-jump, not glide-open.
         let grounded = self.base().is_on_floor()
             || self.base().get_position().y <= 0.0
             || self.time_falling <= 0.0;
         let input_blocked = global.is_jump_disabled()
             || global.is_all_input_disabled()
             || global.is_glide_disabled();
-        let air_jump_consumes_press = self.jump_count >= 1 && self.jump_count <= MAX_AIR_JUMPS;
+        let air_jump_consumes_press = self.jump_count <= MAX_AIR_JUMPS;
         let too_low = self.ground_distance <= GLIDE_MIN_GROUND_DISTANCE;
         let on_cooldown = self.time_since_last_jump < JUMP_TO_GLIDE_INTERVAL
             || self.time_since_glide_end < GLIDE_COOLDOWN;
@@ -784,6 +793,8 @@ impl Player {
         self.glide_timer = 0.0;
         self.jump_buffer = 0.0;
         self.air_jump_delay_timer = 0.0;
+        // Landing at the destination: a teleport down is not a fall.
+        self.movement.fall_apex_y = target.y;
         if check_stuck {
             if let Some(detector) = &mut self.stuck_detector {
                 detector.bind_mut().check_stuck();
@@ -978,6 +989,9 @@ impl Player {
                 "fall" => avatar.fall = value,
                 "land" => avatar.land = value,
                 "is_grounded" => avatar.is_grounded = value,
+                "long_fall" => avatar.long_fall = value,
+                "fall_fast" => avatar.fall_fast = value,
+                "stunned" => avatar.stunned = value,
                 _ => godot_error!("unknown avatar flag `{name}`"),
             }
         }
@@ -1002,22 +1016,16 @@ impl Player {
             .unwrap_or(false)
     }
 
-    fn update_avatar_movement_state(&mut self, speed: f32) {
-        let candidates = [
-            ("idle", speed.abs()),
-            ("walk", (speed - self.walk_speed).abs()),
-            ("jog", (speed - self.jog_speed).abs()),
-            ("run", (speed - self.run_speed).abs()),
-        ];
-        let mut nearest = candidates[0];
-        for candidate in candidates {
-            if candidate.1 < nearest.1 {
-                nearest = candidate;
-            }
+    fn update_avatar_movement_state(&mut self, speed: f32, kind: i32, has_move_input: bool) {
+        let limits = [self.walk_speed, self.jog_speed, self.run_speed];
+        let [walk, jog, run] = gait_flags(kind, has_move_input, speed, limits);
+        if let Some(avatar) = &mut self.avatar {
+            let mut avatar = avatar.bind_mut();
+            avatar.walk = walk;
+            avatar.jog = jog;
+            avatar.run = run;
+            avatar.movement_speed = speed;
         }
-        self.set_avatar_flag("walk", nearest.0 == "walk");
-        self.set_avatar_flag("jog", nearest.0 == "jog");
-        self.set_avatar_flag("run", nearest.0 == "run");
     }
 
     fn physics_tick(&mut self, dt: f32) {
@@ -1030,11 +1038,13 @@ impl Player {
         let scene_pending_impulses = runner.bind_mut().consume_pending_impulses();
         let external_acceleration = scene_external_force / CHARACTER_MASS;
 
-        // Keep the top-level avatar co-located with the player (picks up teleports and
-        // external position changes, and makes the look_at below use the right origin).
+        // Keep the top-level avatar co-located with the player (picks up teleports and external
+        // position changes); each write re-propagates the whole avatar subtree.
         let player_position = self.base().get_global_position();
         if let Some(avatar) = &mut self.avatar {
-            avatar.set_global_position(player_position);
+            if avatar.get_global_position() != player_position {
+                avatar.set_global_position(player_position);
+            }
         }
 
         let mut velocity = self.base().get_velocity();
@@ -1045,6 +1055,9 @@ impl Player {
             velocity.x = move_toward(velocity.x, 0.0, 20.0 * dt);
             velocity.z = move_toward(velocity.z, 0.0, 20.0 * dt);
         }
+        // #2855: the hard-landing animation's stun (remotes derive theirs from their own fall).
+        let stunned = self.hard_landing_timer > 0.0;
+        self.set_avatar_flag("stunned", stunned);
 
         self.jump_buffer = (self.jump_buffer - dt).max(0.0);
         let has_focus = explorer_has_focus();
@@ -1127,10 +1140,6 @@ impl Player {
         // landing unreachable mid-cloud (velocity.y accumulated, jump_count never reset, the
         // glider never closed).
         let supported = on_floor || self.has_walkable_support();
-        let was_falling = self.avatar_flag("fall");
-        // Fall time up to this tick, captured before the reset below so the landing branch can
-        // still read it for the hard-landing check.
-        let fall_duration = self.time_falling;
 
         // is_on_floor() drops before the capsule visually leaves an edge (rounded bottom and
         // speculative margin), which would burn the coyote window early; Unity's CCT
@@ -1166,7 +1175,9 @@ impl Player {
                     velocity.x = horiz.x * impulse;
                     velocity.z = horiz.z * impulse;
                 }
-                self.jump_count += 1;
+                // Unity counts a fall as one jump already used (ApplyJump.cs:44) before this air
+                // jump spends the next one, as StartJump does.
+                self.jump_count = self.jump_count.max(1) + 1;
                 self.time_since_last_jump = 0.0;
                 self.set_avatar_flag("rise", true);
                 self.set_avatar_flag("fall", false);
@@ -1180,15 +1191,20 @@ impl Player {
             // CLOSING normal gravity resumes so Jump_Fall can take over.
             let free_flight = self.glide_state == GLIDE_CLOSED || self.glide_state == GLIDE_CLOSING;
             self.set_avatar_flag("rise", velocity.y > 0.3 && free_flight);
-            self.set_avatar_flag("fall", velocity.y < -0.3 && !in_grace_time && free_flight);
+            let fall = velocity.y < -0.3 && !in_grace_time && free_flight;
+            self.set_avatar_flag("fall", fall);
+            // #2855 / #1553: Unity AnimationLongFallSpeed and AnimationFallSpeed.
+            self.set_avatar_flag("long_fall", fall && velocity.y < -LONG_FALL_ANIM_SPEED);
+            self.set_avatar_flag("fall_fast", fall && velocity.y < -FALL_ANIM_SPEED);
             // Scene force.y reduces effective gravity, so an upward wind cancels the fall
             // instead of stacking on velocity.y.
             let gravity = self.current_gravity(velocity.y);
             velocity.y -= (gravity - external_acceleration.y) * dt;
 
-            // Air-jump: 0.2s hover then impulse (matches Unity ApplyJump two-step).
+            // Air-jump: 0.2s hover then impulse (matches Unity ApplyJump two-step). Unity's
+            // max(JumpCount, 1) <= MaxAirJumpCount (ApplyJump.cs:76): a stepped-off-a-ledge fall
+            // still has its air jump available.
             if self.jump_buffer > 0.0
-                && self.jump_count >= 1
                 && self.jump_count <= MAX_AIR_JUMPS
                 && self.glide_state == GLIDE_CLOSED
                 && !jump_disabled
@@ -1201,10 +1217,9 @@ impl Player {
                 self.jump_buffer = 0.0;
             }
 
-            // Glide toggle-open (mobile-friendly). Diverges from Unity's hold-to-glide and the
-            // Unity-exact `jump_count > MAX_AIR_JUMPS` entry gate: a player who stepped off a
-            // ledge can open the glide without first double-jumping. Air-jump still takes
-            // priority (above) because it consumes the buffer first.
+            // Glide toggle-open (mobile-friendly): Unity holds glide open, we toggle it. The air
+            // jump above consumes the buffer first, so this is only reached once both jumps are
+            // spent or jumping is disabled.
             if self.jump_buffer > 0.0 && self.glide_state == GLIDE_CLOSED {
                 let gate_enabled = !jump_disabled && !glide_disabled;
                 let gate_altitude = self.ground_distance > GLIDE_MIN_GROUND_DISTANCE;
@@ -1216,6 +1231,8 @@ impl Player {
                     self.jump_buffer = 0.0;
                     self.set_avatar_flag("rise", false);
                     self.set_avatar_flag("fall", false);
+                    self.set_avatar_flag("long_fall", false);
+                    self.set_avatar_flag("fall_fast", false);
                 }
             }
 
@@ -1267,15 +1284,24 @@ impl Player {
             self.set_avatar_flag("rise", true);
             self.set_avatar_flag("fall", false);
         } else if supported {
+            let y = self.base().get_global_position().y;
             if !self.avatar_flag("land") {
                 self.set_avatar_flag("land", true);
-                if was_falling && self.hard_landing_cooldown > 0.0 && fall_duration > 1.0 {
+                // #2852 M6 (Unity StunCharacterSystem): fall-height trigger with the scene's stun
+                // duration. Arms at once; a bounce pad cancels it after the impulse applies.
+                if self.hard_landing_cooldown > 0.0
+                    && self.movement.fall_apex_y - y > HARD_LANDING_FALL_HEIGHT
+                {
                     self.hard_landing_timer = self.hard_landing_cooldown;
+                    self.set_avatar_flag("stunned", true);
                 }
             }
+            self.movement.fall_apex_y = y;
             velocity.y = 0.0;
             self.set_avatar_flag("rise", false);
             self.set_avatar_flag("fall", false);
+            self.set_avatar_flag("long_fall", false);
+            self.set_avatar_flag("fall_fast", false);
             // Landing resets the air-jump budget and force-closes the glider.
             self.jump_count = 0;
             if self.glide_state == GLIDE_OPENING || self.glide_state == GLIDE_GLIDING {
@@ -1284,9 +1310,30 @@ impl Player {
             }
         } else {
             // Coyote fall without a buffered jump: gravity applies, no landing state, and the
-            // glide gate stays closed for the whole window.
-            let gravity = self.current_gravity(velocity.y);
-            velocity.y -= (gravity - external_acceleration.y) * dt;
+            // glide gate stays closed for the whole window. #2852 M3: on a steep slope gravity
+            // tilts along the slope instead of pulling straight down.
+            let gravity = self.current_gravity(velocity.y) - external_acceleration.y;
+            let steep = self.steep_slide_dir();
+            if steep != Vector3::ZERO {
+                velocity += steep * gravity * dt;
+            } else {
+                velocity.y -= gravity * dt;
+            }
+        }
+        // #2852 M6: the airborne apex, reset while gliding (a gentle glide down from height is
+        // not a hard landing).
+        let y = self.base().get_global_position().y;
+        if !supported {
+            let gliding = self.glide_state == GLIDE_OPENING || self.glide_state == GLIDE_GLIDING;
+            self.movement.fall_apex_y = if gliding {
+                y
+            } else {
+                self.movement.fall_apex_y.max(y)
+            };
+        } else {
+            // #2852 M4: off-axis ground contact with no ground below tilts gravity to the edge.
+            let edge = self.edge_slip_gravity_dir();
+            velocity += edge * self.current_gravity(velocity.y) * dt;
         }
 
         // Unity port (ApplyCharacterMovementVelocity.cs): the weight ramps over 0.5s while input
@@ -1294,6 +1341,8 @@ impl Player {
         // min, then ramp). The velocity target uses the RAW input direction; the smoothed
         // current_direction is only for facing.
         let has_move_input = direction != Vector3::ZERO;
+        // Unity MovementKind: no input is idle, and only the input mode picks a gait (#2856).
+        let mut movement_kind = KIND_IDLE;
         self.accel_weight = move_toward(
             self.accel_weight,
             if has_move_input { 1.0 } else { 0.0 },
@@ -1313,6 +1362,13 @@ impl Player {
             let wants_walk = input.is_action_pressed("ia_walk");
             let wants_sprint = input.is_action_pressed("ia_sprint");
             let is_mobile = global.bind().is_mobile;
+            movement_kind = if wants_sprint && !run_disabled {
+                KIND_RUN
+            } else if (wants_walk || (is_mobile && jog_disabled)) && !walk_disabled {
+                KIND_WALK
+            } else {
+                KIND_JOG
+            };
 
             // The effective speed depends on the scene's input modifiers.
             let mut effective_speed = 0.0;
@@ -1337,8 +1393,15 @@ impl Player {
                 effective_speed = self.jog_speed;
             } else if !walk_disabled {
                 effective_speed = self.walk_speed;
+                movement_kind = KIND_WALK;
             }
             // else: no movement allowed.
+
+            // #2852 M2: the slope curve multiplies the target speed, where Unity multiplies its
+            // speedLimit.
+            if self.base().is_on_floor() {
+                effective_speed *= self.slope_speed_modifier(direction);
+            }
 
             // ADAD sign correction: reversing an axis flips the sign, keeping momentum.
             let target_x = direction.x * effective_speed;
@@ -1354,12 +1417,15 @@ impl Player {
             velocity.x = move_toward(velocity.x, target_x, accel * dt);
             velocity.z = move_toward(velocity.z, target_z, accel * dt);
 
-            let look_target =
-                rig::normalized_or_zero(self.current_direction) + self.base().get_position();
-            if let Some(avatar) = &mut self.avatar {
-                avatar.look_at(look_target);
-                let rotation = avatar.get_rotation();
-                avatar.set_rotation(Vector3::new(0.0, rotation.y, 0.0));
+            // Yaw-only look_at, as one write and only when it changed.
+            let direction = self.current_direction;
+            if direction.x != 0.0 || direction.z != 0.0 {
+                let yaw_only = Vector3::new(0.0, (-direction.x).atan2(-direction.z), 0.0);
+                if let Some(avatar) = &mut self.avatar {
+                    if !(avatar.get_rotation() - yaw_only).is_zero_approx() {
+                        avatar.set_rotation(yaw_only);
+                    }
+                }
             }
         } else if on_floor {
             // StopTimeSec=0: the grounded stop is INSTANT in Unity (degenerate SmoothDamp), and
@@ -1393,11 +1459,14 @@ impl Player {
             }
         }
 
+        // Avatar-relative motion: standing on a moving platform is idle, not walking.
         let global_position = self.base().get_global_position();
         self.actual_velocity_xz =
-            (to_xz(global_position) - to_xz(self.last_position)).length() / dt;
+            (to_xz(global_position) - to_xz(self.last_position) - self.movement.platform_carry_xz)
+                .length()
+                / dt;
         let actual = self.actual_velocity_xz;
-        self.update_avatar_movement_state(actual);
+        self.update_avatar_movement_state(actual, movement_kind, has_move_input);
 
         // Mirror the local physics state into DclAvatar so avatar.gd drives the AnimationTree
         // off the same numbers for the local and remote avatars.
@@ -1422,6 +1491,13 @@ impl Player {
         self.apply_scene_physics(dt, external_acceleration, &scene_pending_impulses, on_floor);
         let mut velocity = self.base().get_velocity();
 
+        // Bounce pads relaunch on contact: a launch cancels a just-armed stun (Unity pads are
+        // triggers, so no landing event and no stun).
+        if self.hard_landing_timer > 0.0 && velocity.y + self.external_velocity.y > 1.0 {
+            self.hard_landing_timer = 0.0;
+            self.set_avatar_flag("stunned", false);
+        }
+
         // Re-derive rise/fall from the combined vertical velocity: the lift from
         // external_velocity is not visible in velocity.y alone (the Y mix is undone below, so
         // velocity.y reads near zero mid-bounce).
@@ -1437,6 +1513,8 @@ impl Player {
                 } else if combined_vy < -0.3 {
                     self.set_avatar_flag("fall", true);
                     self.set_avatar_flag("rise", false);
+                    self.set_avatar_flag("long_fall", combined_vy < -LONG_FALL_ANIM_SPEED);
+                    self.set_avatar_flag("fall_fast", combined_vy < -FALL_ANIM_SPEED);
                 }
             }
         }
@@ -1450,6 +1528,9 @@ impl Player {
         velocity.x += self.external_velocity.x;
         velocity.y += external_y_for_move;
         velocity.z += self.external_velocity.z;
+        if supported {
+            self.apply_wall_slide(&mut velocity);
+        }
         self.base_mut().set_velocity(velocity);
 
         self.last_position = self.base().get_global_position();
@@ -1508,12 +1589,15 @@ impl Player {
             self.step_armed = true;
             self.step_pending = false;
         }
+        self.update_platform_follow(supported, dt);
         let mut position = self.base().get_position();
         position.y = position.y.max(0.0);
         self.base_mut().set_position(position);
         let final_position = self.base().get_global_position();
         if let Some(avatar) = &mut self.avatar {
-            avatar.set_global_position(final_position);
+            if avatar.get_global_position() != final_position {
+                avatar.set_global_position(final_position);
+            }
         }
 
         // Restore the locomotion-only XZ; external_velocity carries its own state and is
@@ -1540,9 +1624,15 @@ impl Player {
         impulses: &PackedVector3Array,
         on_floor: bool,
     ) {
-        // Force XZ accumulates; force Y was already folded into the effective gravity.
-        self.external_velocity.x += external_acceleration.x * dt;
-        self.external_velocity.z += external_acceleration.z * dt;
+        // Force XZ accumulates; force Y was already folded into the effective gravity. #2854 M12:
+        // an open glider catches airflow (Unity ApplyExternalForce.cs).
+        let wind = if self.glide_state == GLIDE_GLIDING {
+            GLIDE_WIND_RESPONSE
+        } else {
+            1.0
+        };
+        self.external_velocity.x += external_acceleration.x * wind * dt;
+        self.external_velocity.z += external_acceleration.z * wind * dt;
 
         let mut velocity = self.base().get_velocity();
         let mut got_upward_impulse = false;

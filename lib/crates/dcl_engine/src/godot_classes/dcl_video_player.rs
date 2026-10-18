@@ -6,6 +6,7 @@ use godot::classes::{
 use godot::prelude::*;
 
 use crate::av::backend::BackendType;
+use crate::engine::frame_budget;
 use crate::engine::local_task::{await_promise, next_frame, spawn_local};
 use crate::fetcher::globals;
 use crate::media::native_player::{Flavor, NativePlayer};
@@ -420,10 +421,6 @@ impl DclVideoPlayer {
             self.source
         );
         self.video_state = VIDEO_STATE_LOADING;
-
-        let native = NativePlayer::create(flavor);
-        self.base_mut().add_child(&native);
-        self.native = Some(native);
         let generation = self.backend_generation;
         spawn_local(init_native_backend(self.to_gd(), flavor, generation));
     }
@@ -576,11 +573,31 @@ impl DclVideoPlayer {
     }
 }
 
-/// The part of the native backend setup that waits a frame for the child to be ready.
+/// The native backend setup. Player creation and surface init are heavy native calls: one
+/// frame-budget step each.
 async fn init_native_backend(player: Gd<DclVideoPlayer>, flavor: Flavor, generation: u32) {
+    // A source change disposes the backend while it gets ready.
+    let current = |player: &Gd<DclVideoPlayer>| {
+        player.is_instance_valid() && player.bind().backend_generation == generation
+    };
+    frame_budget::acquire(Some(player.instance_id()), false).await;
+    if !current(&player) {
+        return;
+    }
+    {
+        let native = NativePlayer::create(flavor);
+        let mut handle = player.clone();
+        let mut this = handle.bind_mut();
+        this.base_mut().add_child(&native);
+        this.native = Some(native);
+    }
+    // The child creates its platform player in `ready`.
     next_frame().await;
-    if !player.is_instance_valid() || player.bind().backend_generation != generation {
-        // A source change disposed this backend while it was getting ready.
+    if !current(&player) {
+        return;
+    }
+    frame_budget::acquire(Some(player.instance_id()), false).await;
+    if !current(&player) {
         return;
     }
     let label = match flavor {

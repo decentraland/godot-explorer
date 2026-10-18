@@ -52,6 +52,7 @@ pub mod gltf_container_load;
 pub mod portables;
 pub mod promise;
 pub mod rpc_sender;
+pub mod scene_animation_throttle;
 
 pub trait JsonGodotClass
 where

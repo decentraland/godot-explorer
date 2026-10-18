@@ -9,12 +9,6 @@ import {
 import { chatFeedReducer, initialChatFeed } from '../src/hud/chatFeed';
 import { hudReducer, initialHud } from '../src/hud/hudState';
 import {
-  COACH_STEPS,
-  createMemoryStorage,
-  loadCoachSeen,
-  saveCoachSeen,
-} from '../src/hud/coachMarks';
-import {
   HUD_MARGIN_FLOOR,
   hudInsets,
   isNativeTouchZone,
@@ -129,28 +123,6 @@ describe('hudReducer', () => {
       { type: 'menu', open: true },
     );
     expect(s).toMatchObject({ menu: true, chat: 'closed' });
-  });
-});
-
-describe('coach marks', () => {
-  it('has the two tutorial steps in order', () => {
-    expect(COACH_STEPS).toEqual(['controls', 'camera']);
-  });
-
-  it('persists the seen flag through the storage interface', async () => {
-    const storage = createMemoryStorage();
-    expect(await loadCoachSeen(storage)).toBe(false);
-    await saveCoachSeen(storage);
-    expect(await loadCoachSeen(storage)).toBe(true);
-  });
-
-  it('treats a failing storage as not seen', async () => {
-    const broken = {
-      getItem: () => Promise.reject(new Error('x')),
-      setItem: () => Promise.reject(new Error('x')),
-    };
-    expect(await loadCoachSeen(broken)).toBe(false);
-    await expect(saveCoachSeen(broken)).resolves.toBeUndefined();
   });
 });
 
