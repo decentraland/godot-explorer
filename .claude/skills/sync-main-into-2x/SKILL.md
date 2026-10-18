@@ -131,7 +131,9 @@ Large syncs fan out well: one session or agent per domain (engine perf, avatar/p
 core/notifications), each in its own worktree branched from the merge commit, each loading
 `port-main-pr-to-2x`; then cherry-pick their commits onto the sync branch in upstream order and
 re-run the checks. Ports that touch the same area (two avatar PRs) are told about each other so
-they stay in separate modules.
+they stay in separate modules, and the later one rebases onto the sync branch before finishing.
+A new worktree may start from another checkout's HEAD (often `main`): each port first checks
+`git log -1` and resets onto the merge commit.
 
 ## 6. Checks (green on the branch head before the PR)
 
