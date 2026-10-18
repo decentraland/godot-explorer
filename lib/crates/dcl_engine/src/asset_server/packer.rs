@@ -60,7 +60,8 @@ pub fn pack_assets_to_zip(
             continue;
         };
 
-        let data = file.get_buffer(file.get_length() as i64);
+        let len = file.get_length() as i64;
+        let data = file.get_buffer(len);
         file.close();
 
         // Determine the path inside the ZIP
@@ -154,7 +155,8 @@ pub fn pack_single_asset_to_zip(
         ));
     };
 
-    let data = file.get_buffer(file.get_length() as i64);
+    let len = file.get_length() as i64;
+    let data = file.get_buffer(len);
     file.close();
 
     let zip_internal_path = match asset_type {
@@ -281,7 +283,8 @@ pub fn pack_scene_assets_to_zip(
             continue;
         };
 
-        let data = file.get_buffer(file.get_length() as i64);
+        let len = file.get_length() as i64;
+        let data = file.get_buffer(len);
         file.close();
 
         // Determine the path inside the ZIP
