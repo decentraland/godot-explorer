@@ -25,6 +25,7 @@ in phase 3 and not run again here. Rows marked "not done" are the work left befo
 | Loading screen, tips, place card | RN `world/LoadingCover` over `loading_detail` | Ran: Genesis | |
 | Loading timeout modal | `LoadingCover` slow state | Phase 3 pass | The core-driven timeout verdict is not done |
 | Discover, search, categories, FTUE | RN `discover/` | Ran: Discover, place sheet | |
+| FTUE list (`ftue` tag) and single-place bypass, `DISCOVER_FTUE_BYPASS` (main #3047) | RN `discover/ftue.ts`, `flow/FtueStep` + core `track_ftue_bypass` | Not run | The ad-campaign bypass (#2788) is not wired in the RN entry flow, so it cannot win first yet |
 | Event reminders | Core `set_event_reminder` + OS reminder (`DclPush`) | Not run | Reminder delivery unverified |
 | Friends rows | Mock data (D-43) | | Real friends: 6.9 |
 | Last-visited list | Dropped with the GDScript discover | | Not in RN yet |

@@ -225,6 +225,9 @@ protected:
   jsi::Value cpp_uniffi_dcl_core_fn_func_terms_version(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_track_ftue_bypass(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
   jsi::Value cpp_uniffi_dcl_core_fn_func_urls(jsi::Runtime &rt,
                                               const jsi::Value &thisVal,
                                               const jsi::Value *args,
@@ -692,6 +695,9 @@ protected:
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_func_terms_version(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_track_ftue_bypass(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_func_urls(jsi::Runtime &rt,

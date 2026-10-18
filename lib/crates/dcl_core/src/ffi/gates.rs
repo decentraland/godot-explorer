@@ -3,6 +3,10 @@
 use std::sync::{Arc, OnceLock};
 
 use super::{core, CoreError};
+use crate::analytics::{
+    data_definition::{SegmentEvent, SegmentEventScreenViewed},
+    global::analytics,
+};
 use crate::gates::{
     campaign::CampaignResolution,
     destination::ResolvedDestination,
@@ -137,6 +141,24 @@ pub async fn pending_campaign() -> Result<Option<crate::gates::campaign::Campaig
 pub async fn campaign_resolution() -> Result<CampaignResolution, CoreError> {
     let gates = gates()?;
     on_core(async move { gates.campaign_resolution().await }).await
+}
+
+/// The first-run flow skipped the FTUE carousel and jumped into its only place (#3022): a
+/// `DISCOVER_FTUE_BYPASS` screen view with the place, whether the boot went ahead and the
+/// campaign context, as 1.x reports it.
+#[uniffi::export]
+pub async fn track_ftue_bypass(place_id: String, booted: bool) -> Result<(), CoreError> {
+    let analytics = analytics().ok_or_else(|| CoreError::InvalidCall {
+        detail: "analytics is not installed".into(),
+    })?;
+    let mut properties = campaign_resolution().await?.metrics_context();
+    properties.insert("place_id".into(), place_id.into());
+    properties.insert("booted".into(), booted.into());
+    analytics.queue_event(SegmentEvent::ScreenViewed(SegmentEventScreenViewed {
+        screen_name: "DISCOVER_FTUE_BYPASS".into(),
+        extra_properties: Some(serde_json::Value::Object(properties).to_string()),
+    }));
+    Ok(())
 }
 
 /// Remembers the token of a link or of the install attribution; the first one wins. `true` when

@@ -92,7 +92,7 @@ function AppBody() {
           onDone={onDone}
           onJumpIn={place => {
             onDone();
-            jumpIn(place);
+            return jumpIn(place);
           }}
         />
       )}

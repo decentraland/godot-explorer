@@ -285,6 +285,8 @@ void uniffi_dcl_core_fn_func_snooze_version_gate(
 uint32_t
 uniffi_dcl_core_fn_func_terms_accepted_version(RustCallStatus *uniffi_out_err);
 uint32_t uniffi_dcl_core_fn_func_terms_version(RustCallStatus *uniffi_out_err);
+/*handle*/ uint64_t
+uniffi_dcl_core_fn_func_track_ftue_bypass(RustBuffer place_id, int8_t booted);
 RustBuffer uniffi_dcl_core_fn_func_urls(RustCallStatus *uniffi_out_err);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_version_gate();
 RustBuffer
@@ -531,6 +533,7 @@ uint16_t uniffi_dcl_core_checksum_func_scene_link_url();
 uint16_t uniffi_dcl_core_checksum_func_snooze_version_gate();
 uint16_t uniffi_dcl_core_checksum_func_terms_accepted_version();
 uint16_t uniffi_dcl_core_checksum_func_terms_version();
+uint16_t uniffi_dcl_core_checksum_func_track_ftue_bypass();
 uint16_t uniffi_dcl_core_checksum_func_urls();
 uint16_t uniffi_dcl_core_checksum_func_version_gate();
 uint16_t uniffi_dcl_core_checksum_func_day1_notification();
@@ -5263,6 +5266,17 @@ NativeDclCore::NativeDclCore(
             return this->cpp_uniffi_dcl_core_fn_func_terms_version(rt, thisVal,
                                                                    args, count);
           });
+  props["ubrn_uniffi_dcl_core_fn_func_track_ftue_bypass"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_track_ftue_bypass"),
+          2,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_track_ftue_bypass(
+                rt, thisVal, args, count);
+          });
   props["ubrn_uniffi_dcl_core_fn_func_urls"] =
       jsi::Function::createFromHostFunction(
           rt,
@@ -6779,6 +6793,17 @@ NativeDclCore::NativeDclCore(
           [this](jsi::Runtime &rt, const jsi::Value &thisVal,
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_dcl_core_checksum_func_terms_version(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_track_ftue_bypass"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_track_ftue_bypass"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_track_ftue_bypass(
                 rt, thisVal, args, count);
           });
   props["ubrn_uniffi_dcl_core_checksum_func_urls"] =
@@ -8557,6 +8582,16 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_terms_version(
 
   return uniffi_jsi::Bridging<uint32_t>::toJs(rt, callInvoker, value);
 }
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_track_ftue_bypass(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_fn_func_track_ftue_bypass(
+      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]),
+      uniffi_jsi::Bridging<int8_t>::fromJs(rt, callInvoker, args[1]));
+
+  return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
+                                                         value);
+}
 jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_urls(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
@@ -9917,6 +9952,13 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_terms_version(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
   auto value = uniffi_dcl_core_checksum_func_terms_version();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_track_ftue_bypass(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_track_ftue_bypass();
 
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }

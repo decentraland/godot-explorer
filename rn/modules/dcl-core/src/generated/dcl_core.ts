@@ -2540,6 +2540,46 @@ export function track(event: string, props: Array<Property>): void /*throws*/ {
 }
 
 /**
+ * The first-run flow skipped the FTUE carousel and jumped into its only place (#3022): a
+ * `DISCOVER_FTUE_BYPASS` screen view with the place, whether the boot went ahead and the
+ * campaign context, as 1.x reports it.
+ */
+export async function trackFtueBypass(
+  placeId: string,
+  booted: boolean,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<void> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_track_ftue_bypass(
+          FfiConverterString.lower(placeId, nativeModule().rustbuffer_alloc),
+          FfiConverterBool.lower(booted, nativeModule().rustbuffer_alloc),
+        );
+      },
+      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
+      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_void,
+      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
+      /*liftFunc:*/ _v => {},
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
  * Queues a "Screen Viewed" for `name`.
  */
 export function trackScreen(
@@ -13133,6 +13173,14 @@ function uniffiEnsureInitialized() {
   if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_track() !== 58769) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_track',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_track_ftue_bypass() !==
+    19711
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_track_ftue_bypass',
     );
   }
   if (

@@ -259,6 +259,7 @@ export function createMockGates(): GatesApi {
     }),
     captureCampaignToken: () => false,
     consumeCampaign: () => {},
+    trackFtueBypass: async () => {},
 
     resolveDestination: async input => resolve(input),
     resolveDestinationWithSecret: async input => resolve(input),

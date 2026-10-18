@@ -11,21 +11,25 @@ import { eventJumpLink } from './eventTime';
 import { recordPlayed } from './history';
 import type { EventDetail, Friend, PlaceDetail, VoteState } from './types';
 
-/** Enters the world at `place` from a sheet route (the Discover tab gets the same via its onJumpIn prop). */
-export function useJumpIn(): (place: Place) => void {
+/** Enters the world at `place` from a sheet route (the Discover tab gets the same via its onJumpIn
+ * prop). Resolves whether the player went. */
+export function useJumpIn(): (place: Place) => Promise<boolean> {
   const { push } = useNav();
   const toast = useToast();
   return useCallback(
-    place => {
+    place =>
       enterPlaceChecked(place)
         .then(entered => {
           if (entered) {
             recordPlayed(place);
             push({ name: 'world', params: { place } });
           }
+          return entered;
         })
-        .catch(() => toast(t('DISCOVER_ACTION_FAILED')));
-    },
+        .catch(() => {
+          toast(t('DISCOVER_ACTION_FAILED'));
+          return false;
+        }),
     [push, toast],
   );
 }

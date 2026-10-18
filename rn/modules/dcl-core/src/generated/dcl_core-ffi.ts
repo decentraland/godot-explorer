@@ -431,6 +431,10 @@ interface NativeModuleInterface {
     props: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
+  ubrn_uniffi_dcl_core_fn_func_track_ftue_bypass(
+    placeId: Uint8Array,
+    booted: number,
+  ): bigint;
   ubrn_uniffi_dcl_core_fn_func_track_screen(
     name: Uint8Array,
     props: Uint8Array,
@@ -619,6 +623,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_terms_accepted_version(): number;
   ubrn_uniffi_dcl_core_checksum_func_terms_version(): number;
   ubrn_uniffi_dcl_core_checksum_func_track(): number;
+  ubrn_uniffi_dcl_core_checksum_func_track_ftue_bypass(): number;
   ubrn_uniffi_dcl_core_checksum_func_track_screen(): number;
   ubrn_uniffi_dcl_core_checksum_func_urls(): number;
   ubrn_uniffi_dcl_core_checksum_func_version(): number;

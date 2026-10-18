@@ -19,6 +19,7 @@ export type GatesApi = Pick<
   | 'campaignResolution'
   | 'captureCampaignToken'
   | 'consumeCampaign'
+  | 'trackFtueBypass'
   | 'resolveDestination'
   | 'resolveDestinationWithSecret'
   | 'termsVersion'
