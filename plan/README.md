@@ -104,10 +104,11 @@ to watch is how many items are open at the gate and how many `.gd` files remain 
 
 - Until the full-migration gate the work items are Mateo's PR list into the branch, one module or
   one domain per PR, so that the team can read the history. After it the team's PRs follow the same rule.
-- Until the December merge, `main` is merged into the branch every day by a scheduled automated job (an AI session) that
-  updates PR #3059 with what landed on `main`, skips UI-only changes, and resolves a conflict in a
-  `.gd` file the branch deleted as deleted. A fix on `main` that matters outside the UI is redone
-  in RN or Rust by the job or flagged for a person (D-31).
+- Until the December merge, `main` is merged into `2.x` through a draft sync PR (an AI session with
+  the `sync-main-into-2x` skill, porting with `port-main-pr-to-2x`): every upstream PR gets a
+  verdict, UI-only fixes are skipped, a `.gd` the branch deleted stays deleted, and a change that
+  matters is redone in RN or Rust or flagged for a person (D-31). The sync PR is merged as a merge
+  commit, never squashed. Both skills are deleted with this folder in the December merge.
 - The branch merges to `main` at the start of December, once the full-migration gate is green; this
   folder is deleted in that merge.
 - Phase 1 PRs are reviewable Rust-only moves: no behaviour change, no renames beyond the move,
