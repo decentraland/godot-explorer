@@ -53,6 +53,31 @@ const RAIL: {
   },
 ];
 
+const RAIL_PAD = u(20);
+const ITEM_H = u(40);
+
+/** The rail, and one of its entries, on screen: entries are spread evenly with the profile last. */
+export function railRect(section?: MenuSection) {
+  const rail = {
+    left: DRAWER_LEFT,
+    top: DRAWER_TOP,
+    width: RAIL_W,
+    height: DRAWER_H,
+  };
+  if (!section) {
+    return rail;
+  }
+  const count = RAIL.length + 1;
+  const gap = (DRAWER_H - 2 * RAIL_PAD - count * ITEM_H) / (count - 1);
+  const found = RAIL.findIndex(item => item.key === section);
+  const index = found < 0 ? RAIL.length : found;
+  return {
+    ...rail,
+    top: DRAWER_TOP + RAIL_PAD + index * (ITEM_H + gap),
+    height: ITEM_H,
+  };
+}
+
 /** The 50dp icon rail plus the gradient panel; `children` is the active section's content. */
 export function DrawerShell({
   active,
@@ -133,12 +158,12 @@ const styles = StyleSheet.create({
   rail: {
     width: RAIL_W,
     justifyContent: 'space-between',
-    paddingVertical: u(20),
+    paddingVertical: RAIL_PAD,
     borderTopLeftRadius: u(12),
     borderBottomLeftRadius: u(12),
     backgroundColor: 'rgba(36,3,59,0.92)',
   },
-  item: { height: u(40), alignItems: 'center', justifyContent: 'center' },
+  item: { height: ITEM_H, alignItems: 'center', justifyContent: 'center' },
   dot: { position: 'absolute', top: u(6), right: u(10) },
   glow: {
     position: 'absolute',

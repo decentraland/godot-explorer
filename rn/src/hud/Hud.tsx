@@ -18,9 +18,11 @@ import { ChatPanel } from './ChatPanel';
 import { Segment } from './chatModel';
 import { ControlsOverlay } from '../ftue/ControlsOverlay';
 import { dismissControls, ftueTuning, useFtue } from '../ftue/store';
+import { GESTURE_STEPS } from '../ftue/tutorial';
 import type { HudApi } from './hudApi';
 import {
   emitIntent,
+  setChatOpen,
   setUiHidden,
   useMenuOpen,
   useUiHidden,
@@ -84,6 +86,7 @@ export function Hud({
       }),
     [api],
   );
+  useEffect(() => setChatOpen(ui.chat !== 'closed'), [ui.chat]);
 
   useEffect(() => {
     if (ui.chat !== 'writing') {
@@ -166,7 +169,9 @@ export function Hud({
     setChat('closed');
   };
 
-  if (ui.hidden) {
+  const gesture = ftue.run !== null && GESTURE_STEPS.includes(ftue.run.step);
+  // Hide UI stays on through a replay, but the Chat and Menu steps point at those buttons.
+  if (ui.hidden && (ftue.run === null || gesture)) {
     return (
       <View
         style={[styles.corner, { top: ins.top, left: ins.left }]}
@@ -193,7 +198,10 @@ export function Hud({
         style={[styles.corner, { top: ins.top, left: ins.left }]}
         pointerEvents="box-none"
       >
-        <View style={styles.group} pointerEvents="box-none">
+        <View
+          style={[styles.group, gesture && styles.gone]}
+          pointerEvents={gesture ? 'none' : 'box-none'}
+        >
           <MenuButton
             face={own?.face}
             badge={menuUnread}
@@ -260,4 +268,5 @@ const styles = StyleSheet.create({
     gap: u(HUD_SIZES.groupGap / 2),
     marginBottom: u(HUD_SIZES.listGap / 2),
   },
+  gone: { opacity: 0 },
 });

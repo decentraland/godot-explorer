@@ -75,4 +75,7 @@ export const settings: Partial<Record<keyof typeof en, string>> = {
   SETTINGS_REALM: 'Realm',
   SETTINGS_WEBSOCKET_URL: 'URL del WebSocket',
   SETTINGS_PROCESS_TICK_QUOTA: 'Cuota de ticks de proceso',
+  SETTINGS_TUTORIAL: 'TUTORIAL',
+  SETTINGS_REPLAY_TUTORIAL: 'Repetir tutorial',
+  SETTINGS_REPLAY: 'REPETIR',
 };

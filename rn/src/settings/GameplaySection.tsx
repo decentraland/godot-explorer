@@ -1,5 +1,14 @@
-import { View } from 'react-native';
-import { Dropdown, WarningBanner } from '../ds';
+import { StyleSheet, View } from 'react-native';
+import {
+  AppText,
+  colors,
+  Dropdown,
+  fonts,
+  OutlinedButton,
+  u,
+  WarningBanner,
+} from '../ds';
+import { emitIntent } from '../hud/hudSignals';
 import { t } from '../i18n';
 import type { CameraMode } from './keys';
 import { Group, SectionCaption, ToggleRow } from './rows';
@@ -68,6 +77,38 @@ export function GameplaySection({ m }: { m: SettingsModel }) {
           onChange={v => set('hide_interaction_prompts', v)}
         />
       </Group>
+      {env.tutorialReplay && (
+        <>
+          <SectionCaption title={t('SETTINGS_TUTORIAL')} />
+          <Group>
+            <View style={styles.replayRow}>
+              <AppText variant="body" style={styles.replayLabel}>
+                {t('SETTINGS_REPLAY_TUTORIAL')}
+              </AppText>
+              <OutlinedButton
+                box
+                label={t('SETTINGS_REPLAY')}
+                onPress={() => emitIntent({ type: 'replay_tutorial' })}
+              />
+            </View>
+          </Group>
+        </>
+      )}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  replayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: u(20),
+  },
+  replayLabel: {
+    flex: 1,
+    fontFamily: fonts.medium,
+    fontSize: u(15),
+    color: colors.snow,
+  },
+});

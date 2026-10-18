@@ -169,8 +169,12 @@ last_places={
 
     #[test]
     fn imports_the_ftue_state_of_a_1x_install() {
-        let v = parse("[config]\ncontrols_ftue_shown=PackedStringArray(\"menu\", \"chat\")\n");
+        let v = parse(
+            "[config]\ncontrols_ftue_shown=PackedStringArray(\"menu\", \"chat\")\nftue_tutorial_offered=true\nftue_new_player_wallet=\"0xabc\"\n",
+        );
         assert_eq!(v[&K::ControlsFtueShown], V::Text("menu,chat".into()));
+        assert_eq!(v[&K::FtueTutorialOffered], V::Bool(true));
+        assert_eq!(v[&K::FtueNewPlayerWallet], V::Text("0xabc".into()));
         assert_eq!(
             parse_value("PackedStringArray()"),
             Some(V::Text(String::new()))

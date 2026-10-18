@@ -4,5 +4,13 @@ import type * as Native from '../native';
  * shows next, remembers it and records the analytics. */
 export type FtueApi = Pick<
   typeof Native,
-  'ftueTuning' | 'ftueSceneEntered' | 'controlsFtueDismissed'
+  | 'ftueTuning'
+  | 'ftueSceneEntered'
+  | 'controlsFtueDismissed'
+  | 'tutorialWelcomeAnswered'
+  | 'tutorialStepEntered'
+  | 'tutorialSkipped'
+  | 'tutorialCompleted'
+  | 'tutorialReplayRequested'
+  | 'ftueMarkNewPlayer'
 >;

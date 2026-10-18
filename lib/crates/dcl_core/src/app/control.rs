@@ -134,7 +134,12 @@ pub struct HudSnapshot {
     pub position: Vec3,
     /// Base parcel of the scene the player is in; `None` while no scene is loaded there.
     pub scene_base: Option<super::Parcel>,
+    /// Degrees; yaw around the up axis, pitch up and down.
+    pub camera_yaw: f32,
+    pub camera_pitch: f32,
     pub camera_mode: CameraMode,
+    /// A scene fixed the camera mode, so pinching does not switch it.
+    pub camera_mode_locked: bool,
     /// The movement joystick is on screen (a scene can hide it).
     pub joystick_visible: bool,
 }

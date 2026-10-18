@@ -307,7 +307,13 @@ impl Host {
                 Parcel::new(base.x, base.y)
             })
         };
-        let (camera_mode, joystick_hidden) = {
+        let camera = world
+            .player
+            .get_viewport()
+            .and_then(|viewport| viewport.get_camera_3d())
+            .map(|camera| camera.get_global_rotation_degrees())
+            .unwrap_or_default();
+        let (camera_mode, camera_mode_locked, joystick_hidden) = {
             let global = DclGlobal::singleton();
             let global = global.bind();
             let mode = match CameraMode::from_i32(global.current_camera_mode) {
@@ -315,7 +321,11 @@ impl Host {
                 CameraMode::ThirdPerson => HudCameraMode::ThirdPerson,
                 CameraMode::Cinematic => HudCameraMode::Cinematic,
             };
-            (mode, global.touch_controls_hide_joystick)
+            (
+                mode,
+                global.camera_mode_blocked,
+                global.touch_controls_hide_joystick,
+            )
         };
         let joystick = &world.joystick;
         globals::engine().bind().report_hud(HudSnapshot {
@@ -328,7 +338,10 @@ impl Host {
                 z: position.z,
             },
             scene_base,
+            camera_yaw: camera.y,
+            camera_pitch: camera.x,
             camera_mode,
+            camera_mode_locked,
             // A scene can hide the joystick's graphic without hiding the node.
             joystick_visible: joystick.is_visible_in_tree()
                 && joystick.get_modulate().a > 0.0

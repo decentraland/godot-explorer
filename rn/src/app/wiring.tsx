@@ -1,6 +1,9 @@
 import { useEffect } from 'react';
 import { BackHandler } from 'react-native';
 import { BackpackScreen } from '../backpack/BackpackScreen';
+import { TutorialStep } from '../core/native';
+import { replayTutorial, useFtue } from '../ftue/store';
+import { EquipHint } from '../ftue/TutorialLayer';
 import { onIntent } from '../hud/hudSignals';
 import { t } from '../i18n';
 import { openMenu } from '../menu';
@@ -12,9 +15,24 @@ import '../menu/register';
 import '../profile';
 import '../settings';
 
+const TUTORIAL_TAB = { tab: 'extras' as const };
+
 function BackpackRoute() {
   const { pop } = useNav();
-  return <BackpackScreen footer={null} onBack={pop} />;
+  const step = useFtue().run?.step;
+  // The tutorial's equip step opens on Extras (hats, eyewear...).
+  const tutorial =
+    step === TutorialStep.Backpack || step === TutorialStep.Equip;
+  return (
+    <>
+      <BackpackScreen
+        footer={null}
+        onBack={pop}
+        initial={tutorial ? TUTORIAL_TAB : undefined}
+      />
+      <EquipHint />
+    </>
+  );
 }
 
 registerScreen('backpack', () => <BackpackRoute />);
@@ -40,7 +58,7 @@ export function confirmLeave(onLeave: () => void): void {
 
 /** Routes HUD requests to the screens that own them, and lets Android back leave the world. */
 export function useAppWiring(onLeave: () => void) {
-  const { push, route } = useNav();
+  const { push, pop, route } = useNav();
   const inWorld = route.name === 'world';
 
   useEffect(
@@ -50,11 +68,16 @@ export function useAppWiring(onLeave: () => void) {
           openMenu();
         } else if (intent.type === 'open_profile') {
           push({ name: 'profile' });
+        } else if (intent.type === 'replay_tutorial') {
+          if (!inWorld) {
+            pop();
+          }
+          replayTutorial();
         } else {
           push({ name: 'backpack' });
         }
       }),
-    [push],
+    [push, pop, inWorld],
   );
 
   useEffect(() => {

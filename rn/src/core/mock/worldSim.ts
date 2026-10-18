@@ -69,7 +69,10 @@ export function createMockWorld(bus: MockBus): MockWorld {
       fps: 60,
       position,
       sceneBase: parcel,
+      cameraYaw: (step * 3) % 360,
+      cameraPitch: 0,
       cameraMode: CameraMode.ThirdPerson,
+      cameraModeLocked: false,
       joystickVisible: true,
     };
     bus.emit(l => l.hud(snapshot));

@@ -900,6 +900,51 @@
     "orientation": "landscape"
   },
   {
+    "id": "extra/ftue-welcome",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/ftue-step-move",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/ftue-step-camera",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/ftue-step-pinch",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/ftue-step-chat",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/ftue-step-menu",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/ftue-step-social",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/ftue-step-backpack",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/ftue-step-equip",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
     "id": "settings-revamp__settings-graphics__1397-6501",
     "source": "settings-revamp",
     "orientation": "portrait"

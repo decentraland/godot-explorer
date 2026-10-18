@@ -78,6 +78,17 @@ export function EntryFlow({
     }
   }, [step, onDone]);
 
+  // Only an account without a profile reaches the welcome after its avatar: it was made here.
+  useEffect(() => {
+    if (step === 'ftue') {
+      try {
+        core().ftueMarkNewPlayer();
+      } catch {
+        // Signed out meanwhile: there is no account to remember.
+      }
+    }
+  }, [step]);
+
   const [busy, setBusy] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
 

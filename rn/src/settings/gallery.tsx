@@ -53,7 +53,7 @@ const skyOff = values({ dynamic_skybox: false, skybox_time: 21600 });
 const chat = values({ submit_message_closes_chat: true });
 const inWorld = (env: MockSeed['env'], v = chat): MockSeed => ({
   ...v,
-  env: { inWorld: true, ...env },
+  env: { inWorld: true, tutorialReplay: true, ...env },
 });
 const audio = (general: number, scene: number): MockSeed =>
   values({ audio_general_volume: general, audio_scene_volume: scene });

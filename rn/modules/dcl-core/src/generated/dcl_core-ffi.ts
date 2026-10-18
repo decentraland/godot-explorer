@@ -275,6 +275,9 @@ interface NativeModuleInterface {
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
   ubrn_uniffi_dcl_core_fn_func_flush_analytics(): bigint;
+  ubrn_uniffi_dcl_core_fn_func_ftue_mark_new_player(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
   ubrn_uniffi_dcl_core_fn_func_ftue_scene_entered(
     blocked: number,
     uniffi_out_err: UniffiRustCallStatus,
@@ -452,6 +455,27 @@ interface NativeModuleInterface {
     props: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
+  ubrn_uniffi_dcl_core_fn_func_tutorial_completed(
+    isReplay: number,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_tutorial_replay_requested(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_tutorial_skipped(
+    step: Uint8Array,
+    isReplay: number,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_tutorial_step_entered(
+    step: Uint8Array,
+    isReplay: number,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_tutorial_welcome_answered(
+    start: number,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
   ubrn_uniffi_dcl_core_fn_func_urls(
     uniffi_out_err: UniffiRustCallStatus,
   ): Uint8Array;
@@ -586,6 +610,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_favorite_places(): number;
   ubrn_uniffi_dcl_core_checksum_func_first_screen_drawn(): number;
   ubrn_uniffi_dcl_core_checksum_func_flush_analytics(): number;
+  ubrn_uniffi_dcl_core_checksum_func_ftue_mark_new_player(): number;
   ubrn_uniffi_dcl_core_checksum_func_ftue_scene_entered(): number;
   ubrn_uniffi_dcl_core_checksum_func_ftue_tuning(): number;
   ubrn_uniffi_dcl_core_checksum_func_handle_deep_link(): number;
@@ -640,6 +665,11 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_track(): number;
   ubrn_uniffi_dcl_core_checksum_func_track_ftue_bypass(): number;
   ubrn_uniffi_dcl_core_checksum_func_track_screen(): number;
+  ubrn_uniffi_dcl_core_checksum_func_tutorial_completed(): number;
+  ubrn_uniffi_dcl_core_checksum_func_tutorial_replay_requested(): number;
+  ubrn_uniffi_dcl_core_checksum_func_tutorial_skipped(): number;
+  ubrn_uniffi_dcl_core_checksum_func_tutorial_step_entered(): number;
+  ubrn_uniffi_dcl_core_checksum_func_tutorial_welcome_answered(): number;
   ubrn_uniffi_dcl_core_checksum_func_urls(): number;
   ubrn_uniffi_dcl_core_checksum_func_version(): number;
   ubrn_uniffi_dcl_core_checksum_func_version_gate(): number;

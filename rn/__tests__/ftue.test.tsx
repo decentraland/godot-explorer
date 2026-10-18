@@ -11,16 +11,23 @@ import {
   ControlsFtueElement,
   SceneEntryFtue,
   State,
+  TutorialStep,
 } from '../src/core/native';
-import type { HudSnapshot } from '../src/core/native';
+import type { FtueTuning, HudSnapshot } from '../src/core/native';
 import { ControlsOverlay, unlockAfterMs } from '../src/ftue/ControlsOverlay';
 import {
+  answerWelcome,
   dismissControls,
   entryDecided,
+  replayTutorial,
   resetFtueForTests,
   showControls,
+  skipTutorial,
+  tutorialFact,
   useFtue,
 } from '../src/ftue/store';
+import { MENU_OPEN_MS, reduceRun, startRun } from '../src/ftue/tutorial';
+import type { Fact, Run } from '../src/ftue/tutorial';
 import { useFtueEntry } from '../src/ftue/useFtueEntry';
 import { hudInsets } from '../src/hud/layout';
 import { Hud } from '../src/hud/Hud';
@@ -28,6 +35,16 @@ import { coreHudApi, HudApi } from '../src/hud/hudApi';
 import { ModalProvider, useModals } from '../src/modals/ModalProvider';
 import type { ModalApi } from '../src/modals/ModalProvider';
 import { useModalShowing } from '../src/modals/bridge';
+
+const TUNING: FtueTuning = {
+  overlayLockSeconds: 3,
+  overlayTapThrough: false,
+  moveMeters: 1,
+  cameraDegrees: 30,
+  socialSeconds: 3,
+  stepDelaySeconds: 2,
+  chatSeconds: 3,
+};
 
 const metrics = {
   frame: { x: 0, y: 0, width: 800, height: 360 },
@@ -55,11 +72,23 @@ function hud(patch: Partial<HudSnapshot> = {}): HudSnapshot {
     fps: 60,
     position: { x: 0, y: 0, z: 0 },
     sceneBase: { x: -3, y: -2 },
+    cameraYaw: 0,
+    cameraPitch: 0,
     cameraMode: CameraMode.ThirdPerson,
+    cameraModeLocked: false,
     joystickVisible: true,
     ...patch,
   };
 }
+
+const at = (x: number, z: number, yaw = 0): HudSnapshot =>
+  hud({ position: { x, y: 0, z }, cameraYaw: yaw });
+
+function play(run: Run, ...facts: Fact[]): Run {
+  return facts.reduce((r, fact) => reduceRun(r, fact, TUNING), run);
+}
+
+const onStep = (step: TutorialStep): Run => ({ ...startRun(false), step });
 
 afterEach(() => {
   act(() => mounted.splice(0).forEach(tree => tree.unmount()));
@@ -67,6 +96,113 @@ afterEach(() => {
   setCoreForTests(undefined);
   resetCoreEventsForTests();
   jest.useRealTimers();
+});
+
+describe('tutorial steps', () => {
+  it('walking a metre ends the move step, the next one starts after the pause', () => {
+    let run = play(
+      startRun(false),
+      { type: 'hud', hud: at(0, 0), now: 0 },
+      { type: 'hud', hud: at(0, 0.6), now: 250 },
+      { type: 'hud', hud: at(50, 50), now: 500 },
+    );
+    expect(run.moved).toBeCloseTo(0.6);
+    run = play(run, { type: 'hud', hud: at(50, 50.5), now: 750 });
+    expect(run.next).toEqual({ step: TutorialStep.Camera, at: 2750 });
+    expect(play(run, { type: 'tick', now: 2000 }).step).toBe(TutorialStep.Move);
+    expect(play(run, { type: 'tick', now: 2750 }).step).toBe(
+      TutorialStep.Camera,
+    );
+  });
+
+  it('turning the camera counts the short way round', () => {
+    const run = play(
+      onStep(TutorialStep.Camera),
+      { type: 'hud', hud: at(0, 0, 350), now: 0 },
+      { type: 'hud', hud: at(0, 0, 10), now: 250 },
+    );
+    expect(run.rotated).toBeCloseTo(20);
+    expect(
+      play(run, { type: 'hud', hud: at(0, 0, 25), now: 500 }).next?.step,
+    ).toBe(TutorialStep.Pinch);
+  });
+
+  it('pinch needs first and then third person, and is skipped when a scene locks the camera', () => {
+    const first = hud({ cameraMode: CameraMode.FirstPerson });
+    const run = play(
+      onStep(TutorialStep.Pinch),
+      { type: 'hud', hud: hud(), now: 0 },
+      { type: 'hud', hud: first, now: 250 },
+    );
+    expect(run.next).toBeUndefined();
+    expect(play(run, { type: 'hud', hud: hud(), now: 500 }).next?.step).toBe(
+      TutorialStep.Chat,
+    );
+
+    const locked = play(
+      onStep(TutorialStep.Camera),
+      { type: 'hud', hud: hud({ cameraModeLocked: true }), now: 0 },
+      {
+        type: 'hud',
+        hud: hud({ cameraModeLocked: true, cameraYaw: 40 }),
+        now: 250,
+      },
+      { type: 'tick', now: 5000 },
+    );
+    expect(locked.step).toBe(TutorialStep.Chat);
+  });
+
+  it('a chat closed within the guard is asked again; later it moves on to the menu', () => {
+    const opened = play(onStep(TutorialStep.Chat), {
+      type: 'chat',
+      open: true,
+      now: 0,
+    });
+    expect(opened).toMatchObject({ engaged: true, guardUntil: 3000 });
+    const early = play(opened, { type: 'chat', open: false, now: 1000 });
+    expect(early).toMatchObject({ step: TutorialStep.Chat, engaged: false });
+    const late = play(
+      opened,
+      { type: 'tick', now: 3000 },
+      { type: 'chat', open: false, now: 3500 },
+    );
+    expect(late.step).toBe(TutorialStep.Menu);
+  });
+
+  it('the menu opened from the chat skips the menu step', () => {
+    const run = play(
+      onStep(TutorialStep.Chat),
+      { type: 'chat', open: true, now: 0 },
+      { type: 'tick', now: 3000 },
+      { type: 'menu', open: true, social: false, now: 4000 },
+      { type: 'chat', open: false, now: 4000 },
+    );
+    expect(run.step).toBe(TutorialStep.Social);
+  });
+
+  it('menu, social and backpack lead to the equip step; equipping and leaving completes it', () => {
+    let run = play(onStep(TutorialStep.Menu), {
+      type: 'menu',
+      open: true,
+      social: false,
+      now: 0,
+    });
+    run = play(run, { type: 'tick', now: MENU_OPEN_MS });
+    expect(run.step).toBe(TutorialStep.Social);
+    run = play(run, { type: 'menu', open: true, social: true, now: 1000 });
+    expect(run).toMatchObject({ engaged: true, next: { at: 4000 } });
+    run = play(
+      run,
+      { type: 'tick', now: 4000 },
+      { type: 'backpack', open: true },
+    );
+    expect(run.step).toBe(TutorialStep.Equip);
+    expect(play(run, { type: 'reenter' }).step).toBe(TutorialStep.Backpack);
+    expect(play(run, { type: 'backpack', open: false }).ended).toBe('skipped');
+    expect(
+      play(run, { type: 'equipped' }, { type: 'backpack', open: false }).ended,
+    ).toBe('completed');
+  });
 });
 
 describe('ftue store', () => {
@@ -79,10 +215,33 @@ describe('ftue store', () => {
       };
     setCoreForTests({
       ...createMockCore(),
+      tutorialWelcomeAnswered: record('welcome'),
+      tutorialStepEntered: record('step'),
+      tutorialSkipped: record('skipped'),
+      tutorialCompleted: record('completed'),
+      tutorialReplayRequested: record('replay'),
       controlsFtueDismissed: record('dismissed'),
     });
     return calls;
   }
+
+  it('START runs the steps from the first one; SKIP during a step settles it', () => {
+    const calls = spyCore();
+    answerWelcome(true);
+    tutorialFact({ type: 'hud', hud: at(0, 0), now: 0 });
+    skipTutorial();
+    expect(calls).toEqual([
+      'welcome(true)',
+      `step(${TutorialStep.Move},false)`,
+      `skipped(${TutorialStep.Move},false)`,
+    ]);
+  });
+
+  it('Replay starts a run without the welcome card and says so', () => {
+    const calls = spyCore();
+    replayTutorial();
+    expect(calls).toEqual(['replay()', `step(${TutorialStep.Move},true)`]);
+  });
 
   it('dismissing the overlay reports what it labelled', () => {
     const calls = spyCore();
@@ -159,8 +318,8 @@ describe('modals while the controls overlay is up', () => {
 describe('scene entry', () => {
   function Entry() {
     useFtueEntry(true);
-    const { controls, decided } = useFtue();
-    return <Text>{JSON.stringify({ controls, decided })}</Text>;
+    const { controls, welcome, decided } = useFtue();
+    return <Text>{JSON.stringify({ controls, welcome, decided })}</Text>;
   }
 
   function inWorldCore(answer: SceneEntryFtue) {
@@ -192,6 +351,13 @@ describe('scene entry', () => {
     await act(async () => bus.emit(l => l.hud(hud())));
     expect(blocked).toHaveLength(1);
     expect(text(tree)).toContain('\\"decided\\":true');
+  });
+
+  it('a welcome answer from the core shows the card', async () => {
+    const { bus } = inWorldCore(new SceneEntryFtue.Tutorial());
+    const tree = mount(<Entry />);
+    await act(async () => bus.emit(l => l.hud(hud())));
+    expect(text(tree)).toContain('\\"welcome\\":true');
   });
 });
 

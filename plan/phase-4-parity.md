@@ -71,6 +71,7 @@ in phase 3 and not run again here. Rows marked "not done" are the work left befo
 | Version and FPS line | RN `VersionFps` | Not run | |
 | Hide UI | RN `HideUi` control | Not run | The sub-toggles were dropped |
 | Controls overlay on first scene entry (main #3032) | RN `ftue/ControlsOverlay` + `dcl_core::ftue` | Not run (jest, gallery) | `ftue-overlay-tap-through` not honoured; device run |
+| Guided tutorial for new players (main #3041) | RN `ftue/TutorialLayer` + `dcl_core::ftue` | Not run (jest, gallery) | Reward card and claim (no rewards client on 2.x; guests need Add Email, 6.8); joystick resting-base redraw; device run of all 7 steps |
 | Avatar tap opens a profile | Not done | | Needs a player-profile screen |
 | Scene request (link, teleport, realm change, NFT) | `CoreModals` + `AnswerSceneRequest` | Not run | Needs a scene that asks; NFT card not ported |
 | Private world / place not found | Destination check + engine notice | Ran: not found (deep link) | Private and password not run |

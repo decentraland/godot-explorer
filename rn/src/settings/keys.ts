@@ -79,6 +79,8 @@ export type SettingsEnv = {
   deviceUnsupported: boolean;
   /** Dev Tools and the pseudo-locale only exist outside production. */
   devBuild: boolean;
+  /** In a world, where Gameplay offers to replay the tutorial. */
+  tutorialReplay: boolean;
 };
 
 export const defaultEnv = (): SettingsEnv => ({
@@ -87,6 +89,7 @@ export const defaultEnv = (): SettingsEnv => ({
   cameraLocked: false,
   deviceUnsupported: false,
   devBuild: typeof __DEV__ !== 'undefined' && __DEV__,
+  tutorialReplay: false,
 });
 
 export type AccountInfo = {

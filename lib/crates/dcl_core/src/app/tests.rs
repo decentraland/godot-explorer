@@ -510,7 +510,10 @@ fn snapshot(parcel: Parcel, realm: &str) -> HudSnapshot {
             z: 0.0,
         },
         scene_base: Some(parcel),
+        camera_yaw: 0.0,
+        camera_pitch: 0.0,
         camera_mode: CameraMode::ThirdPerson,
+        camera_mode_locked: false,
         joystick_visible: true,
     }
 }

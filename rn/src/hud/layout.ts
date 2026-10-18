@@ -43,6 +43,8 @@ export const HUD_SIZES = {
   notificationsWidth: 337,
 } as const;
 
+export type Rect = { left: number; top: number; width: number; height: number };
+
 /** Figma px of the HUD frame -> dp from the screen's top-left, on the same floor as the buttons. */
 export function hudPoint(x: number, y: number, insets: Insets) {
   return {
@@ -50,6 +52,37 @@ export function hudPoint(x: number, y: number, insets: Insets) {
     y: insets.top + u((y - HUD_MARGIN_FLOOR.top) / 2),
   };
 }
+
+/** Where the Menu and Chat buttons sit: one row at the HUD's top-left corner, centred vertically. */
+export function hudButtonRects(insets: Insets): { menu: Rect; chat: Rect } {
+  const menu = u(HUD_SIZES.menu / 2);
+  const chat = u(HUD_SIZES.chat / 2);
+  return {
+    menu: { left: insets.left, top: insets.top, width: menu, height: menu },
+    chat: {
+      left: insets.left + menu + u(HUD_SIZES.groupGap / 2),
+      top: insets.top + (menu - chat) / 2,
+      width: chat,
+      height: chat,
+    },
+  };
+}
+
+/** Centre of the resting joystick base. */
+export const joystickCenter = (insets: Insets) =>
+  hudPoint(
+    JOYSTICK_BASE.x + JOYSTICK_BASE.width / 2,
+    JOYSTICK_BASE.y + JOYSTICK_BASE.height / 2,
+    insets,
+  );
+
+/** Where a touch reaches the native joystick, down to the screen's bottom edge. */
+export const joystickZone = (screenHeight: number): Rect => ({
+  left: 0,
+  top: u(JOYSTICK_ZONE.y / 2),
+  width: u(JOYSTICK_ZONE.width / 2),
+  height: screenHeight - u(JOYSTICK_ZONE.y / 2),
+});
 
 /** Effective HUD insets in dp: the larger of the device inset and the Godot margin floor. */
 export function hudInsets(device: Insets): Insets {

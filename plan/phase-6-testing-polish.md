@@ -26,6 +26,7 @@ engine-facing fix.
   layer and per domain assigned (D-30).
 - [ ] **6.1 What the AI got wrong**. Whatever was not green at the gate, plus defects found by reading and running the ported code, taken first.
   Handed over from phase 5 (user decision, 17 Oct 2026; details in `phase-5-verification.md`): avatar snapshot references and the `--stest` / client reference images regenerated from the current build (the committed ones are old); lights against 1.15; HLS and LiveKit video, in background and foreground; creator preview (`-- --preview`); the RN `begin_sign_in` crash while `SignedIn`; reminders, error modals and settings relaunch on a phone; OTP / Google / Gmail logins, native wallets and friends; es / pt_BR strings for the entry flow and the two Idioma helper texts. Push notifications are dropped.
+  Main #3041: the guided tutorial's reward card and the Vibe Coding claim need a typed signed `claim_reward` in the core and the guest Add Email upgrade; the card will use static art (D-11). Main #3032 and #3041: the controls overlay and the tutorial's highlights checked on a phone.
 - [ ] **6.2 Device matrix QA**. Moto Edge 60 Pro, a low-end Android (Mali, 4 GB), iPhone 14 Pro, an
   older iPhone, one tablet per platform. Each parity row run with a
   signed-in account, including the paths never tested on the branch: friends actions, notifications

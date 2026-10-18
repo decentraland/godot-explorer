@@ -247,10 +247,22 @@ void uniffi_dcl_core_fn_func_show_avatar_preview(
     RustBuffer rect, RustCallStatus *uniffi_out_err);
 void uniffi_dcl_core_fn_func_controls_ftue_dismissed(
     RustBuffer elements, double seconds_shown, RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_func_ftue_mark_new_player(
+    RustCallStatus *uniffi_out_err);
 RustBuffer
 uniffi_dcl_core_fn_func_ftue_scene_entered(int8_t blocked,
                                            RustCallStatus *uniffi_out_err);
 RustBuffer uniffi_dcl_core_fn_func_ftue_tuning(RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_func_tutorial_completed(int8_t is_replay,
+                                                RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_func_tutorial_replay_requested(
+    RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_func_tutorial_skipped(RustBuffer step, int8_t is_replay,
+                                              RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_func_tutorial_step_entered(
+    RustBuffer step, int8_t is_replay, RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_func_tutorial_welcome_answered(
+    int8_t start, RustCallStatus *uniffi_out_err);
 void uniffi_dcl_core_fn_func_accept_terms(uint32_t version,
                                           RustCallStatus *uniffi_out_err);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_campaign_resolution();
@@ -521,8 +533,14 @@ uint16_t uniffi_dcl_core_checksum_func_first_screen_drawn();
 uint16_t uniffi_dcl_core_checksum_func_hide_avatar_preview();
 uint16_t uniffi_dcl_core_checksum_func_show_avatar_preview();
 uint16_t uniffi_dcl_core_checksum_func_controls_ftue_dismissed();
+uint16_t uniffi_dcl_core_checksum_func_ftue_mark_new_player();
 uint16_t uniffi_dcl_core_checksum_func_ftue_scene_entered();
 uint16_t uniffi_dcl_core_checksum_func_ftue_tuning();
+uint16_t uniffi_dcl_core_checksum_func_tutorial_completed();
+uint16_t uniffi_dcl_core_checksum_func_tutorial_replay_requested();
+uint16_t uniffi_dcl_core_checksum_func_tutorial_skipped();
+uint16_t uniffi_dcl_core_checksum_func_tutorial_step_entered();
+uint16_t uniffi_dcl_core_checksum_func_tutorial_welcome_answered();
 uint16_t uniffi_dcl_core_checksum_func_accept_terms();
 uint16_t uniffi_dcl_core_checksum_func_campaign_resolution();
 uint16_t uniffi_dcl_core_checksum_func_capture_campaign_token();
@@ -5075,6 +5093,17 @@ NativeDclCore::NativeDclCore(
             return this->cpp_uniffi_dcl_core_fn_func_controls_ftue_dismissed(
                 rt, thisVal, args, count);
           });
+  props["ubrn_uniffi_dcl_core_fn_func_ftue_mark_new_player"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_ftue_mark_new_player"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_ftue_mark_new_player(
+                rt, thisVal, args, count);
+          });
   props["ubrn_uniffi_dcl_core_fn_func_ftue_scene_entered"] =
       jsi::Function::createFromHostFunction(
           rt,
@@ -5096,6 +5125,61 @@ NativeDclCore::NativeDclCore(
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_dcl_core_fn_func_ftue_tuning(rt, thisVal,
                                                                  args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_tutorial_completed"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_tutorial_completed"),
+          1,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_tutorial_completed(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_tutorial_replay_requested"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_tutorial_replay_requested"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_tutorial_replay_requested(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_tutorial_skipped"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_tutorial_skipped"),
+          2,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_tutorial_skipped(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_tutorial_step_entered"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_tutorial_step_entered"),
+          2,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_tutorial_step_entered(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_tutorial_welcome_answered"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_tutorial_welcome_answered"),
+          1,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_tutorial_welcome_answered(
+                rt, thisVal, args, count);
           });
   props["ubrn_uniffi_dcl_core_fn_func_accept_terms"] =
       jsi::Function::createFromHostFunction(
@@ -6634,6 +6718,17 @@ NativeDclCore::NativeDclCore(
                 ->cpp_uniffi_dcl_core_checksum_func_controls_ftue_dismissed(
                     rt, thisVal, args, count);
           });
+  props["ubrn_uniffi_dcl_core_checksum_func_ftue_mark_new_player"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_ftue_mark_new_player"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_ftue_mark_new_player(
+                rt, thisVal, args, count);
+          });
   props["ubrn_uniffi_dcl_core_checksum_func_ftue_scene_entered"] =
       jsi::Function::createFromHostFunction(
           rt,
@@ -6655,6 +6750,66 @@ NativeDclCore::NativeDclCore(
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_dcl_core_checksum_func_ftue_tuning(
                 rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_tutorial_completed"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_tutorial_completed"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_tutorial_completed(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_tutorial_replay_requested"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt,
+              "ubrn_uniffi_dcl_core_checksum_func_tutorial_replay_requested"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this
+                ->cpp_uniffi_dcl_core_checksum_func_tutorial_replay_requested(
+                    rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_tutorial_skipped"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_tutorial_skipped"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_tutorial_skipped(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_tutorial_step_entered"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_tutorial_step_entered"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this
+                ->cpp_uniffi_dcl_core_checksum_func_tutorial_step_entered(
+                    rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_tutorial_welcome_answered"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt,
+              "ubrn_uniffi_dcl_core_checksum_func_tutorial_welcome_answered"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this
+                ->cpp_uniffi_dcl_core_checksum_func_tutorial_welcome_answered(
+                    rt, thisVal, args, count);
           });
   props["ubrn_uniffi_dcl_core_checksum_func_accept_terms"] =
       jsi::Function::createFromHostFunction(
@@ -8451,6 +8606,17 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_controls_ftue_dismissed(
 
   return jsi::Value::undefined();
 }
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_ftue_mark_new_player(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_func_ftue_mark_new_player(&status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
 jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_ftue_scene_entered(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
@@ -8473,6 +8639,67 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_ftue_tuning(
       rt, callInvoker, status, args[count - 1]);
 
   return uniffi::dcl_core::Bridging<RustBuffer>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_tutorial_completed(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_func_tutorial_completed(
+      uniffi_jsi::Bridging<int8_t>::fromJs(rt, callInvoker, args[0]), &status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_tutorial_replay_requested(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_func_tutorial_replay_requested(&status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_tutorial_skipped(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_func_tutorial_skipped(
+      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]),
+      uniffi_jsi::Bridging<int8_t>::fromJs(rt, callInvoker, args[1]), &status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_tutorial_step_entered(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_func_tutorial_step_entered(
+      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]),
+      uniffi_jsi::Bridging<int8_t>::fromJs(rt, callInvoker, args[1]), &status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_tutorial_welcome_answered(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_func_tutorial_welcome_answered(
+      uniffi_jsi::Bridging<int8_t>::fromJs(rt, callInvoker, args[0]), &status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
 }
 jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_accept_terms(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
@@ -9936,6 +10163,14 @@ NativeDclCore::cpp_uniffi_dcl_core_checksum_func_controls_ftue_dismissed(
 
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }
+jsi::Value
+NativeDclCore::cpp_uniffi_dcl_core_checksum_func_ftue_mark_new_player(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_ftue_mark_new_player();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
 jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_ftue_scene_entered(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
@@ -9947,6 +10182,44 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_ftue_tuning(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
   auto value = uniffi_dcl_core_checksum_func_ftue_tuning();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_tutorial_completed(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_tutorial_completed();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value
+NativeDclCore::cpp_uniffi_dcl_core_checksum_func_tutorial_replay_requested(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_tutorial_replay_requested();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_tutorial_skipped(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_tutorial_skipped();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value
+NativeDclCore::cpp_uniffi_dcl_core_checksum_func_tutorial_step_entered(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_tutorial_step_entered();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value
+NativeDclCore::cpp_uniffi_dcl_core_checksum_func_tutorial_welcome_answered(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_tutorial_welcome_answered();
 
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }

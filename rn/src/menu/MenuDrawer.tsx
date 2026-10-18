@@ -27,7 +27,7 @@ import {
 } from './notifications';
 import { ModalTarget, PlaceModal } from './PlaceModal';
 import { REPORT_CONTENT_URL, shareScene } from './share';
-import { socialReducer, SocialTab } from './social';
+import { socialReducer } from './social';
 import { SocialPanel } from './SocialPanel';
 import type { SceneInfo } from './types';
 import { useLoad } from './useLoad';
@@ -50,12 +50,11 @@ export function jumpTo(place: Place): void {
 function OpenDrawer({ navigate }: { navigate: Navigate }) {
   const api = getMenuApi();
   const toast = useToast();
-  const { section } = useDrawerState();
+  const { section, socialTab } = useDrawerState();
   const now = useMemo(() => Date.now(), []);
   const played = usePlayed();
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [reminders, setReminders] = useState<ReadonlySet<string>>(new Set());
-  const [socialTab, setSocialTab] = useState<SocialTab>('friends');
 
   const scene = useLoad<SceneInfo>(api.scene);
   const feed = useLoad(api.discover);
@@ -140,8 +139,7 @@ function OpenDrawer({ navigate }: { navigate: Navigate }) {
         openEvent(event);
       }
     } else if (target?.section === 'social') {
-      setSocialTab(target.tab);
-      selectSection('social');
+      selectSection('social', target.tab);
     } else if (target?.section === 'backpack') {
       select('backpack');
     }

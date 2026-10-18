@@ -168,6 +168,9 @@ protected:
   jsi::Value cpp_uniffi_dcl_core_fn_func_controls_ftue_dismissed(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_ftue_mark_new_player(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
   jsi::Value cpp_uniffi_dcl_core_fn_func_ftue_scene_entered(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
@@ -175,6 +178,21 @@ protected:
                                                      const jsi::Value &thisVal,
                                                      const jsi::Value *args,
                                                      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_tutorial_completed(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_tutorial_replay_requested(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_tutorial_skipped(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_tutorial_step_entered(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_tutorial_welcome_answered(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
   jsi::Value cpp_uniffi_dcl_core_fn_func_accept_terms(jsi::Runtime &rt,
                                                       const jsi::Value &thisVal,
                                                       const jsi::Value *args,
@@ -653,10 +671,28 @@ protected:
   jsi::Value cpp_uniffi_dcl_core_checksum_func_controls_ftue_dismissed(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_ftue_mark_new_player(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_func_ftue_scene_entered(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_func_ftue_tuning(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_tutorial_completed(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_tutorial_replay_requested(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_tutorial_skipped(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_tutorial_step_entered(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_tutorial_welcome_answered(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_func_accept_terms(

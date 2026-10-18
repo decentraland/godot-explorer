@@ -6,11 +6,18 @@ import { SceneEntryFtue_Tags } from '../core/native';
 import { useCoreState } from '../core/useCoreState';
 import { useMenuOpen, useUiHidden } from '../hud/hudSignals';
 import { useModalShowing } from '../modals/bridge';
-import { entryDecided, leaveEntry, showControls } from './store';
+import {
+  entryDecided,
+  ftueState,
+  leaveEntry,
+  showControls,
+  showWelcome,
+} from './store';
 
 /**
- * Asks the core, once per scene entry, whether the controls overlay shows: after the loading
- * cover (`ready`), the engine's first report of the scene and any modal that was up.
+ * Asks the core, once per scene entry, whether the controls overlay or the tutorial's welcome
+ * card shows: after the loading cover (`ready`), the engine's first report of the scene and any
+ * modal that was up.
  */
 export function useFtueEntry(ready: boolean): void {
   const inWorld = useCoreState().tag === 'InWorld';
@@ -36,7 +43,8 @@ export function useFtueEntry(ready: boolean): void {
       return;
     }
     asked.current = true;
-    const blocked = menuOpen || hidden || height > width;
+    const blocked =
+      menuOpen || hidden || height > width || ftueState().run !== null;
     let entry;
     try {
       entry = core().ftueSceneEntered(blocked);
@@ -46,6 +54,8 @@ export function useFtueEntry(ready: boolean): void {
     }
     if (entry.tag === SceneEntryFtue_Tags.Controls) {
       showControls(entry.inner.elements);
+    } else if (entry.tag === SceneEntryFtue_Tags.Tutorial) {
+      showWelcome();
     }
     entryDecided();
   }, [ready, inWorld, reported, modal, menuOpen, hidden, width, height]);
