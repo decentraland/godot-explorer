@@ -71,7 +71,9 @@ struct Packet {
     anim: AnimState,
 }
 
-/// Animation flags consumed by avatar.gd's AnimationTree conditions.
+/// Animation flags consumed by avatar.gd's AnimationTree conditions. One per
+/// buffered packet, so a rendered segment never mixes one packet's rise/fall
+/// with another's air pose or gait speed.
 #[derive(Default, Clone, Copy)]
 struct AnimState {
     walk: bool,
@@ -81,6 +83,9 @@ struct AnimState {
     fall: bool,
     land: bool,
     is_grounded: bool,
+    long_fall: bool,
+    fall_fast: bool,
+    movement_speed: f32,
 }
 
 const PACKET_BUFFER_CAPACITY: usize = 8;
@@ -236,6 +241,18 @@ pub struct DclAvatar {
     #[export]
     #[var(pub)]
     pub(crate) land: bool,
+    // #2855: long-fall animation gate (vy < -8 airborne, Unity AnimationLongFallSpeed).
+    #[export]
+    #[var(pub)]
+    pub(crate) long_fall: bool,
+    // #2855: hard-landing stun (0.75s input lock active).
+    #[export]
+    #[var(pub)]
+    pub(crate) stunned: bool,
+    // #1553: anim-level fall gate (vy < -3, Unity AnimationFallSpeed).
+    #[export]
+    #[var(pub)]
+    pub(crate) fall_fast: bool,
 
     // Multi-jump + gliding state, driven by player.gd (local) or the remote-
     // movement decoder. Consumed by avatar.gd edge detection. glide_state
@@ -249,6 +266,28 @@ pub struct DclAvatar {
     #[export]
     #[var(pub)]
     pub(crate) is_grounded: bool,
+
+    // #2856: horizontal speed (m/s, EMA-smoothed for remotes) feeding the
+    // continuous gait blend in avatar.gd. Local player writes it from
+    // player.gd instead.
+    #[export]
+    movement_speed: f32,
+
+    // Head sync (Unity HeadSync): the sender's head turn in degrees, in its own
+    // frame, plus whether it is aiming at all. The wire writes these for
+    // remotes; the local player never reads them (it aims from its own camera).
+    #[export]
+    head_ik_yaw: f32,
+    #[export]
+    head_ik_pitch: f32,
+    #[export]
+    head_ik_yaw_enabled: bool,
+    #[export]
+    head_ik_pitch_enabled: bool,
+
+    // Last transform written by this class; unchanged frames skip the write and
+    // its subtree propagation. Remote avatars are only moved from here.
+    rendered_transform: Option<Transform3D>,
 
     lerp_state: LerpState,
 
@@ -317,6 +356,15 @@ impl INode3D for DclAvatar {
             current_parcel_scene_id: SceneId::INVALID.0,
             current_parcel_position: Vector2i::new(i32::MAX, i32::MAX),
             wire_classification: false,
+            movement_speed: 0.0,
+            head_ik_yaw: 0.0,
+            head_ik_pitch: 0.0,
+            head_ik_yaw_enabled: false,
+            head_ik_pitch_enabled: false,
+            long_fall: false,
+            stunned: false,
+            fall_fast: false,
+            rendered_transform: None,
             lerp_state: Default::default(),
             skip_process: false,
             hide_name: false,
@@ -457,9 +505,14 @@ impl DclAvatar {
             self.run = false;
             self.rise = false;
             self.fall = false;
+            self.long_fall = false;
+            self.fall_fast = false;
             self.land = true;
             self.is_grounded = self.glide_state == 0;
             self.lerp_state.smoothed_speed = 0.0;
+            self.movement_speed = 0.0;
+            self.head_ik_yaw_enabled = false;
+            self.head_ik_pitch_enabled = false;
         } else if self.wire_classification {
             // Wire-driven peer: locomotion/air/grounded come from the wire
             // (apply_wire_*). Blending the dy estimate in would still carry
@@ -494,9 +547,7 @@ impl DclAvatar {
         if first {
             // First packet: no segment yet — snap, interpolating from a zeroed
             // state would drag the avatar across the world.
-            self.base_mut().set_global_position(new_target.origin);
-            self.base_mut()
-                .set_global_rotation(new_target.basis.get_euler());
+            self.write_rendered_transform(new_target.origin, new_target.basis.get_euler());
         }
 
         self.update_parcel_position(self.lerp_state.target_position());
@@ -511,8 +562,12 @@ impl DclAvatar {
         self.jog = false;
         self.rise = false;
         self.fall = false;
+        self.long_fall = false;
+        self.fall_fast = false;
         self.land = true;
         self.is_grounded = self.glide_state == 0;
+        self.head_ik_yaw_enabled = false;
+        self.head_ik_pitch_enabled = false;
 
         let target_rotation_y = new_target.basis.get_euler().y;
         self.lerp_state.buffer.clear();
@@ -520,11 +575,10 @@ impl DclAvatar {
         self.lerp_state
             .push_packet(new_target.origin, target_rotation_y, anim);
         self.lerp_state.smoothed_speed = 0.0;
+        self.movement_speed = 0.0;
         self.lerp_state.since_last_packet = 0.0;
 
-        self.base_mut()
-            .set_global_rotation(new_target.basis.get_euler());
-        self.base_mut().set_global_position(new_target.origin);
+        self.write_rendered_transform(new_target.origin, new_target.basis.get_euler());
 
         self.update_parcel_position(new_target.origin);
     }
@@ -555,6 +609,20 @@ impl DclAvatar {
         }
     }
 
+    /// One global-transform write (one subtree propagation), skipped when unchanged.
+    fn write_rendered_transform(&mut self, origin: Vector3, euler: Vector3) {
+        let transform = Transform3D::new(Basis::from_euler(EulerOrder::YXZ, euler), origin);
+        if self.rendered_transform == Some(transform) {
+            return;
+        }
+        self.rendered_transform = Some(transform);
+        self.base_mut().set_global_transform(transform);
+    }
+
+    pub fn rendered_transform(&self) -> Option<Transform3D> {
+        self.rendered_transform
+    }
+
     /// Snapshot of the anim flags as they are RIGHT NOW (post classification
     /// and/or wire state) — stored into the packet being buffered.
     fn anim_snapshot(&self) -> AnimState {
@@ -566,6 +634,9 @@ impl DclAvatar {
             fall: self.fall,
             land: self.land,
             is_grounded: self.is_grounded,
+            long_fall: self.long_fall,
+            fall_fast: self.fall_fast,
+            movement_speed: self.movement_speed,
         }
     }
 
@@ -579,6 +650,9 @@ impl DclAvatar {
         self.fall = anim.fall;
         self.land = anim.land;
         self.is_grounded = anim.is_grounded;
+        self.long_fall = anim.long_fall;
+        self.fall_fast = anim.fall_fast;
+        self.movement_speed = anim.movement_speed;
     }
 
     /// Re-snapshot the newest packet's anim after wire-authoritative state
@@ -594,6 +668,7 @@ impl DclAvatar {
     /// below it the anim plays with no visible displacement.
     fn classify_locomotion(&mut self, speed: f32) {
         const IDLE_SPEED_FLOOR: f32 = 0.5;
+        self.movement_speed = speed;
         self.walk = speed < 4.0 && speed > IDLE_SPEED_FLOOR;
         self.run = speed >= 6.5;
         self.jog = !(self.walk || self.run) && speed > IDLE_SPEED_FLOOR;
@@ -607,6 +682,28 @@ impl DclAvatar {
         self.rise = !grounded_gate && velocity_y > 1.0;
         self.fall = !grounded_gate && velocity_y < -1.0;
         self.land = !self.rise && !self.fall;
+        // #2855: Unity AnimationLongFallSpeed = -8.
+        self.long_fall = !grounded_gate && velocity_y < -8.0;
+        // #1553: Unity AnimationFallSpeed = -3.
+        self.fall_fast = !grounded_gate && velocity_y < -3.0;
+    }
+
+    /// Head turn from the wire. Unity's HeadSync sends the
+    /// sender's yaw/pitch plus the enable flags; the decoder already undoes the
+    /// unsigned [0, 360] wraparound, so these are signed degrees in the sender's
+    /// own frame. A disabled pair drops the turn — the flags follow the sender's
+    /// own gate (grounded, standing still, not emoting).
+    pub fn apply_wire_head_ik(
+        &mut self,
+        yaw: f32,
+        pitch: f32,
+        yaw_enabled: bool,
+        pitch_enabled: bool,
+    ) {
+        self.head_ik_yaw = yaw;
+        self.head_ik_pitch = pitch;
+        self.head_ik_yaw_enabled = yaw_enabled;
+        self.head_ik_pitch_enabled = pitch_enabled;
     }
 
     // Applies wire-authoritative movement state (remote avatars). Locomotion
@@ -700,9 +797,7 @@ impl DclAvatar {
                 if !self.lerp_state.buffer.is_empty() {
                     // Position, rotation and anim state all render off one clock.
                     let (new_position, new_yaw, anim, on_timeline) = self.lerp_state.render();
-                    self.base_mut().set_global_position(new_position);
-                    self.base_mut()
-                        .set_global_rotation(Vector3::new(0.0, new_yaw, 0.0));
+                    self.write_rendered_transform(new_position, Vector3::new(0.0, new_yaw, 0.0));
                     if on_timeline {
                         self.apply_anim(&anim);
                     }
@@ -724,6 +819,7 @@ impl DclAvatar {
                     self.land = true;
                     // Drain the speed EMA too or the next keepalive re-latches walk.
                     self.lerp_state.smoothed_speed = 0.0;
+                    self.movement_speed = 0.0;
                 }
             }
         }

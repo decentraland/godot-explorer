@@ -508,6 +508,18 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Testing".to_string(),
             },
+            ArgDefinition {
+                name: "--async-shaders".to_string(),
+                description: "Enable non-blocking shader/pipeline compilation (Android/iOS) even when the server feature flag is absent or off".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Testing".to_string(),
+            },
+            ArgDefinition {
+                name: "--no-async-shaders".to_string(),
+                description: "Keep shader/pipeline compilation blocking for this run, whatever the server feature flag says".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Testing".to_string(),
+            },
             // Comms
             ArgDefinition {
                 name: "--pulse".to_string(),

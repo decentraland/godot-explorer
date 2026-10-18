@@ -13,6 +13,7 @@ use godot::{
     prelude::{godot_api, GodotClass},
 };
 
+use super::scene_animation_throttle;
 use crate::dcl::components::proto_components::sdk::components::{PbAnimationState, PbAnimator};
 
 pub const DUMMY_ANIMATION_NAME: &str = "__dummy__";
@@ -641,6 +642,7 @@ pub fn apply_anims(gltf_container_node: Gd<Node3D>, value: &PbAnimator) {
         already_exist_node.bind_mut().apply_anims(value);
         return;
     }
+    let throttle_root = gltf_container_node.clone();
 
     let playing_states: Vec<&PbAnimationState> = value
         .states
@@ -673,6 +675,7 @@ pub fn apply_anims(gltf_container_node: Gd<Node3D>, value: &PbAnimator) {
             return;
         };
         new_blend_builder.bind_mut().apply_anims(value);
+        scene_animation_throttle::register(new_blend_builder.upcast(), &throttle_root);
     } else {
         // Single animation: use AnimationPlayer directly, no AnimationTree needed
         let Some(mut anim_player) =
@@ -752,6 +755,7 @@ pub fn apply_anims(gltf_container_node: Gd<Node3D>, value: &PbAnimator) {
                     anim.set_loop_mode(loop_mode);
                 }
                 anim_player.play_ex().name(&anim_name).done();
+                scene_animation_throttle::register(anim_player.upcast(), &throttle_root);
             }
         }
     }

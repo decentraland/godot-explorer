@@ -1,7 +1,10 @@
 use crate::{
     avatars::dcl_user_profile::DclUserProfile,
     comms::profile::UserProfile,
-    godot_classes::{dcl_global::DclGlobal, promise::Promise},
+    godot_classes::{
+        dcl_global::DclGlobal,
+        promise::{Promise, PromiseDeferred},
+    },
 };
 use anyhow::anyhow;
 use dcl_core::Core;
@@ -178,12 +181,12 @@ impl ProfileService {
                     // Note: Clearing temporary lists should be done from the main thread
                     // The caller can handle this after the promise resolves
 
-                    promise
-                        .bind_mut()
-                        .resolve_with_data(serde_json::to_string(&response).unwrap().to_variant());
+                    promise.resolve_with_data_deferred(
+                        serde_json::to_string(&response).unwrap().to_variant(),
+                    );
                 }
                 Err(err) => {
-                    promise.bind_mut().reject(GString::from(
+                    promise.reject_deferred(GString::from(
                         format!("Failed to deploy profile: {}", err).as_str(),
                     ));
                 }
