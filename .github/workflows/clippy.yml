@@ -38,7 +38,7 @@ jobs:
 
       - name: cargo clippy
         working-directory: lib
-        run: cargo clippy --workspace -- -D warnings
+        run: cargo clippy --workspace --features dclgodot/asset_server -- -D warnings
 
       - name: dcl_core and dcl_host tests (no Godot)
         working-directory: lib

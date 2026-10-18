@@ -415,7 +415,6 @@ pub async fn handle_process_scene(
         .create_scene_batch(
             output_hash.clone(),
             job_ids,
-            request.scene_hash.clone(),
             preloaded_hashes,
             scene_assets.boot_files.clone(),
             Arc::new(scene_assets.content_mapping.clone()),
