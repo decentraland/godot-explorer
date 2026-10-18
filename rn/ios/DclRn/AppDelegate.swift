@@ -16,8 +16,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
+#if DCL_WITH_GODOT
     // The process's one core, before React Native and before any engine.
     CoreHost.start()
+#endif
+    // Menus are portrait until RN locks a scene to landscape (Android: the manifest).
+    Orientation.setOrientation(.portrait)
     let delegate = ReactNativeDelegate()
     let factory = RCTReactNativeFactory(delegate: delegate)
     delegate.dependencyProvider = RCTAppDependencyProvider()
@@ -37,6 +41,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     DclGodotHost.forwardLaunchOptions(launchOptions)
 
     return true
+  }
+
+  func application(
+    _ application: UIApplication,
+    supportedInterfaceOrientationsFor window: UIWindow?
+  ) -> UIInterfaceOrientationMask {
+    Orientation.getOrientation()
   }
 
   func application(
@@ -87,6 +98,7 @@ class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
   }
 }
 
+#if DCL_WITH_GODOT
 /// What the core asks of the host: the engine view when it needs the engine, and the surface order
 /// while the avatar preview shows.
 final class HostEvents: HostListener {
@@ -195,3 +207,4 @@ enum CoreHost {
     return uuid
   }
 }
+#endif

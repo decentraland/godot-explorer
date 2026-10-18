@@ -22,7 +22,9 @@ static BOOL isReactBackground(UIView *view, UIView *reactRoot) {
 		return YES;
 	}
 	NSString *name = NSStringFromClass(view.class);
-	return [name hasPrefix:@"RCTSurface"] || [name isEqualToString:@"RCTRootComponentView"];
+	// The safe-area provider ignores pointerEvents, so it is a full-screen target; look through it.
+	return [name hasPrefix:@"RCTSurface"] || [name isEqualToString:@"RCTRootComponentView"] ||
+			[name hasPrefix:@"RNCSafeAreaProvider"];
 }
 
 @interface DclHostView : UIView
@@ -96,8 +98,9 @@ static BOOL isReactBackground(UIView *view, UIView *reactRoot) {
 }
 #endif
 
+// RN owns the orientation: the AppDelegate narrows this to react-native-orientation-locker's mask.
 - (UIInterfaceOrientationMask)supportedInterfaceOrientations {
-	return UIInterfaceOrientationMaskLandscape;
+	return UIInterfaceOrientationMaskAll;
 }
 
 - (BOOL)prefersStatusBarHidden {

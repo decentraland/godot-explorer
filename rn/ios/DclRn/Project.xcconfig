@@ -3,5 +3,8 @@
 MARKETING_VERSION = 1.0
 CURRENT_PROJECT_VERSION = 1
 
+// The Swift bindings of dcl_host call into libdclgodot, which only the Godot build links.
+EXCLUDED_SOURCE_FILE_NAMES = DclHostFfi.swift
+
 #include? "../Godot/godot.xcconfig"
 #include? "../Version.generated.xcconfig"
