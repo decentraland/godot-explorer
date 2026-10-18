@@ -113,7 +113,7 @@ or phase 4 (d56ccae8b0); then `grep -rn` the Rust name in that commit.
 | `#[var(get, set = f)]` | `#[var(get = g, set = f)]`, or no `#[var]` when only Rust uses it |
 | `varray![…, s.to_godot()]`, `dict.set("k", packed)` | by reference: `&s.to_godot()`, `&packed` |
 | `typed_array.to_variant().call("size"/"get")` (null-tolerant) | `typed_array.upcast_any_array()` then `.len()` / `.get(i)` |
-| `has_method("x")` + `call("x")` on an engine-fork API 2.x's engine may lack | one guarded helper probing `ClassDb::class_has_method`, the name added to `EXTERNAL` in `call_targets_test.rs` with its reason; without the method it behaves like the feature off; flag that 2.x needs an engine build carrying it |
+| `has_method("x")` + `call("x")` on an engine-fork API | typed, once the engine change is merged into 2.x's pinned branch (`install` then regenerates the bindings; `cargo clean -p godot-ffi -p godot-codegen -p godot-core -p godot-bindings -p godot` if the old API is cached). If that cannot happen yet: one guarded helper probing `ClassDb::class_has_method`, the name added to `EXTERNAL` in `call_targets_test.rs` with its reason; without the method it behaves like the feature off; flag that 2.x needs an engine build carrying it |
 | `DclGlobal`/node-path lookups of GDScript autoloads | the typed handles in `dcl_engine/src/engine/mod.rs` |
 | `get_node("/root/Global").call("x")`, `Global.x` | the Rust owner of `x` (find it with §2's `git log -S`) |
 

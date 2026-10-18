@@ -111,8 +111,9 @@ By hand, understanding both sides (`git show "${MB}:<old path>"` against each si
   `src/check_gdscript.rs`) → stay deleted; the change is ported to where the logic lives now.
 - **`src/consts.rs` `GODOT_USE_BRANCH`** → keep 2.x's pin (the iOS RN-host engine,
   `spike/ios-host-embedding`, engine PR #29, D-23): the typed bindings come from that branch's
-  `extension_api.json`. If main pins another engine branch, port the explorer side behind a guarded
-  probe (`port-main-pr-to-2x` §4) and flag that 2.x needs an engine build carrying both.
+  `extension_api.json`. If main pins another engine branch, merge that branch into the 2.x pin in
+  the engine repo (and retarget the pinned PR onto it), reinstall, and call the new methods typed.
+  Only when that cannot happen in the sync, use a guarded probe (`port-main-pr-to-2x` §4) and flag it.
 - **`lib/Cargo.toml`** → 2.x's `[workspace]` layout, main's version in `[workspace.package]`; let
   cargo rewrite `Cargo.lock`. **`godot/export_presets.cfg`** → main's version lines, 2.x's rest.
 - **zsh**: `$MB:lib/...` applies the `:l` (lowercase) modifier; write `"${MB}:lib/..."`.
