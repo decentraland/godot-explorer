@@ -11,7 +11,12 @@ import {
 import { Dialog, TextField } from '../ds';
 import type { DialogButton } from '../ds';
 import { t } from '../i18n';
-import { registerModalApi } from './bridge';
+import {
+  announceUrgentModal,
+  registerModalApi,
+  setModalShowing,
+  useModalsHeld,
+} from './bridge';
 
 export type ModalButton = {
   label: string;
@@ -29,6 +34,9 @@ export type ModalSpec = {
   /** Back and outside taps close it; off for the ones the player has to answer. */
   dismissable?: boolean;
   onDismiss?: () => void;
+  /** Jumps the queue and shows even while the controls overlay holds the others (crash, ban,
+   * lost connection). */
+  urgent?: boolean;
 };
 
 /** What the password dialog needs: `verify` returns the error text, or null when the password worked. */
@@ -128,10 +136,14 @@ export function ModalProvider({ children }: { children: ReactNode }) {
   const current = useRef<ModalSpec | undefined>(undefined);
   current.current = queue[0];
 
-  const show = useCallback(
-    (spec: ModalSpec) => setQueue(q => queueAfter(q, spec)),
-    [],
-  );
+  const show = useCallback((spec: ModalSpec) => {
+    if (!spec.urgent) {
+      setQueue(q => queueAfter(q, spec));
+      return;
+    }
+    announceUrgentModal();
+    setQueue(q => [spec, ...q.filter(item => item.key !== spec.key)]);
+  }, []);
   const dismiss = useCallback(
     (key: string) => setQueue(q => q.filter(item => item.key !== key)),
     [],
@@ -151,8 +163,12 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     return () => registerModalApi(null);
   }, [api]);
 
-  const close = () => setQueue(q => q.slice(1));
-  const shown = queue[0];
+  const held = useModalsHeld();
+  const shown = held ? queue.find(spec => spec.urgent) : queue[0];
+  const close = () => setQueue(q => q.filter(spec => spec !== shown));
+  const showing = shown !== undefined || password !== null;
+  useEffect(() => setModalShowing(showing), [showing]);
+  useEffect(() => () => setModalShowing(false), []);
   return (
     <ModalContext.Provider value={api}>
       {children}

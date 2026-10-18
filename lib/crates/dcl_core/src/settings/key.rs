@@ -46,10 +46,11 @@ pub enum SettingKey {
     Day1NotificationScheduled,
     /// Unix seconds the Day 1 welcome fires at; 0 when 1.x scheduled it without saying when.
     Day1NotificationAt,
+    ControlsFtueShown,
 }
 
 impl SettingKey {
-    pub const ALL: [SettingKey; 40] = [
+    pub const ALL: [SettingKey; 41] = [
         Self::SubmitMessageClosesChat,
         Self::Locale,
         Self::GraphicProfile,
@@ -90,6 +91,7 @@ impl SettingKey {
         Self::LocalAssetsCacheVersion,
         Self::Day1NotificationScheduled,
         Self::Day1NotificationAt,
+        Self::ControlsFtueShown,
     ];
 
     /// The name used by `settings.cfg` and the shell's `keys.ts`.
@@ -135,6 +137,7 @@ impl SettingKey {
             Self::LocalAssetsCacheVersion => "local_assets_cache_version",
             Self::Day1NotificationScheduled => "day1_notification_scheduled",
             Self::Day1NotificationAt => "day1_notification_at",
+            Self::ControlsFtueShown => "controls_ftue_shown",
         }
     }
 
@@ -154,7 +157,7 @@ impl SettingKey {
             | Self::InstallReferrerSent
             | Self::DebugRotateGuestAnchor
             | Self::Day1NotificationScheduled => SettingKind::Bool,
-            Self::Locale | Self::LastRealmJoined => SettingKind::Text,
+            Self::Locale | Self::LastRealmJoined | Self::ControlsFtueShown => SettingKind::Text,
             Self::GraphicProfile
             | Self::SkyboxTime
             | Self::ParticleQuality
@@ -227,6 +230,7 @@ impl SettingKey {
             Self::LocalAssetsCacheVersion => SettingValue::Int(0),
             Self::Day1NotificationScheduled => SettingValue::Bool(false),
             Self::Day1NotificationAt => SettingValue::Int(0),
+            Self::ControlsFtueShown => SettingValue::Text(String::new()),
         }
     }
 

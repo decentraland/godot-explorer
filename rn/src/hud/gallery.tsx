@@ -156,7 +156,6 @@ function hudPreview(
   lines: ChatLine[] = FIVE_LINES,
   opts: {
     ui?: HudUiState;
-    coach?: 'controls' | 'camera' | null;
     notes?: string;
   } = {},
 ) {
@@ -170,7 +169,6 @@ function hudPreview(
         <Hud
           api={staticApi(lines, [CLARA, ME, SALLY])}
           initialUi={opts.ui}
-          initialCoach={opts.coach ?? null}
           rowLifetimeMs={Infinity}
           welcome={false}
           animate={false}
@@ -209,14 +207,6 @@ registerPreview(
 registerPreview(
   'hud__hideui__706-1414',
   hudPreview('Hide UI', FIVE_LINES, { ui: { ...initialHud, hidden: true } }),
-);
-registerPreview(
-  'menu__hud__106-2203',
-  hudPreview('Coach marks: controls', [], { coach: 'controls' }),
-);
-registerPreview(
-  'menu__hud__108-2191',
-  hudPreview('Coach marks: camera', [], { coach: 'camera' }),
 );
 registerPreview('menu__hud__367-4161', hudPreview('HUD with chat'));
 registerPreview(

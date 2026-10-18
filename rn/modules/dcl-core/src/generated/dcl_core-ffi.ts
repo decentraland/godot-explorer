@@ -229,6 +229,11 @@ interface NativeModuleInterface {
     command: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
+  ubrn_uniffi_dcl_core_fn_func_controls_ftue_dismissed(
+    elements: Uint8Array,
+    secondsShown: number,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
   ubrn_uniffi_dcl_core_fn_func_credits_balance(): bigint;
   ubrn_uniffi_dcl_core_fn_func_current_scene(): bigint;
   ubrn_uniffi_dcl_core_fn_func_day1_notification(
@@ -270,6 +275,13 @@ interface NativeModuleInterface {
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
   ubrn_uniffi_dcl_core_fn_func_flush_analytics(): bigint;
+  ubrn_uniffi_dcl_core_fn_func_ftue_scene_entered(
+    blocked: number,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_ftue_tuning(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
   ubrn_uniffi_dcl_core_fn_func_handle_deep_link(
     url: Uint8Array,
     start: Uint8Array,
@@ -557,6 +569,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_connection_retry(): number;
   ubrn_uniffi_dcl_core_checksum_func_consume_campaign(): number;
   ubrn_uniffi_dcl_core_checksum_func_control(): number;
+  ubrn_uniffi_dcl_core_checksum_func_controls_ftue_dismissed(): number;
   ubrn_uniffi_dcl_core_checksum_func_credits_balance(): number;
   ubrn_uniffi_dcl_core_checksum_func_current_scene(): number;
   ubrn_uniffi_dcl_core_checksum_func_day1_notification(): number;
@@ -573,6 +586,8 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_favorite_places(): number;
   ubrn_uniffi_dcl_core_checksum_func_first_screen_drawn(): number;
   ubrn_uniffi_dcl_core_checksum_func_flush_analytics(): number;
+  ubrn_uniffi_dcl_core_checksum_func_ftue_scene_entered(): number;
+  ubrn_uniffi_dcl_core_checksum_func_ftue_tuning(): number;
   ubrn_uniffi_dcl_core_checksum_func_handle_deep_link(): number;
   ubrn_uniffi_dcl_core_checksum_func_hide_avatar_preview(): number;
   ubrn_uniffi_dcl_core_checksum_func_installs(): number;

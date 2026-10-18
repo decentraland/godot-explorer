@@ -83,6 +83,9 @@ impl Hub {
                 Effect::Config {
                     param: ConfigParam::EnableUpgradedDeletion,
                 } => self.allow_upgraded_deletion(),
+                Effect::Config {
+                    param: ConfigParam::ControlsFtueShow,
+                } => crate::ftue::force_controls(),
                 Effect::SetPreviewUrl { url } => {
                     self.with_app(|app| app.control(crate::app::Control::SetPreviewUrl { url }))
                 }

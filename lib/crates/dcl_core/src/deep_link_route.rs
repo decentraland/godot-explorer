@@ -134,6 +134,8 @@ pub enum ConfigParam {
     EnableUpgradedDeletion,
     GpBenchmark,
     SafeMarginDebug,
+    /// Non-production: label every visible HUD control on the next scene entry.
+    ControlsFtueShow,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -386,6 +388,9 @@ fn process_effects(
     }
     if !ctx.production && param(link, "rotate-guest").eq_ignore_ascii_case("true") {
         out.push(cfg(ConfigParam::RotateGuest));
+    }
+    if !ctx.production && param(link, "controls-ftue") == "show" {
+        out.push(cfg(ConfigParam::ControlsFtueShow));
     }
     let token = param(link, "c").trim();
     if is_valid_campaign_token(token) {
@@ -826,6 +831,7 @@ mod tests {
             ("gp-benchmark=true", ConfigParam::GpBenchmark),
             ("safemargindebug=1", ConfigParam::SafeMarginDebug),
             ("rotate-guest=true", ConfigParam::RotateGuest),
+            ("controls-ftue=show", ConfigParam::ControlsFtueShow),
             (
                 "c=summer-24",
                 ConfigParam::CampaignToken {
@@ -845,6 +851,7 @@ mod tests {
             "enable-upgraded-deletion=false",
             "enable-upgraded-deletion=",
             "rotate-guest=false",
+            "controls-ftue=hide",
             "c=Bad_Token",
             "c=-x",
             "c=a--b",
@@ -868,6 +875,10 @@ mod tests {
         };
         assert_eq!(
             cfg_of(&run("decentraland://open?rotate-guest=true", &ctx)),
+            vec![]
+        );
+        assert_eq!(
+            cfg_of(&run("decentraland://open?controls-ftue=show", &ctx)),
             vec![]
         );
     }

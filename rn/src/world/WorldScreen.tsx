@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Place } from '../discover/api';
 import { useCoreState } from '../core/useCoreState';
+import { useFtueEntry } from '../ftue/useFtueEntry';
 import { setOrientation } from '../platform/orientation';
 import { getHudApi } from '../hud/activeApi';
 import { Hud } from '../hud/Hud';
@@ -23,6 +24,7 @@ export function WorldScreen({
 }) {
   const playing = useCoreState().tag === 'InWorld';
   const { state, dispatch } = useLoading(getHudApi(), playing);
+  useFtueEntry(state.phase === 'finished');
 
   useEffect(() => {
     setOrientation('landscape');

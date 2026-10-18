@@ -450,16 +450,6 @@
     "orientation": "landscape"
   },
   {
-    "id": "menu__hud__106-2203",
-    "source": "menu",
-    "orientation": "landscape"
-  },
-  {
-    "id": "menu__hud__108-2191",
-    "source": "menu",
-    "orientation": "landscape"
-  },
-  {
     "id": "menu__hud__367-4161",
     "source": "menu",
     "orientation": "landscape"
@@ -898,6 +888,16 @@
     "id": "settings-portrait__account-home__738-8261",
     "source": "settings-portrait",
     "orientation": "portrait"
+  },
+  {
+    "id": "menu__hud__106-2203",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__hud__108-2191",
+    "source": "menu",
+    "orientation": "landscape"
   },
   {
     "id": "settings-revamp__settings-graphics__1397-6501",

@@ -2,7 +2,7 @@ use std::{rc::Rc, sync::Arc};
 
 use dcl_core::app::{
     AvatarState, ChatLine, ChatProfile, CommandQueue, DisconnectReason, EngineEvent, EngineNotice,
-    EntryRefusal, HudSnapshot, LoadingDetail, Parcel, UiState, Vec3,
+    EntryRefusal, HudSnapshot, LoadingDetail, Parcel, UiState,
 };
 
 use godot::classes::{DisplayServer, Engine};
@@ -177,19 +177,8 @@ impl DclEngine {
     }
 
     /// The player's whereabouts, a few times a second while in a world.
-    #[func]
-    #[allow(clippy::too_many_arguments)]
-    pub fn report_hud(&self, realm: GString, x: i32, y: i32, fps: f32, px: f32, py: f32, pz: f32) {
-        self.report(EngineEvent::Hud(HudSnapshot {
-            parcel: Parcel::new(x, y),
-            realm: realm.to_string(),
-            fps,
-            position: Vec3 {
-                x: px,
-                y: py,
-                z: pz,
-            },
-        }));
+    pub fn report_hud(&self, snapshot: HudSnapshot) {
+        self.report(EngineEvent::Hud(snapshot));
     }
 
     /// A chat line; `has_profile` tells whether `name`, `claimed` and `picture` resolve its sender.

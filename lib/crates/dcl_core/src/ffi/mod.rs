@@ -12,6 +12,7 @@ use crate::{
 mod avatar;
 mod connection;
 mod control;
+mod ftue;
 mod gates;
 pub use gates::eula_accepted;
 mod notifications;

@@ -1,4 +1,4 @@
-import { State } from '../native';
+import { CameraMode, State } from '../native';
 import type { ChatLine, Destination, Parcel } from '../native';
 import type { MockBus } from './emitter';
 
@@ -62,11 +62,15 @@ export function createMockWorld(bus: MockBus): MockWorld {
   };
 
   const sendHud = () => {
+    const parcel = parcelAt(position.x, position.z);
     const snapshot = {
-      parcel: parcelAt(position.x, position.z),
+      parcel,
       realm,
       fps: 60,
       position,
+      sceneBase: parcel,
+      cameraMode: CameraMode.ThirdPerson,
+      joystickVisible: true,
     };
     bus.emit(l => l.hud(snapshot));
   };

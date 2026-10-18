@@ -3,6 +3,7 @@ import { Day1Notification, Quality, State } from '../native';
 import { createMockAvatar } from './avatar';
 import { createMockAvatarApi } from './avatarApi';
 import { createMockControl } from './control';
+import { createMockFtue } from './ftue';
 import { createMockBus } from './emitter';
 import { createMockGates } from './gates';
 import { createMockPlaces } from './places';
@@ -25,6 +26,7 @@ export function createMockCore(options: { signedIn?: boolean } = {}): CoreApi {
     ...createMockAvatarApi(avatar),
     ...createMockControl(bus, avatar),
     ...createMockSettings(),
+    ...createMockFtue(),
     ...createMockProfile(),
     ...createMockPlaces(),
     setPushRegistration: () => {},

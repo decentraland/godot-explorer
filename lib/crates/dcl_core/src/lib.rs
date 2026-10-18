@@ -16,6 +16,7 @@ pub mod env;
 #[cfg(feature = "ffi")]
 pub mod ffi;
 pub mod flags;
+pub mod ftue;
 pub mod gates;
 pub mod http;
 pub mod hub;

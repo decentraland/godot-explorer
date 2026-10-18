@@ -115,6 +115,15 @@ pub struct Vec3 {
     pub z: f32,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ffi", derive(uniffi::Enum))]
+pub enum CameraMode {
+    FirstPerson,
+    ThirdPerson,
+    /// A scene's virtual camera holds the view.
+    Cinematic,
+}
+
 /// The player's whereabouts, sent a few times a second while in a world.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "ffi", derive(uniffi::Record))]
@@ -123,6 +132,11 @@ pub struct HudSnapshot {
     pub realm: String,
     pub fps: f32,
     pub position: Vec3,
+    /// Base parcel of the scene the player is in; `None` while no scene is loaded there.
+    pub scene_base: Option<super::Parcel>,
+    pub camera_mode: CameraMode,
+    /// The movement joystick is on screen (a scene can hide it).
+    pub joystick_visible: bool,
 }
 
 /// Who wrote a chat line, when the engine could resolve them.

@@ -17,6 +17,8 @@ use crate::engine::local_task::{next_frame, spawn_local};
 use crate::fetcher::api::DclNavigator;
 use crate::fetcher::globals;
 use crate::godot_classes::dcl_global::DclGlobal;
+use crate::player::body::CameraMode;
+use dcl_core::app::{CameraMode as HudCameraMode, HudSnapshot, Parcel, Vec3};
 
 /// Seconds between the HUD snapshots reported while in a world.
 const STATE_INTERVAL: f32 = 0.25;
@@ -296,15 +298,41 @@ impl Host {
         };
         let position = world.player.get_global_position();
         let parcel = world.parcel.get();
-        let realm = globals::realm().bind().get_realm_string();
-        globals::engine().bind().report_hud(
-            realm,
-            parcel.x,
-            parcel.y,
-            godot::classes::Engine::singleton().get_frames_per_second() as f32,
-            position.x,
-            position.y,
-            position.z,
-        );
+        let scene_base = {
+            let runner = globals::scene_runner();
+            let runner = runner.bind();
+            let id = runner.get_current_parcel_scene_id();
+            (id >= 0).then(|| {
+                let base = runner.get_scene_base_parcel(id);
+                Parcel::new(base.x, base.y)
+            })
+        };
+        let (camera_mode, joystick_hidden) = {
+            let global = DclGlobal::singleton();
+            let global = global.bind();
+            let mode = match CameraMode::from_i32(global.current_camera_mode) {
+                CameraMode::FirstPerson => HudCameraMode::FirstPerson,
+                CameraMode::ThirdPerson => HudCameraMode::ThirdPerson,
+                CameraMode::Cinematic => HudCameraMode::Cinematic,
+            };
+            (mode, global.touch_controls_hide_joystick)
+        };
+        let joystick = &world.joystick;
+        globals::engine().bind().report_hud(HudSnapshot {
+            parcel: Parcel::new(parcel.x, parcel.y),
+            realm: globals::realm().bind().get_realm_string().to_string(),
+            fps: godot::classes::Engine::singleton().get_frames_per_second() as f32,
+            position: Vec3 {
+                x: position.x,
+                y: position.y,
+                z: position.z,
+            },
+            scene_base,
+            camera_mode,
+            // A scene can hide the joystick's graphic without hiding the node.
+            joystick_visible: joystick.is_visible_in_tree()
+                && joystick.get_modulate().a > 0.0
+                && !joystick_hidden,
+        });
     }
 }

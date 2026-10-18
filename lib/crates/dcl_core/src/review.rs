@@ -100,6 +100,11 @@ impl ReviewPolicy {
         self.save(&state);
     }
 
+    /// Launches counted so far, this one included once the shell reported it.
+    pub fn sessions(&self) -> u32 {
+        self.state().sessions
+    }
+
     pub fn verdict(&self, now: i64, rails: &[Rail]) -> Verdict {
         let state = self.state();
         if state.shots >= MAX_SHOTS {

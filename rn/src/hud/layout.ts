@@ -24,16 +24,13 @@ export const GAMEPAD_ZONE = { minX: 1180, minY: 380 } as const;
 /** Native floating-joystick area (left ~40%, below the chat column); only the emote button sits inside. */
 export const JOYSTICK_ZONE = { x: 0, y: 380, width: 640, height: 340 } as const;
 
-/** Resting joystick base, used to place the coach marks. */
+/** Resting joystick base, which the controls overlay and the tutorial point at. */
 export const JOYSTICK_BASE = {
   x: 161,
   y: 442,
   width: 172,
   height: 170,
 } as const;
-
-/** Where the "Controls" coach mark sits (above the gamepad's top satellite). */
-export const GAMEPAD_LABEL = { x: 1405, y: 411 } as const;
 
 export const HUD_SIZES = {
   menu: 82,
@@ -45,6 +42,14 @@ export const HUD_SIZES = {
   chatPanelWidth: 420,
   notificationsWidth: 337,
 } as const;
+
+/** Figma px of the HUD frame -> dp from the screen's top-left, on the same floor as the buttons. */
+export function hudPoint(x: number, y: number, insets: Insets) {
+  return {
+    x: insets.left + u((x - HUD_MARGIN_FLOOR.left) / 2),
+    y: insets.top + u((y - HUD_MARGIN_FLOOR.top) / 2),
+  };
+}
 
 /** Effective HUD insets in dp: the larger of the device inset and the Godot margin floor. */
 export function hudInsets(device: Insets): Insets {

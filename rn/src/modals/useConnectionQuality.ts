@@ -18,6 +18,7 @@ export function connectionLostModal(actions: {
     title: t('MODAL_CONNECTION_LOST_TITLE'),
     body: t('MODAL_CONNECTION_LOST_BODY'),
     dismissable: false,
+    urgent: true,
     buttons: [
       {
         label: t('MODAL_CONNECTION_LOST_SECONDARY'),

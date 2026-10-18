@@ -499,20 +499,27 @@ fn shell_commands_reach_the_engine_and_wait_for_it_when_it_is_not_up() {
     );
 }
 
+fn snapshot(parcel: Parcel, realm: &str) -> HudSnapshot {
+    HudSnapshot {
+        parcel,
+        realm: realm.into(),
+        fps: 30.0,
+        position: Vec3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        scene_base: Some(parcel),
+        camera_mode: CameraMode::ThirdPerson,
+        joystick_visible: true,
+    }
+}
+
 #[test]
 fn engine_facts_reach_the_listeners() {
     let facts = Arc::new(Facts::default());
     let (mut app, _engine) = in_a_world(&facts);
-    app.engine_event(EngineEvent::Hud(HudSnapshot {
-        parcel: Parcel::new(1, 2),
-        realm: "main".into(),
-        fps: 30.0,
-        position: Vec3 {
-            x: 1.0,
-            y: 2.0,
-            z: 3.0,
-        },
-    }));
+    app.engine_event(EngineEvent::Hud(snapshot(Parcel::new(1, 2), "main")));
     app.engine_event(EngineEvent::Chat(ChatLine {
         address: "0x1".into(),
         message: "hello".into(),
@@ -552,16 +559,7 @@ fn hud_and_loading_detail_are_ignored_outside_their_states() {
     let facts = Arc::new(Facts::default());
     let mut app = App::new(facts.clone());
     app.finish_boot(true).unwrap();
-    app.engine_event(EngineEvent::Hud(HudSnapshot {
-        parcel: Parcel::new(0, 0),
-        realm: "x".into(),
-        fps: 0.0,
-        position: Vec3 {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        },
-    }));
+    app.engine_event(EngineEvent::Hud(snapshot(Parcel::new(0, 0), "x")));
     app.engine_event(EngineEvent::LoadingDetail(LoadingDetail {
         loaded: 1,
         total: 2,

@@ -7,7 +7,6 @@ import { createMockCore } from '../src/core/mock';
 import { createMockBus } from '../src/core/mock/emitter';
 import { Control, State } from '../src/core/native';
 import { ChatRow } from '../src/hud/ChatRow';
-import { CoachMarks } from '../src/hud/CoachMarks';
 import { Hud } from '../src/hud/Hud';
 import { setHudApi } from '../src/hud/activeApi';
 import { HudApi, coreHudApi } from '../src/hud/hudApi';
@@ -18,7 +17,6 @@ import {
   setUiHidden,
 } from '../src/hud/hudSignals';
 import { MOCK_PROFILES } from '../src/hud/mockProfiles';
-import { setHudStorage, createMemoryStorage } from '../src/hud/coachMarks';
 import { LoadingCover } from '../src/world/LoadingCover';
 import { WorldScreen } from '../src/world/WorldScreen';
 import { TIPS } from '../src/world/loadingModel';
@@ -230,10 +228,6 @@ describe('ChatRow', () => {
 });
 
 describe('Hud', () => {
-  beforeEach(() =>
-    setHudStorage(createMemoryStorage({ 'hud.coachMarksSeen': '1' })),
-  );
-
   it('shows incoming chat as click-through notifications that expire after 6.5 s', async () => {
     jest.useFakeTimers();
     const { api, emit } = fakeApi();
@@ -253,7 +247,7 @@ describe('Hud', () => {
 
   it('opens the chat panel, sends a message and closes with a slash command', async () => {
     const { api, sent, emit } = fakeApi();
-    const tree = mount(<Hud api={api} welcome={false} initialCoach={null} />);
+    const tree = mount(<Hud api={api} welcome={false} />);
     await act(async () => {});
     await act(async () => emit(chat('hi')));
     act(() =>
@@ -283,7 +277,6 @@ describe('Hud', () => {
       <Hud
         api={api}
         welcome={false}
-        initialCoach={null}
         initialUi={{
           chat: 'writing',
           hidden: false,
@@ -316,7 +309,6 @@ describe('Hud', () => {
       <Hud
         api={api}
         welcome={false}
-        initialCoach={null}
         initialUi={{ chat: 'open', hidden: false, menu: false }}
       />,
     );
@@ -337,7 +329,7 @@ describe('Hud', () => {
     const { api, emit } = fakeApi();
     const heard: unknown[] = [];
     const off = onIntent(i => heard.push(i));
-    mount(<Hud api={api} welcome={false} initialCoach={null} />);
+    mount(<Hud api={api} welcome={false} />);
     await act(async () => {});
     await act(async () =>
       emit({ type: 'open_backpack', data: { emotes: true } }),
@@ -350,7 +342,7 @@ describe('Hud', () => {
     const { api, sent } = fakeApi();
     const heard: unknown[] = [];
     const off = onIntent(i => heard.push(i));
-    const tree = mount(<Hud api={api} welcome={false} initialCoach={null} />);
+    const tree = mount(<Hud api={api} welcome={false} />);
     await act(async () => {});
     act(() =>
       tree.root.findByProps({ accessibilityLabel: 'Menu' }).props.onPress(),
@@ -379,60 +371,9 @@ describe('Hud', () => {
 
   it('reports insets to the engine', async () => {
     const { api, sent } = fakeApi();
-    mount(<Hud api={api} welcome={false} initialCoach={null} />);
+    mount(<Hud api={api} welcome={false} />);
     await act(async () => {});
     expect(sent.find(c => c.tag === 'SetHudInsets')).toBeDefined();
-  });
-
-  it('runs the coach marks once and remembers they were seen', async () => {
-    const storage = createMemoryStorage();
-    setHudStorage(storage);
-    const { api } = fakeApi();
-    const tree = mount(<Hud api={api} welcome={false} animate={false} />);
-    await act(async () => {});
-    expect(text(tree)).toContain('Character movement');
-    act(() =>
-      tree.root.findByProps({ accessibilityLabel: 'Next tip' }).props.onPress(),
-    );
-    expect(text(tree)).toContain('Switch camera');
-    act(() =>
-      tree.root.findByProps({ accessibilityLabel: 'Next tip' }).props.onPress(),
-    );
-    await act(async () => {});
-    expect(text(tree)).not.toContain('Switch camera');
-    expect(await storage.getItem('hud.coachMarksSeen')).toBe('1');
-  });
-
-  it('skips the tour when already seen', async () => {
-    const { api } = fakeApi();
-    const tree = mount(<Hud api={api} welcome={false} />);
-    await act(async () => {});
-    expect(text(tree)).not.toContain('Character movement');
-  });
-});
-
-describe('pieces', () => {
-  it('CoachMarks renders both steps', () => {
-    const insets = { top: 16, left: 54, right: 54, bottom: 22 };
-    expect(
-      text(
-        mount(
-          <CoachMarks
-            step="controls"
-            insets={insets}
-            onNext={noop}
-            animate={false}
-          />,
-        ),
-      ),
-    ).toContain('Controls');
-    expect(
-      text(
-        mount(
-          <CoachMarks step="camera" insets={insets} onNext={noop} animate />,
-        ),
-      ),
-    ).toContain('Switch camera');
   });
 });
 

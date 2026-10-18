@@ -159,6 +159,7 @@ export function noticeModal(
         title: t('MODAL_BAN_KICKED_TITLE'),
         body: t('MODAL_BAN_KICKED_BODY'),
         dismissable: false,
+        urgent: true,
         buttons: back(t('MODAL_BAN_KICKED_PRIMARY')),
       };
     case EngineNotice_Tags.LowMemory:
@@ -183,6 +184,7 @@ export function noticeModal(
           title: t('MODAL_SESSION_ENDED_DUPLICATE_TITLE'),
           body: t('MODAL_SESSION_ENDED_DUPLICATE_BODY'),
           dismissable: false,
+          urgent: true,
           buttons: [
             {
               label: t('MODAL_SESSION_ENDED_SECONDARY'),
@@ -206,6 +208,7 @@ export function noticeModal(
           ? t('MODAL_SESSION_ENDED_ROOM_CLOSED_BODY')
           : t('MODAL_SESSION_ENDED_OTHER_BODY'),
         dismissable: false,
+        urgent: true,
         buttons: [
           {
             label: t('MODAL_SESSION_ENDED_SECONDARY'),
@@ -284,6 +287,7 @@ export function CoreModals({ ready }: { ready: boolean }) {
             title: t('MODAL_SCENE_CRASH_TITLE'),
             body: t('MODAL_SCENE_CRASH_BODY'),
             dismissable: false,
+            urgent: true,
             buttons: [
               {
                 label: t('MODAL_SCENE_CRASH_SECONDARY'),

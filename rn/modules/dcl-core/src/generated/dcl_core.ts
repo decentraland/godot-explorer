@@ -501,6 +501,34 @@ export function control(command: Control): void /*throws*/ {
 }
 
 /**
+ * The player closed the controls overlay with a tap after `seconds_shown`.
+ */
+export function controlsFtueDismissed(
+  elements: Array<ControlsFtueElement>,
+  secondsShown: number,
+): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_controls_ftue_dismissed(
+        FfiConverterSequenceTypeControlsFtueElement.lower(
+          elements,
+          nativeModule().rustbuffer_alloc,
+        ),
+        FfiConverterFloat64.lower(
+          secondsShown,
+          nativeModule().rustbuffer_alloc,
+        ),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
  * Spendable credits of the signed-in wallet.
  */
 export async function creditsBalance(asyncOpts_?: {
@@ -1076,6 +1104,49 @@ export async function flushAnalytics(asyncOpts_?: {
       __error.stack = __stack;
     }
     throw __error;
+  }
+}
+
+/**
+ * Once per scene entry, after the loading cover, the first HUD report and any modal. `blocked`:
+ * a menu is open, the phone is in portrait or the HUD is hidden.
+ */
+export function ftueSceneEntered(blocked: boolean): SceneEntryFtue /*throws*/ {
+  const __rb: Uint8Array = uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_ftue_scene_entered(
+        FfiConverterBool.lower(blocked, nativeModule().rustbuffer_alloc),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterTypeSceneEntryFtue.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
+ * The remote tunables of the overlay.
+ */
+export function ftueTuning(): FtueTuning {
+  const __rb: Uint8Array = uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_ftue_tuning(
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterTypeFtueTuning.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
   }
 }
 
@@ -3859,6 +3930,60 @@ const FfiConverterTypeDeviceSupport = (() => {
 })();
 
 /**
+ * The remote tunables, already clamped to what 1.x accepted.
+ */
+export type FtueTuning = {
+  /**
+   * Between the last label appearing and the tap prompt; every touch is swallowed meanwhile.
+   */
+  overlayLockSeconds: number;
+  /**
+   * The closing tap also presses the control under it.
+   */
+  overlayTapThrough: boolean;
+};
+
+/**
+ * Generated factory for {@link FtueTuning} record objects.
+ */
+export const FtueTuning = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<FtueTuning, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<FtueTuning>,
+  });
+})();
+
+const FfiConverterTypeFtueTuning = (() => {
+  type TypeName = FtueTuning;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        overlayLockSeconds: FfiConverterFloat64.readFromCursor(c),
+        overlayTapThrough: FfiConverterBool.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterFloat64.writeIntoCursor(value.overlayLockSeconds, c);
+      FfiConverterBool.writeIntoCursor(value.overlayTapThrough, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterFloat64.allocationSize(value.overlayLockSeconds) +
+        FfiConverterBool.allocationSize(value.overlayTapThrough)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
  * The physical pixels the HUD keeps clear on each side (notch, gesture bar, joypad).
  */
 export type HudInsets = {
@@ -3959,6 +4084,47 @@ const FfiConverterTypeVec3 = (() => {
   return new FFIConverter();
 })();
 
+export enum CameraMode {
+  FirstPerson,
+  ThirdPerson,
+  /**
+   * A scene's virtual camera holds the view.
+   */
+  Cinematic,
+}
+
+const FfiConverterTypeCameraMode = (() => {
+  type TypeName = CameraMode;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return CameraMode.FirstPerson;
+        case 2:
+          return CameraMode.ThirdPerson;
+        case 3:
+          return CameraMode.Cinematic;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case CameraMode.FirstPerson:
+          return c.writeI32(1);
+        case CameraMode.ThirdPerson:
+          return c.writeI32(2);
+        case CameraMode.Cinematic:
+          return c.writeI32(3);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
 /**
  * The player's whereabouts, sent a few times a second while in a world.
  */
@@ -3967,6 +4133,15 @@ export type HudSnapshot = {
   realm: string;
   fps: number;
   position: Vec3;
+  /**
+   * Base parcel of the scene the player is in; `None` while no scene is loaded there.
+   */
+  sceneBase?: Parcel;
+  cameraMode: CameraMode;
+  /**
+   * The movement joystick is on screen (a scene can hide it).
+   */
+  joystickVisible: boolean;
 };
 
 /**
@@ -3995,6 +4170,9 @@ const FfiConverterTypeHudSnapshot = (() => {
         realm: FfiConverterString.readFromCursor(c),
         fps: FfiConverterFloat32.readFromCursor(c),
         position: FfiConverterTypeVec3.readFromCursor(c),
+        sceneBase: FfiConverterOptionalTypeParcel.readFromCursor(c),
+        cameraMode: FfiConverterTypeCameraMode.readFromCursor(c),
+        joystickVisible: FfiConverterBool.readFromCursor(c),
       };
     }
     writeIntoCursor(value: TypeName, c: Cursor): void {
@@ -4002,13 +4180,19 @@ const FfiConverterTypeHudSnapshot = (() => {
       FfiConverterString.writeIntoCursor(value.realm, c);
       FfiConverterFloat32.writeIntoCursor(value.fps, c);
       FfiConverterTypeVec3.writeIntoCursor(value.position, c);
+      FfiConverterOptionalTypeParcel.writeIntoCursor(value.sceneBase, c);
+      FfiConverterTypeCameraMode.writeIntoCursor(value.cameraMode, c);
+      FfiConverterBool.writeIntoCursor(value.joystickVisible, c);
     }
     allocationSize(value: TypeName): number {
       return (
         FfiConverterTypeParcel.allocationSize(value.parcel) +
         FfiConverterString.allocationSize(value.realm) +
         FfiConverterFloat32.allocationSize(value.fps) +
-        FfiConverterTypeVec3.allocationSize(value.position)
+        FfiConverterTypeVec3.allocationSize(value.position) +
+        FfiConverterOptionalTypeParcel.allocationSize(value.sceneBase) +
+        FfiConverterTypeCameraMode.allocationSize(value.cameraMode) +
+        FfiConverterBool.allocationSize(value.joystickVisible)
       );
     }
   }
@@ -6599,6 +6783,7 @@ export enum ConfigParam_Tags {
   EnableUpgradedDeletion = 'EnableUpgradedDeletion',
   GpBenchmark = 'GpBenchmark',
   SafeMarginDebug = 'SafeMarginDebug',
+  ControlsFtueShow = 'ControlsFtueShow',
 }
 /**
  * A setting a link carries, for the owner of that setting to apply.
@@ -7026,6 +7211,35 @@ export const ConfigParam = (() => {
     }
   }
 
+  type ControlsFtueShow__interface = {
+    tag: ConfigParam_Tags.ControlsFtueShow;
+  };
+  /**
+   * Non-production: label every visible HUD control on the next scene entry.
+   */
+  class ControlsFtueShow_
+    extends UniffiEnum
+    implements ControlsFtueShow__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.ControlsFtueShow;
+    constructor() {
+      super('ConfigParam', 'ControlsFtueShow');
+    }
+
+    static new(): ControlsFtueShow_ {
+      return new ControlsFtueShow_();
+    }
+
+    static instanceOf(obj: any): obj is ControlsFtueShow_ {
+      return obj.tag === ConfigParam_Tags.ControlsFtueShow;
+    }
+  }
+
   function instanceOf(obj: any): obj is ConfigParam {
     return obj[uniffiTypeNameSymbol] === 'ConfigParam';
   }
@@ -7048,6 +7262,7 @@ export const ConfigParam = (() => {
     EnableUpgradedDeletion: EnableUpgradedDeletion_,
     GpBenchmark: GpBenchmark_,
     SafeMarginDebug: SafeMarginDebug_,
+    ControlsFtueShow: ControlsFtueShow_,
   });
 })();
 /**
@@ -7070,7 +7285,8 @@ export type ConfigParam = InstanceType<
     | 'TouchFeedback'
     | 'EnableUpgradedDeletion'
     | 'GpBenchmark'
-    | 'SafeMarginDebug']
+    | 'SafeMarginDebug'
+    | 'ControlsFtueShow']
 >;
 
 // FfiConverter for enum ConfigParam
@@ -7133,6 +7349,8 @@ const FfiConverterTypeConfigParam = (() => {
           return new ConfigParam.GpBenchmark();
         case 16:
           return new ConfigParam.SafeMarginDebug();
+        case 17:
+          return new ConfigParam.ControlsFtueShow();
         default:
           throw new UniffiInternalError.UnexpectedEnumCase();
       }
@@ -7225,6 +7443,10 @@ const FfiConverterTypeConfigParam = (() => {
           c.writeI32(16);
           return;
         }
+        case ConfigParam_Tags.ControlsFtueShow: {
+          c.writeI32(17);
+          return;
+        }
         default:
           // Throwing from here means that ConfigParam_Tags hasn't matched an ordinal.
           throw new UniffiInternalError.UnexpectedEnumCase();
@@ -7311,6 +7533,9 @@ const FfiConverterTypeConfigParam = (() => {
           return 4;
         }
         case ConfigParam_Tags.SafeMarginDebug: {
+          return 4;
+        }
+        case ConfigParam_Tags.ControlsFtueShow: {
           return 4;
         }
         default:
@@ -8063,6 +8288,7 @@ export enum SettingKey {
    * Unix seconds the Day 1 welcome fires at; 0 when 1.x scheduled it without saying when.
    */
   Day1NotificationAt,
+  ControlsFtueShown,
 }
 
 const FfiConverterTypeSettingKey = (() => {
@@ -8150,6 +8376,8 @@ const FfiConverterTypeSettingKey = (() => {
           return SettingKey.Day1NotificationScheduled;
         case 40:
           return SettingKey.Day1NotificationAt;
+        case 41:
+          return SettingKey.ControlsFtueShown;
         default:
           throw new UniffiInternalError.UnexpectedEnumCase();
       }
@@ -8236,6 +8464,8 @@ const FfiConverterTypeSettingKey = (() => {
           return c.writeI32(39);
         case SettingKey.Day1NotificationAt:
           return c.writeI32(40);
+        case SettingKey.ControlsFtueShown:
+          return c.writeI32(41);
       }
     }
     allocationSize(value: TypeName): number {
@@ -9984,6 +10214,52 @@ const FfiConverterTypeControl = (() => {
   return new FFIConverter();
 })();
 
+/**
+ * A HUD control the overlay labels, in its entrance order.
+ */
+export enum ControlsFtueElement {
+  Menu,
+  Chat,
+  Movement,
+  Emotes,
+}
+
+const FfiConverterTypeControlsFtueElement = (() => {
+  type TypeName = ControlsFtueElement;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return ControlsFtueElement.Menu;
+        case 2:
+          return ControlsFtueElement.Chat;
+        case 3:
+          return ControlsFtueElement.Movement;
+        case 4:
+          return ControlsFtueElement.Emotes;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case ControlsFtueElement.Menu:
+          return c.writeI32(1);
+        case ControlsFtueElement.Chat:
+          return c.writeI32(2);
+        case ControlsFtueElement.Movement:
+          return c.writeI32(3);
+        case ControlsFtueElement.Emotes:
+          return c.writeI32(4);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
 // Error type: CoreError
 export enum CoreError_Tags {
   NotInstalled = 'NotInstalled',
@@ -10906,6 +11182,139 @@ const FfiConverterTypeRail = (() => {
     }
     allocationSize(value: TypeName): number {
       return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+// Enum: SceneEntryFtue
+export enum SceneEntryFtue_Tags {
+  Nothing = 'Nothing',
+  Controls = 'Controls',
+}
+/**
+ * What a scene entry gets.
+ */
+export const SceneEntryFtue = (() => {
+  type Nothing__interface = {
+    tag: SceneEntryFtue_Tags.Nothing;
+  };
+  class Nothing_ extends UniffiEnum implements Nothing__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'SceneEntryFtue';
+    readonly tag = SceneEntryFtue_Tags.Nothing;
+    constructor() {
+      super('SceneEntryFtue', 'Nothing');
+    }
+
+    static new(): Nothing_ {
+      return new Nothing_();
+    }
+
+    static instanceOf(obj: any): obj is Nothing_ {
+      return obj.tag === SceneEntryFtue_Tags.Nothing;
+    }
+  }
+
+  type Controls__interface = {
+    tag: SceneEntryFtue_Tags.Controls;
+    inner: Readonly<{ elements: Array<ControlsFtueElement> }>;
+  };
+  class Controls_ extends UniffiEnum implements Controls__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'SceneEntryFtue';
+    readonly tag = SceneEntryFtue_Tags.Controls;
+    readonly inner: Readonly<{ elements: Array<ControlsFtueElement> }>;
+    constructor(inner: { elements: Array<ControlsFtueElement> }) {
+      super('SceneEntryFtue', 'Controls');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { elements: Array<ControlsFtueElement> }): Controls_ {
+      return new Controls_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Controls_ {
+      return obj.tag === SceneEntryFtue_Tags.Controls;
+    }
+  }
+
+  function instanceOf(obj: any): obj is SceneEntryFtue {
+    return obj[uniffiTypeNameSymbol] === 'SceneEntryFtue';
+  }
+
+  return Object.freeze({
+    instanceOf,
+    Nothing: Nothing_,
+    Controls: Controls_,
+  });
+})();
+/**
+ * What a scene entry gets.
+ */
+export type SceneEntryFtue = InstanceType<
+  (typeof SceneEntryFtue)['Nothing' | 'Controls']
+>;
+
+// FfiConverter for enum SceneEntryFtue
+const FfiConverterTypeSceneEntryFtue = (() => {
+  type TypeName = SceneEntryFtue;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return new SceneEntryFtue.Nothing();
+        case 2:
+          return new SceneEntryFtue.Controls({
+            elements:
+              FfiConverterSequenceTypeControlsFtueElement.readFromCursor(c),
+          });
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value.tag) {
+        case SceneEntryFtue_Tags.Nothing: {
+          c.writeI32(1);
+          return;
+        }
+        case SceneEntryFtue_Tags.Controls: {
+          c.writeI32(2);
+          const inner = value.inner;
+          FfiConverterSequenceTypeControlsFtueElement.writeIntoCursor(
+            inner.elements,
+            c,
+          );
+          return;
+        }
+        default:
+          // Throwing from here means that SceneEntryFtue_Tags hasn't matched an ordinal.
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    allocationSize(value: TypeName): number {
+      switch (value.tag) {
+        case SceneEntryFtue_Tags.Nothing: {
+          return 4;
+        }
+        case SceneEntryFtue_Tags.Controls: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterSequenceTypeControlsFtueElement.allocationSize(
+            inner.elements,
+          );
+          return size;
+        }
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
     }
   }
   return new FFIConverter();
@@ -12472,6 +12881,11 @@ const FfiConverterSequenceTypeEffect = new FfiConverterArray(
   FfiConverterTypeEffect,
 );
 
+// FfiConverter for Array<ControlsFtueElement>
+const FfiConverterSequenceTypeControlsFtueElement = new FfiConverterArray(
+  FfiConverterTypeControlsFtueElement,
+);
+
 // FfiConverter for AvatarState | undefined
 const FfiConverterOptionalTypeAvatarState = new FfiConverterOptional(
   FfiConverterTypeAvatarState,
@@ -12691,6 +13105,14 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_controls_ftue_dismissed() !==
+    28525
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_controls_ftue_dismissed',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_credits_balance() !==
     15557
   ) {
@@ -12805,6 +13227,21 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_flush_analytics',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_ftue_scene_entered() !==
+    28145
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_ftue_scene_entered',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_ftue_tuning() !== 56210
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_ftue_tuning',
     );
   }
   if (
@@ -13365,6 +13802,7 @@ export default Object.freeze({
     FfiConverterTypeBuildEnvironment,
     FfiConverterTypeCacheSize,
     FfiConverterTypeCameraFocus,
+    FfiConverterTypeCameraMode,
     FfiConverterTypeCampaign,
     FfiConverterTypeCampaignFallback,
     FfiConverterTypeCampaignKind,
@@ -13375,6 +13813,7 @@ export default Object.freeze({
     FfiConverterTypeColorTarget,
     FfiConverterTypeConfigParam,
     FfiConverterTypeControl,
+    FfiConverterTypeControlsFtueElement,
     FfiConverterTypeCoreError,
     FfiConverterTypeCreditsBalance,
     FfiConverterTypeCurrentScene,
@@ -13389,6 +13828,7 @@ export default Object.freeze({
     FfiConverterTypeEngineNotice,
     FfiConverterTypeEntryRefusal,
     FfiConverterTypeEnvironment,
+    FfiConverterTypeFtueTuning,
     FfiConverterTypeHudInsets,
     FfiConverterTypeHudSnapshot,
     FfiConverterTypeIssueType,
@@ -13425,6 +13865,7 @@ export default Object.freeze({
     FfiConverterTypeResolveFailure,
     FfiConverterTypeResolvedDestination,
     FfiConverterTypeRouted,
+    FfiConverterTypeSceneEntryFtue,
     FfiConverterTypeSceneRequest,
     FfiConverterTypeSettingEntry,
     FfiConverterTypeSettingKey,

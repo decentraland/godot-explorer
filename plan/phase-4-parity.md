@@ -70,7 +70,7 @@ in phase 3 and not run again here. Rows marked "not done" are the work left befo
 | Menu, chat, emote buttons | RN `hud/` | Ran | |
 | Version and FPS line | RN `VersionFps` | Not run | |
 | Hide UI | RN `HideUi` control | Not run | The sub-toggles were dropped |
-| Coach marks | RN `CoachMarks` | Ran: shown | |
+| Controls overlay on first scene entry (main #3032) | RN `ftue/ControlsOverlay` + `dcl_core::ftue` | Not run (jest, gallery) | `ftue-overlay-tap-through` not honoured; device run |
 | Avatar tap opens a profile | Not done | | Needs a player-profile screen |
 | Scene request (link, teleport, realm change, NFT) | `CoreModals` + `AnswerSceneRequest` | Not run | Needs a scene that asks; NFT card not ported |
 | Private world / place not found | Destination check + engine notice | Ran: not found (deep link) | Private and password not run |
