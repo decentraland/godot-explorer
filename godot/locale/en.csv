@@ -27,6 +27,7 @@
 "AUTH_SIGNED_IN_AS_NAME";"";"";"You're signed in as
 {name}."
 "AUTH_SIGN_IN_BUTTON";"";"";"SIGN IN"
+"AUTH_SIGN_IN_OTHER_REQUEST";"";"";"This sign-in was started from another session. Please try again."
 "AUTH_SIGN_IN_TITLE";"";"";"Sign in to Decentraland"
 "AUTH_UPDATE_BODY";"";"";"A new version of Decentraland is available. Update for the best experience."
 "AUTH_UPDATE_TITLE";"";"";"New Version Available"

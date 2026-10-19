@@ -1099,6 +1099,7 @@ func _on_button_try_again_pressed():
 ## recovery it stands in for. Safe to call twice: the token is handed out only once.
 func _async_resume_signin_from_deep_link() -> bool:
 	var identity_id: String = Global.deep_link_router.take_pending_signin_identity_id()
+	var auth_request_id: String = Global.deep_link_router.take_pending_signin_auth_request_id()
 	if identity_id.is_empty():
 		return false
 
@@ -1115,7 +1116,7 @@ func _async_resume_signin_from_deep_link() -> bool:
 	# hybrid env has to be settled before the profile fetch this kicks off, or the profile
 	# loads from the wrong backend. No-op off iOS, and capped at 5s.
 	await Iap.async_await_env_resolved()
-	Global.player_identity.complete_mobile_connect_account(identity_id)
+	Global.player_identity.complete_mobile_connect_account(identity_id, auth_request_id)
 	return true
 
 
@@ -1139,10 +1140,10 @@ func _show_auth_error(error_message: String):
 	SplashOverlay.fade_out()
 	auth_spinner_container.hide()
 	label_step2_title.text = tr("AUTH_FAILED_TITLE")
-	# Errors come from player_identity (server/SDK text), so the node never
-	# auto-translates; an empty error still needs generic copy rather than a blank box.
+	# Errors come from player_identity: mostly server/SDK text, which tr() returns unchanged,
+	# plus a few translation keys. An empty error still needs generic copy, not a blank box.
 	auth_error_label_main.text = (
-		error_message if not error_message.is_empty() else tr("COMMON_SOMETHING_WENT_WRONG")
+		tr(error_message) if not error_message.is_empty() else tr("COMMON_SOMETHING_WENT_WRONG")
 	)
 	auth_error_label_code.text = ""
 	auth_error_container.show()
