@@ -112,7 +112,9 @@ func _async_show_streak_current_reminder_if_pending() -> void:
 	)
 
 
-func _async_show_streak_modal_and_wait(state: int, progress_day: int, pending_day: int = 0) -> void:
+func _async_show_streak_modal_and_wait(
+	state: int, progress_day: int, pending_day: int = -1
+) -> void:
 	var is_guest := StreakManager.is_unlinked_guest()
 	Global.upgrade_nudge_coordinator.suppress_until_cleared("streak")
 	var shown := await Global.streak_modal_controller.async_show_streak_modal(

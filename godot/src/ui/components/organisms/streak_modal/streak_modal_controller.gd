@@ -31,10 +31,11 @@ func is_open() -> bool:
 ## Shows the login-streak modal for the given state. Returns true only if the modal was actually
 ## created and set up, mirroring ModalManager.async_show_reward_modal's contract.
 ## @param state: one of StreakModal.State.
-## @param pending_day: > 0 renders the "come finish today's mission" reminder look instead of the
-## post-credit celebration — see StreakModal's own doc comment.
+## @param pending_day: -1 ("not specified") falls back to progress_day; any other value (0
+## included) renders exactly that day as the row's "today" pill — see StreakModal's own doc
+## comment on _pending_day for why 0 can't share the -1 default.
 func async_show_streak_modal(
-	state: int, progress_day: int, is_guest: bool, pending_day: int = 0
+	state: int, progress_day: int, is_guest: bool, pending_day: int = -1
 ) -> bool:
 	var modal = await _async_create_streak_modal()
 	if not is_instance_valid(modal):

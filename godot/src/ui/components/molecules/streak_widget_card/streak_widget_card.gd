@@ -114,17 +114,24 @@ func _on_button_claim_pressed() -> void:
 	if Global.streak_manager.get_claimable_days().is_empty():
 		return
 	Global.metrics.track_click_button("CLAIM", "LOGIN_STREAK_WIDGET_SHOW", "")
-	# pending_day is irrelevant here — get_claimable_days() is already non-empty, so
-	# compute_modal_state() resolves from its first branch regardless of what's passed.
+	# Still needs the real pending_day even though get_claimable_days() already makes
+	# compute_modal_state() resolve from its first branch regardless — the day row inside the
+	# modal also reads it (for its own "today" pill), and must land on the same pill look this
+	# widget's own row already shows, or D3/D7 can end up looking different between the two.
+	var pending_day := Global.streak_manager.get_pending_today_day()
 	_async_show_streak_modal_and_wait(
-		Global.streak_manager.compute_modal_state(0), Global.streak_manager.get_progress_day()
+		Global.streak_manager.compute_modal_state(pending_day),
+		Global.streak_manager.get_progress_day(),
+		pending_day
 	)
 
 
 ## Mirrors Discover._async_show_streak_modal_and_wait: suppresses the upgrade nudge while the
 ## modal is up and refreshes this widget once it closes, so claiming/viewing from here doesn't
 ## leave a stale pill row/CLAIM button up behind it.
-func _async_show_streak_modal_and_wait(state: int, progress_day: int, pending_day: int = 0) -> void:
+func _async_show_streak_modal_and_wait(
+	state: int, progress_day: int, pending_day: int = -1
+) -> void:
 	Global.upgrade_nudge_coordinator.suppress_until_cleared("streak")
 	var shown := await Global.streak_modal_controller.async_show_streak_modal(
 		state, progress_day, StreakManager.is_unlinked_guest(), pending_day
