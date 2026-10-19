@@ -140,6 +140,9 @@ impl ArchipelagoManager {
     }
 
     pub fn island_room_state(&self) -> &'static str {
+        if self.session.is_removed() {
+            return "removed_waiting_for_pulse";
+        }
         self.adapter
             .as_ref()
             .map(|adapter| adapter.connection_state_str())
@@ -193,11 +196,20 @@ impl ArchipelagoManager {
         {
             return;
         }
-        self.session.remove();
+        self.session.remove(Instant::now());
         self.clean();
     }
 
     pub fn poll(&mut self) {
+        if self.session.refresh_after_removal(Instant::now()) {
+            // Removal already discarded the token. Ask the connector for a fresh assignment.
+            self.clean();
+            self.state = ArchipelagoState::Connecting;
+            self.island_connect_failures = 0;
+            self.island_attempt_connected = false;
+            self.last_try_to_connect =
+                Instant::now() - Duration::from_secs(RECONNECT_INTERVAL_SECS + 1);
+        }
         if !self.session.can_poll() {
             return;
         }
@@ -389,7 +401,7 @@ impl ArchipelagoManager {
             .as_ref()
             .is_some_and(|adapter| adapter.connection_state_str() == "removed")
         {
-            self.session.remove();
+            self.session.remove(Instant::now());
             self.clean();
             return;
         }

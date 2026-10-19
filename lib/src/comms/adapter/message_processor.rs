@@ -932,7 +932,15 @@ impl MessageProcessor {
             return;
         }
         if let MessageType::Disconnected(reason) = &message.message {
-            self.disconnects.push((*reason, message.room_id));
+            // Preserve distinct reasons (especially a later terminal eviction), but
+            // repeated events from one room must not consume the UI retry budget.
+            if !self
+                .disconnects
+                .iter()
+                .any(|(queued_reason, room)| queued_reason == reason && room == &message.room_id)
+            {
+                self.disconnects.push((*reason, message.room_id));
+            }
             return;
         }
 

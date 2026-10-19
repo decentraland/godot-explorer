@@ -72,6 +72,7 @@ mod tests {
     fn outage_notifies_once_and_only_establishment_resets_it() {
         let now = Instant::now();
         let mut recovery = Recovery::default();
+        assert!(!recovery.established());
         assert!(!recovery.unavailable(now));
         assert!(!recovery.unavailable(now + Duration::from_secs(9)));
         assert!(recovery.unavailable(now + Duration::from_secs(10)));
@@ -104,7 +105,7 @@ mod tests {
     #[test]
     fn terminal_decision_survives_resume_and_outage_resets() {
         let now = Instant::now();
-        for reason in [0, 2, 4] {
+        for reason in [0, 5, 4] {
             let mut recovery = Recovery {
                 stopped: Some(reason),
                 ..Default::default()

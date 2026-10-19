@@ -20,9 +20,12 @@ assignment arrives, including when gatekeeper still sees a closing participant.
 - Retryable Pulse failures back off from 2 seconds to a 30-second cap. Transport connection
   attempts time out after 10 seconds. A 10-second observed outage shows the existing Retry
   modal without stopping transport recovery; establishment clears the outage modal.
-- Island `ParticipantRemoved` stops island retries and waits for Pulse's reason.
+- Island `ParticipantRemoved` discards the token and waits 10 seconds for Pulse's reason.
+  If Pulse survives, a fresh WS handshake requests a new assignment; the debug panel shows
+  `removed_waiting_for_pulse` during the grace period.
 - Pulse `DuplicateSession` stops all automatic comms recovery and shows Session Ended
-  (Sign in / Exit). Pulse `Banned` shows the ban modal. Other terminal Pulse failures require
+  (Sign in / Exit). Pulse `Banned` shows a terminal ban modal
+  (Sign in / Exit), separate from scene-ban navigation. Other terminal Pulse failures require
   explicit Retry rather than an automatic loop.
 - Resume grace lasts 30 seconds and permits one Pulse session reclaim. Repeated duplicate
   eviction cannot continuously reclaim the account during that window.
@@ -34,6 +37,7 @@ assignment arrives, including when gatekeeper still sees a closing participant.
 Automated checks:
 
 ```sh
+cargo run -- test-gdscript
 cargo test --manifest-path lib/Cargo.toml --lib comms::
 cargo clippy --manifest-path lib/Cargo.toml --lib -- -D warnings
 ```
@@ -41,7 +45,7 @@ cargo clippy --manifest-path lib/Cargo.toml --lib -- -D warnings
 Headless UI tests are `godot/src/test/comms/test_disconnect_handler.gd` and
 `test_disconnect_modal.gd`. They load the production scripts with fake services and test
 retry cancellation, deferred modals, recovery, and sign-in without connecting to servers.
-Run with the repository's Godot binary using `--headless --path godot --script res://src/test/comms/<test>.gd`.
+Both suites are discovered by the standard test command above.
 
 Device acceptance checks (require a running client and the migrated backend):
 

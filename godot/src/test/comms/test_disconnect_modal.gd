@@ -38,6 +38,9 @@ class TestManager:
 	extends Node
 	var current_modal := TestModal.new()
 	var session_ended_secondary := "Exit"
+	var ban_kicked_title := "Banned"
+	var ban_kicked_body := "Contact support"
+	var session_ended_sign_in_primary := "Sign in"
 	var closed := false
 
 	func _async_ensure_modal(_site: String, urgent := false) -> bool:
@@ -81,6 +84,7 @@ func _async_run() -> void:
 	var source := FileAccess.get_file_as_string(HELPER_PATH)
 	source = source.replace("class_name CommsDisconnectModal\n", "")
 	source = source.replace("Modal.MODAL_CONNECTION_ICON", "0")
+	source = source.replace(": TranslationKey", ": String")
 	var helper := GDScript.new()
 	helper.source_code = source
 	_expect(helper.reload() == OK, "modal helper compiles")
@@ -88,7 +92,7 @@ func _async_run() -> void:
 	root.add_child(manager)
 	var is_current := func(): return accept
 	helper.async_show_modal(
-		manager, "Outage", "", "Retry", manager._on_session_ended_retry, is_current
+		manager, "Outage", "", "Retry", manager._on_session_ended_retry, is_current, true
 	)
 	accept = false
 	manager.current_modal.title = "Session Ended"
@@ -105,18 +109,34 @@ func _async_run() -> void:
 	)
 	helper.close_recovered(manager)
 	_expect(not manager.closed, "recovery cannot close Session Ended")
+	await helper.async_show_platform_banned(manager, is_current)
+	helper.close_recovered(manager)
+	_expect(manager.current_modal.title == "Banned", "platform ban has ban copy")
+	_expect(
+		manager.current_modal.button_primary.pressed.is_connected(
+			manager._on_session_ended_sign_in
+		),
+		"platform ban offers Sign in"
+	)
+	_expect(not manager.closed, "recovery cannot close platform ban")
 	await helper.async_show_modal(
-		manager, "Outage", "", "Retry", manager._on_session_ended_retry, is_current
+		manager, "Outage", "", "Retry", manager._on_session_ended_retry, is_current, true
 	)
 	helper.close_recovered(manager)
 	_expect(manager.closed, "recovery closes only a Retry modal")
+	manager.closed = false
+	await helper.async_show_modal(
+		manager, "Room Closed", "", "Retry", manager._on_session_ended_retry, is_current
+	)
+	helper.close_recovered(manager)
+	_expect(not manager.closed, "Pulse recovery cannot close Room Closed")
 	manager.current_modal.button_primary.free()
 	manager.current_modal.button_secondary.free()
 	manager.current_modal.free()
 	manager.closed = false
 	accept = true
 	helper.async_show_modal(
-		manager, "Outage", "", "Retry", manager._on_session_ended_retry, is_current
+		manager, "Outage", "", "Retry", manager._on_session_ended_retry, is_current, true
 	)
 	accept = false
 	await process_frame
@@ -128,4 +148,6 @@ func _async_run() -> void:
 	manager.current_modal.free()
 	manager.free()
 	print("disconnect modal tests: %d failures" % failures)
+	if failures == 0:
+		print("[test_disconnect_modal] PASS")
 	quit(failures)

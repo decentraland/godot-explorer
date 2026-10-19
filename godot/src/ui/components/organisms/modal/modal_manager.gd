@@ -586,7 +586,8 @@ func async_show_disconnected_modal(is_current: Callable = Callable()) -> void:
 		session_ended_other_body,
 		session_ended_retry_primary,
 		_on_session_ended_retry,
-		is_current
+		is_current,
+		true
 	)
 
 
@@ -595,10 +596,11 @@ func _async_show_disconnect_modal(
 	body: TranslationKey,
 	primary_label: TranslationKey,
 	primary_handler: Callable,
-	is_current: Callable = Callable()
+	is_current: Callable = Callable(),
+	close_on_recovery: bool = false
 ) -> void:
 	await CommsDisconnectModal.async_show_modal(
-		self, title, body, primary_label, primary_handler, is_current
+		self, title, body, primary_label, primary_handler, is_current, close_on_recovery
 	)
 
 

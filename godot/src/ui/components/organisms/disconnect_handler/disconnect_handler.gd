@@ -10,6 +10,7 @@ const REASON_ROOM_CLOSED: int = 1
 const REASON_KICKED: int = 2
 const REASON_OTHER: int = 3
 const REASON_PULSE_UNAVAILABLE: int = 4
+const REASON_PLATFORM_BANNED: int = 5
 
 const MAX_RECONNECT_ATTEMPTS: int = 3
 
@@ -71,13 +72,12 @@ func _on_disconnected(reason: int) -> void:
 	if _last_adapter_str.is_empty():
 		_last_adapter_str = Global.comms.get_current_adapter_conn_str()
 
-	# DuplicateIdentity means someone else logged in - don't retry, show error immediately
-	if reason == REASON_DUPLICATE_IDENTITY:
+	# Terminal account decisions cannot be recovered by reconnecting.
+	if reason in [REASON_DUPLICATE_IDENTITY, REASON_PLATFORM_BANNED]:
 		_session_ended = true
 		_pulse_outage = false
-		# Note: Don't reset _last_adapter_str here - we need it for reconnection
 		_reconnect_attempts = 0
-		_last_disconnect_reason = -1
+		_last_disconnect_reason = reason
 		_should_stop_reconnecting = true  # Stop any pending reconnect attempts
 		if not _is_loading:
 			_show_disconnect_modal(reason)
@@ -140,6 +140,8 @@ func _show_disconnect_modal(reason: int) -> void:
 	match reason:
 		REASON_DUPLICATE_IDENTITY:
 			Global.modal_manager.async_show_session_ended_modal(is_current)
+		REASON_PLATFORM_BANNED:
+			CommsDisconnectModal.async_show_platform_banned(Global.modal_manager, is_current)
 		REASON_ROOM_CLOSED:
 			Global.modal_manager.async_show_room_closed_modal(is_current)
 		_:
@@ -147,8 +149,7 @@ func _show_disconnect_modal(reason: int) -> void:
 
 
 func _on_session_ended_sign_in() -> void:
-	# DuplicateIdentity: another client took over this account. Sign the user out
-	# and route to the lobby so they can re-authenticate (possibly with a different account).
+	# Leave the stopped session and allow authentication with another account.
 	_reset_reconnect_state()
 	Global.sign_out()
 
@@ -191,7 +192,7 @@ func _on_loading_finished() -> void:
 	_is_loading = false
 
 	if _session_ended:
-		_show_disconnect_modal(REASON_DUPLICATE_IDENTITY)
+		_show_disconnect_modal(_last_disconnect_reason)
 		return
 	if _pulse_outage:
 		_show_disconnect_modal(REASON_PULSE_UNAVAILABLE)

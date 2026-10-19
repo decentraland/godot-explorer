@@ -644,7 +644,7 @@ impl INode for CommunicationManager {
                     DisconnectReason::RoomClosed => 1,
                     DisconnectReason::Kicked => 2,
                     DisconnectReason::Other => 3,
-                    DisconnectReason::IslandRemoved => unreachable!(),
+                    DisconnectReason::IslandRemoved => continue,
                 };
                 tracing::warn!("Disconnected from '{}': {:?}", room_id, reason);
                 self.base_mut()
@@ -1225,7 +1225,7 @@ impl CommunicationManager {
     fn on_adapter_changed(voice_chat_enabled: bool, new_adapter: GString);
 
     /// Signal emitted when disconnected from the server
-    /// reason: 0 = DuplicateIdentity, 1 = RoomClosed, 2 = Kicked, 3 = Other, 4 = PulseUnavailable
+    /// reason: 0 = DuplicateIdentity, 1 = RoomClosed, 2 = Kicked, 3 = Other, 4 = PulseUnavailable, 5 = PlatformBanned
     #[signal]
     fn disconnected(reason: i32);
 
@@ -1773,76 +1773,6 @@ impl CommunicationManager {
             if let Some(pulse_room) = &mut self.pulse_room {
                 pulse_room.send_movement(&uncompressed_movement);
                 message_sent = true;
-            }
-        }
-
-        if message_sent {
-            self.last_position_broadcast_index += 1;
-        }
-        message_sent
-    }
-
-    #[func]
-    fn broadcast_position_and_rotation(&mut self, position: Vector3, rotation: Quaternion) -> bool {
-        #[cfg(feature = "use_pulse")]
-        if !self.is_livekit_movement_dual_channel() {
-            return false;
-        }
-        // Update archipelago position if connected via archipelago
-        #[cfg(feature = "use_livekit")]
-        if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
-            archipelago.update_position(position);
-        }
-
-        let index = self.last_position_broadcast_index;
-        let get_packet = || {
-            let position_packet = rfc4::Position {
-                index: index as u32,
-                position_x: position.x,
-                position_y: position.y,
-                position_z: -position.z,
-                rotation_x: rotation.x,
-                rotation_y: rotation.y,
-                rotation_z: -rotation.z,
-                rotation_w: -rotation.w,
-            };
-
-            rfc4::Packet {
-                message: Some(rfc4::packet::Message::Position(position_packet)),
-                protocol_version: DEFAULT_PROTOCOL_VERSION,
-            }
-        };
-
-        // Send to main room if available
-        let mut message_sent = if let Some(main_room) = &mut self.main_room {
-            let sent = main_room.send_rfc4(get_packet(), true);
-            if sent {
-                tracing::debug!("📡 Position sent to main room");
-            }
-            sent
-        } else {
-            false
-        };
-
-        // Also send to scene room if available (dual broadcasting)
-        #[cfg(feature = "use_livekit")]
-        if let Some(scene_room) = &mut self.scene_room {
-            let scene_sent = scene_room.send_rfc4(get_packet(), true);
-            message_sent = message_sent || scene_sent; // Consider successful if either main or scene room succeeded
-            if scene_sent {
-                tracing::debug!("📡 Position also sent to scene room");
-            }
-        }
-
-        // Also send through archipelago's adapter if available
-        #[cfg(feature = "use_livekit")]
-        if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
-            if let Some(adapter) = archipelago.adapter_as_mut() {
-                let sent = adapter.send_rfc4(get_packet(), true);
-                if sent {
-                    tracing::debug!("📡 Position also sent through archipelago");
-                    message_sent = true;
-                }
             }
         }
 

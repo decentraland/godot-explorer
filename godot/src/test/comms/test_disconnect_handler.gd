@@ -40,6 +40,9 @@ class TestModals:
 		if not is_current.is_valid() or is_current.call():
 			shown = "outage"
 
+	func async_show_platform_banned(_manager, _is_current: Callable) -> void:
+		shown = "platform_ban"
+
 	func async_show_room_closed_modal(_is_current: Callable = Callable()) -> void:
 		shown = "closed"
 
@@ -149,9 +152,23 @@ func _async_run() -> void:
 	services.loading_finished.emit()
 	_expect(services.modal_manager.shown.is_empty(), "recovery during loading cancels stale outage")
 
+	_new_handler()
+	services.comms.disconnected.emit(5)
+	_expect(not handler._scene_banned, "platform ban never enters scene navigation")
+	services.comms.pulse_recovered.emit()
+	services.modal_manager.session_ended_retry.emit()
+	services.loading_started.emit()
+	services.loading_finished.emit()
+	_expect(services.modal_manager.shown == "platform_ban", "platform ban persists after loading")
+	_expect(services.comms.retries == 0, "platform ban cannot retry")
+	services.modal_manager.session_ended_sign_in.emit()
+	_expect(services.signed_out, "platform ban Sign in leaves the stopped session")
+
 	handler.free()
 	services.comms.free()
 	services.modal_manager.free()
 	services.free()
 	print("disconnect handler tests: %d failures" % failures)
+	if failures == 0:
+		print("[test_disconnect_handler] PASS")
 	quit(failures)

@@ -69,7 +69,7 @@ impl CommunicationManager {
                     self.ensure_pulse_room();
                 }
                 Some(PulseDisconnect::DuplicateSession) => self.stop_comms(0),
-                Some(PulseDisconnect::Banned) => self.stop_comms(2),
+                Some(PulseDisconnect::Banned) => self.stop_comms(5),
                 _ => self.stop_comms(4),
             }
             return;
@@ -78,8 +78,9 @@ impl CommunicationManager {
             match event {
                 PulseRoomEvent::Established => {
                     self.pulse_teleport_pending = true;
-                    self.recovery.established();
-                    self.base_mut().emit_signal("pulse_recovered", &[]);
+                    if self.recovery.established() {
+                        self.base_mut().emit_signal("pulse_recovered", &[]);
+                    }
                 }
                 PulseRoomEvent::AttemptFailed => {
                     self.recovery.failures = self.recovery.failures.saturating_add(1);
@@ -102,8 +103,8 @@ impl CommunicationManager {
     }
 
     pub(super) fn retry_pulse_connection(&mut self) {
-        // Eviction requires sign-in; a ban is handled by the ban navigation flow.
-        if matches!(self.recovery.stopped, Some(0 | 2)) {
+        // Eviction and platform bans require leaving the stopped session.
+        if matches!(self.recovery.stopped, Some(0 | 5)) {
             return;
         }
         self.block_auto_reconnect = false;
