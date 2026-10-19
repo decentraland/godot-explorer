@@ -69,7 +69,8 @@ func _on_day_row_tapped() -> void:
 	var pending_day := Global.streak_manager.get_pending_today_day()
 	_async_show_streak_modal_and_wait(
 		Global.streak_manager.compute_modal_state(pending_day),
-		Global.streak_manager.get_effective_progress_day()
+		Global.streak_manager.get_effective_progress_day(),
+		pending_day
 	)
 
 
@@ -123,10 +124,10 @@ func _on_button_claim_pressed() -> void:
 ## Mirrors Discover._async_show_streak_modal_and_wait: suppresses the upgrade nudge while the
 ## modal is up and refreshes this widget once it closes, so claiming/viewing from here doesn't
 ## leave a stale pill row/CLAIM button up behind it.
-func _async_show_streak_modal_and_wait(state: int, progress_day: int) -> void:
+func _async_show_streak_modal_and_wait(state: int, progress_day: int, pending_day: int = 0) -> void:
 	Global.upgrade_nudge_coordinator.suppress_until_cleared("streak")
 	var shown := await Global.streak_modal_controller.async_show_streak_modal(
-		state, progress_day, StreakManager.is_unlinked_guest()
+		state, progress_day, StreakManager.is_unlinked_guest(), pending_day
 	)
 	if shown and is_instance_valid(Global.streak_modal_controller.current_streak_modal):
 		await Global.streak_modal_controller.current_streak_modal.tree_exited
