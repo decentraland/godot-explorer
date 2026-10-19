@@ -179,6 +179,12 @@ func _async_add_email_confirmed(
 			Global.metrics.track_screen_viewed(
 				"ACCOUNT_UPGRADE_REWARD_SHOW", JSON.stringify({"method": "otp"})
 			)
+			# async_show_reward_modal only awaits the modal appearing, not the player claiming
+			# and dismissing it — without this, flow_concluded (and whatever it chains into,
+			# e.g. the streak claim) would fire while the upgrade reward is still on screen,
+			# racing it instead of running after.
+			if is_instance_valid(Global.modal_manager.current_reward_modal):
+				await Global.modal_manager.current_reward_modal.tree_exited
 	# The guest is now upgraded (Rust set the cached flag on link) — notify the app so the
 	# Discover/Settings notice, badge, credits button, etc. update without a network call.
 	Global.guest_upgrade_state_refreshed.emit(true)
