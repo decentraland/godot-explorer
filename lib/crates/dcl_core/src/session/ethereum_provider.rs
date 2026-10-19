@@ -27,22 +27,21 @@ impl EthereumProvider {
     ) -> Result<serde_json::Value, anyhow::Error> {
         let mut this_provider = self.provider.lock().await;
 
-        if this_provider.is_none() {
-            let provider_url = urls::ethereum_rpc_with_project("kernel-local");
-            let provider = Provider::<Ws>::connect(&provider_url).await?;
-            this_provider.replace(provider);
-        }
-
-        // TODO: check if the connection is missing
-        let provider = this_provider.as_ref().unwrap();
+        let provider = match this_provider.take() {
+            Some(provider) => provider,
+            None => {
+                let provider_url = urls::ethereum_rpc_with_project("kernel-local");
+                Provider::<Ws>::connect(&provider_url).await?
+            }
+        };
         let result = provider.request(method, params).await;
 
         match result {
-            Err(e) => {
-                this_provider.take();
-                Err(anyhow::Error::new(e))
+            Err(e) => Err(anyhow::Error::new(e)),
+            Ok(result) => {
+                *this_provider = Some(provider);
+                Ok(result)
             }
-            Ok(result) => Ok(result),
         }
     }
 }

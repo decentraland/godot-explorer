@@ -2,10 +2,11 @@
  * RN entry flow, then the tab shell. The core starts the engine when a screen needs it: the avatar
  * preview first, then the world on Jump In.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { onLinkTarget } from './src/app/links';
+import type { LinkTarget } from './src/app/links';
 import { NavProvider, useNav } from './src/app/NavProvider';
 import { gallery, usePreviewRoute } from './src/app/preview';
 import { Shell } from './src/app/Shell';
@@ -49,25 +50,40 @@ function AppBody() {
     }
   }, [signedOut, entered, reset]);
 
-  // A deep link navigates once the player is past the entry flow.
+  // A deep link navigates once the player is past the entry flow; one that arrives earlier waits.
+  const waitingLink = useRef<LinkTarget | undefined>(undefined);
+  const openLink = useCallback(
+    (target: LinkTarget) => {
+      if (target.kind === 'world') {
+        jumpIn(target.place);
+      } else if (target.kind === 'place') {
+        push({ name: 'placeDetail', params: { placeId: target.placeId } });
+      } else if (target.kind === 'event') {
+        push({ name: 'eventDetail', params: { eventId: target.eventId } });
+      } else {
+        reset({ name: 'home' });
+      }
+    },
+    [jumpIn, push, reset],
+  );
   useEffect(
     () =>
       onLinkTarget(target => {
-        if (!entered) {
-          return;
-        }
-        if (target.kind === 'world') {
-          jumpIn(target.place);
-        } else if (target.kind === 'place') {
-          push({ name: 'placeDetail', params: { placeId: target.placeId } });
-        } else if (target.kind === 'event') {
-          push({ name: 'eventDetail', params: { eventId: target.eventId } });
+        if (entered) {
+          openLink(target);
         } else {
-          reset({ name: 'home' });
+          waitingLink.current = target;
         }
       }),
-    [entered, jumpIn, push, reset],
+    [entered, openLink],
   );
+  useEffect(() => {
+    if (entered && waitingLink.current) {
+      const target = waitingLink.current;
+      waitingLink.current = undefined;
+      openLink(target);
+    }
+  }, [entered, openLink]);
 
   const leave = useCallback(() => {
     try {

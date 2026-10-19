@@ -20,7 +20,8 @@ use crate::{
 
 use self::{
     common::{
-        SceneLogMessage, TakeAndCompareSnapshotResponse, TestingScreenshotComparisonMethodRequest,
+        SceneLogLevel, SceneLogMessage, TakeAndCompareSnapshotResponse,
+        TestingScreenshotComparisonMethodRequest,
     },
     crdt::{DirtyCrdtState, SceneCrdtState},
     scene_apis::{RpcCall, RpcResultSender},
@@ -179,11 +180,28 @@ impl DclScene {
             .name(format!("scene thread {}", spawn_dcl_scene_data.scene_id.0))
             .spawn(move || {
                 #[cfg(feature = "use_deno")]
-                scene_thread(
-                    thread_receive_from_renderer,
-                    thread_scene_crdt,
-                    spawn_dcl_scene_data,
-                )
+                {
+                    // A panic reaching here (scene input, a V8 callback) ends this scene only.
+                    let sender = spawn_dcl_scene_data.thread_sender_to_main.clone();
+                    let scene_id = spawn_dcl_scene_data.scene_id;
+                    let ended = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        scene_thread(
+                            thread_receive_from_renderer,
+                            thread_scene_crdt,
+                            spawn_dcl_scene_data,
+                        )
+                    }));
+                    if ended.is_err() {
+                        let _ = sender.send(SceneResponse::RemoveGodotScene(
+                            scene_id,
+                            vec![SceneLogMessage {
+                                timestamp: 0.0,
+                                level: SceneLogLevel::SystemError,
+                                message: "the scene thread panicked".to_string(),
+                            }],
+                        ));
+                    }
+                }
             })
             .unwrap();
 

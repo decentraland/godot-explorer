@@ -20,6 +20,7 @@ done inside phase 5 (5.1), still before the full-migration gate (D-37). Until th
       protocol tree from `cargo run -- install`, like the rest of the workspace).
 - [x] `lib/crates/dcl_engine/src/scene_runner/tokio_runtime.rs` is gone; no `TokioRuntime::` reference remains.
 - [ ] `cargo run -- run` (desktop) and the Android APK from the branch pass the regression below.
+      **19 Oct:** the Android build passes the guest → world path on the Moto (`phase-5-verification.md`); the desktop run was not repeated.
       Desktop `--itest` (29) and `test-gdscript` (16) pass; the phone regression is not run yet.
 - [x] `cargo clippy --workspace -- -D warnings` and `cargo fmt --all` clean.
 

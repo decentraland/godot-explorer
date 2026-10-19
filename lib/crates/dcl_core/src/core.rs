@@ -176,9 +176,9 @@ impl Core {
         self.hub.events().avatar_preview_mode(on);
     }
 
-    /// Spawns on the core runtime. Without an installed core it fails in debug builds; release
-    /// builds and `dcl_core`'s own tests run the future on a short-lived thread with its own
-    /// runtime instead of dropping it.
+    /// Spawns on the core runtime. Without an installed core it fails in debug builds and drops
+    /// the future with an error in release; `dcl_core`'s own tests run it on a short-lived thread
+    /// with its own runtime instead.
     pub fn spawn<F>(future: F)
     where
         F: Future + Send + 'static,
@@ -188,15 +188,19 @@ impl Core {
             core.handle().spawn(future);
             return;
         }
-        #[cfg(all(debug_assertions, not(test)))]
-        panic!("Core::spawn called before Core::install");
-        #[allow(unreachable_code)]
+        #[cfg(test)]
         std::thread::spawn(move || match Runtime::new() {
             Ok(runtime) => {
                 runtime.block_on(future);
             }
             Err(e) => tracing::error!("failed to create a fallback runtime: {e}"),
         });
+        #[cfg(not(test))]
+        {
+            drop(future);
+            debug_assert!(false, "Core::spawn called before Core::install");
+            tracing::error!("Core::spawn called before Core::install; the task was dropped");
+        }
     }
 
     /// Handle to the core runtime, `None` before `install`.

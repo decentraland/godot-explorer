@@ -24,7 +24,7 @@ engine-side GDScript that phase 5 ports; it stops creating services and stops be
 - [x] `grep -rn '"/root/' lib/crates/dcl_engine/src` finds nothing.
 - [x] `handle_restricted_actions.rs` builds `SceneRequest`s and hands them to `DclEngine::scene_request`; the
       only GDScript it still reaches goes through the engine handles (move/look/emote) and the Godot-UI sink.
-- [ ] Soft keyboard reaches a scene `UiInput` on Android and iOS in the RN host (risks R-3): scene and checklist in
+- [x] (Android only, 19 Oct: bottom input focuses and shows the keyboard, typing updates `value:`, the action key sets `submitted: hello`, the keyboard closes and the scene shifts above it; iOS and the rotate / RN-`TextInput` rows were not run) Soft keyboard reaches a scene `UiInput` on Android and iOS in the RN host (risks R-3): scene and checklist in
       `tests/ime-uiinput-scene/`, **not run** — needs the phones.
 - [ ] Release-build fps and memory measured on the QA phone, RN host vs Godot-exported app (risks R-1): `--perf-log`
       and the runbook in `scripts/bench/rn-vs-godot.md`, **not run** — needs the phones.

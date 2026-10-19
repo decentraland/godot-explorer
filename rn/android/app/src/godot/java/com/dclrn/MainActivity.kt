@@ -2,7 +2,6 @@ package com.dclrn
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
@@ -12,6 +11,7 @@ import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
 import com.facebook.react.uimanager.TouchTargetHelper
+import com.th3rdwave.safeareacontext.SafeAreaProvider
 import org.godotengine.godot.Godot
 import org.godotengine.godot.GodotFragment
 import org.godotengine.godot.GodotHost
@@ -91,9 +91,7 @@ class MainActivity : ReactActivity(), GodotHost {
       val target = TouchTargetHelper.findTargetTagForTouch(ev.x, ev.y, rnRoot)
       // The safe-area provider ignores pointerEvents, so it is a full-screen target; look through it.
       val targetView = if (target > 0) rnRoot.findViewById<View>(target) else null
-      gestureGoesToGodot =
-          target == rnRoot.id || target <= 0 || targetView?.javaClass?.simpleName == "SafeAreaProvider"
-      Log.d(TAG, "touch down target=$target rootId=${rnRoot.id} -> godot=$gestureGoesToGodot")
+      gestureGoesToGodot = target == rnRoot.id || target <= 0 || targetView is SafeAreaProvider
     }
     return if (gestureGoesToGodot) godotContainer.dispatchTouchEvent(ev)
     else super.dispatchTouchEvent(ev)
@@ -106,10 +104,10 @@ class MainActivity : ReactActivity(), GodotHost {
   override fun getCommandLine(): List<String> = BOOT_ARGS
 
   companion object {
-    private const val TAG = "DclRn"
     private const val GODOT_CONTAINER_ID = 0x00D0D0
 
-    private val BOOT_ARGS = listOf("--force-mobile", "--no-pulse", "--perf-log")
+    private val BOOT_ARGS =
+        listOf("--force-mobile", "--no-pulse") + if (BuildConfig.DEBUG) listOf("--perf-log") else emptyList()
 
     @Volatile var instance: MainActivity? = null
   }

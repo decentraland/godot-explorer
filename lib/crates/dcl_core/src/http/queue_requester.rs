@@ -76,6 +76,7 @@ impl HttpQueueRequester {
         request_option: RequestOption,
         priority: usize,
     ) -> Result<HttpResponse, HttpError> {
+        let request_id = request_option.id;
         let (response_sender, response_receiver) = oneshot::channel();
 
         let (network_inspector_id, network_inspector_sender) = if NETWORK_INSPECTOR_ENABLE
@@ -112,7 +113,13 @@ impl HttpQueueRequester {
 
         self.queue.lock().unwrap().push(http_request);
         self.process_queue().await;
-        response_receiver.await.unwrap()
+        let id = request_id;
+        response_receiver.await.unwrap_or_else(|_| {
+            Err(HttpError {
+                id,
+                error_message: "the request was dropped before it completed".into(),
+            })
+        })
     }
 
     async fn process_queue(&self) {

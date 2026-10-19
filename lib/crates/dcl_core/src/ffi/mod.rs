@@ -110,9 +110,19 @@ pub trait AppListener: Send + Sync {
 /// own; delivering on the firing thread would then wait for each other.
 struct ListenerAdapter {
     queue: std::sync::mpsc::Sender<Delivery>,
+    /// Only the latest `hud` snapshot is worth delivering: a slow shell would otherwise work
+    /// through a backlog of stale ones (4 per second) before it saw a `state_changed`.
+    hud: Arc<std::sync::Mutex<Option<crate::app::HudSnapshot>>>,
 }
 
 type Delivery = Box<dyn FnOnce(&dyn AppListener) + Send>;
+
+fn flush_hud(slot: &std::sync::Mutex<Option<crate::app::HudSnapshot>>, listener: &dyn AppListener) {
+    let snapshot = slot.lock().unwrap_or_else(|e| e.into_inner()).take();
+    if let Some(snapshot) = snapshot {
+        listener.hud(snapshot);
+    }
+}
 
 impl ListenerAdapter {
     fn new(listener: Arc<dyn AppListener>) -> Self {
@@ -129,7 +139,10 @@ impl ListenerAdapter {
         if let Err(error) = spawned {
             tracing::error!("shell events: cannot start the delivery thread: {error}");
         }
-        Self { queue }
+        Self {
+            queue,
+            hud: Arc::default(),
+        }
     }
 
     fn deliver(&self, delivery: impl FnOnce(&dyn AppListener) + Send + 'static) {
@@ -140,7 +153,11 @@ impl ListenerAdapter {
 impl AppEvents for ListenerAdapter {
     fn state_changed(&self, state: &State) {
         let state = state.clone();
-        self.deliver(move |l| l.state_changed(state));
+        let hud = self.hud.clone();
+        self.deliver(move |l| {
+            flush_hud(&hud, l);
+            l.state_changed(state)
+        });
     }
     fn engine_required(&self) {}
     fn avatar_preview_mode(&self, _on: bool) {}
@@ -160,8 +177,15 @@ impl AppEvents for ListenerAdapter {
         self.deliver(move |l| l.settings_changed(entry));
     }
     fn hud(&self, snapshot: &crate::app::HudSnapshot) {
-        let snapshot = snapshot.clone();
-        self.deliver(move |l| l.hud(snapshot));
+        let replaced = self
+            .hud
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .replace(snapshot.clone());
+        if replaced.is_none() {
+            let hud = self.hud.clone();
+            self.deliver(move |l| flush_hud(&hud, l));
+        }
     }
     fn chat(&self, line: &crate::app::ChatLine) {
         let line = line.clone();
@@ -293,6 +317,7 @@ mod adapter_tests {
     struct Gate {
         open: Mutex<mpsc::Receiver<()>>,
         seen: mpsc::Sender<u32>,
+        huds: mpsc::Sender<f32>,
     }
 
     impl AppListener for Gate {
@@ -305,7 +330,9 @@ mod adapter_tests {
         fn auth_error(&self, _: String) {}
         fn open_url(&self, _: OpenUrl) {}
         fn settings_changed(&self, _: crate::settings::SettingEntry) {}
-        fn hud(&self, _: crate::app::HudSnapshot) {}
+        fn hud(&self, snapshot: crate::app::HudSnapshot) {
+            let _ = self.huds.send(snapshot.fps);
+        }
         fn chat(&self, _: crate::app::ChatLine) {}
         fn ui_state(&self, _: crate::app::UiState) {}
         fn open_backpack(&self, _: bool) {}
@@ -325,6 +352,7 @@ mod adapter_tests {
         let adapter = ListenerAdapter::new(Arc::new(Gate {
             open: Mutex::new(open),
             seen: seen_tx,
+            huds: mpsc::channel().0,
         }));
 
         adapter.unread_chat(1);
@@ -339,5 +367,46 @@ mod adapter_tests {
         let timeout = Duration::from_secs(5);
         assert_eq!(seen.recv_timeout(timeout), Ok(1));
         assert_eq!(seen.recv_timeout(timeout), Ok(2));
+    }
+
+    fn hud_at(fps: f32) -> crate::app::HudSnapshot {
+        crate::app::HudSnapshot {
+            parcel: crate::app::Parcel { x: 0, y: 0 },
+            realm: String::new(),
+            fps,
+            position: crate::app::Vec3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            scene_base: None,
+            camera_yaw: 0.0,
+            camera_pitch: 0.0,
+            camera_mode: crate::app::CameraMode::ThirdPerson,
+            camera_mode_locked: false,
+            joystick_visible: true,
+        }
+    }
+
+    #[test]
+    fn a_busy_shell_gets_only_the_latest_hud_before_the_next_state() {
+        let (release, open) = mpsc::channel();
+        let (seen_tx, seen) = mpsc::channel();
+        let (huds_tx, huds) = mpsc::channel();
+        let adapter = ListenerAdapter::new(Arc::new(Gate {
+            open: Mutex::new(open),
+            seen: seen_tx,
+            huds: huds_tx,
+        }));
+
+        adapter.unread_chat(0);
+        for fps in [1.0, 2.0, 3.0] {
+            adapter.hud(&hud_at(fps));
+        }
+        release.send(()).unwrap();
+        let timeout = Duration::from_secs(5);
+        assert_eq!(seen.recv_timeout(timeout), Ok(0));
+        assert_eq!(huds.recv_timeout(timeout), Ok(3.0));
+        assert!(huds.recv_timeout(Duration::from_millis(200)).is_err());
     }
 }

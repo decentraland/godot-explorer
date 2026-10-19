@@ -32,7 +32,7 @@ avatar, shader baker), No RN screen calls `exit_world` yet (phase 4).
 - [x] `godot/src/rn_bridge/` and `godot/src/ui/pages/auth/` are gone; `rn/src/GodotBridge.ts`,
       `rn/src/bridge/`, `rn/src/engine.ts` and `rn/src/events.ts` are gone; `rn/src/core/` is the
       only way RN reaches the core and the engine.
-- [ ] One `Core` per process, verified: the TurboModule and the GDExtension share the library handle
+- [x] One `Core` per process, verified (19 Oct, Moto debug build: the `installs()` assertion in `dcl_global.rs` did not fire): the TurboModule and the GDExtension share the library handle
       (an `installed()` counter asserts it in debug builds).
 - [x] `rn/src` has no hardcoded `decentraland.org|zone` or `dclexplorer.com` outside `*mock*` and
       `simulator.ts`; the eslint rule is on.

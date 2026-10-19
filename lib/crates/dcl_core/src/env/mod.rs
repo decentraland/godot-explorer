@@ -264,13 +264,16 @@ static CURRENT_CONFIG: RwLock<DclEnvConfig> = RwLock::new(DclEnvConfig {
 
 /// Get the current environment config.
 pub fn get_config() -> DclEnvConfig {
-    CURRENT_CONFIG.read().unwrap().clone()
+    CURRENT_CONFIG
+        .read()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone()
 }
 
 /// Set the environment config. Can be called multiple times (e.g. hot deep link).
 pub fn set_environment_config(config: DclEnvConfig) {
     tracing::info!("Environment config set to: {}", config.to_string_repr());
-    *CURRENT_CONFIG.write().unwrap() = config;
+    *CURRENT_CONFIG.write().unwrap_or_else(|e| e.into_inner()) = config;
 }
 
 /// Get the current default environment (backward compat).

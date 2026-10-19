@@ -43,6 +43,15 @@ jobs:
         working-directory: lib
         run: cargo fmt --all -- --check
 
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+
+      - name: Rust dependency licences
+        working-directory: lib
+        run: cargo deny check licenses
+
       - name: i18n tooling unit tests
         run: python3 -m unittest discover -s tools/i18n -p 'test_*.py'
 

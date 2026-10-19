@@ -54,6 +54,7 @@ and no item carries an estimate.
 | [phase-2-rust-root-emulator.md](phase-2-rust-root-emulator.md) | A Rust root boots the engine; the engine API is real; desktop is the emulator |
 | [phase-3-ffi-entry-flow.md](phase-3-ffi-entry-flow.md) | Typed FFI, the core state machine, every sign-in method in RN, JSON bridge deleted |
 | [phase-4-screens.md](phase-4-screens.md) | The GDScript UI sweep, every domain wired to the core, feature parity with 1.15 |
+| [phase-5b-solo-polish.md](phase-5b-solo-polish.md) | Mateo + AI, between 5 and 6: close what 1–5 left open and what the 19 Oct audit found (readable Sentry stacks, scene-input panics, event delivery, smoke tests) |
 | [phase-6-testing-polish.md](phase-6-testing-polish.md) | team, December, first: fix what the AI got wrong, validate and polish everything |
 | [phase-7-new-features.md](phase-7-new-features.md) | team, December, then: the five new features in RN on the polished core, release candidate, store readiness |
 | [phase-5-engine-port.md](phase-5-engine-port.md) | gdext upgraded to its modern API first, then avatar, player, SDK components, fetcher into `dcl_engine`; VR removed; zero `.gd` |
@@ -70,6 +71,7 @@ and no item carries an estimate.
 | 3. FFI + entry flow | 2.1 landed | Mateo + AI | code complete on `feat/react-native-phase5` (draft PR #3081); phase 5 closed on 17 Oct 2026; the open items are handed to phase 6 polish, see [phase-5-verification.md](phase-5-verification.md) |
 | 4. UI sweep + every domain on the core | phase 3 (the 4.0 sweep goes first, D-44) | Mateo + AI | not started |
 | 5. Modern gdext, engine-side port, VR removed | 2.1 landed; mostly after 4.0 | Mateo + AI | code on `feat/react-native-phase5` (draft PR #3081); phase 5 closed on 17 Oct 2026; the open items are handed to phase 6 polish, see [phase-5-verification.md](phase-5-verification.md) |
+| 5b. Solo polish (D-45) | phase 5 closed | Mateo + AI | code items done 19 Oct (panics, event delivery, deep links, licences, 16 KB guard, pinned deps, Maestro smoke); open: iOS, Sentry readable-stack check, hang report, parity rows needing an account; see [phase-5b-solo-polish.md](phase-5b-solo-polish.md) |
 | **Checkpoint 1 Nov** (D-39): real state of stack 1, one of options (a)–(d) chosen | | | |
 | **Gate: full migration** (parity checklist green and zero `.gd`), target 30 Nov | | | |
 | 6. Fix, validate, polish (December, first) | full-migration gate | full team | not started |
