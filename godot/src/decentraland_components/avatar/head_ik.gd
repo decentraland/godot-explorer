@@ -6,6 +6,7 @@ extends RefCounted
 ## on top of the animated pose.
 
 const HEAD := "Avatar_Head"
+const NECK := "Avatar_Neck"
 
 const WEIGHT_SPEED := 2.0  # HeadIKWeightChangeSpeed
 const ROTATION_SPEED := 360.0  # HeadIKRotationSpeed (deg/s)
@@ -18,16 +19,22 @@ const RESET_SPEED_SCALE := 0.3333333
 # Unity gates on MoveVelocity.sqrMagnitude > 0.5 while it is running, so the
 # speed that turns head IK off is its square root.
 const MAX_SPEED := 0.7071068
+# Unity spreads the turn over the rig with TwistChainConstraints: the neck sits
+# at curve(step 0.5) on both chains (~0.89 vertical, ~0.94 horizontal) and the
+# head holds the tip, i.e. the full aim. Rotating the head alone leaves the
+# whole angle at one joint and the neck snaps; this is that share.
+const NECK_SHARE := 0.89
 
 
-## Applied last on the skeleton: rotates the head's world pose so the turn reads
-## on top of whatever the clip did with it.
+## Applied last on the skeleton: reshapes the animated pose so the aim is spread
+## over Neck > Head like Unity's chain, instead of piling it all on the head.
 class HeadTurnModifier3D:
 	extends SkeletonModifier3D
 
 	const YAW_DEAD_ZONE := 0.05
 
-	var bone := -1
+	var neck := -1
+	var head := -1
 	var yaw := 0.0  # radians, + = character turns to its own right
 	var pitch := 0.0  # radians, + = up
 	var weight := 0.0
@@ -38,21 +45,35 @@ class HeadTurnModifier3D:
 
 	func _process_modification() -> void:
 		var skel := get_skeleton()
-		if skel == null or bone < 0 or weight <= 0.0 or not skel.is_inside_tree():
+		if skel == null or head < 0 or weight <= 0.0 or not skel.is_inside_tree():
 			return
 		var skel_basis := skel.global_transform.basis.orthonormalized()
 		# Yaw about the body's up, then pitch about the body's right, the order
 		# Unity composes (horizontalTargetRotation * AxisAngle(right, ..)).
 		var delta_local := Basis(Vector3.UP, -yaw) * Basis(Vector3.RIGHT, pitch)
 		var delta := frame * delta_local * frame.inverse()
-		var cur_world := (skel_basis * skel.get_bone_global_pose(bone).basis).orthonormalized()
-		var mixed := cur_world.slerp((delta * cur_world).orthonormalized(), weight)
-		var parent_skel := Basis.IDENTITY
-		var parent_idx := skel.get_bone_parent(bone)
-		if parent_idx >= 0:
-			parent_skel = skel.get_bone_global_pose(parent_idx).basis
-		var local := parent_skel.inverse() * (skel_basis.inverse() * mixed)
-		skel.set_bone_pose_rotation(bone, local.get_rotation_quaternion())
+		var head_base := skel_basis * skel.get_bone_global_pose(head).basis.orthonormalized()
+		var head_world := head_base.slerp((delta * head_base).orthonormalized(), weight)
+		var parent_global := Basis.IDENTITY
+		if neck >= 0 and skel.get_bone_parent(head) == neck:
+			var neck_base := skel_basis * skel.get_bone_global_pose(neck).basis.orthonormalized()
+			var neck_delta := Basis(
+				Quaternion.IDENTITY.slerp(delta.get_rotation_quaternion(), NECK_SHARE)
+			)
+			var neck_world := neck_base.slerp((neck_delta * neck_base).orthonormalized(), weight)
+			var neck_parent := Basis.IDENTITY
+			var neck_parent_idx := skel.get_bone_parent(neck)
+			if neck_parent_idx >= 0:
+				neck_parent = skel.get_bone_global_pose(neck_parent_idx).basis
+			parent_global = skel_basis.inverse() * neck_world
+			var neck_local := neck_parent.inverse() * parent_global
+			skel.set_bone_pose_rotation(neck, neck_local.get_rotation_quaternion())
+		else:
+			var head_parent := skel.get_bone_parent(head)
+			if head_parent >= 0:
+				parent_global = skel.get_bone_global_pose(head_parent).basis
+		var local := parent_global.inverse() * (skel_basis.inverse() * head_world)
+		skel.set_bone_pose_rotation(head, local.get_rotation_quaternion())
 
 
 # The angles the local player last AIMED at, in degrees, before the limits and
@@ -137,5 +158,6 @@ func _build() -> void:
 	_built = true
 	_modifier = HeadTurnModifier3D.new()
 	_modifier.name = "IKHeadTurn"
-	_modifier.bone = _skeleton.find_bone(HEAD)
+	_modifier.neck = _skeleton.find_bone(NECK)
+	_modifier.head = _skeleton.find_bone(HEAD)
 	_skeleton.add_child(_modifier)
