@@ -710,7 +710,7 @@ func _on_check_button_show_own_nametag_toggled(toggled_on: bool) -> void:
 	Global.get_config().save_to_settings_file()
 	var player = Global.scene_runner.player_avatar_node if Global.scene_runner else null
 	if is_instance_valid(player):
-		player._apply_nickname_visibility()
+		player.refresh_nametag_visibility()
 
 
 # Camera mode (first/third person) is runtime-only state, not persisted config: the

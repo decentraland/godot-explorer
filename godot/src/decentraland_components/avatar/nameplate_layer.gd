@@ -311,8 +311,6 @@ static func _set_tier_nodes(ui: Control, tier: int, show_chat: bool) -> void:
 	ui.mic_enabled_icon.visible = tier != Tier.NAME and ui.mic_enabled
 
 
-## Throttled occlusion raycast. MUST run from _physics_process — direct_space_state
-## crashes when queried from _process (idle frame).
 ## Occlusion raycast for one plate. MUST run from _physics_process — direct_space_state
 ## crashes when queried from _process (idle frame). Throttling is the driver's job.
 static func update_occlusion(avatar) -> void:

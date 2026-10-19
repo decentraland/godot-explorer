@@ -786,6 +786,11 @@ func _request_nickname_redraw() -> void:
 	nickname_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
+## Re-evaluate the nametag gate after an external setting changed (own nametag).
+func refresh_nametag_visibility() -> void:
+	_apply_nickname_visibility()
+
+
 func _apply_nickname_visibility() -> void:
 	if nickname_quad == null:
 		return
