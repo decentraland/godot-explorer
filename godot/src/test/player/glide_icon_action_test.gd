@@ -18,9 +18,13 @@ var errors: Array[String] = []
 
 func _ready() -> void:
 	var ok := run()
-	print("[glide_icon_action_test] ", "PASS" if ok else "FAIL")
-	for error in errors:
-		printerr("  ", error)
+	# The literal marker is what `cargo run -- test-gdscript` discovers this suite by.
+	if ok:
+		print("[glide_icon_action_test] PASS")
+	else:
+		print("[glide_icon_action_test] FAIL")
+		for error in errors:
+			printerr("  ", error)
 	get_tree().quit(0 if ok else 1)
 
 
