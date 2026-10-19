@@ -31,6 +31,7 @@
 [ext_resource type="PackedScene" uid="uid://bycjwh7mskrsd" path="res://src/helpers_components/chat_handler.tscn" id="32_cq187"]
 [ext_resource type="Resource" uid="uid://ntu4pnce7xxr" path="res://src/ui/layouts/hud_margins.tres" id="34_hudmg"]
 [ext_resource type="PackedScene" uid="uid://v3ktu5kra0ql" path="res://src/ui/components/organisms/preview_hud_panel/preview_hud_panel.tscn" id="35_prevhud"]
+[ext_resource type="PackedScene" path="res://src/ui/components/organisms/dev_intent_panel/dev_intent_panel.tscn" id="36_devintent"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_c5h7v"]
 
@@ -382,6 +383,10 @@ layout_mode = 1
 
 [node name="JumpInPopup" parent="UI" unique_id=2016785394 instance=ExtResource("28_jump_in_popup")]
 unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
+[node name="DevIntentPanel" parent="UI" instance=ExtResource("36_devintent")]
 visible = false
 layout_mode = 1
 

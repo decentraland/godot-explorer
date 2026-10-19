@@ -133,6 +133,22 @@ visible = false
 layout_mode = 2
 text = "Open chromium browser with url chrome://inspect and pick the scene debugger."
 
+[node name="DevIntent" type="VBoxContainer" parent="VBoxContainer/TabContainer_DebugPanel"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+metadata/_tab_index = 3
+
+[node name="Label_DevIntent" type="Label" parent="VBoxContainer/TabContainer_DebugPanel/DevIntent"]
+layout_mode = 2
+text = "This client was launched with an intent (docs/dev-intent.md):"
+
+[node name="TextEdit_DevIntent" type="TextEdit" parent="VBoxContainer/TabContainer_DebugPanel/DevIntent"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+editable = false
+
 [connection signal="index_pressed" from="PopupMenu" to="." method="_on_popup_menu_index_pressed"]
 [connection signal="text_changed" from="VBoxContainer/TabContainer_DebugPanel/Console/HBoxContainer/LineEdit_Filter" to="." method="_on_line_edit_filter_text_changed"]
 [connection signal="pressed" from="VBoxContainer/TabContainer_DebugPanel/Console/HBoxContainer/Button_Clear" to="." method="_on_button_clear_pressed"]
