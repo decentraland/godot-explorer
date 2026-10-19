@@ -1921,7 +1921,10 @@ impl ContentProvider {
     ) -> Gd<Promise> {
         let url = url.to_string();
         // Local snapshots (`snapshot.gd`) are stored on disk under their bare hash.
-        let disk_file_hash = url.strip_prefix("local:").map(str::to_string);
+        let disk_file_hash = url
+            .strip_prefix("local:")
+            .filter(|hash| !hash.is_empty())
+            .map(str::to_string);
         let file_hash = format!("{}_q{}", file_hash, quality.to_i32());
         if let Some(promise) = self.get_cached_promise(&file_hash) {
             return promise;

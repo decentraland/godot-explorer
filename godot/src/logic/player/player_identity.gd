@@ -44,9 +44,7 @@ func async_fetch_profile(address: String, lambda_server_url: String) -> void:
 			and not current.get_name().is_empty()
 			and current.get_ethereum_address().to_lower() == address.to_lower()
 		):
-			printerr(
-				"Keeping local profile, fetch failed for ", address, ": ", response.get_error()
-			)
+			print("Keeping local profile, fetch failed for ", address, ": ", response.get_error())
 			return
 
 		# Profile not found or error - clear saved guest profile and start fresh

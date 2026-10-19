@@ -1333,7 +1333,12 @@ impl DclPlayerIdentity {
                         .and_then(|s| s.face_url.as_deref())
                         .is_some_and(|url| url.starts_with("local:"));
                     if profile.version == current_version && has_local_face {
-                        profile.content.avatar.snapshots = current_snapshots.clone();
+                        if let Some(new_snapshots) = profile.content.avatar.snapshots.as_mut() {
+                            new_snapshots.face_url =
+                                current_snapshots.as_ref().and_then(|s| s.face_url.clone());
+                        } else {
+                            profile.content.avatar.snapshots = current_snapshots.clone();
+                        }
                     }
                 }
 
