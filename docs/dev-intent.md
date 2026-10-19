@@ -50,13 +50,13 @@ intent. When both flags are passed, `--dev-intent-file` wins.
 ## What the human sees
 
 - **Card, top-left, above the whole UI**: title, one tickable row per step, and the hint
-  *"Pasos: tildá a medida que probás. F8 oculta/muestra este panel."* It is the `DevIntent`
-  autoload on its own CanvasLayer, so it also covers menus, the lobby and loading screens —
-  some fixes are UI fixes — and it survives scene changes. Click-through everywhere except
-  the checkboxes and the `X` button, so it never takes a click from the scene. `X` hides it,
-  `F8` hides/shows it (ticks survive both).
-
-![The card over the Discover page: it sits above the interface, not only above the scene](dev-intent-card.jpg)
+  *"Steps: tick them as you test. F8 hides/shows this panel."*. It is the `DevIntent`
+  autoload on its own CanvasLayer, so it also covers menus, the lobby and
+  loading screens — some fixes are UI fixes — and it survives scene changes. Click-through
+  everywhere except the checkboxes and the `X` button, so it never takes a click from the
+  scene. `X` hides it, `F8` hides/shows it (ticks survive both). Nothing in the card is
+  translated: the payload is the agent's own text in whatever language it wrote it, so every
+  node in it is `auto_translate_mode = 2`.
 - **stdout**, one line per step, greppable from any log:
   ```
   [DEV-INTENT] Probar el fix #3080 head IK entre dos clientes
@@ -66,6 +66,8 @@ intent. When both flags are passed, `--dev-intent-file` wins.
   ```
 - **Debug panel** (`--debug-panel`): a "Dev Intent" tab with the full text, selectable for
   copying. The tab only exists when an intent was passed.
+
+![The card over the Discover page: it sits above the interface, not only above the scene](dev-intent-card.jpg)
 
 ## From GDScript / tooling
 

@@ -37,6 +37,8 @@ func apply_intent(title: String, steps: PackedStringArray) -> void:
 		var checkbox := CheckBox.new()
 		checkbox.name = STEP_NAME_FORMAT % (i + 1)
 		checkbox.text = "%d. %s" % [i + 1, steps[i]]
+		# The step text is the agent's own words, in whatever language it wrote them.
+		checkbox.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		checkbox.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		# Explicit: every container above is IGNORE, the row itself must claim the tap.
 		checkbox.mouse_filter = Control.MOUSE_FILTER_STOP
