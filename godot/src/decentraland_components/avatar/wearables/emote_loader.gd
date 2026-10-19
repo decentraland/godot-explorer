@@ -5,6 +5,9 @@ extends RefCounted
 ## Emotes have a special structure with animations that need extraction.
 ## Tracks completed loads to handle both optimized (res://) and runtime-processed (user://) paths.
 
+## The avatar this loader extracts emotes for; orders its turn in FrameWorkBudget.
+var avatar: Node = null
+
 # Tracks completed loads: file_hash -> scene_path
 var _completed_loads: Dictionary = {}
 
@@ -146,7 +149,7 @@ func async_get_emote_gltf(
 		obj != null
 		and obj.prop_animation != null
 		and obj.armature_prop == null
-		and scene_path.begins_with("res://")
+		and _is_optimized_bake(scene_path)
 		and content_mapping != null
 		and not file_name.is_empty()
 	):
@@ -158,12 +161,17 @@ func async_get_emote_gltf(
 		var runtime_path = await async_load_emote_from_mapping(
 			file_hash, file_name, content_mapping, true
 		)
-		if not runtime_path.is_empty() and not runtime_path.begins_with("res://"):
+		if not runtime_path.is_empty() and not _is_optimized_bake(runtime_path):
 			var healed = await _async_extract_from_path(runtime_path, file_hash)
 			if healed != null:
 				return healed
 
 	return obj
+
+
+## Optimized bakes arrive mounted (res://) or extracted from their zip (*.mobile.scn).
+static func _is_optimized_bake(path: String) -> bool:
+	return path.begins_with("res://") or path.ends_with(".mobile.scn")
 
 
 ## Threaded-load a PackedScene from scene_path and extract the emote data from it.
@@ -213,5 +221,10 @@ func _async_extract_from_path(scene_path: String, file_hash: String) -> DclEmote
 		printerr("EmoteLoader: loaded resource is not a PackedScene: ", scene_path)
 		return null
 
-	# Use ContentProvider's extract_emote_from_scene to extract animations from loaded scene
+	# The caller merges and adds the clip synchronously after this returns, so the
+	# turn covers the whole extract + add.
+	if avatar != null:
+		await FrameWorkBudget.async_acquire_for_avatar("Emote::merge", avatar)
+	else:
+		await FrameWorkBudget.async_acquire("Emote::merge")
 	return Global.content_provider.extract_emote_from_scene(packed_scene, file_hash)

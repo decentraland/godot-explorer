@@ -23,6 +23,14 @@ const CAMPAIGNS := {
 		"Vn0WimL5RjKMpIeDoJIvHfz9lBI490tEkvYXoPEK5Ts=.3QEbxeMg9QXkY/vZrcZyDUYNL0MFrHFatF/KZJ1g7WA=",
 		"urn": "",
 	},
+	# The guided tutorial's reward (#2767): the "Vibe Coding" emote.
+	"FtueTutorial":
+	{
+		"campaign_id": "34923698-3107-4b0c-8968-2f0d90bcea63",
+		"campaign_key":
+		"tH95hT6uQCWCITnSBLljxDSSNpgxB0sMiWgvDZC86mM=.VLoVqyGRwMLooMysTEz5b1EAe173cCG5i0naKcpzdFA=",
+		"urn": "urn:decentraland:matic:collections-v2:0xcb911d51f7d9c470262461935636bd173f1061f5:0",
+	},
 }
 
 

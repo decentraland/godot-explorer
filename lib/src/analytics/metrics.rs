@@ -1,6 +1,9 @@
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::{AtomicI32, Ordering},
+        Arc, Mutex,
+    },
 };
 
 use chrono::{DateTime, SecondsFormat, Utc};
@@ -125,6 +128,10 @@ pub struct Metrics {
     // (it fails open), so this is a short hold and never an indefinite one.
     push_identify_pending: Option<String>,
 
+    // Android PSS in MB (-1 = unknown), refreshed off the engine thread: getMobileMetrics walks
+    // /proc/self/smaps on the calling thread (~100 ms on an A54).
+    android_pss_mb: Arc<AtomicI32>,
+
     base: Base<Node>,
 }
 
@@ -163,6 +170,7 @@ impl INode for Metrics {
             push_enabled: true,
             push_flag_resolved: false,
             push_identify_pending: None,
+            android_pss_mb: Arc::new(AtomicI32::new(-1)),
             base,
         }
     }
@@ -187,6 +195,7 @@ impl INode for Metrics {
         } else if DclAndroidPlugin::is_available() {
             self.mobile_platform = Some(MobilePlatform::Android);
             self.device_info = DclAndroidPlugin::get_mobile_device_info_internal();
+            refresh_pss_in_background(self.android_pss_mb.clone());
             tracing::debug!("Android mobile platform detected for metrics collection");
         }
 
@@ -550,6 +559,7 @@ impl Metrics {
             push_enabled: true,
             push_flag_resolved: false,
             push_identify_pending: None,
+            android_pss_mb: Arc::new(AtomicI32::new(-1)),
             base,
         })
     }
@@ -1271,7 +1281,15 @@ impl Metrics {
             // Fetch dynamic mobile metrics ONLY when event is about to be sent
             let mobile_metrics = match self.mobile_platform {
                 Some(MobilePlatform::Ios) => DclIosPlugin::get_mobile_metrics_internal(),
-                Some(MobilePlatform::Android) => DclAndroidPlugin::get_mobile_metrics_internal(),
+                Some(MobilePlatform::Android) => {
+                    // PSS sampled by the previous refresh (one event old).
+                    let mut m = DclAndroidPlugin::get_battery_metrics_internal();
+                    if let Some(m) = m.as_mut() {
+                        m.memory_usage = self.android_pss_mb.load(Ordering::Relaxed);
+                    }
+                    refresh_pss_in_background(self.android_pss_mb.clone());
+                    m
+                }
                 None => None,
             };
 
@@ -1476,6 +1494,38 @@ impl Metrics {
             tracing::debug!("Segment batch sent successfully");
         }
     }
+}
+
+fn refresh_pss_in_background(target: Arc<AtomicI32>) {
+    static IN_FLIGHT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    if IN_FLIGHT.swap(true, Ordering::AcqRel) {
+        return;
+    }
+    let spawned = std::thread::Builder::new()
+        .name("metrics-pss".into())
+        .spawn(move || {
+            if let Some(mb) = read_self_pss_mb() {
+                target.store(mb, Ordering::Relaxed);
+            }
+            IN_FLIGHT.store(false, Ordering::Release);
+        });
+    if spawned.is_err() {
+        IN_FLIGHT.store(false, Ordering::Release);
+    }
+}
+
+/// Total PSS of this process in MB, the same figure `Debug.getMemoryInfo` sums.
+fn read_self_pss_mb() -> Option<i32> {
+    let rollup = std::fs::read_to_string("/proc/self/smaps_rollup").ok()?;
+    let kb: i64 = rollup
+        .lines()
+        .find_map(|l| l.strip_prefix("Pss:"))?
+        .trim()
+        .trim_end_matches("kB")
+        .trim()
+        .parse()
+        .ok()?;
+    Some((kb / 1024) as i32)
 }
 
 fn non_empty(value: String) -> Option<String> {

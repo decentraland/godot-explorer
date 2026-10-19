@@ -1,9 +1,22 @@
 class_name RewardModal
 extends ColorRect
 
+## Emitted on a backdrop tap when `managed_by_modal_manager` is off.
+signal dismissed
+## Emitted instead of claiming when `guests_must_upgrade` is on and the player is a guest who
+## has not added an email.
+signal upgrade_required
+
 ## Two-minute window (in seconds) used to tell a fresh claim apart from an item the
 ## wallet already owned, mirroring Genesis' claim.ts `assigned_at` check.
 const ALREADY_CLAIMED_WINDOW_SEC := 120.0
+
+## Translation KEY of the body copy shown until the claim resolves.
+@export var body_key := "REWARD_MODAL_YOUR_EMAIL_HAS_BEEN_VERIFIED_ENJOY"
+## Off for a scene shown by something other than ModalManager, which then closes it on
+## `dismissed`.
+@export var managed_by_modal_manager := true
+@export var guests_must_upgrade := false
 
 var _campaign_id: String = ""
 var _campaign_key: String = ""
@@ -31,12 +44,17 @@ func async_setup(campaign: Dictionary) -> void:
 	# whether or not the item is already in the wallet. Just reveal it (kept async for the caller's
 	# await contract; no network wait here anymore).
 	show()
+	# A scene with an emote preview shows the player performing the reward over the art.
+	var emote_preview := get_node_or_null("%EmoteAvatarPreview") as EmoteAvatarPreview
+	var urn := str(campaign.get("urn", ""))
+	if emote_preview != null and not urn.is_empty():
+		emote_preview.async_play(urn)
 
 
 func _ready() -> void:
 	# Label_Text never auto-translates (its error state carries server text), and
 	# _show_success() deliberately leaves this copy in place, so seed it here.
-	label_text.text = tr("REWARD_MODAL_YOUR_EMAIL_HAS_BEEN_VERIFIED_ENJOY")
+	label_text.text = tr(body_key)
 
 
 func _on_gui_input(event: InputEvent) -> void:
@@ -45,10 +63,21 @@ func _on_gui_input(event: InputEvent) -> void:
 		return
 	if event is InputEventScreenTouch:
 		if event.pressed:
-			Global.modal_manager.close_reward_modal()
+			if managed_by_modal_manager:
+				Global.modal_manager.close_reward_modal()
+			else:
+				dismissed.emit()
 
 
 func _on_button_claim_pressed() -> void:
+	var identity := Global.player_identity
+	if (
+		guests_must_upgrade
+		and identity.is_thirdweb_guest()
+		and not identity.is_thirdweb_guest_upgraded()
+	):
+		upgrade_required.emit()
+		return
 	_async_claim()
 
 

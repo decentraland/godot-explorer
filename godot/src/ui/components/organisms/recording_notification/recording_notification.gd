@@ -2,9 +2,20 @@ extends Control
 
 var is_enabled = false
 
+@onready var animation_player: AnimationPlayer = $AnimationPlayer
+
 
 func _ready():
+	visibility_changed.connect(_on_visibility_changed)
 	hide()
+	_on_visibility_changed()
+
+
+func _on_visibility_changed() -> void:
+	if is_visible_in_tree():
+		animation_player.play()
+	else:
+		animation_player.pause()
 
 
 func _physics_process(_delta):

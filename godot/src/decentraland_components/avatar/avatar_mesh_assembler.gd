@@ -30,6 +30,13 @@ var _active_extra_bone_indices: Array[int] = []
 var _free_bone_pool: Array[int] = []
 var _stale_bone_counter: int = 0
 
+# Build in progress: a newer begin_build() supersedes it (latest wins).
+var _build_id: int = 0
+var _avatar: Node = null
+# Wearable instances held across a budget wait; freed with the assembler if never attached.
+var _in_flight: Array[Node] = []
+var _gpu_gate := AvatarGpuReadyGate.new()
+
 # Cache of toon ShaderMaterials keyed by source BaseMaterial3D's instance_id.
 # Lets avatars wearing the same wearable share a single ShaderMaterial across
 # the whole scene. Skin/hair surfaces clone-on-write in apply_color_and_facial
@@ -43,6 +50,63 @@ static var _bone_suffix_regex: RegEx = RegEx.create_from_string("^(.*)_\\d+$")
 
 func _init(skeleton: Skeleton3D) -> void:
 	_skeleton = skeleton
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		for node in _in_flight:
+			if is_instance_valid(node):
+				node.free()
+
+
+## Starts a build of `avatar` and returns its id; any earlier build stops at its next step.
+func begin_build(avatar: Node) -> int:
+	_avatar = avatar
+	_build_id += 1
+	_gpu_gate.cancel(avatar)
+	FrameWorkBudget.begin_build(avatar)
+	return _build_id
+
+
+func is_current(build_id: int) -> bool:
+	return build_id == _build_id
+
+
+func end_build() -> void:
+	FrameWorkBudget.end_build(_avatar)
+	_gpu_gate.start(_avatar, _skeleton)
+
+
+## Waits for a FrameWorkBudget turn; false when a newer build superseded `build_id`.
+func async_step(label: String, build_id: int) -> bool:
+	await FrameWorkBudget.async_acquire_for_avatar(label, _avatar)
+	return is_current(build_id)
+
+
+## Moves the meshes of a freshly instantiated wearable onto the base skeleton, one budget
+## step per mesh, then frees `obj`. False when a newer build superseded `build_id`.
+func async_attach_wearable(obj: Node, name_suffix: String, build_id: int) -> bool:
+	_in_flight.append(obj)
+	var attached := is_current(build_id)
+	var skeletons: Array = obj.find_children("Skeleton3D") if attached else []
+	for wearable_skel in skeletons:
+		# Extra bones must exist on the base skeleton before any mesh is reparented.
+		merge_extra_bones(wearable_skel)
+		for child in wearable_skel.get_children():
+			if child is MeshInstance3D:
+				if not await async_step("AvatarMeshAssembler::attach_mesh", build_id):
+					attached = false
+					break
+				rebind_skin_by_name(child, wearable_skel)
+			wearable_skel.remove_child(child)
+			child.set_owner(null)
+			child.name = child.name.to_lower() + name_suffix
+			_skeleton.add_child(child)
+		if not attached:
+			break
+	_in_flight.erase(obj)
+	obj.queue_free()
+	return attached
 
 
 # Renames bones previously merged via merge_extra_bones to a stale placeholder,
