@@ -10,7 +10,10 @@ extends PanelContainer
 ##
 ## Everything but the checkboxes and the close button is MOUSE_FILTER_IGNORE, so the card
 ## never steals clicks from the scene (issue #2578; lib/src/hud_input_lint.rs). Ticks live
-## in the CheckBox nodes, which are not rebuilt on hide, so F8 keeps them.
+## in the CheckBox nodes, which are not rebuilt on hide, so they survive F8.
+##
+## Created by the `DevIntent` autoload (dev_intent_overlay.gd), which owns the payload and
+## the shortcut: a hidden card cannot receive the key that would bring it back.
 
 const STEP_NAME_FORMAT := "CheckBox_Step%d"
 
@@ -21,22 +24,10 @@ const STEP_NAME_FORMAT := "CheckBox_Step%d"
 
 func _ready() -> void:
 	button_close.pressed.connect(_on_button_close_pressed)
-	var title := Global.cli.get_dev_intent_title()
-	var steps := Global.cli.get_dev_intent_steps()
-	apply_intent(title, steps)
-	# Nothing to say when the client was opened without an intent.
-	visible = not title.is_empty() or not steps.is_empty()
 
 
-## F8 hides/shows the card. No other HUD shortcut uses it.
-func _unhandled_key_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F8:
-		visible = not visible
-		get_viewport().set_input_as_handled()
-
-
-## Rebuild the step rows. `_ready` calls it with the resolved CLI intent; the headless test
-## (src/test/ui/test_dev_intent_panel.gd) calls it directly, since it has no CLI payload.
+## Rebuild the step rows. The overlay calls it with the resolved CLI intent; the headless
+## test (src/test/ui/test_dev_intent_panel.gd) calls it directly, since it has no payload.
 func apply_intent(title: String, steps: PackedStringArray) -> void:
 	label_title.text = title
 	for child in vbox_steps.get_children():

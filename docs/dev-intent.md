@@ -49,10 +49,14 @@ intent. When both flags are passed, `--dev-intent-file` wins.
 
 ## What the human sees
 
-- **In-game card**, top-left: title, one tickable row per step, and the hint
-  *"Pasos: tildá a medida que probás. F8 oculta/muestra este panel."* The card is
-  click-through everywhere except the checkboxes and the `X` button, so it never takes a
-  click from the scene. Ticks survive hiding and showing it.
+- **Card, top-left, above the whole UI**: title, one tickable row per step, and the hint
+  *"Pasos: tildá a medida que probás. F8 oculta/muestra este panel."* It is the `DevIntent`
+  autoload on its own CanvasLayer, so it also covers menus, the lobby and loading screens —
+  some fixes are UI fixes — and it survives scene changes. Click-through everywhere except
+  the checkboxes and the `X` button, so it never takes a click from the scene. `X` hides it,
+  `F8` hides/shows it (ticks survive both).
+
+![The card over the Discover page: it sits above the interface, not only above the scene](dev-intent-card.jpg)
 - **stdout**, one line per step, greppable from any log:
   ```
   [DEV-INTENT] Probar el fix #3080 head IK entre dos clientes
