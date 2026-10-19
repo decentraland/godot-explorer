@@ -153,12 +153,20 @@ jobs:
 
       # The shipping app is the React Native app in rn/: `cargo run -- export` builds it from the
       # Godot export, and its Gradle build bundles the JS with Node.
-      - name: Set up Node (React Native app)
-        uses: actions/setup-node@v4
+      - name: Set up Node + npm ci (React Native app)
+        uses: ./.github/actions/rn-npm-ci
+
+      # Godot's gradle template and the RN app share ~/.gradle; cold, Gradle spends minutes resolving.
+      - name: Restore Gradle cache
+        id: gradle-cache
+        uses: WarpBuilds/cache/restore@v1.4.6
         with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: rn/package-lock.json
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('rn/android/**/*.gradle', 'rn/android/gradle/wrapper/gradle-wrapper.properties', 'rn/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
       # AGP 8.12 (React Native 0.86) needs build-tools 35; the builder image ships 33/34. compileSdk 35
       # and NDK 28.1 are already in the image.
@@ -170,6 +178,15 @@ jobs:
           cargo run -- export --target android --format apk --release
           mkdir -p android-debug-symbols
           cp godot/android/build/build/outputs/native-debug-symbols/standardRelease/native-debug-symbols.zip android-debug-symbols/ || true
+
+      - name: Save Gradle cache (main/2.x only)
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/2.x') && steps.gradle-cache.outputs.cache-hit != 'true'
+        uses: WarpBuilds/cache/save@v1.4.6
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ steps.gradle-cache.outputs.cache-primary-key }}
 
       # Re-sign the exported APK with the production distribution key so every published
       # build shares one stable signing identity (Android requires the same key across

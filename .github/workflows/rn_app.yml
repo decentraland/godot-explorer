@@ -5,6 +5,18 @@ name: 📱 React Native app checks
 # broken native project before the full mobile pipeline (android_builds.yml, ios_r2_artifact.yml)
 # does. The full iOS build with the engine is manual.
 on:
+  # Pushes only refresh the shared Rust/npm caches the PR runs restore (the iOS jobs are PR/manual only).
+  push:
+    branches: [main, 2.x]
+    paths:
+      - 'rn/**'
+      - 'godot/locale/*.csv'
+      - 'lib/crates/dcl_core/**'
+      - 'lib/crates/dcl_host/**'
+      - 'lib/crates/dcl_bindings/**'
+      - 'lib/crates/dcl_bindgen/**'
+      - '.github/workflows/rn_app.yml'
+      - '.github/actions/rn-npm-ci/**'
   pull_request:
     paths:
       - 'rn/**'
@@ -14,6 +26,7 @@ on:
       - 'lib/crates/dcl_bindings/**'
       - 'lib/crates/dcl_bindgen/**'
       - '.github/workflows/rn_app.yml'
+      - '.github/actions/rn-npm-ci/**'
   workflow_dispatch:
     inputs:
       godot_host_lib_url:
@@ -38,13 +51,8 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: rn/package-lock.json
+      - uses: ./.github/actions/rn-npm-ci
 
-      - run: npm ci
       - run: npx tsc --noEmit
       - run: npx eslint App.tsx src __tests__
       - run: npx jest
@@ -62,11 +70,10 @@ jobs:
         with:
           toolchain: "1.94"
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: rn/package-lock.json
+      - name: Set up cache
+        uses: ./.github/actions/set-up-cache
+
+      - uses: ./.github/actions/rn-npm-ci
 
       - name: Install dependencies
         uses: ./.github/actions/install-deps
@@ -76,7 +83,7 @@ jobs:
       - name: Regenerate the TypeScript, C++, Kotlin and Swift bindings
         run: |
           (cd lib && cargo build -p dcl_bindings)
-          (cd rn && npm ci && node scripts/ubrn-generate.mjs)
+          (cd rn && node scripts/ubrn-generate.mjs)
 
       - name: A changed Rust signature must come with regenerated bindings
         run: git diff --exit-code -- rn
@@ -94,11 +101,7 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: rn/package-lock.json
+      - uses: ./.github/actions/rn-npm-ci
 
       - uses: actions/setup-java@v4
         with:
@@ -108,7 +111,6 @@ jobs:
       - name: Build the release APK
         working-directory: rn
         run: |
-          npm ci
           cd android && ./gradlew :app:assembleRelease -PdclNoGodot=true
 
   ios-no-godot:
@@ -119,16 +121,11 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: rn/package-lock.json
+      - uses: ./.github/actions/rn-npm-ci
 
       - name: Build for the simulator
         working-directory: rn
         run: |
-          npm ci
           cd ios && pod install
           xcodebuild build -workspace DclRn.xcworkspace -scheme DclRn -configuration Release \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator'
@@ -146,11 +143,7 @@ jobs:
           toolchain: "1.94"
           targets: aarch64-apple-ios
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: rn/package-lock.json
+      - uses: ./.github/actions/rn-npm-ci
 
       - name: Install dependencies
         uses: ./.github/actions/install-deps
@@ -185,7 +178,6 @@ jobs:
       - name: Build for device (no signing)
         working-directory: rn
         run: |
-          npm ci
           cd ios && pod install
           xcodebuild build -workspace DclRn.xcworkspace -scheme DclRn -configuration Release \
             -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO
