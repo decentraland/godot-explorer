@@ -261,6 +261,65 @@ mod local_notification_queue_tests {
         );
     }
 
+    /// The `day1-notification` remote flag: off disarms only the Day 1 welcome while the DB
+    /// keeps its row, leaves event reminders armed, and on re-arms Day 1 from the DB.
+    #[godot::test::itest]
+    fn test_day1_flag_disarms_and_rearms(_ctx: &TestContext) {
+        let fixture = NotificationTestFixture::new();
+        let mut mock = fixture.mock.clone();
+        let mut manager = fixture.manager.clone();
+
+        let time = godot::classes::Time::singleton();
+        let trigger_timestamp = (time.get_unix_time_from_system() as i64) + 3600;
+        for id in ["day1_welcome", "event_flagged"] {
+            mock.call(
+                "db_insert_notification",
+                &[
+                    Variant::from(id),
+                    Variant::from("Title"),
+                    Variant::from("Body"),
+                    Variant::from(trigger_timestamp),
+                    Variant::from(0),
+                    Variant::from(""),
+                    Variant::from(""),
+                ],
+            );
+        }
+        manager.call("_sync_notification_queue", &[]);
+        assert_eq!(
+            get_os_scheduled_count(&mut mock),
+            2,
+            "both armed before the flag"
+        );
+
+        manager.call("set_day1_notification_enabled", &[Variant::from(false)]);
+        assert_eq!(
+            get_os_scheduled_count(&mut mock),
+            1,
+            "flag off disarms Day 1 only"
+        );
+        assert!(
+            !is_notification_scheduled(&mut mock, "day1_welcome"),
+            "Day 1 row is marked unscheduled"
+        );
+        assert!(
+            notification_exists(&mut mock, "day1_welcome"),
+            "Day 1 row is kept for re-arming"
+        );
+        assert!(
+            is_notification_scheduled(&mut mock, "event_flagged"),
+            "event reminder stays armed"
+        );
+
+        manager.call("set_day1_notification_enabled", &[Variant::from(true)]);
+        assert_eq!(
+            get_os_scheduled_count(&mut mock),
+            2,
+            "flag on re-arms Day 1 from the DB"
+        );
+        assert!(is_notification_scheduled(&mut mock, "day1_welcome"));
+    }
+
     /// Test 3: End-to-end sync algorithm validation
     /// This test validates the complete _sync_notification_queue() algorithm with a complex scenario
     #[godot::test::itest]

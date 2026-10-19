@@ -243,12 +243,16 @@ impl TriggerAreaState {
 }
 
 /// Called during scene update (with throttling) - handles component creation/deletion
-/// and processes ENTER/EXIT events from callbacks + throttled STAY events
+/// and, when `emit_events` is set, processes ENTER/EXIT events from callbacks +
+/// throttled STAY events. Foreground scenes pass `false` and emit the events at
+/// kick time instead (`collect_trigger_area_events`), so a trigger fired in this
+/// frame's physics step reaches the scene in this frame's reply.
 pub fn update_trigger_area(
     scene: &mut Scene,
     crdt_state: &mut SceneCrdtState,
     pools: &mut PoolManager,
     current_parcel_scene_id: &SceneId,
+    emit_events: bool,
 ) {
     let trigger_area_component = SceneCrdtStateProtoComponents::get_trigger_area(crdt_state);
 
@@ -294,6 +298,15 @@ pub fn update_trigger_area(
     // Step 3: Update transforms for all trigger areas
     update_trigger_area_transforms(scene);
 
+    if emit_events {
+        collect_trigger_area_events(scene);
+    }
+}
+
+/// Drains the ENTER/EXIT events queued by the physics-server callbacks and
+/// generates the STAY events, into `scene.trigger_area_results`. Independent of
+/// the CRDT apply: it only reads the trigger instances and node transforms.
+pub fn collect_trigger_area_events(scene: &mut Scene) {
     // Step 4: Process pending callback events (ENTER/EXIT)
     process_callback_events(scene);
 
