@@ -93,7 +93,7 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
         with:
-          toolchain: "1.90"
+          toolchain: "1.94"
           components: clippy, rustfmt
 
       # Cache the Rust build (host + Android target) so the dep tree isn't recompiled from
@@ -151,11 +151,42 @@ jobs:
           cargo-key: ${{ steps.cache.outputs.cargo-key }}
           rust-key: ${{ steps.cache.outputs.rust-key }}
 
+      # The shipping app is the React Native app in rn/: `cargo run -- export` builds it from the
+      # Godot export, and its Gradle build bundles the JS with Node.
+      - name: Set up Node + npm ci (React Native app)
+        uses: ./.github/actions/rn-npm-ci
+
+      # Godot's gradle template and the RN app share ~/.gradle; cold, Gradle spends minutes resolving.
+      - name: Restore Gradle cache
+        id: gradle-cache
+        uses: WarpBuilds/cache/restore@v1.4.6
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('rn/android/**/*.gradle', 'rn/android/gradle/wrapper/gradle-wrapper.properties', 'rn/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # AGP 8.12 (React Native 0.86) needs build-tools 35; the builder image ships 33/34. compileSdk 35
+      # and NDK 28.1 are already in the image.
+      - name: Install Android build-tools 35
+        run: echo y | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "build-tools;35.0.0"
+
       - name: Export Android APK
         run: |
           cargo run -- export --target android --format apk --release
           mkdir -p android-debug-symbols
           cp godot/android/build/build/outputs/native-debug-symbols/standardRelease/native-debug-symbols.zip android-debug-symbols/ || true
+
+      - name: Save Gradle cache (main/2.x only)
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/2.x') && steps.gradle-cache.outputs.cache-hit != 'true'
+        uses: WarpBuilds/cache/save@v1.4.6
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ steps.gradle-cache.outputs.cache-primary-key }}
 
       # Re-sign the exported APK with the production distribution key so every published
       # build shares one stable signing identity (Android requires the same key across
@@ -440,20 +471,7 @@ jobs:
             echo "⚠️  Godot AAR not found at $GODOT_AAR"
           fi
 
-          # 3. sentry-godot's own native lib, so a crash inside the SDK is readable too. Its
-          #    debug files are a separate asset of the pinned release (src/consts.rs); the
-          #    server already has them after the first build of a given SDK version.
-          SENTRY_ADDON_URL=$(grep -o 'https://github.com/getsentry/sentry-godot/releases/download/[^"]*' src/consts.rs | head -1)
-          SENTRY_ADDON_SYMBOLS_URL="${SENTRY_ADDON_URL/sentry-godot-/sentry-godot-debug-symbols-}"
-          if curl -sfL -o /tmp/sentry-godot-symbols.zip "$SENTRY_ADDON_SYMBOLS_URL"; then
-            rm -rf /tmp/sentry-godot-symbols && mkdir -p /tmp/sentry-godot-symbols
-            unzip -o -q /tmp/sentry-godot-symbols.zip "addons/sentry/bin/android/*" -d /tmp/sentry-godot-symbols
-            upload_dif "sentry-godot android symbols" "/tmp/sentry-godot-symbols/addons/sentry/bin/android"
-          else
-            echo "⚠️  could not download $SENTRY_ADDON_SYMBOLS_URL"
-          fi
-
-          # 4. Register the release under the runtime's name, attach commits and mark it
+          # 3. Register the release under the runtime's name, attach commits and mark it
           #    deployed to the environment this build targets, so issues get "first seen in",
           #    suspect commits and regression detection.
           case "${PROD_FLAG:-}" in

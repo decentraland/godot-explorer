@@ -1,6 +1,5 @@
 [gd_scene format=3 uid="uid://d0rqfy34immue"]
 
-[ext_resource type="Script" uid="uid://5u25dqo7og70" path="res://src/ui/components/molecules/pointer_tooltip/tooltip_label.gd" id="1_ut63f"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="4_sk4cq"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="6_sk4cq"]
 
@@ -23,7 +22,7 @@ font = ExtResource("6_sk4cq")
 font_size = 24
 font_color = Color(0.8745098, 0.8156863, 1, 1)
 
-[node name="PanelContainer" type="PanelContainer" unique_id=2053453734]
+[node name="PanelContainer" type="PointerTooltipPill" unique_id=2053453734]
 custom_minimum_size = Vector2(130, 60)
 anchors_preset = 4
 anchor_top = 0.5
@@ -34,7 +33,6 @@ grow_vertical = 2
 size_flags_horizontal = 0
 size_flags_vertical = 4
 theme_override_styles/panel = SubResource("StyleBoxFlat_473nw")
-script = ExtResource("1_ut63f")
 
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=555259352]
 layout_mode = 2

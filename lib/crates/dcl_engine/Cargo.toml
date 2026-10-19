@@ -1,0 +1,130 @@
+[package]
+name = "dclgodot"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+dcl_host = { path = "../dcl_host", optional = true }
+dcl_core = { path = "../dcl_core" }
+godot = { version = "0.5.5", features = ["experimental-threads", "serde", "api-custom-json"] }
+meshopt = "0.6"
+rand = "0.8"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0.92", features = ["raw_value"] }
+zip = { version = "0.6", default-features = false, features = ["deflate"] }
+tokio = { version = "1.40.0", features = ["full"] }
+json5 = "0.4"
+prost = "0.11.8"
+once_cell = "1.16.0"
+futures-lite = "1.12.0"
+
+hyper = { version = "1.0.0-rc.3", features = ["full"] }
+hyper-util = { version = "0.1.0-rc.1", features = ["tokio"], optional = true }
+http-body-util = "0.1.0-rc.2"
+reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls", "stream", "gzip", "brotli"] }
+regex = "*"
+urn = "0.7.0"
+
+ethers-core = { version = "2.0" }
+ethers-signers = { version = "2.0" }
+
+async-trait = "0.1.68"
+
+
+anyhow = "1.0.70"
+
+tracing = "0.1"
+
+v8 = { version = "0.106.0", optional = true }
+deno_core = { version = "0.308.0", optional = true }
+uuid = { version = "1.3.0", features = ["v4"] }
+fastwebsockets = { version = "0.3.1", features = ["upgrade"], optional = true }
+hyper1 = { package = "hyper", version = "0.14.26", features = ["server","runtime", "http1"], optional = true }
+num-traits = "0.2"
+num-derive = "0.4"
+http = "0.2.9"
+bytes = "1.4.0"
+url = "2.5"
+
+tokio-tungstenite = "0.20.1"
+glam = "0.32"
+futures-util = "0.3.30"
+
+livekit = { git = "https://github.com/robtfm/client-sdk-rust", rev="c59f7e4693579dc137dba72153a0e995079305c6", features=["rustls-tls-webpki-roots"], optional = true }
+
+# Pulse (ENet/UDP avatar-state relay). MUST be this fork: it's a pure-Rust ENet retargeted to
+# the nxrighthere ENet-CSharp "modified protocol" the Pulse server runs — stock lsalzman ENet
+# (including Godot's built-in one) is wire-incompatible. DCL-org mirror of
+# robtfm/rusty_enet branch decentraland-pulse (rev 6fa651d, tree-identical); pinned by rev.
+rusty_enet = { git = "https://github.com/dcl-regenesislabs/rusty_enet", rev = "8023f9b39e12d4b11a2a054ade49fa8365a5e250", optional = true }
+
+taffy = "0.5.2"
+
+base64 = "0.21.5"
+hex = "0.4.3"
+sha2 = "0.10"
+chrono = "0.4.31"
+
+simple-easing = "1.0.1"
+
+multihash-codetable = { version = "0.1.1", features = ["digest", "sha2"] } 
+cid = "0.11.0"
+multipart = { version = "0.18.0", default-features = false, features = ["client", "lazy_static"] }
+
+modular-bitfield = "0.11"
+
+# Image decoding for formats not natively supported by Godot (GIF, animated WebP)
+image = { version = "0.25", default-features = false, features = ["gif", "webp"] }
+
+# PNG encoding for off-main-thread impostor cache writes (Godot's Image::save_png
+# blocks the render thread; we encode + write on a tokio blocking worker instead).
+png = "0.17"
+
+# Procedural noise for Floating Islands terrain generation. Pure-Rust port of
+# FastNoiseLite (same algorithm Godot uses) so seeds match the legacy GDScript
+# implementation bit-for-bit.
+fastnoise-lite = "1.1"
+
+[target.'cfg(target_os = "android")'.dependencies]
+jni = { version = "0.21.1", features = ["invocation"] }
+paranoid-android = "0.2.1"
+
+[target.'cfg(target_os = "ios")'.dependencies]
+oslog = "0.2"
+
+# stdout/stderr capture for the `--log-stream` debug feature (see tools/log_stream.rs)
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[features]
+default = ["use_livekit", "use_deno", "use_pulse", "ffi"]
+use_livekit = ["dep:livekit", "dep:webrtc-sys-build"]
+# Compiled in by default (pure-Rust dep, keeps CI/mobile builds from bitrotting);
+# runtime activation is opt-in via --pulse / --pulse-server / PULSE_SERVER.
+use_pulse = ["dep:rusty_enet", "dcl_core/use_pulse"]
+# The typed FFI exported from this library for the RN shell and the native hosts.
+ffi = ["dcl_core/ffi", "dep:dcl_host"]
+use_deno = ["dep:deno_core", "dep:v8"]
+use_resource_tracking = []
+use_voice_chat = []
+use_memory_debugger = []
+asset_server = ["dep:hyper-util"]
+# When enabled, Sentry and Segment metrics initialization are skipped at runtime.
+# Used by CI desktop builds to ship telemetry-free artifacts.
+disable_telemetry = []
+
+# TODO: Fix enable_inspector failure when cross-compiling to Android from Windows.
+#       The FastWebSockets build incorrectly includes `unmask`.
+enable_inspector = ["use_deno", "dep:fastwebsockets", "dep:hyper1"]
+
+[build-dependencies]
+webrtc-sys-build = { git = "https://github.com/robtfm/client-sdk-rust", rev="c59f7e4693579dc137dba72153a0e995079305c6", optional = true }
+prost-build = "0.11.8"
+# Reads the Pulse quantization field options out of the FileDescriptorSet (build_quant.rs).
+# 0.11.x pairs with prost 0.11 (same pairing bevy-explorer uses).
+prost-reflect = "0.11"
+chrono = "0.4.31"

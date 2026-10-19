@@ -1,72 +1,23 @@
 [gd_scene format=3 uid="uid://deq5v42fmh0y7"]
 
-[ext_resource type="Script" uid="uid://b7upym7ptmks0" path="res://src/ui/explorer.gd" id="1_5n8xk"]
-[ext_resource type="Script" uid="uid://bv8yaml1r4cmi" path="res://src/logic/player/mobile_camera_input.gd" id="1_mcinput"]
-[ext_resource type="PackedScene" uid="uid://cb6bcbjrusl4p" path="res://src/helpers_components/broadcast_position.tscn" id="4_2dkhu"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="4_2vs87"]
 [ext_resource type="PackedScene" uid="uid://pg3ssuep5dm7" path="res://assets/environment/environment_selector.tscn" id="4_f5cdi"]
-[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/layouts/safe_margin_container.gd" id="5_c8ksg"]
-[ext_resource type="PackedScene" uid="uid://co44hxd7jbcjs" path="res://src/ui/components/organisms/menu/menu.tscn" id="5_mso44"]
 [ext_resource type="PackedScene" uid="uid://b7e8iko6dwv7p" path="res://src/ui/components/organisms/joypad/joypad.tscn" id="7_admxk"]
-[ext_resource type="PackedScene" uid="uid://bviu1proryfux" path="res://src/ui/pages/chat/chat_panel.tscn" id="9_chatpanel"]
 [ext_resource type="PackedScene" uid="uid://dmr0fcamx7t56" path="res://src/mobile/joystick/virtual_joystick.tscn" id="9_lxw33"]
-[ext_resource type="PackedScene" uid="uid://bx1gqvqo2q04b" path="res://src/ui/components/organisms/dialogs/dialog_stack.tscn" id="10_y1lkn"]
 [ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/molecules/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
-[ext_resource type="PackedScene" uid="uid://cw8x2h5p3y6kn" path="res://src/ui/components/organisms/notifications/notifications_panel.tscn" id="14_notif_panel"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="16_karsc"]
-[ext_resource type="PackedScene" uid="uid://bmjwqm6jgri7c" path="res://src/ui/pages/loading_screen/loading_screen.tscn" id="17_0blod"]
-[ext_resource type="Script" uid="uid://dqpk827xdxpcy" path="res://src/ui/components/organisms/voice_chat_recorder/voice_chat_recorder.gd" id="20_064cw"]
-[ext_resource type="PackedScene" uid="uid://e18p6cp0duuu" path="res://src/ui/components/organisms/recording_notification/recording_notification.tscn" id="20_uf6rv"]
-[ext_resource type="PackedScene" uid="uid://btl8ag3s7oanm" path="res://src/ui/components/organisms/navbar/navbar.tscn" id="21_admxk"]
-[ext_resource type="PackedScene" uid="uid://dd2w2ysk3akdj" path="res://src/ui/pages/friends/friends_panel.tscn" id="21_cwgs4"]
-[ext_resource type="PackedScene" uid="uid://b1d2s3c4v5p6n" path="res://src/ui/pages/discover/discover_panel/discover_panel.tscn" id="31_disc_panel"]
 [ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/organisms/emotes/emote_wheel.tscn" id="21_pows0"]
-[ext_resource type="PackedScene" uid="uid://dx873niilktrw" path="res://src/ui/components/organisms/warning_messages/warning_messages.tscn" id="23_bi432"]
-[ext_resource type="PackedScene" uid="uid://bectasdgy1btu" path="res://src/ui/pages/profile/profile_container.tscn" id="25_c5h7v"]
-[ext_resource type="PackedScene" uid="uid://75a0brb4fw2g" path="res://src/helpers_components/scene_music_changer.tscn" id="26_5hhk2"]
-[ext_resource type="PackedScene" uid="uid://bdlssvxebe4kt" path="res://src/ui/components/atoms/buttons/hud_button/hud_button.tscn" id="26_hud"]
-[ext_resource type="Texture2D" uid="uid://chv1fooem0pg6" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-close.svg" id="27_close"]
-[ext_resource type="PackedScene" uid="uid://qbcqm5fskyho" path="res://src/ui/components/organisms/url_popup/url_popup.tscn" id="27_url_popup"]
-[ext_resource type="PackedScene" uid="uid://ks0sxu8dsf66" path="res://src/ui/components/organisms/jump_in_popup/jump_in_popup.tscn" id="28_jump_in_popup"]
-[ext_resource type="PackedScene" uid="uid://bycjwh7mskrsd" path="res://src/helpers_components/chat_handler.tscn" id="32_cq187"]
-[ext_resource type="Resource" uid="uid://ntu4pnce7xxr" path="res://src/ui/layouts/hud_margins.tres" id="34_hudmg"]
-[ext_resource type="PackedScene" uid="uid://v3ktu5kra0ql" path="res://src/ui/components/organisms/preview_hud_panel/preview_hud_panel.tscn" id="35_prevhud"]
+[ext_resource type="SafeAreaMargins" uid="uid://ntu4pnce7xxr" path="res://src/ui/layouts/hud_margins.tres" id="34_hudmg"]
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_c5h7v"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_settings_bg"]
-bg_color = Color(0.133333, 0.129412, 0.145098, 1)
-corner_radius_top_left = 24
-corner_radius_top_right = 24
-corner_radius_bottom_right = 24
-corner_radius_bottom_left = 24
-
-[node name="explorer" type="Node" unique_id=1276646984]
-script = ExtResource("1_5n8xk")
+[node name="explorer" type="Explorer" unique_id=1276646984]
 metadata/mobile_preview_orientation = "landscape"
 metadata/_edit_horizontal_guides_ = [60.0]
 metadata/_edit_vertical_guides_ = [374.0]
 
-[node name="MarginContainer" type="MarginContainer" parent="." unique_id=253544351]
-visible = false
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/margin_left = 0
-theme_override_constants/margin_top = 24
-theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 50
-
-[node name="ColorRect" type="ColorRect" parent="MarginContainer" unique_id=1992667887]
-layout_mode = 2
-color = Color(0, 1, 0, 1)
-
 [node name="world" type="Node3D" parent="." unique_id=1937092413]
 unique_name_in_owner = true
 
-[node name="Timer_BroadcastPosition" parent="world" unique_id=10634114 instance=ExtResource("4_2dkhu")]
+[node name="Timer_BroadcastPosition" type="PositionBroadcaster" parent="world" unique_id=10634114]
 unique_name_in_owner = true
 
 [node name="EnvironmentSelector" parent="world" unique_id=363309900 instance=ExtResource("4_f5cdi")]
@@ -84,7 +35,7 @@ focus_mode = 1
 mouse_filter = 1
 theme = ExtResource("4_2vs87")
 
-[node name="MobileCameraInput" type="Control" parent="UI" unique_id=435960516]
+[node name="MobileCameraInput" type="MobileCameraInput" parent="UI" unique_id=435960516]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -92,9 +43,8 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_mcinput")
 
-[node name="SafeAreaControls" type="MarginContainer" parent="UI" unique_id=1539864391]
+[node name="SafeAreaControls" type="SafeMarginContainer" parent="UI" unique_id=1539864391]
 unique_name_in_owner = true
 editor_description = "Safe-area frame for the on-screen controls (joypad + joystick). Sits BEFORE SceneUIContainer so scene UI wins input where it draws. Shares hud_margins.tres — do not merge with SafeAreaHud (opposite side of the input pivot)."
 layout_mode = 1
@@ -104,7 +54,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-script = ExtResource("5_c8ksg")
 margin_profile = ExtResource("34_hudmg")
 symmetric_horizontal = true
 
@@ -120,7 +69,7 @@ layout_mode = 1
 
 [node name="VirtualJoystick_Left" parent="UI" unique_id=858042680 instance=ExtResource("9_lxw33")]
 unique_name_in_owner = true
-editor_description = "Virtual joystick to control avatar movement. Direct UI child (full-screen travel). margin_profile (hud_margins.tres) supplies the safe-area insets so the resting position (_joystick_default_position, safe-area-relative) adapts per device without constraining travel. A Resource ref is used (not a node path) so it survives editor re-saves."
+editor_description = "Virtual joystick to control avatar movement. Direct UI child (full-screen travel). margin_profile (hud_margins.tres) supplies the safe-area insets so the resting position (joystick_default_position, safe-area-relative) adapts per device without constraining travel. A Resource ref is used (not a node path) so it survives editor re-saves."
 layout_mode = 1
 deadzone_size = 0.0
 margin_profile = ExtResource("34_hudmg")
@@ -166,53 +115,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="HBoxContainer_VersionFPS" type="HBoxContainer" parent="UI" unique_id=193054843]
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -77.0
-offset_top = -33.0
-offset_right = 77.0
-offset_bottom = -16.0
-grow_horizontal = 2
-grow_vertical = 0
-mouse_filter = 2
-
-[node name="Label_Version" type="Label" parent="UI/HBoxContainer_VersionFPS" unique_id=2080384115]
-auto_translate_mode = 2
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 0.705882)
-theme_override_colors/font_outline_color = Color(0.501961, 0.501961, 0.501961, 0.705882)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 12
-text = "v0.1.0-alpha-abcd1f"
-
-[node name="Label_FPS" type="Label" parent="UI/HBoxContainer_VersionFPS" unique_id=1795956625]
-auto_translate_mode = 2
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 0.705882)
-theme_override_colors/font_outline_color = Color(0.501961, 0.501961, 0.501961, 0.705882)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 12
-text = "FPS"
-
-[node name="HudDismissCatcher" type="Control" parent="UI" unique_id=146097442]
-unique_name_in_owner = true
-editor_description = "Full-screen tap-catcher that dismisses the left panels and the chat. Active (STOP) only while a left panel is open or the chat is visible; IGNORE otherwise. Sits before SafeAreaHud so panels/chat win their own taps, but it beats the joystick, scene UI and camera input, so an empty-area tap anywhere closes them."
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="SafeAreaHud" type="MarginContainer" parent="UI" unique_id=1210894567]
+[node name="SafeAreaHud" type="SafeMarginContainer" parent="UI" unique_id=1210894567]
 unique_name_in_owner = true
 editor_description = "Safe-area frame for the interactive HUD (navbar, chat, navbar panels, emotes). Sits AFTER SceneUIContainer so it wins input over scene UI. Shares hud_margins.tres. The fullscreen Control_Menu draws opaque over the navbar (nothing hides it in code), so they never visually overlap."
 layout_mode = 1
@@ -222,7 +125,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-script = ExtResource("5_c8ksg")
 margin_profile = ExtResource("34_hudmg")
 symmetric_horizontal = true
 
@@ -232,183 +134,18 @@ editor_description = "The hideable HUD content group (chat, navbar panels, emote
 layout_mode = 2
 mouse_filter = 2
 
-[node name="ChatPanel" parent="UI/SafeAreaHud/InteractableHUD" unique_id=1855059198 instance=ExtResource("9_chatpanel")]
-unique_name_in_owner = true
-layout_mode = 1
-
-[node name="PreviewHudPanel" parent="UI/SafeAreaHud/InteractableHUD" unique_id=1534114070 instance=ExtResource("35_prevhud")]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-
-[node name="HBoxContainerLeftPanels" type="HBoxContainer" parent="UI/SafeAreaHud/InteractableHUD" unique_id=2005524203]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-theme_override_constants/separation = 0
-
-[node name="VSeparator" type="VSeparator" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels" unique_id=834468868]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 99
-theme_override_styles/separator = SubResource("StyleBoxEmpty_c5h7v")
-
-[node name="VBoxContainer_LeftPanels" type="VBoxContainer" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels" unique_id=1190000788]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(624, 640)
-layout_mode = 2
-mouse_filter = 2
-
-[node name="NotificationsPanel" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels/VBoxContainer_LeftPanels" unique_id=1351118609 instance=ExtResource("14_notif_panel")]
-unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(500, 640)
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="FriendsPanel" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels/VBoxContainer_LeftPanels" unique_id=644859130 instance=ExtResource("21_cwgs4")]
-unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(500, 640)
-layout_mode = 2
-
-[node name="DiscoverPanel" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels/VBoxContainer_LeftPanels" instance=ExtResource("31_disc_panel")]
-unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(500, 640)
-layout_mode = 2
-size_flags_vertical = 3
-
 [node name="EmoteWheel" parent="UI/SafeAreaHud/InteractableHUD" unique_id=228992295 instance=ExtResource("21_pows0")]
 unique_name_in_owner = true
 layout_mode = 1
 
-[node name="Navbar" parent="UI/SafeAreaHud/InteractableHUD" unique_id=1143439956 instance=ExtResource("21_admxk")]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(100, 556)
-layout_mode = 1
-anchors_preset = 9
-anchor_right = 0.0
-grow_horizontal = 1
-
-[node name="Button_ShowUI" parent="UI/SafeAreaHud" unique_id=36862358 instance=ExtResource("26_hud")]
-unique_name_in_owner = true
-editor_description = "Restore affordance (hide/show HUD). Momentary HudButton (SMALL, close/X icon). Sibling of InteractableHUD inside SafeAreaHud so it survives hide-UI and stays clickable over scene UI; EXPAND-without-FILL keeps it at the disc size, top-left of the safe area."
-visible = false
-layout_mode = 2
-size_flags_horizontal = 2
-size_flags_vertical = 2
-icon = ExtResource("27_close")
-icon_normal = ExtResource("27_close")
-
-[node name="InteractableAreaDebug" type="ColorRect" parent="UI" unique_id=146097443]
-unique_name_in_owner = true
-editor_description = "Dev-only overlay of the scene interactable area. Position/size are set at runtime by explorer; toggled by show_interactable_area (never in production). Tune color/alpha here. The percentages label is a child so toggling this node toggles both."
-visible = false
-layout_mode = 1
-offset_right = 40.0
-offset_bottom = 40.0
-mouse_filter = 2
-color = Color(0.2, 0.8, 1, 0.15)
-
-[node name="InteractableAreaDebugLabel" type="Label" parent="UI/InteractableAreaDebug" unique_id=146097444]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -300.0
-offset_top = 8.0
-offset_right = -8.0
-offset_bottom = 78.0
-grow_horizontal = 0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 24
-horizontal_alignment = 2
-
-[node name="Timer_FPSLabel" type="Timer" parent="UI" unique_id=926156601]
+[node name="Timer_SavePosition" type="Timer" parent="UI" unique_id=926156601]
 autostart = true
 
-[node name="Control_Menu" parent="UI" unique_id=757703690 instance=ExtResource("5_mso44")]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-
-[node name="DialogStack" parent="UI" unique_id=584021113 instance=ExtResource("10_y1lkn")]
-visible = false
-layout_mode = 1
-offset_left = -180.0
-offset_top = -140.0
-offset_right = 180.0
-offset_bottom = 140.0
-
-[node name="RecordingNotification" parent="UI" unique_id=848788203 instance=ExtResource("20_uf6rv")]
-visible = false
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -24.0
-offset_top = -120.0
-offset_right = 24.0
-offset_bottom = -72.0
-grow_horizontal = 2
-grow_vertical = 0
-
-[node name="ProfileContainer" parent="UI" unique_id=312662393 instance=ExtResource("25_c5h7v")]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-
-[node name="WarningMessages" parent="UI" unique_id=767782640 instance=ExtResource("23_bi432")]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-mouse_filter = 2
-
-[node name="UrlPopup" parent="UI" unique_id=780917919 instance=ExtResource("27_url_popup")]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-
-[node name="JumpInPopup" parent="UI" unique_id=2016785394 instance=ExtResource("28_jump_in_popup")]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-
-[node name="Loading" parent="UI" unique_id=894556648 instance=ExtResource("17_0blod")]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-
 [node name="VoiceChatRecorder" type="VoiceChatRecorder" parent="." unique_id=1690186631]
-script = ExtResource("20_064cw")
 
-[node name="SceneMusicChanger" parent="." unique_id=404245768 instance=ExtResource("26_5hhk2")]
+[node name="SceneMusicChanger" type="SceneMusicChanger" parent="." unique_id=404245768]
 
-[node name="ChatHandler" parent="." unique_id=440307884 instance=ExtResource("32_cq187")]
+[node name="ChatHandler" type="ChatHandler" parent="." unique_id=440307884]
 
-[connection signal="gui_input" from="UI/HudDismissCatcher" to="." method="_on_hud_dismiss_catcher_gui_input"]
-[connection signal="load_scenes_pressed" from="UI/SafeAreaHud/InteractableHUD/ChatPanel" to="." method="_on_button_load_scenes_pressed"]
-[connection signal="share_place" from="UI/SafeAreaHud/InteractableHUD/ChatPanel" to="." method="_share_place"]
-[connection signal="submit_message" from="UI/SafeAreaHud/InteractableHUD/ChatPanel" to="." method="_on_panel_chat_submit_message"]
-[connection signal="emote_wheel_closed" from="UI/SafeAreaHud/InteractableHUD/EmoteWheel" to="." method="_on_emote_wheel_emote_wheel_closed"]
-[connection signal="emote_wheel_opened" from="UI/SafeAreaHud/InteractableHUD/EmoteWheel" to="." method="_on_emote_wheel_emote_wheel_opened"]
-[connection signal="timeout" from="UI/Timer_FPSLabel" to="." method="_on_timer_fps_label_timeout"]
-[connection signal="hide_menu" from="UI/Control_Menu" to="." method="_on_control_menu_hide_menu"]
-[connection signal="jump_to" from="UI/Control_Menu" to="." method="_on_control_menu_jump_to"]
-[connection signal="open_profile" from="UI/Control_Menu" to="." method="_on_control_menu_open_profile"]
-[connection signal="request_debug_panel" from="UI/Control_Menu" to="." method="_on_control_menu_request_debug_panel"]
-[connection signal="request_multiplayer_debug" from="UI/Control_Menu" to="." method="_on_control_menu_request_multiplayer_debug"]
-[connection signal="request_pause_scenes" from="UI/Control_Menu" to="." method="_on_control_menu_request_pause_scenes"]
-[connection signal="toggle_fps" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_fps"]
-[connection signal="toggle_minimap" from="UI/Control_Menu" to="." method="_on_control_menu_toggle_minimap"]
+[node name="LoadingSession" type="LoadingSession" parent="." unique_id=1234567890]
+unique_name_in_owner = true

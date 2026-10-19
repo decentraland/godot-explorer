@@ -1,0 +1,853 @@
+use std::collections::HashSet;
+
+use crate::{
+    content::{content_mapping::DclContentMappingAndUrl, content_provider::ContentProvider},
+    dcl::{
+        components::{
+            material::{DclMaterial, DclSourceTex, DclTexture, DclUnlitMaterial},
+            SceneComponentId,
+        },
+        crdt::{
+            last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
+            SceneCrdtStateProtoComponents,
+        },
+    },
+    godot_classes::dcl_global::DclGlobal,
+    scene_runner::scene::{MaterialItem, Scene},
+};
+use godot::{
+    classes::{
+        base_material_3d::{EmissionOperator, Feature, Flags, ShadingMode, Transparency},
+        image::Format,
+        Image, ImageTexture, Material, MeshInstance3D, ResourceLoader, Shader, ShaderMaterial,
+        StandardMaterial3D, Texture2D,
+    },
+    global::weakref,
+    prelude::*,
+};
+
+use crate::dcl::components::proto_components::sdk::components::MaterialTransparencyMode;
+
+/// Convert a DCL/Unity UV offset.y to Godot's V-down UV space.
+/// Primitive/glTF UVs are stored V-flipped vs Unity (`v_godot = 1 - v_unity`),
+/// so the offset must be compensated to land in the same texture window.
+/// Identity for the defaults (tiling=1, offset=0).
+pub(crate) fn dcl_uv_offset_y(tiling_y: f32, offset_y: f32) -> f32 {
+    1.0 - tiling_y - offset_y
+}
+
+/// Load the unlit alpha shader. Godot's ResourceLoader caches loaded resources internally.
+fn get_unlit_alpha_shader() -> Option<Gd<Shader>> {
+    ResourceLoader::singleton()
+        .load("res://assets/shaders/dcl_unlit_alpha.gdshader")
+        .and_then(|res| res.try_cast::<Shader>().ok())
+}
+
+pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
+    let godot_dcl_scene = &mut scene.godot_dcl_scene;
+    let dirty_lww_components = &scene.current_dirty.lww_components;
+    let material_component = SceneCrdtStateProtoComponents::get_material(crdt_state);
+    let mut content_provider = DclGlobal::singleton().bind().get_content_provider();
+
+    if let Some(material_dirty) = dirty_lww_components.get(&SceneComponentId::MATERIAL) {
+        for entity in material_dirty {
+            let new_value = material_component.get(entity);
+            if new_value.is_none() {
+                continue;
+            }
+
+            let new_value = new_value.unwrap();
+            let dcl_material = if let Some(material) = new_value.value.as_ref() {
+                material
+                    .material
+                    .as_ref()
+                    .map(|material| DclMaterial::from_proto(material, &scene.content_mapping))
+            } else {
+                None
+            };
+
+            let (godot_entity_node, node_3d) = godot_dcl_scene.ensure_node_3d(entity);
+
+            if let Some(dcl_material) = dcl_material {
+                let previous_dcl_material = godot_entity_node.material.as_ref();
+                if let Some(previous_dcl_material) = previous_dcl_material {
+                    if previous_dcl_material.eq(&dcl_material) {
+                        continue;
+                    }
+                }
+
+                let existing_material = if let Some(material_item) = scene.materials.get(entity) {
+                    let material_item = material_item.weak_ref.get_ref();
+
+                    if material_item.is_nil() {
+                        None
+                    } else {
+                        Some(material_item)
+                    }
+                } else {
+                    None
+                };
+
+                // Always request texture fetches for new textures
+                for tex in dcl_material.get_textures().into_iter().flatten() {
+                    match &tex.source {
+                        DclSourceTex::Texture(hash) => {
+                            // url-sourced textures are external (non-deployed)
+                            // content — record them for the preview stats row.
+                            if hash.starts_with("http") {
+                                crate::content::external_content::register_external_texture(
+                                    &scene.scene_entity_definition.id,
+                                    hash,
+                                );
+                            }
+                            let (hash, mapping) = (
+                                hash.to_godot(),
+                                DclContentMappingAndUrl::from_ref(scene.content_mapping.clone()),
+                            );
+                            content_provider.run_deferred(move |provider| {
+                                provider.fetch_texture_by_hash(hash, mapping);
+                            });
+                        }
+                        DclSourceTex::AvatarTexture(user_id) => {
+                            // Prefetch avatar texture immediately when material is created
+                            let user_id = user_id.to_godot();
+                            content_provider.run_deferred(move |provider| {
+                                provider.fetch_avatar_texture(user_id);
+                            });
+                        }
+                        DclSourceTex::VideoTexture(_) => {
+                            // Video textures are handled separately
+                        }
+                    }
+                }
+
+                let waiting_textures = {
+                    match &dcl_material {
+                        DclMaterial::Unlit(unlit) => {
+                            unlit.texture.is_some() || unlit.alpha_texture.is_some()
+                        }
+                        DclMaterial::Pbr(pbr) => {
+                            pbr.texture.is_some()
+                                || pbr.bump_texture.is_some()
+                                || pbr.alpha_texture.is_some()
+                                || pbr.emissive_texture.is_some()
+                        }
+                    }
+                };
+
+                // Check if we need ShaderMaterial for unlit with alpha_texture
+                // (alpha_texture requires transparency pipeline, so we use a custom shader)
+                let needs_shader_material = matches!(&dcl_material, DclMaterial::Unlit(unlit)
+                    if unlit.alpha_texture.is_some());
+
+                let godot_material: Gd<Material> = if needs_shader_material {
+                    // Use ShaderMaterial for unlit with separate alpha texture
+                    if let Some(shader) = get_unlit_alpha_shader() {
+                        let mut shader_mat = ShaderMaterial::new_gd();
+                        shader_mat.set_shader(&shader);
+
+                        // Apply shader properties
+                        if let DclMaterial::Unlit(unlit) = &dcl_material {
+                            apply_unlit_shader_properties(&mut shader_mat, unlit);
+                        }
+
+                        shader_mat.upcast::<Material>()
+                    } else {
+                        // Fallback to StandardMaterial3D if shader not found
+                        let mut mat = StandardMaterial3D::new_gd();
+                        apply_dcl_material_properties(&mut mat, &dcl_material);
+                        mat.upcast::<Material>()
+                    }
+                } else if let Some(material) = existing_material {
+                    // Try to reuse existing StandardMaterial3D, but if coming from ShaderMaterial
+                    // (e.g., switching from unlit+alpha_texture to pbr), create a new one
+                    if let Ok(mut mat) = material.try_to::<Gd<StandardMaterial3D>>() {
+                        // Clear textures that are no longer present in the new material
+                        // This is needed when changing from a textured material to a non-textured one
+                        clear_removed_textures(&mut mat, &dcl_material);
+                        apply_dcl_material_properties(&mut mat, &dcl_material);
+                        mat.upcast::<Material>()
+                    } else {
+                        // Existing material was ShaderMaterial, create new StandardMaterial3D
+                        let mut mat = StandardMaterial3D::new_gd();
+                        apply_dcl_material_properties(&mut mat, &dcl_material);
+                        mat.upcast::<Material>()
+                    }
+                } else {
+                    let mut mat = StandardMaterial3D::new_gd();
+                    apply_dcl_material_properties(&mut mat, &dcl_material);
+                    mat.upcast::<Material>()
+                };
+
+                // Always update the MaterialItem with the new material definition
+                // This is critical for texture changes to be detected and applied
+                scene.materials.insert(
+                    *entity,
+                    MaterialItem {
+                        dcl_mat: dcl_material.clone(),
+                        weak_ref: weakref(&godot_material.to_variant())
+                            .to::<Gd<godot::classes::WeakRef>>(),
+                        waiting_textures,
+                        alive: true,
+                    },
+                );
+
+                let mesh_renderer = node_3d.try_get_node_as::<MeshInstance3D>("MeshRenderer");
+                if let Some(mut mesh_renderer) = mesh_renderer {
+                    mesh_renderer.set_surface_override_material(0, &godot_material);
+                }
+
+                // Update tracked material for change detection
+                godot_entity_node.material = Some(dcl_material);
+            } else {
+                let mesh_renderer = node_3d.try_get_node_as::<MeshInstance3D>("MeshRenderer");
+
+                if let Some(mut mesh_renderer) = mesh_renderer {
+                    mesh_renderer.set_surface_override_material(0, Gd::null_arg());
+                    godot_entity_node.material.take();
+                }
+            }
+        }
+
+        scene.dirty_materials = true;
+    }
+
+    if scene.dirty_materials {
+        let mut keep_dirty = false;
+        let mut dead_materials = HashSet::with_capacity(scene.materials.capacity());
+        let mut no_more_waiting_materials = HashSet::new();
+
+        for (entity, item) in scene.materials.iter() {
+            let dcl_material = item.dcl_mat.clone();
+            if item.waiting_textures {
+                let material_item = item.weak_ref.get_ref();
+                if material_item.is_nil() {
+                    dead_materials.insert(*entity);
+                    continue;
+                }
+
+                let mut ready = true;
+
+                match dcl_material {
+                    DclMaterial::Unlit(unlit_material) => {
+                        if unlit_material.alpha_texture.is_some() {
+                            // Has alpha_texture - use ShaderMaterial
+                            if let Ok(mut shader_mat) = material_item
+                                .to::<Gd<Material>>()
+                                .try_cast::<ShaderMaterial>()
+                            {
+                                // Albedo is optional (shader uses white default)
+                                if unlit_material.texture.is_some() {
+                                    ready &= check_unlit_shader_texture(
+                                        "albedo_texture",
+                                        &unlit_material.texture,
+                                        &mut shader_mat,
+                                        content_provider.bind_mut(),
+                                    );
+                                }
+                                ready &= check_unlit_shader_texture(
+                                    "alpha_texture",
+                                    &unlit_material.alpha_texture,
+                                    &mut shader_mat,
+                                    content_provider.bind_mut(),
+                                );
+                            }
+                        } else if unlit_material.texture.is_some() {
+                            // Only albedo texture - use StandardMaterial3D (opaque pipeline)
+                            let mut material = material_item.to::<Gd<StandardMaterial3D>>();
+                            ready &= check_texture(
+                                godot::classes::base_material_3d::TextureParam::ALBEDO,
+                                &unlit_material.texture,
+                                &mut material,
+                                content_provider.bind_mut(),
+                                scene,
+                            );
+                        }
+                        // No textures case: nothing to load
+                    }
+                    DclMaterial::Pbr(pbr) => {
+                        let mut material = material_item.to::<Gd<StandardMaterial3D>>();
+                        ready &= check_texture(
+                            godot::classes::base_material_3d::TextureParam::ALBEDO,
+                            &pbr.texture,
+                            &mut material,
+                            content_provider.bind_mut(),
+                            scene,
+                        );
+                        ready &= check_texture(
+                            godot::classes::base_material_3d::TextureParam::NORMAL,
+                            &pbr.bump_texture,
+                            &mut material,
+                            content_provider.bind_mut(),
+                            scene,
+                        );
+                        ready &= check_texture(
+                            godot::classes::base_material_3d::TextureParam::EMISSION,
+                            &pbr.emissive_texture,
+                            &mut material,
+                            content_provider.bind_mut(),
+                            scene,
+                        );
+                    }
+                }
+
+                if !ready {
+                    keep_dirty = true;
+                } else {
+                    no_more_waiting_materials.insert(*entity);
+                }
+            }
+        }
+
+        for materials in no_more_waiting_materials {
+            scene
+                .materials
+                .get_mut(&materials)
+                .unwrap()
+                .waiting_textures = false;
+        }
+
+        scene.materials.retain(|k, _| !dead_materials.contains(k));
+        scene.dirty_materials = keep_dirty;
+    }
+}
+
+/// Apply DCL material properties to an existing Godot StandardMaterial3D.
+/// This modifies the material in-place, preserving shader state where possible.
+pub fn apply_dcl_material_properties(
+    godot_material: &mut Gd<StandardMaterial3D>,
+    dcl_material: &DclMaterial,
+) {
+    match dcl_material {
+        DclMaterial::Unlit(unlit) => {
+            godot_material.set_metallic(0.0);
+            godot_material.set_roughness(0.0);
+            godot_material.set_specular(0.0);
+
+            godot_material.set_shading_mode(ShadingMode::UNSHADED);
+            // Never FORCE_SRGB here: hash/avatar textures are ImageTexture/PCT2
+            // with a valid sRGB view, so the `source_color` hint on the albedo
+            // sampler already decodes sRGB->linear. The flag would decode AGAIN
+            // in-shader (double gamma, ~2.2x darker). Video textures are the
+            // exception and get the flag set per-backend when the video texture
+            // binds (update_video_material_textures).
+            godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, false);
+            // Unity ignores diffuse_color alpha for unlit materials, force alpha to 1.0
+            // No color space conversion — matches Unity (SetColor with no conversion)
+            let mut albedo_color = unlit.diffuse_color.0.to_godot();
+            albedo_color.a = 1.0;
+            godot_material.set_albedo(albedo_color);
+
+            tracing::debug!(
+                "Unlit material: diffuse_color=({}, {}, {}, {}), has_texture={}, has_alpha_texture={}",
+                albedo_color.r, albedo_color.g, albedo_color.b, albedo_color.a,
+                unlit.texture.is_some(),
+                unlit.alpha_texture.is_some()
+            );
+
+            // Apply UV offset/tiling from main texture (only main texture supports this)
+            if let Some(texture) = &unlit.texture {
+                godot_material.set_uv1_offset(godot::builtin::Vector3::new(
+                    texture.offset.0.x,
+                    dcl_uv_offset_y(texture.tiling.0.y, texture.offset.0.y),
+                    0.0,
+                ));
+                godot_material.set_uv1_scale(godot::builtin::Vector3::new(
+                    texture.tiling.0.x,
+                    texture.tiling.0.y,
+                    1.0,
+                ));
+            } else {
+                // Reset UV transform if no texture
+                godot_material.set_uv1_offset(godot::builtin::Vector3::new(0.0, 0.0, 0.0));
+                godot_material.set_uv1_scale(godot::builtin::Vector3::new(1.0, 1.0, 1.0));
+            }
+
+            // Handle transparency for unlit materials
+            // Unity uses AlphaTest (ZWrite=ON, _ALPHATEST_ON) as the base for unlit,
+            // then ResolveAutoMode determines if AlphaBlend is needed.
+            // Only alpha_texture triggers AlphaBlend (matches Unity's ResolveAutoMode).
+            if unlit.alpha_texture.is_some() {
+                tracing::debug!("Unlit material: transparency=ALPHA (has alpha_texture)");
+                godot_material.set_transparency(Transparency::ALPHA);
+            } else if unlit.texture.is_some() {
+                // Texture present but no alpha_texture — use scissor for cutout
+                // (matches Unity's base unlit: _ALPHATEST_ON, ZWrite=1)
+                tracing::debug!(
+                    "Unlit material: transparency=ALPHA_SCISSOR (has texture, no alpha_texture)"
+                );
+                godot_material.set_transparency(Transparency::ALPHA_SCISSOR);
+                godot_material.set_alpha_scissor_threshold(unlit.alpha_test.0);
+            } else {
+                tracing::debug!("Unlit material: transparency=DISABLED (no textures)");
+                godot_material.set_transparency(Transparency::DISABLED);
+            }
+        }
+        DclMaterial::Pbr(pbr) => {
+            godot_material.set_metallic(pbr.metallic.0);
+            godot_material.set_roughness(pbr.roughness.0);
+            // Unity: specularIntensity * directIntensity
+            godot_material.set_specular(pbr.specular_intensity.0 * pbr.direct_intensity.0);
+
+            godot_material.set_shading_mode(ShadingMode::PER_PIXEL);
+
+            // Emission: only enable when color is non-black (matches Unity)
+            let emissive = pbr.emissive_color.0.to_godot();
+            let has_emission = emissive.r != 0.0 || emissive.g != 0.0 || emissive.b != 0.0;
+            godot_material.set_feature(Feature::EMISSION, has_emission);
+            if has_emission {
+                godot_material.set_emission(emissive);
+                godot_material.set_emission_energy_multiplier(pbr.emissive_intensity.0);
+            }
+
+            // Use MULTIPLY operator when there's an emissive texture, ADD otherwise
+            if pbr.emissive_texture.is_some() {
+                godot_material.set_emission_operator(EmissionOperator::MULTIPLY);
+            } else {
+                godot_material.set_emission_operator(EmissionOperator::ADD);
+            }
+
+            // See unlit branch: `source_color` already decodes sRGB for
+            // hash/avatar textures; forcing sRGB double-decodes (dark output).
+            // Video textures get the flag per-backend on texture bind.
+            godot_material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, false);
+            // No color space conversion — matches Unity (SetColor with no conversion)
+            godot_material.set_albedo(pbr.albedo_color.0.to_godot());
+
+            // Apply UV offset/tiling from main texture (only main texture supports this)
+            if let Some(texture) = &pbr.texture {
+                godot_material.set_uv1_offset(godot::builtin::Vector3::new(
+                    texture.offset.0.x,
+                    dcl_uv_offset_y(texture.tiling.0.y, texture.offset.0.y),
+                    0.0,
+                ));
+                godot_material.set_uv1_scale(godot::builtin::Vector3::new(
+                    texture.tiling.0.x,
+                    texture.tiling.0.y,
+                    1.0,
+                ));
+            } else {
+                // Reset UV transform if no texture
+                godot_material.set_uv1_offset(godot::builtin::Vector3::new(0.0, 0.0, 0.0));
+                godot_material.set_uv1_scale(godot::builtin::Vector3::new(1.0, 1.0, 1.0));
+            }
+
+            // Handle transparency mode
+            // Unity: AlphaBlend → ZWrite=OFF, SrcAlpha/OneMinusSrcAlpha, no depth pre-pass
+            // Godot equivalent: Transparency::ALPHA (NOT ALPHA_DEPTH_PRE_PASS)
+            let albedo_color = pbr.albedo_color.0.to_godot();
+            tracing::debug!(
+                "PBR material: mode={:?}, albedo=({}, {}, {}, {}), metallic={}, roughness={}, specular={}, has_texture={}, has_emissive_tex={}",
+                pbr.transparency_mode,
+                albedo_color.r, albedo_color.g, albedo_color.b, albedo_color.a,
+                pbr.metallic.0, pbr.roughness.0, pbr.specular_intensity.0,
+                pbr.texture.is_some(), pbr.emissive_texture.is_some()
+            );
+            match pbr.transparency_mode {
+                MaterialTransparencyMode::MtmOpaque => {
+                    godot_material.set_transparency(Transparency::DISABLED);
+                }
+                MaterialTransparencyMode::MtmAlphaTest => {
+                    godot_material.set_transparency(Transparency::ALPHA_SCISSOR);
+                    godot_material.set_alpha_scissor_threshold(pbr.alpha_test.0);
+                }
+                MaterialTransparencyMode::MtmAlphaBlend => {
+                    godot_material.set_transparency(Transparency::ALPHA);
+                }
+                MaterialTransparencyMode::MtmAlphaTestAndAlphaBlend => {
+                    godot_material.set_transparency(Transparency::ALPHA);
+                    godot_material.set_alpha_scissor_threshold(pbr.alpha_test.0);
+                }
+                MaterialTransparencyMode::MtmAuto => {
+                    // Unity: alphaTexture != null || albedoColor.a < 1.0 → AlphaBlend, else Opaque
+                    // PBR passes null for alphaTexture, so only albedo alpha matters
+                    if pbr.albedo_color.0.a < 1.0 {
+                        godot_material.set_transparency(Transparency::ALPHA);
+                    } else {
+                        godot_material.set_transparency(Transparency::DISABLED);
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Apply DCL unlit material properties to a ShaderMaterial.
+fn apply_unlit_shader_properties(shader_mat: &mut Gd<ShaderMaterial>, unlit: &DclUnlitMaterial) {
+    // Set diffuse color (Unity ignores alpha for unlit, shader only uses .rgb)
+    let mut color = unlit.diffuse_color.0.to_godot();
+    color.a = 1.0;
+    shader_mat.set_shader_parameter("diffuse_color", &color.to_variant());
+
+    // Set UV offset and scale from main texture
+    if let Some(tex) = &unlit.texture {
+        shader_mat.set_shader_parameter(
+            "uv_offset",
+            &Vector2::new(
+                tex.offset.0.x,
+                dcl_uv_offset_y(tex.tiling.0.y, tex.offset.0.y),
+            )
+            .to_variant(),
+        );
+        shader_mat.set_shader_parameter(
+            "uv_scale",
+            &Vector2::new(tex.tiling.0.x, tex.tiling.0.y).to_variant(),
+        );
+    } else {
+        shader_mat.set_shader_parameter("uv_offset", &Vector2::new(0.0, 0.0).to_variant());
+        shader_mat.set_shader_parameter("uv_scale", &Vector2::new(1.0, 1.0).to_variant());
+    }
+}
+
+/// Clear textures from a material that are no longer present in the new material definition.
+/// This ensures that when a texture is set to null, it's actually removed from the Godot material.
+fn clear_removed_textures(material: &mut Gd<StandardMaterial3D>, dcl_material: &DclMaterial) {
+    use godot::classes::base_material_3d::TextureParam;
+
+    match dcl_material {
+        DclMaterial::Unlit(unlit) => {
+            // Clear albedo texture if neither main texture nor alpha_texture is present
+            if unlit.texture.is_none() && unlit.alpha_texture.is_none() {
+                material.set_texture(TextureParam::ALBEDO, Gd::null_arg());
+            }
+            // Unlit materials don't have normal/emission textures
+            material.set_texture(TextureParam::NORMAL, Gd::null_arg());
+            material.set_texture(TextureParam::EMISSION, Gd::null_arg());
+        }
+        DclMaterial::Pbr(pbr) => {
+            // Clear albedo texture if not present (and no alpha texture either)
+            if pbr.texture.is_none() && pbr.alpha_texture.is_none() {
+                material.set_texture(TextureParam::ALBEDO, Gd::null_arg());
+            }
+            // Clear normal texture if not present
+            if pbr.bump_texture.is_none() {
+                material.set_texture(TextureParam::NORMAL, Gd::null_arg());
+                // Also disable the normal map feature
+                material.set_feature(Feature::NORMAL_MAPPING, false);
+            }
+            // Clear emission texture if not present
+            if pbr.emissive_texture.is_none() {
+                material.set_texture(TextureParam::EMISSION, Gd::null_arg());
+            }
+        }
+    }
+}
+
+/// Validates that a texture has valid GPU resources (non-zero dimensions).
+/// Empty textures can cause crashes on Android due to invalid descriptor sets.
+fn is_valid_texture(texture: &Gd<Texture2D>) -> bool {
+    texture.get_width() > 0 && texture.get_height() > 0
+}
+
+/// Returns a cached 2x2 black opaque texture for use as a placeholder when no video is playing.
+fn get_black_placeholder_texture() -> Gd<ImageTexture> {
+    thread_local! {
+        static BLACK_TEXTURE: std::cell::RefCell<Option<Gd<ImageTexture>>> = const { std::cell::RefCell::new(None) };
+    }
+    BLACK_TEXTURE.with(|cell| {
+        let mut borrow = cell.borrow_mut();
+        if let Some(tex) = borrow.as_ref() {
+            tex.clone()
+        } else {
+            let mut image = Image::create(2, 2, false, Format::RGBA8)
+                .expect("couldn't create black placeholder image");
+            image.fill(Color::BLACK);
+            let tex = ImageTexture::create_from_image(&image)
+                .expect("couldn't create black placeholder texture");
+            *borrow = Some(tex.clone());
+            tex
+        }
+    })
+}
+
+fn check_texture(
+    param: godot::classes::base_material_3d::TextureParam,
+    dcl_texture: &Option<DclTexture>,
+    material: &mut Gd<StandardMaterial3D>,
+    mut content_provider: GdMut<ContentProvider>,
+    _scene: &Scene,
+) -> bool {
+    if dcl_texture.is_none() {
+        return true;
+    }
+
+    let dcl_texture = dcl_texture.as_ref().unwrap();
+
+    match &dcl_texture.source {
+        DclSourceTex::Texture(content_hash) => {
+            if content_provider.is_resource_from_hash_loaded(content_hash.to_godot()) {
+                if let Some(resource) =
+                    content_provider.get_texture_from_hash(content_hash.to_godot())
+                {
+                    // Validate texture has actual data before using to prevent GPU crashes
+                    if is_valid_texture(&resource) {
+                        material.set_texture(param, &resource.upcast::<Texture2D>());
+                    } else {
+                        tracing::warn!(
+                            "Skipping invalid texture (0x0) for hash {}, may cause rendering issues",
+                            content_hash
+                        );
+                    }
+                }
+                true
+            } else {
+                false
+            }
+        }
+        DclSourceTex::AvatarTexture(user_id) => {
+            if content_provider.is_avatar_texture_loaded(user_id.to_godot()) {
+                let texture_result = content_provider.get_avatar_texture(user_id.to_godot());
+                if let Some(texture) = texture_result {
+                    // Validate texture has actual data before using to prevent GPU crashes
+                    if is_valid_texture(&texture) {
+                        material.set_texture(param, &texture.upcast::<Texture2D>());
+                    } else {
+                        tracing::warn!(
+                            "Skipping invalid avatar texture (0x0) for user {}, may cause rendering issues",
+                            user_id
+                        );
+                    }
+                } else {
+                    // Promise was rejected (invalid user, no profile, no snapshots, etc.)
+                    // Clear the texture to avoid showing stale data
+                    let no_texture: Option<&Gd<Texture2D>> = None;
+                    material.set_texture(param, no_texture);
+                }
+                true
+            } else {
+                // Start fetching if not already in progress (only logs once due to caching)
+                content_provider.fetch_avatar_texture(user_id.to_godot());
+                false
+            }
+        }
+        DclSourceTex::VideoTexture(_video_entity_id) => {
+            // Video textures need special handling:
+            // - LiveKit: uses dcl_texture (ImageTexture) which is updated from Rust
+            // - ExoPlayer: uses ExternalTexture from GDScript, accessed via get_backend_texture()
+            //
+            // We return false here to keep the material "dirty" so video textures
+            // are re-applied each frame. This ensures texture changes (video frames,
+            // ExoPlayer texture resize) are reflected in the material.
+            //
+            // The actual texture binding happens in update_video_material_textures()
+            // which is called after the main material loop.
+            //
+            // Set a black placeholder immediately so the material doesn't show GPU
+            // garbage (pink) before the video player is created or delivers its
+            // first frame. update_video_material_textures() will replace this with
+            // the real texture once available.
+            material.set_texture(
+                param,
+                &get_black_placeholder_texture().upcast::<Texture2D>(),
+            );
+            false
+        }
+    }
+}
+
+/// Check and set a texture on a ShaderMaterial.
+/// Returns true if ready (texture loaded), false if still loading.
+fn check_unlit_shader_texture(
+    param_name: &str,
+    dcl_texture: &Option<DclTexture>,
+    shader_mat: &mut Gd<ShaderMaterial>,
+    mut content_provider: GdMut<ContentProvider>,
+) -> bool {
+    let Some(dcl_tex) = dcl_texture else {
+        return true;
+    };
+
+    match &dcl_tex.source {
+        DclSourceTex::Texture(hash) => {
+            if content_provider.is_resource_from_hash_loaded(hash.to_godot()) {
+                if let Some(tex) = content_provider.get_texture_from_hash(hash.to_godot()) {
+                    shader_mat.set_shader_parameter(param_name, &tex.to_variant());
+                }
+                true
+            } else {
+                false
+            }
+        }
+        DclSourceTex::AvatarTexture(user_id) => {
+            if content_provider.is_avatar_texture_loaded(user_id.to_godot()) {
+                if let Some(tex) = content_provider.get_avatar_texture(user_id.to_godot()) {
+                    shader_mat.set_shader_parameter(param_name, &tex.to_variant());
+                }
+                true
+            } else {
+                content_provider.fetch_avatar_texture(user_id.to_godot());
+                false
+            }
+        }
+        DclSourceTex::VideoTexture(_) => {
+            // Video textures not yet supported for ShaderMaterial
+            false
+        }
+    }
+}
+
+/// Update video textures on materials.
+/// This is called separately from check_texture because video textures need mutable access
+/// to video_players to call get_backend_texture(), which would conflict with the material
+/// iteration loop.
+pub fn update_video_material_textures(scene: &mut Scene) {
+    // Collect video texture bindings we need to update
+    // Format: (material weak_ref, texture_param, video_entity_id)
+    let mut video_texture_updates: Vec<(
+        Variant,
+        godot::classes::base_material_3d::TextureParam,
+        crate::dcl::components::SceneEntityId,
+    )> = Vec::new();
+
+    for (_entity, item) in scene.materials.iter() {
+        if !item.waiting_textures {
+            continue;
+        }
+
+        let material_ref = item.weak_ref.get_ref();
+        if material_ref.is_nil() {
+            continue;
+        }
+
+        // Check each texture in the material for video textures
+        let textures_to_check: Vec<(
+            godot::classes::base_material_3d::TextureParam,
+            &Option<DclTexture>,
+        )> = match &item.dcl_mat {
+            DclMaterial::Unlit(unlit) => {
+                vec![(
+                    godot::classes::base_material_3d::TextureParam::ALBEDO,
+                    &unlit.texture,
+                )]
+            }
+            DclMaterial::Pbr(pbr) => {
+                vec![
+                    (
+                        godot::classes::base_material_3d::TextureParam::ALBEDO,
+                        &pbr.texture,
+                    ),
+                    (
+                        godot::classes::base_material_3d::TextureParam::NORMAL,
+                        &pbr.bump_texture,
+                    ),
+                    (
+                        godot::classes::base_material_3d::TextureParam::EMISSION,
+                        &pbr.emissive_texture,
+                    ),
+                ]
+            }
+        };
+
+        for (param, dcl_texture) in textures_to_check {
+            if let Some(tex) = dcl_texture {
+                if let DclSourceTex::VideoTexture(video_entity_id) = &tex.source {
+                    video_texture_updates.push((material_ref.clone(), param, *video_entity_id));
+                }
+            }
+        }
+    }
+
+    if !video_texture_updates.is_empty() {
+        tracing::debug!(
+            "update_video_material_textures: {} video texture bindings to process",
+            video_texture_updates.len()
+        );
+    }
+
+    // Now apply the video textures (we can mutably borrow video_players here)
+    for (material_ref, param, video_entity_id) in video_texture_updates {
+        if let Some(video_player) = scene.video_players.get_mut(&video_entity_id) {
+            let video_state: i32 = video_player.bind().get_video_state();
+            let mut material = material_ref.to::<Gd<StandardMaterial3D>>();
+
+            // Get current texture to check if update is needed
+            let current_texture = material.get_texture(param);
+
+            // get_backend_texture returns null before the first valid frame (GDScript guard).
+            let backend_texture = video_player.bind_mut().get_backend_texture();
+            let has_backend = backend_texture.is_some();
+            let resolved_texture: Option<Gd<Texture2D>> = backend_texture
+                .filter(is_valid_texture)
+                .map(|t| t.upcast::<Texture2D>());
+
+            let using_placeholder = resolved_texture.is_none();
+
+            // Use resolved texture or fall back to a black placeholder
+            let texture_to_set = resolved_texture
+                .unwrap_or_else(|| get_black_placeholder_texture().upcast::<Texture2D>());
+
+            // Only set texture if it's different (compare by instance ID)
+            let needs_update = current_texture
+                .as_ref()
+                .is_none_or(|current| current.instance_id() != texture_to_set.instance_id());
+            if needs_update {
+                tracing::debug!(
+                    "update_video_material_textures: entity {:?} video_state={} has_backend={} using_placeholder={} param={:?}",
+                    video_entity_id,
+                    video_state,
+                    has_backend,
+                    using_placeholder,
+                    param
+                );
+                material.set_texture(param, &texture_to_set);
+
+                // ExternalTexture (ExoPlayer/AVPlayer) does not create an sRGB texture
+                // view in Godot's renderer, so `source_color` hint has no effect and
+                // hardware sRGB→linear conversion never happens. We need FORCE_SRGB=true
+                // to get the conversion done in the shader instead.
+                //
+                // ImageTexture (LiveKit) does have an sRGB view, so `source_color`
+                // already handles conversion — FORCE_SRGB must remain false to avoid
+                // double gamma correction.
+                if param == godot::classes::base_material_3d::TextureParam::ALBEDO {
+                    let force_srgb = video_player.bind().uses_external_texture();
+                    material.set_flag(Flags::ALBEDO_TEXTURE_FORCE_SRGB, force_srgb);
+                }
+            }
+        } else {
+            // Video player not created yet — set black placeholder to avoid pink garbage.
+            // This happens when the material component is processed before the video player
+            // component in the same tick.
+            let mut material = material_ref.to::<Gd<StandardMaterial3D>>();
+            let current_texture = material.get_texture(param);
+            let placeholder = get_black_placeholder_texture().upcast::<Texture2D>();
+            let needs_placeholder = current_texture
+                .as_ref()
+                .is_none_or(|current| current.instance_id() != placeholder.instance_id());
+            if needs_placeholder {
+                material.set_texture(param, &placeholder);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::dcl_uv_offset_y;
+
+    /// Regression test for #2719: texture offset/tiling V direction must match Unity.
+    /// Unity samples texture V window [v*t + o]; our V-flipped UVs must land in the
+    /// same texture rows (texture row = 1 - v in top-left image space).
+    #[test]
+    fn uv_offset_y_matches_unity_texture_window() {
+        // Identity for defaults: untiled textures unchanged
+        assert_eq!(dcl_uv_offset_y(1.0, 0.0), 0.0);
+
+        // Repro from the issue: tiling 0.25, offset 0.25.
+        // Unity samples v_unity*t+o over v_unity in [0.25, 0.5]
+        //   -> texture rows [1-(0.5*0.25+0.25), 1-(0.25*0.25+0.25)] = [0.625, 0.6875]
+        // Godot with flipped UVs (v_godot = 1-v_unity in [0.5, 0.75]) and compensated
+        // offset must sample the same rows.
+        let offset_y = dcl_uv_offset_y(0.25, 0.25);
+        assert_eq!(offset_y, 0.5);
+        let godot_lo = 0.5 * 0.25 + offset_y;
+        let godot_hi = 0.75 * 0.25 + offset_y;
+        let unity_lo = 1.0 - (0.5 * 0.25 + 0.25);
+        let unity_hi = 1.0 - (0.25 * 0.25 + 0.25);
+        assert!((godot_lo - unity_lo).abs() < 1e-6);
+        assert!((godot_hi - unity_hi).abs() < 1e-6);
+
+        // Pure scroll (tiling=1, offset=0.3): Godot offset must be -offset
+        assert_eq!(dcl_uv_offset_y(1.0, 0.3), -0.3);
+    }
+}

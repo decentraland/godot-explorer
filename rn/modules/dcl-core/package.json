@@ -1,0 +1,41 @@
+{
+  "name": "dcl-core",
+  "version": "0.0.1",
+  "description": "The Decentraland core (dcl_core) bound into React Native with uniffi-bindgen-react-native",
+  "main": "src/index.tsx",
+  "types": "src/index.tsx",
+  "license": "Apache-2.0",
+  "author": "Decentraland",
+  "homepage": "https://github.com/decentraland/godot-explorer",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/decentraland/godot-explorer.git"
+  },
+  "files": [
+    "src",
+    "cpp",
+    "android",
+    "ios",
+    "*.podspec"
+  ],
+  "dependencies": {
+    "@ubjs/core": "0.31.0-6",
+    "uniffi-bindgen-react-native": "0.31.0-6"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*"
+  },
+  "codegenConfig": {
+    "name": "RNDclCoreSpec",
+    "type": "modules",
+    "jsSrcsDir": "src",
+    "outputDir": {
+      "ios": "ios/generated",
+      "android": "android/generated"
+    },
+    "android": {
+      "javaPackageName": "org.decentraland.core"
+    }
+  }
+}

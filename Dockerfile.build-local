@@ -1,7 +1,7 @@
 # Local godot-explorer build for the consumer-processor asset-server pipeline.
 #
 # Strategy: reuse the prod image (quay.io/decentraland/godot-explorer:next) as
-# the runtime base — it has Godot + .pck + sentry + crashpad already wired.
+# the runtime base — it has Godot + .pck already wired.
 # We only rebuild libdclgodot.so from this branch and swap it in. The bench's
 # Rust optimizations (cheap-pbr at GLTF import, meshopt LOD chain via
 # apply_pre_generate_mesh_simplification) live entirely in libdclgodot.so,
@@ -14,7 +14,7 @@
 ############################################################
 # Stage 1 — Rebuild libdclgodot.so on debian/rust
 ############################################################
-FROM --platform=linux/amd64 rust:1.90-bookworm AS rust-builder
+FROM --platform=linux/amd64 rust:1.94-bookworm AS rust-builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -33,7 +33,7 @@ COPY Cargo.toml Cargo.lock* ./
 COPY . .
 
 # lib/build.rs hardcodes .bin/protoc/bin/protoc. Symlink the system protoc.
-# Drop rust-toolchain.toml so the base image's rust 1.90 doesn't trigger
+# Drop rust-toolchain.toml so the base image's rust 1.94 doesn't trigger
 # rustup channel sync (which is blocked inside this build network).
 RUN mkdir -p .bin/protoc/bin && \
     ln -sf /usr/bin/protoc .bin/protoc/bin/protoc && \

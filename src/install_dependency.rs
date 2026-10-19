@@ -3,7 +3,7 @@ use flate2::read::GzDecoder;
 use std::env;
 use std::fs::{self, File};
 use std::io::{self};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use tar::Archive;
 use zip::ZipArchive;
 
@@ -76,7 +76,7 @@ pub fn install_dcl_protocol() -> Result<(), anyhow::Error> {
     print_section("Installing DCL Protocol");
 
     let protocol_url = get_protocol_url()?;
-    let destination_path = format!("{RUST_LIB_PROJECT_FOLDER}src/dcl/components");
+    let destination_path = format!("{RUST_LIB_PROJECT_FOLDER}crates/dcl_engine/src/dcl/components");
 
     let spinner = create_spinner("Downloading protocol files...");
 
@@ -462,6 +462,81 @@ fn install_android_tools() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
+/// gdext regenerates its bindings when the `GDRUST_GODOT_API_JSON` path changes, not its content, so a
+/// new branch build (or a CI cache restored from before it) keeps compiling against the old API. The
+/// hash of the API each `godot-ffi`/`godot-core` build dir was generated from sits in its `out/`
+/// (CI caches keep those dirs whole); on a mismatch their fingerprints go and cargo regenerates.
+fn invalidate_stale_gdext_codegen() -> Result<(), anyhow::Error> {
+    use std::hash::{Hash, Hasher};
+
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    fs::read(BinPaths::extension_api())?.hash(&mut hasher);
+    let api_hash = format!("{:016x}", hasher.finish());
+
+    let target = env::var("CARGO_TARGET_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| Path::new(RUST_LIB_PROJECT_FOLDER).join("target"));
+    // Profile dirs sit at `target/<profile>` and, for cross builds, `target/<triple>/<profile>`.
+    let mut profiles = Vec::new();
+    for entry in fs::read_dir(&target).into_iter().flatten().flatten() {
+        let dir = entry.path();
+        profiles.push(dir.clone());
+        profiles.extend(
+            fs::read_dir(&dir)
+                .into_iter()
+                .flatten()
+                .flatten()
+                .map(|e| e.path()),
+        );
+    }
+
+    const GENERATED: [&str; 2] = ["godot-ffi-", "godot-core-"];
+    let mut invalidated = false;
+    for profile in profiles {
+        let outs: Vec<_> = fs::read_dir(profile.join("build"))
+            .into_iter()
+            .flatten()
+            .flatten()
+            .filter(|e| {
+                let name = e.file_name().to_string_lossy().into_owned();
+                GENERATED.iter().any(|p| name.starts_with(p))
+            })
+            .map(|e| e.path().join("out"))
+            .filter(|out| out.is_dir())
+            .collect();
+        let stale = outs.iter().any(|out| {
+            fs::read_to_string(out.join("extension_api.hash"))
+                .ok()
+                .as_deref()
+                != Some(&api_hash)
+        });
+        if !stale {
+            continue;
+        }
+        for entry in fs::read_dir(profile.join(".fingerprint"))
+            .into_iter()
+            .flatten()
+            .flatten()
+        {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if GENERATED.iter().any(|p| name.starts_with(p)) {
+                fs::remove_dir_all(entry.path())?;
+            }
+        }
+        for out in &outs {
+            fs::write(out.join("extension_api.hash"), &api_hash)?;
+        }
+        invalidated = true;
+    }
+    if invalidated {
+        print_message(
+            MessageType::Info,
+            "extension_api.json changed: the godot bindings will be regenerated on the next build",
+        );
+    }
+    Ok(())
+}
+
 fn download_prebuilt_dependencies() -> Result<(), anyhow::Error> {
     // Ensure BIN_FOLDER exists
     fs::create_dir_all(BIN_FOLDER)?;
@@ -633,11 +708,12 @@ pub fn install(
 
     // (Re)install Godot if missing OR if the present binary doesn't match the pinned version+SHA.
     // A stale binary (same version, different fork SHA) is replaced; the SHA-tagged cache key below
-    // guarantees a cache miss so the fresh fork build is fetched, not the stale cached zip. Branch
-    // builds use existence-only (their fork SHA isn't tracked at const time).
+    // guarantees a cache miss so the fresh fork build is fetched, not the stale cached zip. A branch
+    // build moves and its fork SHA isn't tracked at const time, so it is always fetched, like its
+    // templates: an editor older than the `extension_api.json` fetched below fails to load the
+    // bindings.
     let needs_godot = match (effective_branch, validate_installed_godot_binary()) {
-        (Some(_), GodotBinaryStatus::Missing) => true,
-        (Some(_), _) => false,
+        (Some(_), _) => true,
         (None, GodotBinaryStatus::Ok) => false,
         (None, GodotBinaryStatus::Missing) => true,
         (None, GodotBinaryStatus::Mismatch { found }) => {
@@ -693,48 +769,18 @@ pub fn install(
         );
     }
 
-    // The addon folder is gitignored, so the pinned version is tracked by a
-    // `.version` marker next to `bin/`. A missing or different marker (every
-    // checkout that predates the marker, or a bump of SENTRY_ADDON_VERSION)
-    // replaces the whole folder; a folder-exists check alone would keep an
-    // old SDK forever.
-    let sentry_addon_folder = PathBuf::from(GODOT_SENTRY_ADDON_FOLDER);
-    let sentry_version_marker = sentry_addon_folder.join(".version");
-    let installed_sentry_version = fs::read_to_string(&sentry_version_marker)
-        .map(|v| v.trim().to_string())
-        .unwrap_or_default();
-    if !sentry_addon_folder.exists() || installed_sentry_version != SENTRY_ADDON_VERSION {
-        print_section("Installing Sentry Addon");
-
-        if sentry_addon_folder.exists() {
-            print_message(
-                MessageType::Info,
-                &format!(
-                    "Replacing sentry-godot '{}' with {}",
-                    installed_sentry_version, SENTRY_ADDON_VERSION
-                ),
-            );
-            fs::remove_dir_all(&sentry_addon_folder)?;
+    // The API file changes with the branch build, so it is fetched on every install.
+    let api_url = format!(
+        "{}extension_api.json",
+        match effective_branch {
+            Some(b) => godot_editor_base_url_for_branch(b),
+            None => godot_editor_base_url(),
         }
-
-        let uncompressed_folder = sentry_addon_folder.join("zip");
-        download_and_extract_zip(
-            SENTRY_ADDON_URL,
-            uncompressed_folder.to_str().unwrap(),
-            cache_key(format!("sentry-{SENTRY_ADDON_VERSION}.zip")),
-        )?;
-
-        // Only `bin/` is needed: the repo tracks its own `godot/sentry.gdextension`
-        // (same library paths as the addon's) and does not use the bundled
-        // user-feedback UI, web bundle or .NET assemblies.
-        fs::rename(
-            uncompressed_folder.join("addons/sentry/bin"),
-            sentry_addon_folder.join("bin"),
-        )?;
-
-        fs::remove_dir_all(uncompressed_folder)?;
-        fs::write(&sentry_version_marker, SENTRY_ADDON_VERSION)?;
-    }
+    );
+    print_message(MessageType::Info, &format!("Downloading: {api_url}"));
+    fs::create_dir_all(BinPaths::godot())?;
+    download_file(&api_url, BinPaths::extension_api().to_str().unwrap())?;
+    invalidate_stale_gdext_codegen()?;
 
     // Set executable permissions for protoc if on Unix-like systems
     match (env::consts::OS, env::consts::ARCH) {

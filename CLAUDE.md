@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Decentraland Godot Explorer is a cross-platform metaverse client that combines:
 - **Godot Engine 4.6.2** (custom fork) for 3D rendering and UI
 - **Rust** for core systems and performance-critical components
-- **GDScript** for game logic
+- **Rust** also owns the game logic and the in-world UI: there is no GDScript in the engine project
 - **JavaScript/V8** runtime for executing Decentraland SDK scenes
 
 ## Essential Commands
@@ -69,12 +69,25 @@ cargo run -- run --stest                  # Scene tests
 cargo run -- export --target android --format apk           # Build debug APK (uses debug keystore)
 cargo run -- export --target android --format apk --release # Build signed APK (uses release keystore)
 cargo run -- export --target android --format aab --release # Build AAB for Play Store
-cargo run -- export --target quest --format apk --release   # Meta Quest build
 
 # Note: Keystores are automatically created in .bin/ folder:
 # - .bin/debug.keystore for debug builds
 # - .bin/release.keystore for release builds
 ```
+
+### Mobile app (`rn/`)
+The shipping iOS/Android app is the React Native app in `rn/`, which embeds the Godot client (see
+`rn/README.md`). `export`/`run --target android|ios` run Godot's export and then build the RN app from it
+(`--godot-only` stops after Godot's export). The engine is optional at build time, so the UI can be iterated on
+without it:
+```bash
+cargo run -- run --target ios --no-godot       # simulator, mock bridge + placeholders
+cargo run -- run --target android --no-godot   # emulator
+cd rn && npm start                              # Metro + fast refresh; then, in another shell:
+cd rn && npm run android:no-godot               # or: npm run ios (simulator), npm run expo (Expo Go)
+```
+iOS needs the engine built with `embedded_host=yes`: the `ios_host_release.a` template (`install --targets ios`)
+or `GODOT_HOST_LIB=<path to libgodot.ios.template_release.arm64.a>`.
 
 ### Code Quality
 ```bash
@@ -82,13 +95,6 @@ cargo run -- export --target quest --format apk --release   # Meta Quest build
 cd lib
 cargo fmt --all
 cargo clippy -- -D warnings
-
-# GDScript formatting and linting
-gdformat godot/
-gdlint godot/
-
-# Validate all GDScript files
-cargo run -- check-gdscript
 
 # Generate test coverage
 cargo run -- coverage --dev
@@ -120,17 +126,19 @@ bypasses that check for local debugging only. The baked files live in
 ## Architecture
 
 ### Directory Structure
-- **`lib/`**: Core Rust library with all systems
-  - `src/dcl/`: Decentraland protocol types, SDK bindings, JS runtime glue
-  - `src/scene_runner/`: Scene threads, CRDT handling, per-component systems (`components/`)
-  - `src/av/`: Audio/video processing (video player)
-  - `src/comms/`: WebRTC, voice chat (livekit)
-  - `src/auth/`: Ethereum wallet and sign-in
-  - `src/content/`: Asset loading and caching
+- **`lib/`**: Cargo workspace (target dir, lockfile and version live here)
+  - `crates/dcl_core/`: engine-free core (no `godot` dependency, `cargo test -p dcl_core` runs without Godot): `Core` runtime, `env`/`urls`/`deep_link`, `session` (wallet, auth chain, thirdweb, `session.json`), `http` queue, `realm`, `flags`, `destination`, `analytics`, `notifications`
+  - `crates/dcl_engine/`: the Godot GDExtension (package `dclgodot`); the `Dcl*` classes are adapters over the core
+    - `src/dcl/`: Decentraland protocol types, SDK bindings, JS runtime glue
+    - `src/scene_runner/`: Scene threads, CRDT handling, per-component systems (`components/`)
+    - `src/av/`: Audio/video processing (video player)
+    - `src/comms/`: WebRTC, voice chat (livekit)
+    - `src/auth/`: `DclPlayerIdentity` adapter (the auth logic is in `dcl_core::session`)
+    - `src/content/`: Asset loading and caching
 - **`godot/`**: Godot project
   - `src/decentraland_components/`: Custom Godot nodes for DCL features
     - `avatar/impostor/`: Distance-based avatar LOD (billboard sprites for far avatars). Render handled by `MultiMeshInstance3D` + `Texture2DArray` in Rust `AvatarScene`; capture path uses scene-tree off-screen `AvatarPreview`.
-  - `src/ui/`: UI components and HUD
+  - `src/ui/`: the in-world controls only (explorer world, joypad, emote wheel, pointer tooltip, safe-area layouts); every screen and modal is React Native in `rn/`
   - `src/tool/`: Editor tools
 - **`src/`**: xtask build system
 
@@ -145,14 +153,12 @@ bypasses that check for local debugging only. The baked files live in
 ### Platform Support
 - Desktop: Linux, Windows, macOS
 - Mobile: Android (API 29+), iOS
-- VR: OpenXR compatible devices
 
 ## Development Workflow
 
 1. **Always run formatting before commits**:
    ```bash
    cd lib && cargo fmt --all
-   gdformat godot/
    ```
 
 2. **Test changes with**:
@@ -258,15 +264,11 @@ The habits AI-assisted changes most often get wrong in this repo. Reviewers hold
 
 ### File size
 
-- **Files at the gdlint cap are closed for new features.** `.gdlintrc` caps GDScript at 1900
-  lines / 45 public methods, and `global.gd`, `explorer.gd`, `modal_manager.gd` and `avatar.gd`
-  are within 30 lines of it. New behaviour goes in its own file — a component, a `RefCounted`
-  helper, an autoload — and the big file gets one call into it, not a new block. Same in Rust,
-  where nothing enforces it: `communication_manager.rs`, `scene_manager.rs` and
-  `content_provider.rs` are past 3000 lines.
-- **Never raise `max-file-lines` / `max-public-methods` inside a feature PR.** The line cap has
-  been raised four times since December 2025 (1000 → 1900), every time inside a feature or fix
-  PR. If a change cannot land without it, split the file first, in its own PR.
+- **Large files are closed for new features.** `communication_manager.rs`, `scene_manager.rs` and
+  `content_provider.rs` are past 3000 lines and nothing enforces a cap: new behaviour goes in its own
+  file — a component, a helper, a module — and the big file gets one call into it, not a new block.
+- **No GDScript.** CI fails on any `.gd` under `godot/src`; only the kept editor/export addons
+  (`dcl-godot-android`, `dcl_build_plugin`, `emote_converter`) carry `.gd`.
 - **Rule of thumb:** over ~1500 lines, ask where else the code could live before adding to it.
 
 ### Diff discipline
@@ -281,7 +283,7 @@ The habits AI-assisted changes most often get wrong in this repo. Reviewers hold
 
 - The project uses a forked Godot 4.6.2 - don't update the engine version
 - Windows users should clone to short paths (e.g., `C:/gexplorer`)
-- The Rust toolchain is pinned in `rust-toolchain.toml` (1.90)
+- The Rust toolchain is pinned in `rust-toolchain.toml` (1.94)
 - For coverage testing, install: `rustup component add llvm-tools-preview && cargo install grcov`
 - Integration with Decentraland SDK7 requires the JavaScript runtime to be properly initialized
 - **Android builds**: don't use cargo-ndk (it breaks with NDK 27); build with plain cargo and `GN_ARGS=use_custom_libcxx=false`
@@ -298,9 +300,9 @@ Each xtask command checks its prerequisites and says what to run first:
 ## Common Tasks
 
 ### Adding a new Decentraland component:
-1. Create the Rust implementation in `lib/src/scene_runner/components/`
+1. Create the Rust implementation in `lib/crates/dcl_engine/src/scene_runner/components/`
 2. Add GDExtension bindings in the component file
-3. Create corresponding GDScript class in `godot/src/decentraland_components/`
+3. Expose it as a `GodotClass` in the same file (no GDScript; `find godot/src -name '*.gd'` must stay empty)
 4. Register in the scene runner
 
 ### Rust Log Filtering
@@ -324,12 +326,12 @@ cargo run -- run -- --rust-log="dclgodot::scene_runner=trace,dclgodot::comms=deb
 
 Priority: `--rust-log` > `RUST_LOG` env var > default (`warn` on desktop, `info` on mobile).
 
-The filter can also be changed at runtime from GDScript: `DclGlobal.set_rust_log_filter("dclgodot::comms=debug,warn")`.
+The filter can also be changed at runtime through the debug hub: `log_filter {"filter": "dclgodot::comms=debug,warn"}`.
 
 **Rust Log Filter editor tool:**
 
 In the Godot editor, go to **DCL Tools → Rust Log Filter...** to open a visual tool that:
-- Shows the full module tree scanned from `lib/src/`
+- Shows the full module tree scanned from `lib/crates/dcl_engine/src/`
 - Lets you toggle per-module log levels (ERROR/WARN/INFO/DEBUG/TRACE)
 - Previews the generated filter string
 - "Apply to Run Args" injects `--rust-log=...` into the editor's run arguments
@@ -338,10 +340,10 @@ In the Godot editor, go to **DCL Tools → Rust Log Filter...** to open a visual
 
 ### Debugging scene loading:
 1. Enable verbose logging: `RUST_LOG=debug cargo run -- run`
-2. Check the scene runner logs in `lib/src/scene_runner/`
-3. Verify content server responses in `lib/src/content/`
+2. Check the scene runner logs in `lib/crates/dcl_engine/src/scene_runner/`
+3. Verify content server responses in `lib/crates/dcl_engine/src/content/`
 
 ### Working with the avatar system:
-- Avatar definitions are in `lib/src/avatars/`
-- Wearables are loaded via GLTF in `lib/src/content/gltf/` (`lib/src/content/wearable_entities.rs`)
+- Avatar definitions are in `lib/crates/dcl_engine/src/avatars/`
+- Wearables are loaded via GLTF in `lib/crates/dcl_engine/src/content/gltf/` (`lib/crates/dcl_engine/src/content/wearable_entities.rs`)
 - Animation system uses Godot's AnimationPlayer nodes

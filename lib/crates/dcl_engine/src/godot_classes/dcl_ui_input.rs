@@ -1,0 +1,226 @@
+use std::{cell::RefCell, rc::Rc};
+
+use godot::{
+    classes::{
+        DisplayServer, ILineEdit, InputEvent, InputEventScreenTouch, LineEdit, StyleBoxEmpty,
+    },
+    global::{HorizontalAlignment, VerticalAlignment},
+    prelude::*,
+};
+
+use crate::engine::local_task::defer;
+use crate::godot_classes::dcl_global::DclGlobal;
+use crate::{
+    dcl::components::{
+        proto_components::{
+            sdk::components::{
+                common::{Font, TextAlignMode},
+                PbUiInput, PbUiInputResult,
+            },
+            WrapToGodot,
+        },
+        SceneEntityId,
+    },
+    engine::DclEngine,
+    scene_runner::components::ui::scene_ui::UiResults,
+};
+
+#[derive(GodotClass)]
+#[class(base=LineEdit)]
+pub struct DclUiInput {
+    base: Base<LineEdit>,
+
+    current_font: Font,
+
+    #[export]
+    #[var(pub)]
+    dcl_entity_id: SceneEntityId,
+
+    ui_result: Option<Rc<RefCell<UiResults>>>,
+}
+
+#[godot_api]
+impl ILineEdit for DclUiInput {
+    fn init(base: Base<LineEdit>) -> Self {
+        Self {
+            base,
+            current_font: Font::FSansSerif,
+            ui_result: None,
+            dcl_entity_id: SceneEntityId::ROOT,
+        }
+    }
+
+    fn ready(&mut self) {
+        let style_box_empty: Gd<godot::classes::StyleBox> = StyleBoxEmpty::new_gd().upcast();
+        let new_font_resource = self.current_font.get_font_resource();
+        self.base_mut()
+            .add_theme_font_override("font", &new_font_resource);
+        self.base_mut()
+            .add_theme_stylebox_override("normal", &style_box_empty.clone());
+        self.base_mut()
+            .add_theme_stylebox_override("focus", &style_box_empty.clone());
+        self.base_mut()
+            .add_theme_stylebox_override("read_only", &style_box_empty.clone());
+
+        let this = self.to_gd();
+        let base = self.base().clone();
+        base.signals()
+            .text_changed()
+            .connect_other(&this, |this: &mut Self, text| this.on_text_changed(text));
+        base.signals()
+            .text_submitted()
+            .connect_other(&this, |this: &mut Self, text| this.on_text_submitted(text));
+        base.signals()
+            .focus_entered()
+            .connect_other(&this, |this: &mut Self| this.on_focus_entered());
+        base.signals()
+            .focus_exited()
+            .connect_other(&this, |this: &mut Self| this.on_focus_exited());
+    }
+
+    /// On mobile the scene UI reads raw touch events (see `DclUiControl`), which `LineEdit` does
+    /// not turn into focus, and the explorer takes focus back on the next touch. A press on the
+    /// field focuses it, raises the soft keyboard and consumes the touch so nothing else reacts.
+    fn gui_input(&mut self, event: Gd<InputEvent>) {
+        let Ok(touch) = event.try_cast::<InputEventScreenTouch>() else {
+            return;
+        };
+        if !touch.is_pressed() || !self.base().is_editable() {
+            return;
+        }
+        self.base_mut().accept_event();
+        if !self.base().has_focus() {
+            self.base_mut().grab_focus();
+        }
+        self.show_soft_keyboard();
+    }
+}
+
+#[godot_api]
+impl DclUiInput {
+    #[func]
+    pub fn on_text_changed(&mut self, new_text: GString) {
+        let Some(ui_result) = self.ui_result.as_ref() else {
+            return;
+        };
+
+        let mut ui_result = ui_result.borrow_mut();
+        let value = ui_result
+            .input_results
+            .entry(self.dcl_entity_id)
+            .or_insert(PbUiInputResult::default());
+        value.value = new_text.to_string();
+        value.is_submit = Some(false);
+    }
+
+    #[func]
+    pub fn on_text_submitted(&mut self, new_text: GString) {
+        let Some(ui_result) = self.ui_result.as_ref() else {
+            return;
+        };
+
+        let mut ui_result = ui_result.borrow_mut();
+        let value = ui_result
+            .input_results
+            .entry(self.dcl_entity_id)
+            .or_insert(PbUiInputResult::default());
+        value.value = new_text.to_string();
+        value.is_submit = Some(true);
+    }
+
+    #[func]
+    pub fn on_focus_entered(&mut self) {
+        if let Some(mut engine) = DclEngine::get() {
+            let rect = self.base().get_global_rect();
+            engine.bind_mut().set_text_input_focus(true, rect);
+        }
+    }
+
+    #[func]
+    pub fn on_focus_exited(&mut self) {
+        DisplayServer::singleton().virtual_keyboard_hide();
+        if let Some(mut engine) = DclEngine::get() {
+            engine
+                .bind_mut()
+                .set_text_input_focus(false, Rect2::default());
+        }
+        // Movement is gated on the explorer holding focus: hand it back.
+        defer(DclGlobal::explorer_grab_focus);
+    }
+
+    fn show_soft_keyboard(&self) {
+        let text = self.base().get_text();
+        let rect = self.base().get_global_rect();
+        DisplayServer::singleton()
+            .virtual_keyboard_show_ex(&text)
+            .position(rect)
+            .done();
+    }
+
+    pub fn change_value(&mut self, new_value: &PbUiInput) {
+        self.base_mut()
+            .set_placeholder(&new_value.placeholder.to_godot());
+
+        let font_placeholder_color = new_value
+            .placeholder_color
+            .to_godot_or_else(godot::prelude::Color::from_rgba(0.3, 0.3, 0.3, 1.0));
+
+        self.base_mut()
+            .add_theme_color_override("font_placeholder_color", font_placeholder_color);
+
+        let font_color = new_value
+            .color
+            .to_godot_or_else(godot::prelude::Color::WHITE);
+
+        self.base_mut()
+            .add_theme_color_override("font_color", font_color);
+
+        self.base_mut()
+            .add_theme_font_size_override("font_size", new_value.font_size.unwrap_or(10));
+
+        self.base_mut().set_editable(!new_value.disabled);
+
+        if let Some(text_value) = new_value.value.as_ref() {
+            self.base_mut().set_text(&text_value.to_godot());
+        }
+
+        let text_align = new_value
+            .text_align
+            .map(TextAlignMode::from_i32)
+            .unwrap_or(Some(TextAlignMode::TamMiddleCenter))
+            .unwrap();
+
+        let (hor_align, _vert_align) = match text_align {
+            TextAlignMode::TamTopLeft => (HorizontalAlignment::LEFT, VerticalAlignment::TOP),
+            TextAlignMode::TamTopCenter => (HorizontalAlignment::CENTER, VerticalAlignment::TOP),
+            TextAlignMode::TamTopRight => (HorizontalAlignment::RIGHT, VerticalAlignment::TOP),
+            TextAlignMode::TamMiddleLeft => (HorizontalAlignment::LEFT, VerticalAlignment::CENTER),
+            TextAlignMode::TamMiddleCenter => {
+                (HorizontalAlignment::CENTER, VerticalAlignment::CENTER)
+            }
+            TextAlignMode::TamMiddleRight => {
+                (HorizontalAlignment::RIGHT, VerticalAlignment::CENTER)
+            }
+            TextAlignMode::TamBottomLeft => (HorizontalAlignment::LEFT, VerticalAlignment::BOTTOM),
+            TextAlignMode::TamBottomCenter => {
+                (HorizontalAlignment::CENTER, VerticalAlignment::BOTTOM)
+            }
+            TextAlignMode::TamBottomRight => {
+                (HorizontalAlignment::RIGHT, VerticalAlignment::BOTTOM)
+            }
+        };
+
+        self.base_mut().set_horizontal_alignment(hor_align);
+
+        if new_value.font() != self.current_font {
+            self.current_font = new_value.font();
+            let new_font_resource = self.current_font.get_font_resource();
+            self.base_mut()
+                .add_theme_font_override("font", &new_font_resource);
+        }
+    }
+
+    pub fn set_ui_result(&mut self, ui_result: Rc<RefCell<UiResults>>) {
+        self.ui_result = Some(ui_result);
+    }
+}

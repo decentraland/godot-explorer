@@ -1,0 +1,183 @@
+name: 📱 React Native app checks
+
+# Checks for the React Native app in rn/ (the shipping mobile app; Godot is embedded in it). The JS
+# job and the engine-less native builds are cheap and run on every PR touching rn/: they catch a
+# broken native project before the full mobile pipeline (android_builds.yml, ios_r2_artifact.yml)
+# does. The full iOS build with the engine is manual.
+on:
+  # Pushes only refresh the shared Rust/npm caches the PR runs restore (the iOS jobs are PR/manual only).
+  push:
+    branches: [main, 2.x]
+    paths:
+      - 'rn/**'
+      - 'godot/locale/*.csv'
+      - 'lib/crates/dcl_core/**'
+      - 'lib/crates/dcl_host/**'
+      - 'lib/crates/dcl_bindings/**'
+      - 'lib/crates/dcl_bindgen/**'
+      - '.github/workflows/rn_app.yml'
+      - '.github/actions/rn-npm-ci/**'
+  pull_request:
+    paths:
+      - 'rn/**'
+      - 'godot/locale/*.csv'
+      - 'lib/crates/dcl_core/**'
+      - 'lib/crates/dcl_host/**'
+      - 'lib/crates/dcl_bindings/**'
+      - 'lib/crates/dcl_bindgen/**'
+      - '.github/workflows/rn_app.yml'
+      - '.github/actions/rn-npm-ci/**'
+  workflow_dispatch:
+    inputs:
+      godot_host_lib_url:
+        description: 'URL of libgodot.ios.template_release.arm64.a built with embedded_host=yes, for the full iOS build (empty: use the ios_host template from cargo run -- install)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rn-app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rn-js:
+    name: RN typecheck, lint, unit tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rn
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: ./.github/actions/rn-npm-ci
+
+      - run: npx tsc --noEmit
+      - run: npx eslint App.tsx src __tests__
+      - run: npx jest
+      - name: Translations match godot/locale
+        run: node scripts/i18n-from-csv.mjs --check
+
+  bindings:
+    name: Bindings match the Rust API
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
+        with:
+          toolchain: "1.94"
+
+      - name: Set up cache
+        uses: ./.github/actions/set-up-cache
+
+      - uses: ./.github/actions/rn-npm-ci
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-deps
+
+      - run: sudo apt-get install -y --no-install-recommends protobuf-compiler
+
+      - name: Regenerate the TypeScript, C++, Kotlin and Swift bindings
+        run: |
+          (cd lib && cargo build -p dcl_bindings)
+          (cd rn && node scripts/ubrn-generate.mjs)
+
+      - name: A changed Rust signature must come with regenerated bindings
+        run: git diff --exit-code -- rn
+
+      - name: The app type-checks against the regenerated bindings
+        working-directory: rn
+        run: npx tsc --noEmit
+
+  # On PRs the full Android build (android_builds.yml) already compiles this app with the engine.
+  android-no-godot:
+    name: Android app without Godot (mock bridge)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: ./.github/actions/rn-npm-ci
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Build the release APK
+        working-directory: rn
+        run: |
+          cd android && ./gradlew :app:assembleRelease -PdclNoGodot=true
+
+  ios-no-godot:
+    name: iOS app without Godot (simulator)
+    if: github.event_name == 'pull_request'
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: ./.github/actions/rn-npm-ci
+
+      - name: Build for the simulator
+        working-directory: rn
+        run: |
+          cd ios && pod install
+          xcodebuild build -workspace DclRn.xcworkspace -scheme DclRn -configuration Release \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator'
+
+  ios-with-godot:
+    name: iOS app with Godot (manual, no signing)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
+        with:
+          toolchain: "1.94"
+          targets: aarch64-apple-ios
+
+      - uses: ./.github/actions/rn-npm-ci
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-deps
+
+      - name: Cargo install
+        run: cargo run -- install --targets ios
+
+      - name: Build macOS + iOS Rust libs
+        run: |
+          cargo run -- build -r
+          cargo run -- build -r --target ios
+
+      - name: Import assets
+        uses: ./.github/actions/import-assets
+
+      - name: Ensure Metal toolchain (shader baker)
+        run: |
+          if ! xcrun -sdk iphoneos metal --version >/dev/null 2>&1; then
+            xcodebuild -downloadComponent MetalToolchain
+          fi
+
+      - name: Download embedded_host libgodot
+        if: inputs.godot_host_lib_url != ''
+        run: |
+          curl -fL "${{ inputs.godot_host_lib_url }}" -o "$RUNNER_TEMP/libgodot.a"
+          echo "GODOT_HOST_LIB=$RUNNER_TEMP/libgodot.a" >> "$GITHUB_ENV"
+
+      # Godot export, then rn/scripts/sync-godot-ios.sh into rn/ios/Godot.
+      - name: Export
+        run: cargo run -- export --target ios --release
+
+      - name: Build for device (no signing)
+        working-directory: rn
+        run: |
+          cd ios && pod install
+          xcodebuild build -workspace DclRn.xcworkspace -scheme DclRn -configuration Release \
+            -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO

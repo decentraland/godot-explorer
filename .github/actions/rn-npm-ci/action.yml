@@ -1,0 +1,33 @@
+name: React Native npm ci
+description: >
+  Node 22 + `npm ci` in rn/, with the npm download cache restored on every run but saved only on
+  pushes (main/release/2.x). A PR's cache is readable by that PR alone, so saving it per PR only
+  evicts the shared ones from the 10 GB repo cache.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+
+    - name: Restore npm cache
+      id: npm-cache
+      uses: actions/cache/restore@v4
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-npm-${{ hashFiles('rn/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-npm-
+
+    - name: npm ci
+      shell: bash
+      working-directory: rn
+      run: npm ci
+
+    - name: Save npm cache
+      if: github.event_name == 'push' && steps.npm-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ~/.npm
+        key: ${{ steps.npm-cache.outputs.cache-primary-key }}

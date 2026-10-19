@@ -1,0 +1,15 @@
+[package]
+name = "dcl_bindgen"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+# Generates the Kotlin and Swift bindings of `dcl_core`'s FFI from a built libdclgodot
+# (`cargo run -p dcl_bindgen -- generate --library <lib> --language kotlin --out-dir <dir>`).
+# The TypeScript ones come from uniffi-bindgen-react-native, from the same library.
+[dependencies]
+uniffi = { version = "=0.31", features = ["cli"] }
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/main.rs"

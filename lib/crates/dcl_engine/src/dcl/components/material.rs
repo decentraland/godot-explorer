@@ -1,0 +1,455 @@
+use crate::content::content_mapping::ContentMappingAndUrlRef;
+
+use super::{
+    proto_components::{
+        common::{
+            texture_union::Tex, Color3, Color4, TextureFilterMode, TextureUnion, TextureWrapMode,
+            Vector2,
+        },
+        sdk::components::{pb_material, MaterialTransparencyMode},
+    },
+    SceneEntityId,
+};
+
+#[derive(Clone)]
+pub struct RoundedFloat(pub f32);
+
+#[derive(Clone)]
+pub struct RoundedColor3(pub Color3);
+
+#[derive(Clone)]
+pub struct RoundedColor4(pub Color4);
+
+impl From<RoundedFloat> for f32 {
+    fn from(val: RoundedFloat) -> Self {
+        val.0
+    }
+}
+
+impl From<&f32> for RoundedFloat {
+    fn from(value: &f32) -> Self {
+        Self(*value)
+    }
+}
+
+impl std::hash::Hash for RoundedFloat {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let value = (100000.0 * self.0) as i64;
+        value.hash(state);
+    }
+}
+
+impl PartialEq for RoundedFloat {
+    fn eq(&self, other: &Self) -> bool {
+        let value = (100000.0 * self.0) as i64;
+        let other_value = (100000.0 * other.0) as i64;
+        value == other_value
+    }
+}
+
+impl Eq for RoundedFloat {
+    fn assert_receiver_is_total_eq(&self) {}
+}
+
+impl std::hash::Hash for RoundedColor3 {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        RoundedFloat(self.0.r).hash(state);
+        RoundedFloat(self.0.g).hash(state);
+        RoundedFloat(self.0.b).hash(state);
+    }
+}
+
+impl PartialEq for RoundedColor3 {
+    fn eq(&self, other: &Self) -> bool {
+        RoundedFloat(self.0.r) == RoundedFloat(other.0.r)
+            && RoundedFloat(self.0.g) == RoundedFloat(other.0.g)
+            && RoundedFloat(self.0.b) == RoundedFloat(other.0.b)
+    }
+}
+
+impl std::hash::Hash for RoundedColor4 {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        RoundedFloat(self.0.a).hash(state);
+        RoundedFloat(self.0.r).hash(state);
+        RoundedFloat(self.0.g).hash(state);
+        RoundedFloat(self.0.b).hash(state);
+    }
+}
+
+impl PartialEq for RoundedColor4 {
+    fn eq(&self, other: &Self) -> bool {
+        RoundedFloat(self.0.r) == RoundedFloat(other.0.r)
+            && RoundedFloat(self.0.g) == RoundedFloat(other.0.g)
+            && RoundedFloat(self.0.b) == RoundedFloat(other.0.b)
+            && RoundedFloat(self.0.a) == RoundedFloat(other.0.a)
+    }
+}
+
+impl Eq for RoundedColor4 {
+    fn assert_receiver_is_total_eq(&self) {}
+}
+
+impl Eq for RoundedColor3 {
+    fn assert_receiver_is_total_eq(&self) {}
+}
+
+#[derive(Clone)]
+pub struct RoundedVector2(pub Vector2);
+
+impl std::hash::Hash for RoundedVector2 {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        RoundedFloat(self.0.x).hash(state);
+        RoundedFloat(self.0.y).hash(state);
+    }
+}
+
+impl PartialEq for RoundedVector2 {
+    fn eq(&self, other: &Self) -> bool {
+        RoundedFloat(self.0.x) == RoundedFloat(other.0.x)
+            && RoundedFloat(self.0.y) == RoundedFloat(other.0.y)
+    }
+}
+
+impl Eq for RoundedVector2 {
+    fn assert_receiver_is_total_eq(&self) {}
+}
+
+impl Default for RoundedVector2 {
+    fn default() -> Self {
+        Self(Vector2 { x: 0.0, y: 0.0 })
+    }
+}
+
+#[derive(Clone, Hash, PartialEq, Eq)]
+pub enum DclSourceTex {
+    Texture(String),
+    AvatarTexture(String),
+    VideoTexture(SceneEntityId),
+}
+
+impl Default for DclSourceTex {
+    fn default() -> DclSourceTex {
+        DclSourceTex::Texture("".to_string())
+    }
+}
+
+#[derive(Clone, Hash, PartialEq, Eq)]
+pub struct DclTexture {
+    pub wrap_mode: TextureWrapMode,
+    pub filter_mode: TextureFilterMode,
+    pub source: DclSourceTex,
+    /// UV offset, default = (0, 0). Only applies to main texture in PbrMaterial/UnlitMaterial.
+    pub offset: RoundedVector2,
+    /// UV tiling/scale, default = (1, 1). Only applies to main texture in PbrMaterial/UnlitMaterial.
+    pub tiling: RoundedVector2,
+}
+
+impl Default for DclTexture {
+    fn default() -> Self {
+        Self {
+            wrap_mode: TextureWrapMode::TwmClamp,
+            filter_mode: TextureFilterMode::TfmBilinear,
+            source: DclSourceTex::default(),
+            offset: RoundedVector2(Vector2 { x: 0.0, y: 0.0 }),
+            tiling: RoundedVector2(Vector2 { x: 1.0, y: 1.0 }),
+        }
+    }
+}
+
+impl From<&TextureUnion> for Option<DclTexture> {
+    fn from(value: &TextureUnion) -> Option<DclTexture> {
+        let texture = value.tex.as_ref()?;
+        let wrap_mode = match texture {
+            Tex::Texture(texture) => *texture
+                .wrap_mode
+                .as_ref()
+                .unwrap_or(&TextureWrapMode::TwmClamp.into()),
+            Tex::AvatarTexture(avatar_texture) => *avatar_texture
+                .wrap_mode
+                .as_ref()
+                .unwrap_or(&TextureWrapMode::TwmClamp.into()),
+            Tex::VideoTexture(video_texture) => *video_texture
+                .wrap_mode
+                .as_ref()
+                .unwrap_or(&TextureWrapMode::TwmClamp.into()),
+        };
+        let filter_mode = match texture {
+            Tex::Texture(texture) => *texture
+                .filter_mode
+                .as_ref()
+                .unwrap_or(&TextureFilterMode::TfmBilinear.into()),
+            Tex::AvatarTexture(avatar_texture) => *avatar_texture
+                .filter_mode
+                .as_ref()
+                .unwrap_or(&TextureFilterMode::TfmBilinear.into()),
+            Tex::VideoTexture(video_texture) => *video_texture
+                .filter_mode
+                .as_ref()
+                .unwrap_or(&TextureFilterMode::TfmBilinear.into()),
+        };
+
+        let wrap_mode = TextureWrapMode::from_i32(wrap_mode).unwrap_or(TextureWrapMode::TwmClamp);
+        let filter_mode =
+            TextureFilterMode::from_i32(filter_mode).unwrap_or(TextureFilterMode::TfmBilinear);
+
+        match value.tex.as_ref()? {
+            Tex::Texture(texture) => {
+                // Only Texture type has offset and tiling fields
+                let offset = texture
+                    .offset
+                    .as_ref()
+                    .map(|v| RoundedVector2(v.clone()))
+                    .unwrap_or_else(|| RoundedVector2(Vector2 { x: 0.0, y: 0.0 }));
+                let tiling = texture
+                    .tiling
+                    .as_ref()
+                    .map(|v| RoundedVector2(v.clone()))
+                    .unwrap_or_else(|| RoundedVector2(Vector2 { x: 1.0, y: 1.0 }));
+
+                Some(DclTexture {
+                    wrap_mode,
+                    filter_mode,
+                    source: DclSourceTex::Texture(texture.src.clone()),
+                    offset,
+                    tiling,
+                })
+            }
+            Tex::AvatarTexture(avatar_texture) => Some(DclTexture {
+                wrap_mode,
+                filter_mode,
+                source: DclSourceTex::AvatarTexture(avatar_texture.user_id.clone()),
+                offset: RoundedVector2(Vector2 { x: 0.0, y: 0.0 }),
+                tiling: RoundedVector2(Vector2 { x: 1.0, y: 1.0 }),
+            }),
+            Tex::VideoTexture(video_texture) => Some(DclTexture {
+                wrap_mode,
+                filter_mode,
+                source: DclSourceTex::VideoTexture(SceneEntityId::from_i32(
+                    video_texture.video_player_entity as i32,
+                )),
+                offset: RoundedVector2(Vector2 { x: 0.0, y: 0.0 }),
+                tiling: RoundedVector2(Vector2 { x: 1.0, y: 1.0 }),
+            }),
+        }
+    }
+}
+
+impl DclTexture {
+    /// Resolves the texture file path to a content hash.
+    /// Returns true if the hash was found or if the source is a URL (which doesn't need hash lookup).
+    /// Returns false if the hash lookup failed for a local file path.
+    fn with_hash(&mut self, content_mapping_files: &ContentMappingAndUrlRef) -> bool {
+        if let DclSourceTex::Texture(file_path) = &mut self.source {
+            // HTTP URLs don't need hash lookup - they're used directly
+            if file_path.starts_with("http://") || file_path.starts_with("https://") {
+                return true;
+            }
+
+            let content_hash = content_mapping_files.get_hash(file_path.as_str());
+
+            if let Some(content_hash) = content_hash {
+                *file_path = content_hash.to_string();
+                return true;
+            } else {
+                tracing::warn!(
+                    "DclTexture::with_hash: Failed to find hash for texture path: {}",
+                    file_path
+                );
+                return false;
+            }
+        }
+        true // Non-texture sources (Avatar, Video) don't need hash lookup
+    }
+
+    pub fn from_proto_with_hash(
+        texture: &Option<TextureUnion>,
+        content_mapping_files: &ContentMappingAndUrlRef,
+    ) -> Option<Self> {
+        let value: Option<DclTexture> = texture.as_ref()?.into();
+
+        value.and_then(|mut value| {
+            // Hash lookup failed - return None to prevent invalid texture requests
+            value.with_hash(content_mapping_files).then_some(value)
+        })
+    }
+}
+
+#[derive(Clone, Hash, PartialEq, Eq)]
+pub struct DclUnlitMaterial {
+    pub texture: Option<DclTexture>,
+    pub alpha_test: RoundedFloat,
+    pub cast_shadows: bool,
+    pub diffuse_color: RoundedColor4,
+    pub alpha_texture: Option<DclTexture>,
+}
+
+#[derive(Clone, Hash, PartialEq, Eq)]
+pub struct DclPbrMaterial {
+    pub texture: Option<DclTexture>,
+    pub alpha_test: RoundedFloat,
+    pub cast_shadows: bool,
+    pub alpha_texture: Option<DclTexture>,
+    pub emissive_texture: Option<DclTexture>,
+    pub bump_texture: Option<DclTexture>,
+    pub albedo_color: RoundedColor4,
+    pub emissive_color: RoundedColor3,
+    pub reflectivity_color: RoundedColor3,
+    pub transparency_mode: MaterialTransparencyMode,
+    pub metallic: RoundedFloat,
+    pub roughness: RoundedFloat,
+    pub specular_intensity: RoundedFloat,
+    pub emissive_intensity: RoundedFloat,
+    pub direct_intensity: RoundedFloat,
+}
+
+#[derive(Clone, Hash, PartialEq, Eq)]
+#[allow(clippy::large_enum_variant)]
+pub enum DclMaterial {
+    Unlit(DclUnlitMaterial),
+    Pbr(DclPbrMaterial),
+}
+
+impl DclMaterial {
+    pub fn get_textures(&self) -> Vec<&Option<DclTexture>> {
+        match self {
+            DclMaterial::Unlit(unlit_material) => {
+                vec![&unlit_material.texture, &unlit_material.alpha_texture]
+            }
+            DclMaterial::Pbr(pbr) => {
+                vec![
+                    &pbr.texture,
+                    &pbr.alpha_texture,
+                    &pbr.emissive_texture,
+                    &pbr.bump_texture,
+                ]
+            }
+        }
+    }
+}
+
+// Default from .proto comments
+impl Default for DclPbrMaterial {
+    fn default() -> Self {
+        Self {
+            texture: None,
+            alpha_test: RoundedFloat(0.5),
+            cast_shadows: true,
+            alpha_texture: None,
+            emissive_texture: None,
+            bump_texture: None,
+            albedo_color: RoundedColor4(Color4::white()),
+            emissive_color: RoundedColor3(Color3::black()),
+            reflectivity_color: RoundedColor3(Color3::white()),
+            transparency_mode: MaterialTransparencyMode::MtmAuto,
+            metallic: RoundedFloat(0.5),
+            roughness: RoundedFloat(0.5),
+            specular_intensity: RoundedFloat(1.0),
+            emissive_intensity: RoundedFloat(2.0),
+            direct_intensity: RoundedFloat(1.0),
+        }
+    }
+}
+
+// Default from .proto comments
+impl Default for DclUnlitMaterial {
+    fn default() -> Self {
+        Self {
+            texture: None,
+            alpha_test: RoundedFloat(0.5),
+            cast_shadows: true,
+            diffuse_color: RoundedColor4(Color4::white()),
+            alpha_texture: None,
+        }
+    }
+}
+
+impl DclMaterial {
+    pub fn from_proto(
+        source: &pb_material::Material,
+        content_mapping_files: &ContentMappingAndUrlRef,
+    ) -> Self {
+        match source {
+            pb_material::Material::Pbr(pbr) => {
+                let mut value: DclPbrMaterial = DclPbrMaterial {
+                    // Fill defined values from pbr
+                    texture: DclTexture::from_proto_with_hash(&pbr.texture, content_mapping_files),
+                    alpha_texture: DclTexture::from_proto_with_hash(
+                        &pbr.alpha_texture,
+                        content_mapping_files,
+                    ),
+                    bump_texture: DclTexture::from_proto_with_hash(
+                        &pbr.bump_texture,
+                        content_mapping_files,
+                    ),
+                    emissive_texture: DclTexture::from_proto_with_hash(
+                        &pbr.emissive_texture,
+                        content_mapping_files,
+                    ),
+                    ..Default::default()
+                };
+
+                if let Some(v) = pbr.alpha_test.as_ref() {
+                    value.alpha_test = v.into();
+                }
+                if let Some(v) = pbr.cast_shadows.as_ref() {
+                    value.cast_shadows = *v;
+                }
+                if let Some(v) = pbr.albedo_color.as_ref() {
+                    value.albedo_color = RoundedColor4(v.clone());
+                }
+                if let Some(v) = pbr.emissive_color.as_ref() {
+                    value.emissive_color = RoundedColor3(v.clone());
+                }
+                if let Some(v) = pbr.reflectivity_color.as_ref() {
+                    value.reflectivity_color = RoundedColor3(v.clone());
+                }
+                if let Some(v) = pbr.transparency_mode.as_ref() {
+                    value.transparency_mode =
+                        MaterialTransparencyMode::from_i32(*v).unwrap_or_default();
+                }
+                if let Some(v) = pbr.metallic.as_ref() {
+                    value.metallic = v.into();
+                }
+                if let Some(v) = pbr.roughness.as_ref() {
+                    value.roughness = v.into();
+                }
+                if let Some(v) = pbr.specular_intensity.as_ref() {
+                    value.specular_intensity = v.into();
+                }
+                if let Some(v) = pbr.emissive_intensity.as_ref() {
+                    value.emissive_intensity = v.into();
+                }
+                if let Some(v) = pbr.direct_intensity.as_ref() {
+                    value.direct_intensity = v.into();
+                }
+
+                DclMaterial::Pbr(value)
+            }
+            pb_material::Material::Unlit(unlit) => {
+                let mut value = DclUnlitMaterial {
+                    texture: DclTexture::from_proto_with_hash(
+                        &unlit.texture,
+                        content_mapping_files,
+                    ),
+                    alpha_texture: DclTexture::from_proto_with_hash(
+                        &unlit.alpha_texture,
+                        content_mapping_files,
+                    ),
+                    ..Default::default()
+                };
+
+                if let Some(v) = unlit.alpha_test.as_ref() {
+                    value.alpha_test = v.into();
+                }
+                if let Some(v) = unlit.cast_shadows.as_ref() {
+                    value.cast_shadows = *v;
+                }
+                if let Some(v) = unlit.diffuse_color.as_ref() {
+                    value.diffuse_color = RoundedColor4(v.clone());
+                }
+
+                DclMaterial::Unlit(value)
+            }
+        }
+    }
+}
