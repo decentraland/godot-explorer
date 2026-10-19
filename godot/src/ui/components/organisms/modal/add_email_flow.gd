@@ -31,8 +31,14 @@ static func is_valid_email(text: String) -> bool:
 func async_start_add_email_flow(
 	grant_campaign_key: String = "MobilePet", source: String = ""
 ) -> void:
+	# Same modal, different title when the streak claim is what sent the player here — "claim
+	# your reward" reads as a direct continuation of what they just tapped, instead of the
+	# generic nudge copy the other (sourceless) entry points show.
+	var title_key := (
+		"MODAL_ADD_EMAIL_TITLE_STREAK" if source == "login_streak" else "MODAL_ADD_EMAIL_TITLE"
+	)
 	var modal = await Global.modal_manager.async_show_input_modal(
-		TranslationKey.new("MODAL_ADD_EMAIL_TITLE"),
+		TranslationKey.new(title_key),
 		TranslationKey.new("MODAL_ADD_EMAIL_SUBTITLE"),
 		TranslationKey.new("MODAL_ADD_EMAIL_PLACEHOLDER"),
 		TranslationKey.new("INPUT_MODAL_ADD"),

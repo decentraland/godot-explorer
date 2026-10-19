@@ -334,6 +334,8 @@ Please try again later"
 "MODAL_ADD_EMAIL_PLACEHOLDER";"";"";"name@email.com"
 "MODAL_ADD_EMAIL_SUBTITLE";"";"";"My email"
 "MODAL_ADD_EMAIL_TITLE";"";"";"Add Email"
+"MODAL_ADD_EMAIL_TITLE_STREAK";"";"";"Finish Account Setup
+to claim your reward"
 "MODAL_BAN_KICKED_BODY";"";"";"Please contact support for more information."
 "MODAL_BAN_KICKED_PRIMARY";"";"";"BACK TO DISCOVER"
 "MODAL_BAN_KICKED_TITLE";"";"";"You've been banned"
