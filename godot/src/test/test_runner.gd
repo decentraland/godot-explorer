@@ -7,7 +7,6 @@ const DebugCollectorCountsTest = preload(
 const BeforeSendFreedInstanceTest = preload(
 	"res://src/test/sentry/before_send_freed_instance_test.gd"
 )
-const DevIntentPanelTest = preload("res://src/test/ui/test_dev_intent_panel.gd")
 
 
 func start():
@@ -16,7 +15,6 @@ func start():
 		GroundedGraceTest.new(),
 		DebugCollectorCountsTest.new(),
 		BeforeSendFreedInstanceTest.new(),
-		DevIntentPanelTest.new(),
 	]
 	var success: bool = rust_test_runner.run_all_tests(gdscript_tests, 0, true, self)
 

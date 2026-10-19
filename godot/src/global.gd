@@ -252,21 +252,6 @@ func is_gp_benchmark() -> bool:
 	return cli.gp_benchmark or (deep_link_obj != null and deep_link_obj.gp_benchmark)
 
 
-## Echo the dev intent (`--dev-intent` / `--dev-intent-file`, docs/dev-intent.md) on stdout,
-## one line per step, so the terminal that launched the client records what was being tested
-## and not only the on-screen card. Any tool reads the payload from Global.cli
-## (dev_intent / get_dev_intent_title() / get_dev_intent_steps()).
-func _echo_dev_intent() -> void:
-	var title := cli.get_dev_intent_title()
-	var steps := cli.get_dev_intent_steps()
-	if title.is_empty() and steps.is_empty():
-		return
-	if not title.is_empty():
-		print("[DEV-INTENT] ", title)
-	for i in steps.size():
-		print("[DEV-INTENT] %d. %s" % [i + 1, steps[i]])
-
-
 ## Logging self-test, triggered by `--test-logging` / `?test-logging=true`.
 ## Exercises every logging form in every stack (GDScript / Rust / Swift / ObjC /
 ## Kotlin) so we can confirm each pipes into the unified channel. Grep `[LOGTEST]`
@@ -455,7 +440,6 @@ func send_haptic_feedback(duration_ms: int = 20, amplitude: float = -1.0) -> voi
 # gdlint: ignore=async-function-name
 func _ready():
 	print("[Startup] global._ready start: %dms" % (Time.get_ticks_msec() - _startup_time))
-	_echo_dev_intent()
 	BugReportCapture.listen_for_settings(self)
 	# Bench-only: uncap FPS / disable vsync before any code path can re-pin
 	# Engine.max_fps. Real users keep their saved cap + vsync; mobile bench

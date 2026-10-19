@@ -5,15 +5,15 @@ extends PanelContainer
 ## row per expected step and a reminder of the shortcut. It exists because the prompt
 ## usually arrives in a chat while the game window has focus, and it is gone from sight by
 ## the time the human is looking at the bug. Any tool can read the same payload from
-## `Global.cli` (get_dev_intent / get_dev_intent_title / get_dev_intent_steps); Global
+## `Global.cli` (`dev_intent` / `get_dev_intent_title()` / `get_dev_intent_steps()`); Global
 ## itself has no room left under the gdlint public-method cap.
 ##
 ## Everything but the checkboxes and the close button is MOUSE_FILTER_IGNORE, so the card
 ## never steals clicks from the scene (issue #2578; lib/src/hud_input_lint.rs). Ticks live
 ## in the CheckBox nodes, which are not rebuilt on hide, so they survive F8.
 ##
-## Created by the `DevIntent` autoload (dev_intent_overlay.gd), which owns the payload and
-## the shortcut: a hidden card cannot receive the key that would bring it back.
+## Created by the `DevIntent` autoload (dev_intent_overlay.gd), which owns the payload, the
+## stdout echo and the shortcut: a hidden card cannot receive the key that would bring it back.
 
 const STEP_NAME_FORMAT := "CheckBox_Step%d"
 

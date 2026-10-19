@@ -1,9 +1,12 @@
-extends RefCounted
+extends Node
 
-# Regression test for the --dev-intent overlay (docs/dev-intent.md): the card must render
-# one tickable row per expected step, and every container except those rows must stay
-# click-through, or the card eats clicks meant for the scene it was opened to explain
-# (issue #2578; lib/src/hud_input_lint.rs checks the same in the .tscn).
+# Regression test for --dev-intent (docs/dev-intent.md): one tickable row per step, the card
+# click-through everywhere but those rows, and F8 able to bring it back after X — a hidden
+# node stops receiving input, which is exactly how the card shipped unopenable once.
+#
+# Runs as a scene, not --script: the card and the overlay reach Global.cli, and a --script run
+# compiles before the autoloads exist, so every call silently becomes a no-op (same reason as
+# test_destination). _checks is the guard against that.
 
 const PANEL_SCENE := preload(
 	"res://src/ui/components/organisms/dev_intent_panel/dev_intent_panel.tscn"
@@ -11,82 +14,96 @@ const PANEL_SCENE := preload(
 const OVERLAY_SCRIPT := preload(
 	"res://src/ui/components/organisms/dev_intent_panel/dev_intent_overlay.gd"
 )
+const STEPS := ["Open two clients", "Look down", "Neck follows"]
 
-var suite_name := "dev_intent_panel"
-var method_name := "test_steps_and_click_through"
-var errors: Array[String] = []
-var execution_time_seconds := 0.0
+## Assertions that actually evaluated. A script that fails to compile leaves _failures empty
+## and would otherwise report a green suite that never ran.
+const EXPECTED_CHECKS := 12
+
+var _failures: Array[String] = []
+var _checks: int = 0
 
 
-func run() -> bool:
-	var start := Time.get_ticks_usec()
-	var ok := true
+func _ready() -> void:
+	_test_card_rows()
+	_test_overlay_toggle()
+	_finish()
 
+
+func _test_card_rows() -> void:
 	# Registered in project.godot, so the card sits above the whole UI, not only the scene.
-	ok = _expect(root_has_autoload(), true, "DevIntent autoload is registered") and ok
+	_expect(get_tree().root.has_node("DevIntent"), "the DevIntent autoload is registered")
 
 	var panel := PANEL_SCENE.instantiate()
-	Engine.get_main_loop().root.add_child(panel)
-	panel.apply_intent(
-		"Head IK fix", PackedStringArray(["Open two clients", "Look down", "Neck follows"])
-	)
+	add_child(panel)
+	panel.apply_intent("Head IK fix", PackedStringArray(STEPS))
 
 	var rows: Array[Node] = panel.get_node("%VBoxContainer_Steps").get_children()
-	ok = _expect(rows.size(), 3, "one row per step") and ok
+	_expect(rows.size() == 3, "one row per step, got %d" % rows.size())
 	var checkboxes := 0
 	for row in rows:
 		if row is CheckBox:
 			checkboxes += 1
-	ok = _expect(checkboxes, 3, "every row is a CheckBox") and ok
-	ok = _expect(panel.get_node("%Label_Title").text, "Head IK fix", "title is shown") and ok
-
-	ok = (
-		_expect(panel.mouse_filter, Control.MOUSE_FILTER_IGNORE, "card background is click-through")
-		and ok
+	_expect(checkboxes == 3, "every row is a CheckBox, got %d" % checkboxes)
+	_expect(panel.get_node("%Label_Title").text == "Head IK fix", "the title is shown")
+	_expect(
+		panel.mouse_filter == Control.MOUSE_FILTER_IGNORE, "the card background is click-through"
 	)
-	ok = (
-		_expect(
-			panel.get_node("%VBoxContainer_Steps").mouse_filter,
-			Control.MOUSE_FILTER_IGNORE,
-			"steps container is click-through"
-		)
-		and ok
+	_expect(
+		panel.get_node("%VBoxContainer_Steps").mouse_filter == Control.MOUSE_FILTER_IGNORE,
+		"the steps container is click-through"
 	)
-	ok = (
-		_expect(rows[0].mouse_filter, Control.MOUSE_FILTER_STOP, "the step row claims the tap")
-		and ok
+	_expect(
+		rows[0].mouse_filter == Control.MOUSE_FILTER_STOP,
+		"the step row claims the tap, or it cannot be ticked"
 	)
-
 	panel.queue_free()
 
-	# The close button hid the card, and F8 is the only way back to it: a card that cannot be
-	# reopened after X is worse than no card.
-	var overlay := OVERLAY_SCRIPT.new()
-	var probe := PANEL_SCENE.instantiate()
-	Engine.get_main_loop().root.add_child(overlay)
-	Engine.get_main_loop().root.add_child(probe)
-	probe.get_node("%Button_Close").pressed.emit()
-	ok = _expect(probe.visible, false, "close button hides the card") and ok
-	# Same slot the overlay fills from `Global.cli`; the test has no CLI payload.
-	overlay._card = probe
+
+func _test_overlay_toggle() -> void:
+	var overlay: CanvasLayer = OVERLAY_SCRIPT.new()
+	add_child(overlay)
+	# The payload the autoload resolves from Global.cli; this run passed no flag.
+	overlay.attach_card("Head IK fix", PackedStringArray(STEPS))
+
+	var card: Control = overlay.card()
+	_expect(card != null, "attach_card builds the card")
+	if card == null:
+		overlay.queue_free()
+		return
+
+	card.get_node("%Button_Close").pressed.emit()
+	_expect(not card.visible, "the close button hides the card")
 	overlay.toggle()
-	ok = _expect(probe.visible, true, "F8 shows the card again after the close button") and ok
+	_expect(card.visible, "F8 shows the card again after the close button")
 	overlay.toggle()
-	ok = _expect(probe.visible, false, "F8 hides it too") and ok
+	_expect(not card.visible, "F8 hides it too")
+
+	var row: CheckBox = card.get_node("%VBoxContainer_Steps").get_child(0)
+	overlay.toggle()
+	row.button_pressed = true
+	overlay.toggle()
+	overlay.toggle()
+	_expect(row.button_pressed, "the tick survives hiding and showing")
 	overlay.queue_free()
-	probe.queue_free()
-
-	execution_time_seconds = (Time.get_ticks_usec() - start) / 1_000_000.0
-	return ok
 
 
-func root_has_autoload() -> bool:
-	var root: Window = Engine.get_main_loop().root
-	return root.has_node("DevIntent")
+func _expect(condition: bool, ctx: String) -> void:
+	_checks += 1
+	if not condition:
+		_failures.append(ctx)
 
 
-func _expect(actual: Variant, expected: Variant, label: String) -> bool:
-	if actual != expected:
-		errors.append("%s: expected %s, got %s" % [label, expected, actual])
-		return false
-	return true
+func _finish() -> void:
+	if _checks != EXPECTED_CHECKS:
+		_failures.append(
+			"ran %d checks, expected %d -- did the scripts compile?" % [_checks, EXPECTED_CHECKS]
+		)
+	if _failures.is_empty():
+		print("[test_dev_intent_panel] PASS")
+		get_tree().quit(0)
+		return
+	for failure in _failures:
+		printerr(failure)
+	printerr("[test_dev_intent_panel] FAIL: %d case(s)" % _failures.size())
+	get_tree().quit(1)

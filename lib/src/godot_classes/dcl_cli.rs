@@ -189,7 +189,8 @@ pub struct DclCli {
     // (dev_intent / get_dev_intent_title() / get_dev_intent_steps()).
     #[var(get)]
     pub dev_intent: GString,
-    // Path passed to `--dev-intent-file`, empty otherwise (kept for diagnostics only).
+    // Path passed to `--dev-intent-file`, empty otherwise. Echoed on stdout as the source of
+    // the intent so a log says where the text came from, not only what it said.
     #[var(get)]
     pub dev_intent_file: GString,
 
@@ -247,15 +248,17 @@ impl DevIntent {
         }
     }
 
-    /// File form: the first non-empty line is the title and every line starting with `-` is a
-    /// step. Other lines are ignored, so prose can sit next to the checklist.
+    /// File form: the first non-empty line is the title and every line starting with `- ` is a
+    /// step, matching what docs/dev-intent.md and `--dcl-help` document. Other lines are
+    /// ignored, so prose can sit next to the checklist — and a `---` rule or a `-word` line
+    /// stays prose instead of becoming a step.
     fn from_file_contents(contents: &str) -> Self {
         let mut intent = Self::default();
         for line in contents.lines().map(str::trim) {
             if line.is_empty() {
                 continue;
             }
-            if let Some(step) = line.strip_prefix('-') {
+            if let Some(step) = line.strip_prefix("- ") {
                 let step = step.trim();
                 if !step.is_empty() {
                     intent.steps.push(step.to_string());
@@ -362,6 +365,15 @@ mod tests {
         assert!(text.is_empty());
         assert_eq!(file, "/nonexistent/dcl-dev-intent.txt");
         assert_eq!(intent, DevIntent::default());
+    }
+
+    #[test]
+    fn bare_dash_lines_are_prose_not_steps() {
+        let intent =
+            DevIntent::from_file_contents("Head IK check\n---\n-dashword is prose\n- real step\n");
+
+        assert_eq!(intent.title, "Head IK check");
+        assert_eq!(intent.steps, vec!["real step"]);
     }
 
     #[test]

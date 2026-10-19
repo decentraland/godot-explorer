@@ -29,19 +29,19 @@ cargo run -- run -- --dev-intent-file /tmp/pi-intent.txt
 One-liner, title and steps separated by `|`:
 
 ```bash
-cargo run -- run -- --dev-intent "Probar el fix #3080 head IK | Abrí dos clientes | Mirá el avatar a pitch extremo | Esperado: el cuello acompaña"
+cargo run -- run -- --dev-intent "Fix #3080 head IK | Open two clients | Look at the other avatar at extreme pitch | Expected: the neck follows"
 ```
 
 ## The intent file
 
-UTF-8. The **first non-empty line is the title**; every line starting with `-` is an
+UTF-8. The **first non-empty line is the title**; every line starting with `- ` is an
 expected step. Other lines are ignored, so prose can sit next to the checklist.
 
 ```
-Probar el fix #3080 head IK entre dos clientes
-- Abrí dos clientes, uno con --dev-intent y otro normal
-- Mirá el avatar del otro a pitch extremo (mirando al piso)
-- Esperado: el cuello acompaña, no se quiebra
+Fix #3080 head IK between two clients
+- Open two clients, one with --dev-intent and one plain
+- Look at the other avatar at extreme pitch (looking at the floor)
+- Expected: the neck follows instead of breaking
 ```
 
 A missing or unreadable file is not fatal: the client logs a warning and boots with no
@@ -57,12 +57,13 @@ intent. When both flags are passed, `--dev-intent-file` wins.
   scene. `X` hides it, `F8` hides/shows it (ticks survive both). Nothing in the card is
   translated: the payload is the agent's own text in whatever language it wrote it, so every
   node in it is `auto_translate_mode = 2`.
-- **stdout**, one line per step, greppable from any log:
+- **stdout**, where the source file and then one line per step can be grepped from any log:
   ```
-  [DEV-INTENT] Probar el fix #3080 head IK entre dos clientes
-  [DEV-INTENT] 1. Abrí dos clientes, uno con --dev-intent y otro normal
-  [DEV-INTENT] 2. Mirá el avatar del otro a pitch extremo (mirando al piso)
-  [DEV-INTENT] 3. Esperado: el cuello acompaña, no se quiebra
+  [DEV-INTENT] source: --dev-intent-file /tmp/pi-intent.txt
+  [DEV-INTENT] Fix #3080 head IK between two clients
+  [DEV-INTENT] 1. Open two clients, one with --dev-intent and one plain
+  [DEV-INTENT] 2. Look at the other avatar at extreme pitch (looking at the floor)
+  [DEV-INTENT] 3. Expected: the neck follows instead of breaking
   ```
 - **Debug panel** (`--debug-panel`): a "Dev Intent" tab with the full text, selectable for
   copying. The tab only exists when an intent was passed.
@@ -72,7 +73,7 @@ intent. When both flags are passed, `--dev-intent-file` wins.
 ## From GDScript / tooling
 
 The payload is on the CLI singleton (`Global.cli`); `Global` itself is at the gdlint
-public-method cap, so it only forwards the stdout echo:
+public-method cap, so nothing was added to it:
 
 ```gdscript
 Global.cli.dev_intent              # raw resolved text ("" when no flag was passed)
