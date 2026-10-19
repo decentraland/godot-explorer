@@ -79,10 +79,19 @@ pub async fn start_mobile_auth(
     provider: Option<String>,
     user_id: Option<String>,
     session_id: Option<String>,
+    auth_request_id: Option<String>,
 ) -> Result<(), anyhow::Error> {
     // For mobile auth, we use an empty request since the server will generate everything
     let request = CreateRequest::from_new_ephemeral("");
-    do_request_mobile(request, url_reporter_sender, provider, user_id, session_id).await?;
+    do_request_mobile(
+        request,
+        url_reporter_sender,
+        provider,
+        user_id,
+        session_id,
+        auth_request_id,
+    )
+    .await?;
 
     Ok(())
 }
@@ -91,8 +100,9 @@ pub async fn start_mobile_auth(
 /// The server provides the full ephemeral identity (including private key) and auth chain.
 pub async fn complete_mobile_auth(
     identity_id: String,
+    verifier: Option<String>,
 ) -> Result<(EphemeralAuthChain, u64), anyhow::Error> {
-    let response = fetch_identity_by_id(identity_id).await?;
+    let response = fetch_identity_by_id(identity_id, verifier).await?;
     ephemeral_from_auth_identity(response.identity)
 }
 
