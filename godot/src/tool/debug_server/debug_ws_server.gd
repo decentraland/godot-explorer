@@ -208,12 +208,15 @@ func _build_focus_data() -> Dictionary:
 func _build_ping_data() -> Dictionary:
 	var version: String = str(ProjectSettings.get_setting("application/config/version", "unknown"))
 	var loaded: PackedInt32Array
+	var frame_sync: Dictionary = {}
 	if is_instance_valid(Global.scene_runner):
 		loaded = Global.scene_runner.debug_get_loaded_scene_ids()
+		frame_sync = Global.scene_runner.get_frame_sync_stats()
 	return {
 		"version": version,
 		"engine": Engine.get_version_info().get("string", ""),
 		"scenes_loaded": loaded.size(),
+		"frame_sync": frame_sync,
 	}
 
 

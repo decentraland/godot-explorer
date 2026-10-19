@@ -16,6 +16,12 @@ var counter: int = 0
 var last_jump_count_sent: int = 0
 var last_is_grounded_sent: bool = true
 var last_glide_state_sent: int = 0
+# The head turn rides the movement message, so a standing avatar that keeps
+# aiming its head has to force a send too — otherwise peers see it at the 1 Hz
+# keepalive, one step behind.
+var last_head_ik_enabled: bool = false
+var last_head_ik_yaw: float = 0.0
+var last_head_ik_pitch: float = 0.0
 
 
 func _on_timeout():
@@ -34,6 +40,9 @@ func _on_timeout():
 		avatar.jump_count != last_jump_count_sent
 		or avatar.is_grounded != last_is_grounded_sent
 		or avatar.glide_state != last_glide_state_sent
+		or avatar.head_ik_yaw_enabled != last_head_ik_enabled
+		or not is_equal_approx(avatar.head_ik_yaw, last_head_ik_yaw)
+		or not is_equal_approx(avatar.head_ik_pitch, last_head_ik_pitch)
 	)
 
 	if not position_changed and not rotation_changed and not anim_state_changed:
@@ -68,3 +77,6 @@ func _on_timeout():
 	last_jump_count_sent = avatar.jump_count
 	last_is_grounded_sent = avatar.is_grounded
 	last_glide_state_sent = avatar.glide_state
+	last_head_ik_enabled = avatar.head_ik_yaw_enabled
+	last_head_ik_yaw = avatar.head_ik_yaw
+	last_head_ik_pitch = avatar.head_ik_pitch

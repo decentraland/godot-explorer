@@ -16,6 +16,9 @@ var parcel: Array = []  # Parcel coordinates [x, y] when user is in genesis city
 # ENS name of the world the friend is in (empty when in Genesis City or nowhere). Read from
 # Global.locations.online_locations; drives the world place label and jump-in.
 var world_name: String = ""
+## Address of the avatar a nearby row is waiting for, so the list counts it before
+## social_data exists.
+var pending_address: String = ""
 ## False until `_ready()` runs, i.e. until this node actually entered the tree and the
 ## @onready nodes below were assigned. `add_child()` onto a parent that is itself detached
 ## does NOT put the child in the tree, so a list detached mid-await produces items whose
@@ -148,18 +151,8 @@ func load_item() -> void:
 
 
 func is_load_timed_out() -> bool:
-	# Timeout while either:
-	# 1) loading the profile picture (load_state == LOADING)
-	# 2) waiting for the avatar to become ready (avatar_ready not yet set).
-	# In the second case, load_state can still be UNLOADED while `_is_loading` is true.
-	if load_state == LoadState.LOADED or load_state == LoadState.FAILED:
-		return false
-
-	# Waiting for avatar readiness
-	if load_state == LoadState.UNLOADED and _is_loading:
-		return Time.get_unix_time_from_system() - _load_start_time > LOAD_TIMEOUT_SECONDS
-
-	# Loading profile picture
+	# Only the profile-picture load times out. A row waiting for its avatar stays until the
+	# nearby sync sees that avatar leave (slow avatar builds exceed any fixed timeout).
 	if load_state == LoadState.LOADING:
 		return Time.get_unix_time_from_system() - _load_start_time > LOAD_TIMEOUT_SECONDS
 
@@ -194,6 +187,7 @@ func _async_load_item() -> void:
 
 func set_data_from_avatar(avatar_param: Avatar) -> void:
 	_avatar_ref = weakref(avatar_param)
+	pending_address = avatar_param.avatar_id
 
 	# Show self with skeleton while loading
 	_is_loading = true
