@@ -17,9 +17,14 @@ var _update_request_id: int = 0
 var _nearby_sync_timer: Timer = null
 var _friends_reconcile_timer: Timer = null
 var _friends_reconcile_in_progress: bool = false
+# NEARBY: rows are created one per frame from this queue (address -> Avatar), and the
+# sync is deferred to the next panel open while the panel is hidden.
+var _nearby_add_queue: Dictionary = {}
+var _nearby_dirty: bool = false
 
 
 func _ready():
+	set_process(false)
 	# Don't auto-load on _ready() - lists will be loaded when show_panel() is called
 	# This avoids race conditions with social service initialization
 	if player_list_type == SOCIAL_TYPE.NEARBY:
@@ -42,6 +47,9 @@ func _ready():
 		Global.social_service.friendship_request_rejected.connect(_on_friendship_request_changed)
 		Global.social_service.friendship_request_cancelled.connect(_on_friendship_request_changed)
 		Global.social_service.friendship_deleted.connect(_on_friendship_request_changed)
+		var friends_panel = _get_friends_panel()
+		if friends_panel != null:
+			friends_panel.visibility_changed.connect(_on_friends_panel_visibility_changed)
 	if player_list_type == SOCIAL_TYPE.BLOCKED:
 		Global.social_blacklist.blacklist_changed.connect(self.async_update_list)
 	if player_list_type == SOCIAL_TYPE.REQUEST or player_list_type == SOCIAL_TYPE.REQUEST_SENT:
@@ -76,9 +84,18 @@ func _on_avatar_changed(_arg = null) -> void:
 	_sync_nearby_list()
 
 
+func _on_friends_panel_visibility_changed() -> void:
+	if _nearby_dirty and _is_panel_visible():
+		_sync_nearby_list()
+
+
 func _sync_nearby_list() -> void:
 	if player_list_type != SOCIAL_TYPE.NEARBY:
 		return
+	if not _is_panel_visible():
+		_nearby_dirty = true
+		return
+	_nearby_dirty = false
 
 	# Get current avatar addresses (only those with valid data)
 	var current_avatar_addresses: Dictionary = {}  # address -> Avatar
@@ -103,13 +120,13 @@ func _sync_nearby_list() -> void:
 		if not child is Control:
 			continue
 		if not "social_data" in child or child.social_data == null:
-			# Item still loading without social_data, check if timed out
-			if "load_state" in child and "is_load_timed_out" in child:
-				if child.is_load_timed_out():
-					child.mark_as_failed()
-					items_to_remove.append(child)
-				elif child.load_state == child.LoadState.FAILED:
-					items_to_remove.append(child)
+			# Row still waiting for its avatar: it counts as existing while that avatar is here.
+			if "load_state" in child and child.load_state == child.LoadState.FAILED:
+				items_to_remove.append(child)
+			elif "pending_address" in child and current_avatar_addresses.has(child.pending_address):
+				existing_addresses[child.pending_address] = child
+			else:
+				items_to_remove.append(child)
 			continue
 
 		var address = child.social_data.address
@@ -135,15 +152,41 @@ func _sync_nearby_list() -> void:
 	for item in items_to_remove:
 		item.queue_free()
 
-	# Add items for new avatars
+	# Queue rows for new avatars; one is built now (no empty-state flash on open), the
+	# rest one per frame in _process.
+	_nearby_add_queue.clear()
 	for address in current_avatar_addresses:
 		if not existing_addresses.has(address):
-			var avatar = current_avatar_addresses[address]
-			_add_item_for_avatar(avatar)
+			_nearby_add_queue[address] = current_avatar_addresses[address]
+	_drain_nearby_add_queue()
+	set_process(not _nearby_add_queue.is_empty())
 
 	# Update list size after changes
 	# Use call_deferred to allow queue_free to complete
 	call_deferred("_update_list_size")
+
+
+func _process(_delta: float) -> void:
+	if _nearby_add_queue.is_empty() or not _is_panel_visible():
+		_nearby_dirty = _nearby_dirty or not _nearby_add_queue.is_empty()
+		set_process(false)
+		return
+	_drain_nearby_add_queue()
+	_update_list_size()
+
+
+func _drain_nearby_add_queue() -> void:
+	while not _nearby_add_queue.is_empty():
+		var address: String = _nearby_add_queue.keys()[0]
+		var avatar = _nearby_add_queue[address]
+		_nearby_add_queue.erase(address)
+		# The avatar may have left or been blocked since it was queued.
+		if not is_instance_valid(avatar) or avatar.avatar_id != address:
+			continue
+		if Global.social_blacklist and Global.social_blacklist.is_blocked(address):
+			continue
+		_add_item_for_avatar(avatar)
+		return
 
 
 func _add_item_for_avatar(avatar: Avatar) -> void:

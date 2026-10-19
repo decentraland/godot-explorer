@@ -40,7 +40,8 @@ class TestManager:
 	var session_ended_secondary := "Exit"
 	var closed := false
 
-	func _async_ensure_modal(_site: String) -> bool:
+	func _async_ensure_modal(_site: String, urgent := false) -> bool:
+		assert(urgent, "Disconnect modals must take priority")
 		if not is_instance_valid(current_modal):
 			current_modal = TestModal.new()
 			current_modal.button_primary.pressed.connect(current_modal._on_button_primary_pressed)

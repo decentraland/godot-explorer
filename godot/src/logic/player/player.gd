@@ -6,6 +6,8 @@ const SPRINTING_CAMERA_FOV = 75.0
 
 # Double-jump + glide tuning (values mirror Unity CharacterControllerSettings.asset).
 const MAX_AIR_JUMPS := 1
+# Air jumps are counted from 1, so a fall with no jump yet sits at 0 and still
+# has MAX_AIR_JUMPS presses left (Unity ApplyJump.cs:44, :76).
 const JUMP_BUFFER_WINDOW := 0.15
 const JUMP_COOLDOWN := 0.3
 # Coyote-style debounce on the ANIMATION grounded flag: at mobile physics
@@ -16,9 +18,10 @@ const AIR_JUMP_DELAY := 0.2
 const AIR_JUMP_DIRECTION_IMPULSE := 8.0
 const GLIDE_MAX_FALL_SPEED := 1.0
 const GLIDE_HORIZONTAL_SPEED := 6.0
-const GLIDE_MIN_GROUND_DISTANCE := 1.0
+# #2854: Unity settings values — 0.2 min ground distance, 0.2 re-open cooldown.
+const GLIDE_MIN_GROUND_DISTANCE := 0.2
 const JUMP_TO_GLIDE_INTERVAL := 0.5
-const GLIDE_COOLDOWN := 0.6
+const GLIDE_COOLDOWN := 0.2
 const GLIDE_OPENING_TIME := 0.5
 const GLIDE_CLOSING_TIME := 0.15
 
@@ -81,7 +84,7 @@ const CROSSHAIR_SCREEN_MARGIN := 24.0
 const AVATAR_TOP_HEIGHT := 1.8
 const AVATAR_HALF_WIDTH := 0.35
 
-# #b9: matches the CharacterBody3D.collision_mask in player.tscn (layer 2 =
+# matches the CharacterBody3D.collision_mask in player.tscn (layer 2 =
 # world/terrain). Keeps the ground raycast from pinging avatar wearables,
 # triggers, or other non-ground CollisionObject3Ds.
 const GROUND_RAYCAST_MASK := 2
@@ -105,6 +108,30 @@ const STEP_TALL_RISE := 0.25
 # Predictive pass skips while walking a climbable slope (floor normal off
 # vertical by more than ~8deg) — stepping there turns inclines into stutter.
 const SLOPE_WALK_NORMAL_Y := 0.99
+# #2852 M2: Unity SlopeVelocityModifier curve — linear keys (-55deg, 1.35)
+# -> (0, 1) -> (55deg, 0.65), clamped beyond. Positive angle = uphill.
+const SLOPE_MOD_MAX_DEG := 55.0
+const SLOPE_MOD_DOWNHILL := 1.35
+const SLOPE_MOD_UPHILL := 0.65
+# #2852 M4: ground contact further than this from the capsule axis tilts
+# gravity toward it (Unity NoSlipDistance).
+const EDGE_NO_SLIP_DIST := 0.1
+# #2852 M5: head-on wall contact multiplies speed toward this (Unity
+# WallSlideMaxMoveSpeedMultiplier = 0), lerped by |facing · wall normal|.
+const WALL_SLIDE_MIN_MULT := 0.0
+# #2852 M6: hard landing = fall height above this (Unity JumpHeightStun) with
+# the scene's stun duration (Unity LongFallStunTime, 0 disables the stun).
+const HARD_LANDING_FALL_HEIGHT := 8.0
+# #2855: long-fall animation threshold (Unity AnimationLongFallSpeed = -8).
+const LONG_FALL_ANIM_SPEED := 8.0
+# #1553: fall animation threshold (Unity AnimationFallSpeed = -3) — the fall
+# pose waits for real falling speed; apex floats in the Mid state.
+const FALL_ANIM_SPEED := 3.0
+# Unity AnimationMovementBlendLogic.BLEND_EPSILON: a blend below this is idle,
+# which is what keeps a wall-pinned avatar from stepping in place.
+const GAIT_BLEND_EPSILON := 0.01
+# #2854 M12: external-force multiplier while gliding (Unity GlideWindResponse).
+const GLIDE_WIND_RESPONSE := 1.5
 # cos(46deg): a slide collision flatter than this is walkable ground; steeper
 # is a ramp/wall face — sliding on one must not count as support.
 const WALKABLE_NORMAL_Y := 0.695
@@ -121,9 +148,10 @@ const SLOPE_LIMIT_DEG := 46.0
 const CAPSULE_CENTER_Y := 0.8
 const CAPSULE_RADIUS := 0.3
 
-var last_position: Vector3
-var actual_velocity_xz: float
-
+# #2856: gait kind from input mode (0 idle / 1 walk / 2 jog / 3 run) — drives
+# the avatar's walk/jog/run classification for the continuous gait blend.
+var movement_kind: int = 2
+var has_move_input: bool = false
 # Locomotion settings - these are updated from the current scene's DclLocomotionSettings
 var walk_speed: float = 1.5
 var jog_speed: float = 8.0
@@ -149,8 +177,23 @@ var current_profile_version: int = -1
 # (XZ only — force.y feeds gravity). Decays via drag each tick.
 var external_velocity: Vector3 = Vector3.ZERO
 
+var last_position: Vector3
+var actual_velocity_xz: float
+
 # Private variables (prefixed with _)
 var _hard_landing_timer: float = 0.0
+# XZ displacement the support platform caused last frame (translation +
+# rotation follow) — subtracted from measured displacement so the anim state
+# reads avatar-relative motion, not platform carry.
+var _platform_carry_xz := Vector2.ZERO
+# #2852 M6: apex of the current airborne stretch; landing stun triggers on
+# fall HEIGHT (apex - landing), not on scene-driven cooldowns.
+var _fall_apex_y: float = 0.0
+# #2852 M11: platform follow state — the full delta is applied manually
+# (kinematic colliders moved by CRDT transform sync report no velocity to
+# the engine, so platform velocity never carries the capsule).
+var _platform: CollisionObject3D = null
+var _platform_last_transform := Transform3D.IDENTITY
 var _locomotion_settings: DclLocomotionSettings = null
 var _jump_buffer: float = 0.0
 var _accel_weight: float = 0.0
@@ -174,9 +217,11 @@ var _crosshair_transition_from := Vector2.ZERO
 var _crosshair_transition_clock: float = 0.0
 var _crosshair_transition_active := false
 var _crosshair_prev_mode: Global.CameraMode = Global.CameraMode.THIRD_PERSON
-# #b11: typed Array[RID] avoids per-element dynamic cast when passed to
+# typed Array[RID] avoids per-element dynamic cast when passed to
 # PhysicsRayQueryParameters3D.exclude every physics frame.
 var _raycast_exclude: Array[RID] = []
+# Edge-slip sphere probe, built in _ready (see _edge_slip_gravity_dir).
+var _edge_slip_cast: ShapeCast3D = null
 
 # --- Pinch-to-zoom (mobile, issue #2709) -------------------------------------
 # Team decision: two fixed camera positions (1p/3p, same as prod) — no continuous
@@ -297,29 +342,25 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 
 
 func update_avatar_movement_state(vel: float):
-	avatar.walk = false
-	avatar.jog = false
-	avatar.run = false
-
-	var speed_diffs = {
-		"idle": abs(vel),
-		"walk": abs(vel - walk_speed),
-		"jog": abs(vel - jog_speed),
-		"run": abs(vel - run_speed)
-	}
-
-	var nearest = speed_diffs.keys()[0]
-	for key in speed_diffs.keys():
-		if speed_diffs[key] < speed_diffs[nearest]:
-			nearest = key
-
-	match nearest:
-		"walk":
-			avatar.walk = true
-		"jog":
-			avatar.jog = true
-		"run":
-			avatar.run = true
+	# Unity: the gait KIND comes from the input mode and the blend from the
+	# measured speed. Reading the kind off the blend flips it while a stick holds
+	# near a walk/jog cap, and the blend target jumps between normalizations.
+	var limit := 0.0
+	match movement_kind:
+		1:
+			limit = walk_speed
+		2:
+			limit = jog_speed
+		3:
+			limit = run_speed
+	var blend := 0.0
+	if has_move_input and limit > 0.0:
+		blend = clampf(vel / limit, 0.0, 1.0) * movement_kind
+	var moving := blend > GAIT_BLEND_EPSILON
+	avatar.walk = moving and movement_kind == 1
+	avatar.jog = moving and movement_kind == 2
+	avatar.run = moving and movement_kind == 3
+	avatar.movement_speed = vel
 
 
 func _ready():
@@ -368,6 +409,20 @@ func _ready():
 	# avatar subtree colliders, including the TriggerDetector which would
 	# otherwise make the ray report ~0m at all times).
 	_build_raycast_exclude()
+	# Edge slip needs a sphere: a ray down the capsule axis can only ever hit on
+	# that axis, so the off-axis contact the slip looks for never showed up.
+	var slip_sphere := SphereShape3D.new()
+	slip_sphere.radius = CAPSULE_RADIUS
+	_edge_slip_cast = ShapeCast3D.new()
+	_edge_slip_cast.shape = slip_sphere
+	_edge_slip_cast.collision_mask = collision_mask
+	_edge_slip_cast.target_position = Vector3(0.0, -CAPSULE_CENTER_Y * 1.2, 0.0)
+	_edge_slip_cast.position = Vector3(0.0, CAPSULE_CENTER_Y, 0.0)
+	# Updated on demand; an always-on sweep would report the frame before.
+	_edge_slip_cast.enabled = false
+	add_child(_edge_slip_cast)
+	for rid in _raycast_exclude:
+		_edge_slip_cast.add_exception_rid(rid)
 	# The scene pointer raycast excludes the same set: with the third-person avatar
 	# centered on screen (issue #2709), the ray from the camera would hit its back.
 	Global.scene_runner.set_pointer_raycast_exclude(_raycast_exclude)
@@ -511,9 +566,10 @@ func _physics_process(dt: float) -> void:
 	var scene_pending_impulses: PackedVector3Array = Global.scene_runner.consume_pending_impulses()
 	var external_acceleration: Vector3 = scene_external_force / CHARACTER_MASS
 
-	# Keep the top-level avatar co-located with the player (picks up teleports,
-	# external position changes, and ensures look_at below uses the correct origin)
-	avatar.global_position = global_position
+	# Keep the top-level avatar co-located with the player (picks up teleports and
+	# external position changes); each write re-propagates the whole avatar subtree.
+	if avatar.global_position != global_position:
+		avatar.global_position = global_position
 
 	# Handle hard landing cooldown
 	if _hard_landing_timer > 0:
@@ -521,6 +577,9 @@ func _physics_process(dt: float) -> void:
 		# During cooldown, prevent horizontal movement
 		velocity.x = move_toward(velocity.x, 0, 20 * dt)
 		velocity.z = move_toward(velocity.z, 0, 20 * dt)
+	# #2855: stun state for the hard-landing animation (remote avatars derive
+	# theirs in avatar.gd from the wire long_fall).
+	avatar.stunned = _hard_landing_timer > 0.0
 
 	_jump_buffer = max(_jump_buffer - dt, 0.0)
 	if Global.explorer_has_focus() and Input.is_action_just_pressed("ia_jump"):
@@ -582,10 +641,6 @@ func _physics_process(dt: float) -> void:
 	# the two signals across branches left landing unreachable mid-cloud
 	# (velocity.y accumulated, jump_count never reset, glider never closed).
 	var supported := on_floor or _has_walkable_support()
-	var was_falling = avatar.fall
-	# Fall time up to this tick, captured before the reset below so the landing
-	# branch can still read it for the hard-landing check.
-	var fall_duration := time_falling
 
 	# #1557: is_on_floor() drops before the capsule visually leaves an edge
 	# (rounded bottom + speculative margin), which would burn the coyote
@@ -620,7 +675,9 @@ func _physics_process(dt: float) -> void:
 				)
 				velocity.x = horiz_dir.x * impulse
 				velocity.z = horiz_dir.z * impulse
-			jump_count += 1
+			# Unity counts a fall as one jump already used (ApplyJump.cs:44)
+			# before this air jump spends the next one, as StartJump does.
+			jump_count = maxi(jump_count, 1) + 1
 			_time_since_last_jump = 0.0
 			avatar.rise = true
 			avatar.fall = false
@@ -636,14 +693,19 @@ func _physics_process(dt: float) -> void:
 		var free_flight: bool = glide_state == GLIDE_CLOSED or glide_state == GLIDE_CLOSING
 		avatar.rise = velocity.y > .3 and free_flight
 		avatar.fall = velocity.y < -.3 && !in_grace_time and free_flight
+		# #2855: long-fall anim kicks in past Unity's AnimationLongFallSpeed.
+		avatar.long_fall = avatar.fall and velocity.y < -LONG_FALL_ANIM_SPEED
+		# #1553: anim-level fall gate (Unity AnimationFallSpeed).
+		avatar.fall_fast = avatar.fall and velocity.y < -FALL_ANIM_SPEED
 		# Scene force.y reduces effective gravity, so an upward wind cancels
 		# fall instead of stacking on velocity.y.
 		velocity.y -= (_current_gravity() - external_acceleration.y) * dt
 
 		# Air-jump: 0.2s hover then impulse (matches Unity ApplyJump two-step).
+		# Unity's max(JumpCount, 1) <= MaxAirJumpCount (ApplyJump.cs:76): a
+		# stepped-off-a-ledge fall still has its air jump available.
 		if (
 			_jump_buffer > 0.0
-			and jump_count >= 1
 			and jump_count <= MAX_AIR_JUMPS
 			and glide_state == GLIDE_CLOSED
 			and not jump_disabled
@@ -655,10 +717,9 @@ func _physics_process(dt: float) -> void:
 			_air_jump_direction = current_direction
 			_jump_buffer = 0.0
 
-		# Glide toggle-open (mobile-friendly). Diverges from Unity's hold-to-glide
-		# and from the Unity-exact `jump_count > MAX_AIR_JUMPS` entry gate — we
-		# let a stepped-off-a-ledge player open glide without first double-jumping.
-		# Air-jump still takes priority (above) because it consumes the buffer first.
+		# Glide toggle-open (mobile-friendly): Unity holds glide open, we toggle it.
+		# The air jump above consumes the buffer first, so this is only reached
+		# once both jumps are spent or jumping is disabled.
 		if _jump_buffer > 0.0 and glide_state == GLIDE_CLOSED:
 			var gate_enabled := not jump_disabled and not glide_disabled
 			var gate_altitude := _ground_distance > GLIDE_MIN_GROUND_DISTANCE
@@ -670,6 +731,8 @@ func _physics_process(dt: float) -> void:
 				_jump_buffer = 0.0
 				avatar.rise = false
 				avatar.fall = false
+				avatar.long_fall = false
+				avatar.fall_fast = false
 
 		# Glide close: re-press (toggle), altitude too low, or input disabled.
 		# glide_disabled covers scene→scene transitions where the destination
@@ -716,12 +779,23 @@ func _physics_process(dt: float) -> void:
 	elif supported:
 		if not avatar.land:
 			avatar.land = true
-			if was_falling and hard_landing_cooldown > 0 and fall_duration > 1.0:
+			# #2852 M6: fall-height trigger with the scene's stun duration
+			# (Unity StunCharacterSystem: JumpHeightStun 8m fixed, LongFallStunTime
+			# overridable per scene, 0 disables the stun).
+			# Arms immediately; a bounce pad cancels it after the impulse applies.
+			if (
+				hard_landing_cooldown > 0.0
+				and _fall_apex_y - global_position.y > HARD_LANDING_FALL_HEIGHT
+			):
 				_hard_landing_timer = hard_landing_cooldown
+				avatar.stunned = true
+		_fall_apex_y = global_position.y
 
 		velocity.y = 0
 		avatar.rise = false
 		avatar.fall = false
+		avatar.long_fall = false
+		avatar.fall_fast = false
 		# Landing resets the air-jump budget and force-closes the glider.
 		jump_count = 0
 		if glide_state == GLIDE_OPENING or glide_state == GLIDE_GLIDING:
@@ -730,13 +804,32 @@ func _physics_process(dt: float) -> void:
 	else:
 		# Coyote fall without a buffered jump: gravity applies, no landing state,
 		# glide gate stays closed for the whole window.
-		velocity.y -= (_current_gravity() - external_acceleration.y) * dt
+		# #2852 M3 — ApplyGravity.cs: on a steep slope (>46deg) gravity tilts
+		# along the slope instead of pulling straight down.
+		var steep := _steep_slide_dir()
+		if steep != Vector3.ZERO:
+			velocity += steep * (_current_gravity() - external_acceleration.y) * dt
+		else:
+			velocity.y -= (_current_gravity() - external_acceleration.y) * dt
+	# #2852 M6: track the airborne apex (reset while gliding — a gentle glide
+	# down from height is not a hard landing).
+	if not supported:
+		if glide_state == GLIDE_OPENING or glide_state == GLIDE_GLIDING:
+			_fall_apex_y = global_position.y
+		else:
+			_fall_apex_y = maxf(_fall_apex_y, global_position.y)
+	# #2852 M4 — edge slip: off-axis ground contact with no ground straight
+	# below tilts gravity toward the edge (capsule slips off).
+	if supported:
+		var edge_dir := _edge_slip_gravity_dir()
+		if edge_dir != Vector3.ZERO:
+			velocity += edge_dir * _current_gravity() * dt
 
 	# #2850: Unity port (ApplyCharacterMovementVelocity.cs). Weight ramps over
 	# 0.5s while input is held; the accel pair follows the settings curve
 	# (keys 0/0.1→0, 0.9/1→1: plateau at min, then ramp). Velocity target uses
 	# the RAW input direction — the smoothed current_direction is only for facing.
-	var has_move_input := direction != Vector3.ZERO
+	has_move_input = direction != Vector3.ZERO
 	_accel_weight = move_toward(
 		_accel_weight, 1.0 if has_move_input else 0.0, dt / ACCELERATION_TIME
 	)
@@ -748,9 +841,22 @@ func _physics_process(dt: float) -> void:
 	)
 
 	camera.set_target_fov(DEFAULT_CAMERA_FOV)
+	# Unity MovementKind: no input is Idle, and only the input mode picks a gait.
+	movement_kind = 0
 	if has_move_input:
 		var wants_walk := Input.is_action_pressed("ia_walk")
 		var wants_sprint := Input.is_action_pressed("ia_sprint")
+
+		# #2856: gait kind from the input MODE (walk jog run), not measured
+		# speed — the anim blend normalizes by the kind's speed cap (Unity).
+		if wants_sprint and not run_disabled:
+			movement_kind = 3
+		elif wants_walk and not walk_disabled:
+			movement_kind = 1
+		elif Global.is_mobile() and jog_disabled and not walk_disabled:
+			movement_kind = 1
+		else:
+			movement_kind = 2
 
 		# Determine the effective speed based on input modifiers
 		var effective_speed := 0.0
@@ -771,7 +877,14 @@ func _physics_process(dt: float) -> void:
 			effective_speed = jog_speed
 		elif not walk_disabled:
 			effective_speed = walk_speed
+			movement_kind = 1
 		# else: effective_speed remains 0, no movement allowed
+
+		# #2852 M2: slope speed modifier — the curve multiplies the target
+		# speed by the signed uphill/downhill angle (Unity multiplies its
+		# speedLimit the same way).
+		if is_on_floor():
+			effective_speed *= _slope_speed_modifier(direction)
 
 		# ADAD sign correction: reversing an axis flips sign, keeping momentum.
 		var target_x := direction.x * effective_speed
@@ -785,9 +898,11 @@ func _physics_process(dt: float) -> void:
 		velocity.x = move_toward(velocity.x, target_x, accel * dt)
 		velocity.z = move_toward(velocity.z, target_z, accel * dt)
 
-		avatar.look_at(current_direction.normalized() + position)
-		avatar.rotation.x = 0.0
-		avatar.rotation.z = 0.0
+		# Yaw-only look_at, as one write and only when it changed.
+		if current_direction.x != 0.0 or current_direction.z != 0.0:
+			var yaw_only := Vector3(0.0, atan2(-current_direction.x, -current_direction.z), 0.0)
+			if not avatar.rotation.is_equal_approx(yaw_only):
+				avatar.rotation = yaw_only
 	else:
 		if on_floor:
 			# StopTimeSec=0: grounded stop is INSTANT in Unity (degenerate
@@ -816,7 +931,11 @@ func _physics_process(dt: float) -> void:
 			velocity.x = horizontal.x
 			velocity.z = horizontal.y
 
-	actual_velocity_xz = (to_xz(global_position) - to_xz(last_position)).length() / dt
+	# Anim state follows avatar-relative motion: measured displacement minus
+	# platform carry (standing on a moving platform is idle, not walking).
+	actual_velocity_xz = (
+		(to_xz(global_position) - to_xz(last_position) - _platform_carry_xz).length() / dt
+	)
 
 	update_avatar_movement_state(actual_velocity_xz)
 
@@ -831,6 +950,12 @@ func _physics_process(dt: float) -> void:
 	)
 
 	_apply_scene_physics(dt, external_acceleration, scene_pending_impulses, on_floor)
+
+	# Bounce pads relaunch on contact — a launch cancels a just-armed stun
+	# (Unity pads are triggers: no landing event, no stun).
+	if _hard_landing_timer > 0.0 and (velocity.y + external_velocity.y) > 1.0:
+		_hard_landing_timer = 0.0
+		avatar.stunned = false
 
 	# Re-derive rise/fall from the combined vertical velocity: the lift from
 	# external_velocity isn't visible in velocity.y alone (we undo the Y mix
@@ -847,6 +972,8 @@ func _physics_process(dt: float) -> void:
 			elif combined_vy < -0.3:
 				avatar.fall = true
 				avatar.rise = false
+				avatar.long_fall = combined_vy < -LONG_FALL_ANIM_SPEED
+				avatar.fall_fast = combined_vy < -FALL_ANIM_SPEED
 
 	# Snapshot locomotion XZ so we can restore them after the move. Otherwise
 	# `move_toward` on the next no-input tick would decel from velocity-with-
@@ -858,6 +985,18 @@ func _physics_process(dt: float) -> void:
 	velocity.y += external_y_for_move
 	velocity.z += external_velocity.z
 
+	# #2852 M5 — wall slide (ApplyWallSlide.cs): facing into a wall brakes
+	# movement toward zero; parallel is free. Unity capsulecasts ahead to find
+	# the wall; we already have the contact.
+	if is_on_wall() and supported:
+		var wall_n := get_wall_normal()
+		wall_n.y = 0.0
+		var look := Vector3(current_direction.x, 0.0, current_direction.z)
+		if wall_n.length_squared() > 0.01 and look.length_squared() > 0.01:
+			var wall_dot := absf(look.normalized().dot(wall_n.normalized()))
+			var wall_mult := lerpf(1.0, WALL_SLIDE_MIN_MULT, wall_dot)
+			velocity.x *= wall_mult
+			velocity.z *= wall_mult
 	last_position = global_position
 	# #2753: downslope stick — ApplySlopeModifier picks by input kind (run when
 	# sprinting), not by measured speed. Assigned BEFORE the predictive step-up:
@@ -900,8 +1039,10 @@ func _physics_process(dt: float) -> void:
 	if (not _step_armed or _step_pending) and _has_walkable_support():
 		_step_armed = true
 		_step_pending = false
+	_update_platform_follow(supported, dt)
 	position.y = max(position.y, 0)
-	avatar.global_position = global_position
+	if avatar.global_position != global_position:
+		avatar.global_position = global_position
 
 	# Restore locomotion-only XZ; external_velocity carries its own state and is
 	# re-added next frame.
@@ -1046,6 +1187,120 @@ func _make_step_test_shape() -> CapsuleShape3D:
 	var s2: CapsuleShape3D = %CollisionShape3D_Body.shape.duplicate()
 	s2.margin = 0.0
 	return s2
+
+
+func _steep_slide_dir() -> Vector3:
+	# #2852 M3: downhill tangent of a steeper-than-walkable slide contact
+	# (ZERO when none). n.y > 0.05 excludes vertical walls.
+	for i in get_slide_collision_count():
+		var n := get_slide_collision(i).get_normal()
+		if n.y < WALKABLE_NORMAL_Y and n.y > 0.05:
+			var g_vec := Vector3(0.0, -1.0, 0.0)
+			return (g_vec - n * g_vec.dot(n)).normalized()
+	return Vector3.ZERO
+
+
+func _edge_slip_gravity_dir() -> Vector3:
+	# #2852 M4 — ApplyEdgeSlip.cs: sphere-cast down from the capsule axis; a
+	# ground contact offset past NoSlipDistance (edge!) tilts gravity toward the
+	# contact normal's downhill tangent. Skipped when ground sits directly
+	# below within EdgeSlipSafeDistance (0.4) — no slipping on gentle ground.
+	if not is_on_floor() or _edge_slip_cast == null:
+		return Vector3.ZERO
+	_edge_slip_cast.force_shapecast_update()
+	if not _edge_slip_cast.is_colliding():
+		return Vector3.ZERO
+	var center := global_position + Vector3(0.0, CAPSULE_CENTER_Y, 0.0)
+	var rel: Vector3 = _edge_slip_cast.get_collision_point(0) - center
+	rel.y = 0.0
+	if rel.length() <= EDGE_NO_SLIP_DIST:
+		return Vector3.ZERO
+	var space := get_world_3d().direct_space_state
+	if space == null:
+		return Vector3.ZERO
+	var straight := PhysicsRayQueryParameters3D.new()
+	straight.from = global_position
+	straight.to = global_position + Vector3(0.0, -0.4, 0.0)
+	straight.collision_mask = collision_mask
+	straight.exclude = _raycast_exclude
+	if not space.intersect_ray(straight).is_empty():
+		return Vector3.ZERO
+	var n: Vector3 = _edge_slip_cast.get_collision_normal(0)
+	var g_vec := Vector3(0.0, -1.0, 0.0)
+	return (g_vec - n * g_vec.dot(n)).normalized()
+
+
+func _update_platform_follow(supported: bool, dt: float) -> void:
+	# #2852 M11 — CharacterPlatformSystem.cs: stay attached to the platform
+	# underfoot through translation AND rotation. Manual because kinematic
+	# colliders moved by CRDT transform sync report no velocity — except when
+	# a real floor contact forms, where Jolt does apply platform velocity.
+	# Whichever the engine already carried this frame is subtracted back out.
+	var current: CollisionObject3D = null
+	if supported:
+		var space := get_world_3d().direct_space_state
+		if space != null:
+			var rq := PhysicsRayQueryParameters3D.new()
+			rq.from = global_position + Vector3(0.0, 0.05, 0.0)
+			rq.to = global_position + Vector3(0.0, -0.2, 0.0)
+			rq.collision_mask = collision_mask
+			rq.exclude = _raycast_exclude
+			var hit := space.intersect_ray(rq)
+			if not hit.is_empty() and hit.normal.y >= WALKABLE_NORMAL_Y:
+				current = hit.collider as CollisionObject3D
+	if current != _platform:
+		_platform = current
+		_platform_last_transform = (current.global_transform if current else Transform3D.IDENTITY)
+		_platform_carry_xz = Vector2.ZERO
+		return
+	if _platform == null:
+		_platform_carry_xz = Vector2.ZERO
+		return
+	var xf_now: Transform3D = _platform.global_transform
+	# World-space carry: prev^-1 * now for the yaw, now * prev^-1 for points.
+	var rel := _platform_last_transform.affine_inverse() * xf_now
+	var carry := xf_now * _platform_last_transform.affine_inverse()
+	_platform_last_transform = xf_now
+	if rel.is_equal_approx(Transform3D.IDENTITY):
+		_platform_carry_xz = Vector2.ZERO
+		return
+	# Carry the player through the full platform delta (translation +
+	# rotation), and the facing with it — the avatar is TOP-LEVEL
+	# (avatar.gd), so it does not inherit the body yaw: rotate it explicitly,
+	# plus the smoothed facing vector, or it counter-rotates on a spinner.
+	var before := global_position
+	var yaw := rel.basis.get_euler().y
+	# Full platform delta (for the anim carry bookkeeping) — before the engine
+	# compensation below.
+	_platform_carry_xz = to_xz(carry * before - before)
+	global_position = carry * global_position
+	# Jolt does apply platform velocity when a real floor contact forms (that
+	# late "stick") — subtract what move_and_slide already carried or the
+	# translation lands twice.
+	global_position -= get_platform_velocity() * dt
+	rotation.y += yaw
+	avatar.rotation.y += yaw
+	current_direction = rel.basis * current_direction
+
+
+func _slope_speed_modifier(input_dir: Vector3) -> float:
+	# #2852 M2 — ApplyCharacterMovementVelocity.cs:18-21. slopeForward is the
+	# input direction projected onto the slope plane; the signed angle from
+	# the input direction to it (around input × up) is positive uphill.
+	var look := Vector3(input_dir.x, 0.0, input_dir.z)
+	if look.length_squared() < 0.01:
+		return 1.0
+	look = look.normalized()
+	var n := get_floor_normal()
+	var slope_forward := n.cross(look.cross(n))
+	if slope_forward.length_squared() < 0.01:
+		return 1.0  # flat ground — no slope direction
+	slope_forward = slope_forward.normalized()
+	var angle := rad_to_deg(look.signed_angle_to(slope_forward, look.cross(Vector3.UP)))
+	var a := clampf(angle, -SLOPE_MOD_MAX_DEG, SLOPE_MOD_MAX_DEG)
+	if a < 0.0:
+		return lerpf(1.0, SLOPE_MOD_DOWNHILL, -a / SLOPE_MOD_MAX_DEG)
+	return lerpf(1.0, SLOPE_MOD_UPHILL, a / SLOPE_MOD_MAX_DEG)
 
 
 func _has_walkable_support() -> bool:
@@ -1268,8 +1523,11 @@ func _apply_scene_physics(
 	dt: float, external_acceleration: Vector3, impulses: PackedVector3Array, on_floor: bool
 ) -> void:
 	# Force XZ accumulates; force Y was already folded into effective_gravity.
-	external_velocity.x += external_acceleration.x * dt
-	external_velocity.z += external_acceleration.z * dt
+	# #2854 M12: an open glider catches airflow — external forces act stronger
+	# (Unity ApplyExternalForce.cs: ExternalAcceleration *= GlideWindResponse).
+	var wind := GLIDE_WIND_RESPONSE if glide_state == GLIDE_GLIDING else 1.0
+	external_velocity.x += external_acceleration.x * wind * dt
+	external_velocity.z += external_acceleration.z * wind * dt
 
 	var got_upward_impulse: bool = false
 	for impulse in impulses:
@@ -1418,8 +1676,7 @@ func get_jump_action() -> int:
 		return JUMP_ACTION_NONE
 	# glide_state == GLIDE_CLOSED. Air-jump takes priority over glide-open.
 	if (
-		jump_count >= 1
-		and jump_count <= MAX_AIR_JUMPS
+		jump_count <= MAX_AIR_JUMPS
 		and not Global.is_double_jump_disabled()
 		and _time_since_last_jump >= JUMP_COOLDOWN
 	):
@@ -1440,12 +1697,12 @@ func can_toggle_glide() -> bool:
 		return true
 	if glide_state != GLIDE_CLOSED:
 		return false
-	# jump_count in [1..MAX_AIR_JUMPS] => next press fires air-jump, not glide-open.
+	# jump_count <= MAX_AIR_JUMPS => next press fires air-jump, not glide-open.
 	var grounded := is_on_floor() or position.y <= 0.0 or time_falling <= 0.0
 	var input_blocked := (
 		Global.is_jump_disabled() or Global.is_all_input_disabled() or Global.is_glide_disabled()
 	)
-	var air_jump_consumes_press := jump_count >= 1 and jump_count <= MAX_AIR_JUMPS
+	var air_jump_consumes_press := jump_count <= MAX_AIR_JUMPS
 	var too_low := _ground_distance <= GLIDE_MIN_GROUND_DISTANCE
 	var on_cooldown := (
 		_time_since_last_jump < JUMP_TO_GLIDE_INTERVAL or _time_since_glide_end < GLIDE_COOLDOWN
@@ -1465,7 +1722,7 @@ func can_toggle_glide() -> bool:
 func move_to(target: Vector3, check_stuck: bool = true):
 	global_position = target
 	velocity = Vector3.ZERO
-	# #b15: teleports mid-glide (or mid-air-jump hover) must not carry the
+	# teleports mid-glide (or mid-air-jump hover) must not carry the
 	# glider lift / frozen gravity into the destination. Reset everything to a
 	# grounded-idle baseline; _physics_process will re-derive on the next tick.
 	jump_count = 0
@@ -1473,13 +1730,15 @@ func move_to(target: Vector3, check_stuck: bool = true):
 	_glide_timer = 0.0
 	_jump_buffer = 0.0
 	_air_jump_delay_timer = 0.0
+	# Landing at the destination: a teleport down is not a fall.
+	_fall_apex_y = target.y
 	if check_stuck and stuck_detector:
 		stuck_detector.check_stuck()
 
 
 # Distance from feet to ground for glide entry/close gating. Returns INF beyond
-# 20m. Uses GROUND_RAYCAST_MASK (#b9) so it only sees the world/terrain layer;
-# the exclude list (#b10) is kept as a belt-and-suspenders for avatar colliders
+# 20m. Uses GROUND_RAYCAST_MASK so it only sees the world/terrain layer;
+# the exclude list is kept as a belt-and-suspenders for avatar colliders
 # that might briefly share the world mask.
 func _measure_ground_distance() -> float:
 	var space := get_world_3d().direct_space_state
@@ -1488,7 +1747,7 @@ func _measure_ground_distance() -> float:
 	var from := global_position + Vector3(0.0, 0.1, 0.0)  # above feet to avoid self-hit
 	var to := from + Vector3(0.0, -20.0, 0.0)
 	var query := PhysicsRayQueryParameters3D.create(from, to)
-	# #b9: restrict to terrain layer so wearables / triggers / scene gadgets
+	# restrict to terrain layer so wearables / triggers / scene gadgets
 	# don't collapse the distance reading.
 	query.collision_mask = GROUND_RAYCAST_MASK
 	query.exclude = _raycast_exclude

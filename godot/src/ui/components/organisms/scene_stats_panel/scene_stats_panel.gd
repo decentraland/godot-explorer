@@ -140,6 +140,9 @@ func _refresh() -> void:
 	var stats: Dictionary = _collector.collect_scene(_scene_id)
 	stats["content_size"] = _collector.content_bytes(_scene_id)
 	stats["external_size"] = _collector.external_bytes(_scene_id)
+	var tick: Dictionary = _collector.tick_stats(_scene_id)
+	stats["tick_p95"] = int(round(float(tick.get("js_tick_p95_ms", 0.0)) * 1000.0))
+	stats["missed_frames"] = int(round(float(tick.get("missed_pct", 0.0))))
 	var glob: Dictionary = SceneStatsCollector.global_stats()
 
 	for meta in SceneLimits.metric_order():
@@ -156,6 +159,11 @@ func _refresh() -> void:
 			meta["bar_max"] = m
 			soft = int(ceil(float(m) * 0.9))
 			hard = int(round(float(m) * 0.85))
+		# Scene update time: full scale is one frame at the current max fps (the
+		# scheduler's tick budget); yellow above 75% of it, red above it.
+		if bool(meta.get("dynamic_budget", false)):
+			hard = int(round(1000000.0 / float(_current_max_fps())))
+			soft = int(round(float(hard) * 0.75))
 		_update_row(key, value, soft, hard, meta)
 
 
@@ -181,6 +189,12 @@ func _update_row(key: String, value: int, soft: int, hard: int, meta: Dictionary
 			pct = clampi(int(round(float(value) / float(bar_max) * 100.0)), 0, 100)
 		lbl.text = "%d%%" % pct
 		icon.visible = false
+	elif unit == "pct":
+		# Already a percentage (e.g. missed frames): 0-100 scale, no "x / y" form.
+		bar.max_value = 100
+		bar.value = clampi(value, 0, 100)
+		lbl.text = "%d%%" % value
+		icon.visible = status == Status.RED
 	else:
 		bar.max_value = maxi(hard, 1)
 		bar.value = clampi(value, 0, int(bar.max_value))
@@ -237,6 +251,8 @@ static func _status(value: int, soft: int, hard: int, inverse: bool) -> int:
 static func _fmt(value: int, unit: String) -> String:
 	if unit == "bytes":
 		return _fmt_bytes(value)
+	if unit == "us":
+		return _trim_zero("%.1f" % (float(value) / 1000.0)) + " ms"
 	return _fmt_int(value)
 
 

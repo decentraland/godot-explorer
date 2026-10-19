@@ -250,41 +250,6 @@ impl DclUiBackground {
         self.base_mut().set_material(&mat);
     }
 
-    /// Check if UVs are non-trivial (rotated, skewed, or non-rectangular)
-    /// Default UVs are [0,0, 1,0, 1,1, 0,1] (bottom-left, bottom-right, top-right, top-left)
-    fn has_custom_uvs(&self) -> bool {
-        let uvs = &self.current_value.uvs;
-        if uvs.len() != 8 {
-            return false;
-        }
-
-        // Check if it's an axis-aligned rectangle
-        // For axis-aligned: all X coords of left vertices should match, all X coords of right should match
-        // and all Y coords of bottom should match, all Y coords of top should match
-        let bl_x = uvs[0];
-        let bl_y = uvs[1];
-        let br_x = uvs[2];
-        let br_y = uvs[3];
-        let tr_x = uvs[4];
-        let tr_y = uvs[5];
-        let tl_x = uvs[6];
-        let tl_y = uvs[7];
-
-        const EPSILON: f32 = 0.0001;
-
-        // For an axis-aligned rectangle:
-        // - bl_x == tl_x (left edge is vertical)
-        // - br_x == tr_x (right edge is vertical)
-        // - bl_y == br_y (bottom edge is horizontal)
-        // - tl_y == tr_y (top edge is horizontal)
-        let is_axis_aligned = (bl_x - tl_x).abs() < EPSILON
-            && (br_x - tr_x).abs() < EPSILON
-            && (bl_y - br_y).abs() < EPSILON
-            && (tl_y - tr_y).abs() < EPSILON;
-
-        !is_axis_aligned
-    }
-
     /// Create or update the UV child TextureRect with custom shader
     fn ensure_uv_child(&mut self, texture: &Gd<Texture2D>) {
         if self.uv_child.is_none() {
@@ -338,10 +303,10 @@ impl DclUiBackground {
             return;
         }
 
-        // UV format (matching bevy-explorer): [tl.x, tl.y, bl.x, bl.y, br.x, br.y, tr.x, tr.y]
+        // SDK order, clockwise from bottom-left: [bl.x, bl.y, tl.x, tl.y, tr.x, tr.y, br.x, br.y]
         // Pack into two Vec4s for shader:
-        // uvs_0 = vec4(tl.x, tl.y, bl.x, bl.y)
-        // uvs_1 = vec4(br.x, br.y, tr.x, tr.y)
+        // uvs_0 = vec4(bl.x, bl.y, tl.x, tl.y)
+        // uvs_1 = vec4(tr.x, tr.y, br.x, br.y)
         shader_mat.set_shader_parameter(
             "uvs_0",
             &Vector4::new(uvs[0], uvs[1], uvs[2], uvs[3]).to_variant(),
@@ -358,25 +323,9 @@ impl DclUiBackground {
             child.set_texture(texture);
             child.set_texture_repeat(texture_repeat);
         }
-
-        // Also apply modulate color to the UV child
-        if let Some(child) = &mut self.uv_child {
-            let modulate_color = self
-                .current_value
-                .color
-                .as_ref()
-                .map(|v| godot::prelude::Color {
-                    r: v.r,
-                    g: v.g,
-                    b: v.b,
-                    a: v.a,
-                })
-                .unwrap_or(godot::prelude::Color::WHITE);
-            child.set_modulate(modulate_color);
-        }
     }
 
-    /// Hide the UV child when not using custom UVs
+    /// Hide the UV child when no uvs are set
     fn hide_uv_child(&mut self) {
         if let Some(child) = &mut self.uv_child {
             child.set_visible(false);
@@ -583,37 +532,10 @@ impl DclUiBackground {
                 );
 
                 if self.current_value.uvs.len() == 8 {
-                    if self.has_custom_uvs() {
-                        // Use UV child with shader for non-axis-aligned UVs (rotations, skews, etc.)
-                        self.ensure_uv_child(&godot_texture);
-                        // Hide the base texture by making it transparent
-                        self.base_mut()
-                            .set_self_modulate(Color::from_rgba(1.0, 1.0, 1.0, 0.0));
-                    } else {
-                        // Use existing simple region rect approach for axis-aligned UVs
-                        self.hide_uv_child();
-                        self.base_mut().set_self_modulate(Color::WHITE);
-
-                        let uvs = self.current_value.uvs.as_slice();
-                        let image_size = godot_texture.get_size();
-
-                        // default=[0,0,0,1,1,0,1,0]: starting from bottom-left vertex clock-wise
-                        let sx = uvs[0].min(uvs[4]).clamp(0.0, 1.0);
-                        let sw = uvs[0].max(uvs[4]).clamp(0.0, 1.0);
-
-                        let sy = (1.0 - uvs[3].min(uvs[1])).clamp(0.0, 1.0);
-                        let sh = (1.0 - uvs[3].max(uvs[1])).clamp(0.0, 1.0);
-
-                        let sx = sx * image_size.x;
-                        let sw = sw * image_size.x - sx;
-                        let sy = sy * image_size.y;
-                        let sh = sh * image_size.y - sy;
-
-                        self.base_mut().set_region_rect(Rect2 {
-                            position: Vector2 { x: sx, y: sy },
-                            size: Vector2 { x: sw, y: sh },
-                        });
-                    }
+                    self.ensure_uv_child(&godot_texture);
+                    // Hide the base texture by making it transparent
+                    self.base_mut()
+                        .set_self_modulate(Color::from_rgba(1.0, 1.0, 1.0, 0.0));
                 } else {
                     // No UVs specified, hide UV child if it exists
                     self.hide_uv_child();

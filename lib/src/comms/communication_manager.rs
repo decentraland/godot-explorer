@@ -224,6 +224,12 @@ pub struct CommunicationManager {
     last_position_broadcast_index: u64,
     last_emote_incremental_id: u32,
     is_emoting: bool,
+    /// head sync: the local head turn, pushed every frame by avatar.gd
+    /// (Unity HeadSync). Degrees in the local avatar's own frame, plus whether
+    /// the sender is aiming at all. The movement packet carries it to peers.
+    head_ik_enabled: bool,
+    head_ik_yaw: f32,
+    head_ik_pitch: f32,
     voice_chat_enabled: bool,
     start_time: Instant,
     last_profile_version_broadcast: Instant,
@@ -347,6 +353,9 @@ impl INode for CommunicationManager {
             last_position_broadcast_index: 0,
             last_emote_incremental_id: 0,
             is_emoting: false,
+            head_ik_enabled: false,
+            head_ik_yaw: 0.0,
+            head_ik_pitch: 0.0,
             voice_chat_enabled: false,
             start_time: Instant::now(),
             last_profile_version_broadcast: Instant::now(),
@@ -1585,7 +1594,7 @@ impl CommunicationManager {
         // The Temporal bitfield doesn't carry jump_count / glide_state yet, so
         // force uncompressed when either carries info beyond what rise/fall/land
         // already encode.
-        // #b8: jump_count == 1 is a plain ground jump that rise/fall covers, so
+        // jump_count == 1 is a plain ground jump that rise/fall covers, so
         // no need to force uncompressed. A player that steps off a ledge keeps
         // jump_count=1 until landing, so forcing on `> 0` would burn bandwidth
         // during every long fall.
@@ -1633,10 +1642,15 @@ impl CommunicationManager {
                 glide_state,
                 is_instant: false,
                 is_emoting: self.is_emoting,
-                head_ik_yaw_enabled: false, // TODO: implement head sync
-                head_ik_pitch_enabled: false,
-                head_yaw: 0.0,
-                head_pitch: 0.0,
+                // The wire carries a yaw and a pitch enable bit; the client exposes
+                // one switch, so both mirror it.
+                head_ik_yaw_enabled: self.head_ik_enabled,
+                head_ik_pitch_enabled: self.head_ik_enabled,
+                head_yaw: self.head_ik_yaw,
+                // Unity carries pitch as the X euler wrapped to [0, 360]
+                // (HeadIKComponent.GetHeadYawAndPitch) where positive looks
+                // down, and ours looks up.
+                head_pitch: -self.head_ik_pitch,
                 point_at_x: 0.0, // TODO: implement point-at
                 point_at_y: 0.0,
                 point_at_z: 0.0,
@@ -1932,6 +1946,17 @@ impl CommunicationManager {
         }
 
         sent
+    }
+
+    #[func]
+    pub fn set_head_ik(&mut self, enabled: bool, yaw_deg: f32, pitch_deg: f32) {
+        // Called every frame by the local avatar with its head-turn state. The
+        // gates are the sender's own (grounded, standing still, not emoting), so
+        // `enabled` already carries them; yaw/pitch are aimed degrees, clamped
+        // by the encoder's quantizer.
+        self.head_ik_enabled = enabled;
+        self.head_ik_yaw = yaw_deg;
+        self.head_ik_pitch = pitch_deg;
     }
 
     #[func]

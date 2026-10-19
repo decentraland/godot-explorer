@@ -6,7 +6,7 @@ static func async_show_modal(
 	manager, title, body, primary_label, primary_handler: Callable, is_current: Callable
 ) -> void:
 	var had_modal := is_instance_valid(manager.current_modal)
-	if not await manager._async_ensure_modal("CommsDisconnectModal.async_show_modal"):
+	if not await manager._async_ensure_modal("CommsDisconnectModal.async_show_modal", true):
 		return
 	if is_current.is_valid() and not is_current.call():
 		# A cancelled first request can leave the newly instantiated default modal behind.

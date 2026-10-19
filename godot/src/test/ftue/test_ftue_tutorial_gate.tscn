@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/test/ftue/test_ftue_tutorial_gate.gd" id="1_gate"]
+
+[node name="TestFtueTutorialGate" type="Node"]
+script = ExtResource("1_gate")
