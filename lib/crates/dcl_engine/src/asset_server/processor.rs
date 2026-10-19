@@ -18,8 +18,8 @@ use crate::content::gltf::{
 use crate::content::packed_array::PackedByteArrayFromVec;
 use crate::content::resource_provider::ResourceProvider;
 use crate::content::texture::create_compressed_texture;
+use crate::content::texture_quality::TextureQuality;
 use crate::content::thread_safety::GodotSingleThreadSafety;
-use crate::godot_classes::dcl_config::TextureQuality;
 use crate::utils::infer_mime;
 
 use super::job_manager::JobManager;

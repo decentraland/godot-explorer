@@ -31,13 +31,14 @@ jobs:
       - name: cargo install
         run: cargo run -- install --no-templates
 
+      # asset_server is only built by the Docker image (main/release); check it here so PRs catch it.
       - name: cargo check
         working-directory: lib
-        run: cargo check --workspace
+        run: cargo check --workspace --features dclgodot/asset_server
 
       - name: cargo clippy
         working-directory: lib
-        run: cargo clippy --workspace -- -D warnings
+        run: cargo clippy --workspace --features dclgodot/asset_server -- -D warnings
 
       - name: dcl_core and dcl_host tests (no Godot)
         working-directory: lib

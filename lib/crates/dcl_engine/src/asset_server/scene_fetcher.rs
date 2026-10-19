@@ -9,17 +9,11 @@ use reqwest::Client;
 
 use crate::dcl::common::content_entity::EntityDefinitionJson;
 
-use super::types::AssetType;
-
 /// A discovered asset from a scene entity.
 #[derive(Debug, Clone)]
 pub struct DiscoveredAsset {
     /// Content hash of the asset
     pub hash: String,
-    /// File path in the content mapping
-    pub file_path: String,
-    /// Type of asset
-    pub asset_type: AssetType,
     /// URL to fetch the asset from
     pub url: String,
 }
@@ -39,8 +33,6 @@ pub struct BootFile {
 /// Result of fetching and parsing a scene entity.
 #[derive(Debug)]
 pub struct SceneEntityAssets {
-    /// The scene entity hash
-    pub scene_hash: String,
     /// Base URL for content fetching
     pub content_base_url: String,
     /// All discovered GLTF assets
@@ -54,11 +46,6 @@ pub struct SceneEntityAssets {
 }
 
 impl SceneEntityAssets {
-    /// Get all discovered assets (GLTFs + textures).
-    pub fn all_assets(&self) -> Vec<&DiscoveredAsset> {
-        self.gltfs.iter().chain(self.textures.iter()).collect()
-    }
-
     /// Get the total number of assets.
     pub fn total_count(&self) -> usize {
         self.gltfs.len() + self.textures.len()
@@ -89,7 +76,7 @@ fn is_gltf_file(file_path: &str) -> bool {
 ///
 /// # Arguments
 /// * `content_base_url` - Base URL for the content server (e.g., "https://peer.decentraland.org/content/")
-///                        Can also include "contents/" suffix
+///   Can also include "contents/" suffix
 /// * `scene_hash` - The hash of the scene entity to fetch
 ///
 /// # Returns
@@ -143,19 +130,9 @@ pub async fn fetch_scene_entity(
         content_mapping.insert(file_path.to_lowercase(), hash.clone());
 
         if is_gltf_file(&file_path) {
-            gltfs.push(DiscoveredAsset {
-                hash,
-                file_path,
-                asset_type: AssetType::Scene,
-                url,
-            });
+            gltfs.push(DiscoveredAsset { hash, url });
         } else if is_image_file(&file_path) {
-            textures.push(DiscoveredAsset {
-                hash,
-                file_path,
-                asset_type: AssetType::Texture,
-                url,
-            });
+            textures.push(DiscoveredAsset { hash, url });
         }
         // Skip other file types (audio, JS, etc.)
     }
@@ -196,7 +173,6 @@ pub async fn fetch_scene_entity(
     );
 
     Ok(SceneEntityAssets {
-        scene_hash: scene_hash.to_string(),
         content_base_url: base_url,
         gltfs,
         textures,

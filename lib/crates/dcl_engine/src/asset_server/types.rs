@@ -76,8 +76,6 @@ pub struct Batch {
     pub error: Option<String>,
     /// When the batch was created
     pub created_at: Instant,
-    /// Scene hash (for process-scene batches)
-    pub scene_hash: Option<String>,
     /// Hashes of assets to preload into the main metadata ZIP
     pub preloaded_hashes: Option<HashSet<String>>,
     /// Individual ZIP files created for each asset
@@ -99,7 +97,6 @@ impl Batch {
             zip_path: None,
             error: None,
             created_at: Instant::now(),
-            scene_hash: None,
             preloaded_hashes: None,
             individual_zips: Vec::new(),
             boot_files: Vec::new(),
@@ -111,7 +108,6 @@ impl Batch {
         id: String,
         output_hash: String,
         job_ids: Vec<String>,
-        scene_hash: String,
         preloaded_hashes: Option<HashSet<String>>,
         boot_files: Vec<super::scene_fetcher::BootFile>,
         content_mapping: std::sync::Arc<HashMap<String, String>>,
@@ -124,7 +120,6 @@ impl Batch {
             zip_path: None,
             error: None,
             created_at: Instant::now(),
-            scene_hash: Some(scene_hash),
             preloaded_hashes,
             individual_zips: Vec::new(),
             boot_files,
