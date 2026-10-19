@@ -1,17 +1,30 @@
-extends RefCounted
+extends Node
 
 # Regression test for #2960: the joypad Jump icon flipped to Glider when
 # running over bumpy ground. The icon reads get_jump_action(), so it has to
 # reach the same verdict as the jump branches in _physics_process.
+# Runs as a scene so the Player global class resolves (its script reads autoloads).
+#
+# Run headless:
+#   .bin/godot/godot4_bin --headless --path godot \
+#     res://src/test/player/glide_icon_action_test.tscn --quit
 
-var suite_name := "player_glide_icon"
-var method_name := "test_jump_icon_matches_press"
+# Every jump press this fall has been spent, so the air-jump branch is out of
+# the way and the glide gates are the ones under test.
+const SPENT_AIR_JUMPS := 2
+
 var errors: Array[String] = []
-var execution_time_seconds := 0.0
+
+
+func _ready() -> void:
+	var ok := run()
+	print("[glide_icon_action_test] ", "PASS" if ok else "FAIL")
+	for error in errors:
+		printerr("  ", error)
+	get_tree().quit(0 if ok else 1)
 
 
 func run() -> bool:
-	var start := Time.get_ticks_usec()
 	var ok := true
 
 	# --- coyote window the grounded flag is built from ------------------------
@@ -84,7 +97,7 @@ func run() -> bool:
 	# Truly airborne with the glider closed and altitude: offer the glider.
 	ok = (
 		_expect_action(
-			_action(false, Player.GLIDE_CLOSED, 0, 2.0),
+			_action(false, Player.GLIDE_CLOSED, SPENT_AIR_JUMPS, 2.0),
 			Player.JUMP_ACTION_GLIDE_TOGGLE,
 			"airborne offers glider"
 		)
@@ -95,7 +108,7 @@ func run() -> bool:
 	# That single tick must not offer the glider.
 	ok = (
 		_expect_action(
-			_action(false, Player.GLIDE_CLOSED, 0, 2.0, 0.0167),
+			_action(false, Player.GLIDE_CLOSED, SPENT_AIR_JUMPS, 2.0, 0.0167),
 			Player.JUMP_ACTION_NONE,
 			"step-up tick offers nothing"
 		)
@@ -103,7 +116,7 @@ func run() -> bool:
 	)
 	ok = (
 		_expect_action(
-			_action(false, Player.GLIDE_CLOSED, 0, 2.0, 0.167),
+			_action(false, Player.GLIDE_CLOSED, SPENT_AIR_JUMPS, 2.0, 0.167),
 			Player.JUMP_ACTION_GLIDE_TOGGLE,
 			"offered once past the coyote window"
 		)
@@ -116,9 +129,22 @@ func run() -> bool:
 		)
 		and ok
 	)
+	# Any jump count inside the budget owns the press, including 0: a step off a
+	# ledge still has its air jump (Unity max(JumpCount, 1) <= MaxAirJumpCount).
 	ok = (
 		_expect_action(
-			_action(false, Player.GLIDE_CLOSED, 0, 0.5),
+			_action(false, Player.GLIDE_CLOSED, 0, 2.0),
+			Player.JUMP_ACTION_JUMP,
+			"stepped off a ledge keeps the air jump"
+		)
+		and ok
+	)
+	# Below GLIDE_MIN_GROUND_DISTANCE the glider is never offered.
+	ok = (
+		_expect_action(
+			_action(
+				false, Player.GLIDE_CLOSED, SPENT_AIR_JUMPS, Player.GLIDE_MIN_GROUND_DISTANCE * 0.5
+			),
 			Player.JUMP_ACTION_NONE,
 			"too low offers nothing"
 		)
@@ -142,7 +168,6 @@ func run() -> bool:
 		and ok
 	)
 
-	execution_time_seconds = (Time.get_ticks_usec() - start) / 1_000_000.0
 	return ok
 
 

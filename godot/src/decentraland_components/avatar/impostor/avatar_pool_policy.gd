@@ -11,16 +11,16 @@ const LOD_FULL := 0
 const LOD_MID := 1
 const LOD_FAR := 3
 
-# Rank-based animation throttle, same split as the old MAX_FULL_AVATARS=8:
-# only the FULL_RATE_CAP closest avatars run their AnimationTree every frame;
+# Rank-based animation throttle: only the FULL_RATE_CAP closest avatars run their
+# AnimationTree every frame (4: at mobile frame rates each full-rate tree is costly);
 # the rest of the pool keeps the mesh but advances the skeleton throttled
 # (~20fps, see AvatarImpostorConfig.MID_ANIM_ADVANCE_EVERY_N_FRAMES).
-const FULL_RATE_CAP := 8
+const FULL_RATE_CAP := 4
 
 # Pool size: how many in-frustum avatars keep their 3D mesh before the rest
 # fall back to billboard impostors. Constant 40 = the old fixed budget
-# (MAX_FULL_AVATARS 8 + MAX_THROTTLED_AVATARS 32): FULL_RATE_CAP full-rate +
-# 32 throttled. Deliberately NOT tied to graphics profile — profile only
+# (MAX_FULL_AVATARS 8 + MAX_THROTTLED_AVATARS 32): FULL_RATE_CAP full-rate,
+# the rest throttled. Deliberately NOT tied to graphics profile — profile only
 # affects render quality, avatar mesh budget stays the same on all tiers.
 const POOL_SIZE := 40
 

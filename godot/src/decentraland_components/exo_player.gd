@@ -246,17 +246,25 @@ func update_texture() -> bool:
 		return false
 
 	# Check if video size has changed and we need to reinitialize the surface
-	if plugin.exoPlayerHasVideoSizeChanged(player_id):
-		var new_width = plugin.exoPlayerGetVideoWidth(player_id)
-		var new_height = plugin.exoPlayerGetVideoHeight(player_id)
-		if (
-			new_width > 0
-			and new_height > 0
-			and (new_width != video_width or new_height != video_height)
-		):
-			_reinitialize_surface(new_width, new_height)
+	if not _reinitializing_surface and plugin.exoPlayerHasVideoSizeChanged(player_id):
+		_async_reinitialize_when_budget_allows()
 
 	return _update_texture_gpu()
+
+
+# The surface swap is a heavy one-off; frames are not consumed while it waits its turn.
+func _async_reinitialize_when_budget_allows() -> void:
+	_reinitializing_surface = true
+	await FrameWorkBudget.async_acquire("ExoPlayer::reinitialize_surface", self)
+	var new_width = plugin.exoPlayerGetVideoWidth(player_id)
+	var new_height = plugin.exoPlayerGetVideoHeight(player_id)
+	if (
+		new_width > 0
+		and new_height > 0
+		and (new_width != video_width or new_height != video_height)
+	):
+		_reinitialize_surface(new_width, new_height)
+	_reinitializing_surface = false
 
 
 func _update_texture_gpu() -> bool:
