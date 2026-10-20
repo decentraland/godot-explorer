@@ -11,7 +11,9 @@ extends RefCounted
 
 enum Status { OK, BELOW_MINSPEC, END_OF_SUPPORT }
 
-const _MIN_RAM_MB := 4096
+# Not 4096: totalMem excludes kernel-reserved RAM, so marketed-4 GB phones report 3,472–3,787 MB.
+# This is the lowest 4 GB reading in the System Info Report.
+const _MIN_RAM_MB := 3472
 const _TIMEOUT_SECONDS := 5.0
 
 ## End-of-support modal re-show schedule (#2936), in days since first detected: first session,
