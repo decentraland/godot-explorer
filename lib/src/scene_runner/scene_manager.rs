@@ -175,6 +175,10 @@ pub struct SceneManager {
 
     // Track when pointer was pressed on avatar for click-and-release mechanism
     avatar_pointer_press_time: Option<Instant>,
+    // Same press→release window as the passport, for a video screen under the crosshair.
+    video_pointer_press_time: Option<Instant>,
+    // Origin and unit direction of this tick's pointer ray, for the video-screen bounds test.
+    pointer_ray: Option<(Vector3, Vector3)>,
 
     // Global pool manager for all scene resources (physics areas, etc.)
     // Uses RefCell because we need interior mutability while iterating scenes
@@ -247,6 +251,8 @@ const MIN_TIME_TO_PROCESS_SCENE_US: i64 = 2083; // 25% of max_time_per_scene_tic
 // 60fps), so the scene thread can tear down and Godot/GPU memory is reclaimed
 // before we measure pressure again. See `handle_memory_pressure`.
 const MEMORY_SETTLE_FRAMES: i32 = 90;
+/// Reach of the crosshair/cursor ray, for both the physics raycast and the video-screen test.
+const POINTER_RAY_LENGTH: f32 = 100.0;
 
 const EXIT_WITHOUT_KILL_SIGNAL: &str = "scene thread exited without kill signal";
 const CRDT_STATE_POISONED: &str = "scene CRDT state poisoned by a renderer panic";
@@ -3015,7 +3021,6 @@ impl SceneManager {
     }
 
     fn get_current_mouse_entity(&mut self) -> Option<RaycastResult> {
-        const RAY_LENGTH: f32 = 100.0;
         const CL_POINTER: u32 = 1;
         const CL_AVATAR: u32 = 536870912; // Layer 30 for avatars
 
@@ -3033,7 +3038,9 @@ impl SceneManager {
         };
 
         let raycast_from = camera_node.project_ray_origin(screen_point);
-        let raycast_to = raycast_from + camera_node.project_ray_normal(screen_point) * RAY_LENGTH;
+        let raycast_dir = camera_node.project_ray_normal(screen_point);
+        let raycast_to = raycast_from + raycast_dir * POINTER_RAY_LENGTH;
+        self.pointer_ray = Some((raycast_from, raycast_dir));
         let mut space = camera_node.get_world_3d()?.get_direct_space_state()?;
 
         // Update the cached raycast query parameters
@@ -3138,8 +3145,33 @@ impl SceneManager {
         None
     }
 
+    /// Most screens have no collider, so the physics ray passes through them: test the video
+    /// screens' mesh bounds along the same ray, ignoring any behind the collider it did hit.
+    fn video_screen_along_pointer_ray(
+        &self,
+        physics_hit: &Option<GodotDclRaycastResult>,
+    ) -> Option<Gd<crate::godot_classes::dcl_video_player::DclVideoPlayer>> {
+        let (ray_from, ray_dir) = self.pointer_ray?;
+        let max_distance = physics_hit
+            .as_ref()
+            .map_or(POINTER_RAY_LENGTH, |hit| hit.hit.length);
+        self.scenes
+            .values()
+            .filter_map(|scene| scene.video_screen_along_ray(ray_from, ray_dir))
+            .filter(|(distance, _)| *distance <= max_distance)
+            .min_by(|a, b| a.0.total_cmp(&b.0))
+            .map(|(_, video_player)| video_player)
+    }
+
     #[signal]
     fn pointer_tooltip_changed();
+
+    /// A short ia_pointer press→release on a video screen (issue #1381). The explorer's
+    /// VideoFocusMode overlay opens on it with the screen's player.
+    #[signal]
+    fn open_video_focus_mode(
+        video_player: Gd<crate::godot_classes::dcl_video_player::DclVideoPlayer>,
+    );
 
     fn create_ui_canvas_information(&self) -> PbUiCanvasInformation {
         let canvas_size = self.base_ui.get_size();
@@ -3833,6 +3865,8 @@ impl INode for SceneManager {
             cached_raycast_query: PhysicsRayQueryParameters3D::new_gd(),
             last_avatar_under_crosshair: None,
             avatar_pointer_press_time: None,
+            video_pointer_press_time: None,
+            pointer_ray: None,
             pool_manager: RefCell::new(PoolManager::new()),
             current_loading_session: None,
             next_session_id: 0,
@@ -4028,6 +4062,35 @@ impl INode for SceneManager {
             }
         }
 
+        // A video screen is an entity whose material samples a VideoPlayer. A short
+        // ia_pointer press→release on one opens the focus mode, like the passport above.
+        let hovered_video_player = current_pointer_raycast_result
+            .as_ref()
+            .and_then(|raycast| {
+                self.scenes
+                    .get(&raycast.scene_id)
+                    .and_then(|scene| scene.video_player_for_entity(&raycast.entity_id))
+            })
+            .or_else(|| self.video_screen_along_pointer_ray(&current_pointer_raycast_result));
+        match hovered_video_player.as_ref() {
+            Some(video_player) => {
+                if changed_inputs.contains(&(InputAction::IaPointer, true)) {
+                    self.video_pointer_press_time = Some(Instant::now());
+                }
+                if changed_inputs.contains(&(InputAction::IaPointer, false)) {
+                    if let Some(press_time) = self.video_pointer_press_time.take() {
+                        let ui_has_focus = DclGlobal::try_singleton()
+                            .is_none_or(|global| global.bind().ui_has_focus());
+                        if press_time.elapsed() < Duration::from_secs(1) && ui_has_focus {
+                            self.base_mut()
+                                .emit_signal("open_video_focus_mode", &[video_player.to_variant()]);
+                        }
+                    }
+                }
+            }
+            None => self.video_pointer_press_time = None,
+        }
+
         let player_position = player_avatar.get_global_position();
         let camera_and_viewport = self.base().get_viewport().and_then(|viewport| {
             let size = viewport.get_visible_rect().size;
@@ -4206,6 +4269,14 @@ impl INode for SceneManager {
                 profile_dict.set("action", "ia_pointer");
                 tooltips.push(&profile_dict.to_variant());
             }
+        }
+
+        if hovered_video_player.is_some() {
+            let mut focus_dict = VarDictionary::new();
+            // A translation key resolved in tooltip_label.gd, like TOOLTIP_VIEW_PROFILE.
+            focus_dict.set("text_pet_down", "TOOLTIP_FOCUS_MODE");
+            focus_dict.set("action", "ia_pointer");
+            tooltips.push(&focus_dict.to_variant());
         }
 
         let tooltips_changed = self.pointer_tooltips != tooltips;

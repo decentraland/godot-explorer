@@ -1,0 +1,214 @@
+[gd_scene load_steps=11 format=3 uid="uid://buxjoxmdm2l6v"]
+
+[ext_resource type="Script" uid="uid://dtrv82krgoek8" path="res://src/ui/components/organisms/video_focus_mode/video_focus_mode.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://myp6t306a2n" path="res://src/ui/components/organisms/video_focus_mode/icons/exit-focus.svg" id="2_exit"]
+[ext_resource type="Texture2D" uid="uid://btkyyrt63j7tv" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-flip-orientation.svg" id="3_rotate"]
+[ext_resource type="Texture2D" uid="uid://1bvilol5e3lf" path="res://assets/ui/Members.svg" id="4_members"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="5_font"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+bg_color = Color(0.0862745, 0.0823529, 0.0941176, 0.7)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_pressed"]
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+bg_color = Color(0.266667, 0.262745, 0.282353, 0.7)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_chat"]
+bg_color = Color(0.113725, 0.109804, 0.12549, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_header"]
+content_margin_left = 16.0
+content_margin_right = 16.0
+bg_color = Color(0.0431373, 0.0431373, 0.0509804, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_header"]
+font = ExtResource("5_font")
+font_size = 17
+font_color = Color(0.988235, 0.988235, 0.988235, 1)
+
+[node name="VideoFocusMode" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 2
+script = ExtResource("1_script")
+metadata/mobile_preview_orientation = "both"
+
+[node name="ColorRect_Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
+[node name="VBoxContainer_Root" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="BoxContainer_Layout" type="BoxContainer" parent="VBoxContainer_Root"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Control_Video" type="Control" parent="VBoxContainer_Root/BoxContainer_Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 1
+mouse_filter = 2
+
+[node name="TextureRect_Video" type="TextureRect" parent="VBoxContainer_Root/BoxContainer_Layout/Control_Video"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="MarginContainer_Controls" type="MarginContainer" parent="VBoxContainer_Root/BoxContainer_Layout/Control_Video"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 24
+
+[node name="HBoxContainer_Controls" type="HBoxContainer" parent="VBoxContainer_Root/BoxContainer_Layout/Control_Video/MarginContainer_Controls"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Button_Exit" type="Button" parent="VBoxContainer_Root/BoxContainer_Layout/Control_Video/MarginContainer_Controls/HBoxContainer_Controls"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+size_flags_vertical = 0
+focus_mode = 0
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/font_hover_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_colors/font_focus_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_constants/h_separation = 10
+theme_override_constants/icon_max_width = 26
+theme_override_fonts/font = ExtResource("5_font")
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_button_pressed")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button")
+text = "VIDEO_FOCUS_EXIT"
+icon = ExtResource("2_exit")
+
+[node name="Control_Spacer" type="Control" parent="VBoxContainer_Root/BoxContainer_Layout/Control_Video/MarginContainer_Controls/HBoxContainer_Controls"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Button_Rotate" type="Button" parent="VBoxContainer_Root/BoxContainer_Layout/Control_Video/MarginContainer_Controls/HBoxContainer_Controls"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+size_flags_vertical = 0
+focus_mode = 0
+theme_override_constants/icon_max_width = 28
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_button_pressed")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button")
+icon = ExtResource("3_rotate")
+icon_alignment = 1
+
+[node name="PanelContainer_Chat" type="PanelContainer" parent="VBoxContainer_Root/BoxContainer_Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(430, 0)
+layout_mode = 2
+size_flags_horizontal = 1
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_chat")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="PanelContainer_Header" type="PanelContainer" parent="VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/VBoxContainer"]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_header")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/VBoxContainer/PanelContainer_Header"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Label_Nearby" type="Label" parent="VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/VBoxContainer/PanelContainer_Header/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "COMMON_NEARBY"
+label_settings = SubResource("LabelSettings_header")
+vertical_alignment = 1
+
+[node name="TextureRect_Members" type="TextureRect" parent="VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/VBoxContainer/PanelContainer_Header/HBoxContainer"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("4_members")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label_Members" type="Label" parent="VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/VBoxContainer/PanelContainer_Header/HBoxContainer"]
+unique_name_in_owner = true
+auto_translate_mode = 2
+layout_mode = 2
+text = "1"
+label_settings = SubResource("LabelSettings_header")
+vertical_alignment = 1
+
+[node name="Control_ChatSlot" type="Control" parent="VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Control_KeyboardMargin" type="Control" parent="VBoxContainer_Root"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2

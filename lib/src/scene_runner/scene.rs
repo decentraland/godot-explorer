@@ -16,7 +16,7 @@ use crate::{
         common::{SceneLogMessage, SceneTestResult},
         components::{
             internal_player_data::InternalPlayerData,
-            material::DclMaterial,
+            material::{DclMaterial, DclSourceTex},
             proto_components::sdk::components::{
                 common::RaycastHit, PbAnimator, PbAvatarBase, PbAvatarEmoteCommand,
                 PbAvatarEquippedData, PbPlayerIdentityData, PbPointerEventsResult,
@@ -372,6 +372,66 @@ static SCENE_ID_MONOTONIC_COUNTER: once_cell::sync::Lazy<std::sync::atomic::Atom
 impl Scene {
     pub fn new_id() -> SceneId {
         SceneId(SCENE_ID_MONOTONIC_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
+    }
+
+    /// The video player sampled by `entity_id`'s material, when the entity is a video screen.
+    /// GLTF screens (`update_modifier_video_textures`) are not covered.
+    pub fn video_player_for_entity(&self, entity_id: &SceneEntityId) -> Option<Gd<DclVideoPlayer>> {
+        self.video_player_for_material(self.materials.get(entity_id)?)
+    }
+
+    /// Nearest video screen along the ray, by its MeshRenderer bounds rather than a collider
+    /// (most screens have none). Returns the distance from `ray_from` and the screen's player.
+    pub fn video_screen_along_ray(
+        &self,
+        ray_from: godot::builtin::Vector3,
+        ray_dir: godot::builtin::Vector3,
+    ) -> Option<(f32, Gd<DclVideoPlayer>)> {
+        let mut nearest: Option<(f32, Gd<DclVideoPlayer>)> = None;
+        for (entity_id, item) in self.materials.iter() {
+            let Some(video_player) = self.video_player_for_material(item) else {
+                continue;
+            };
+            let Some(node) = self.godot_dcl_scene.get_node_or_null_3d(entity_id) else {
+                continue;
+            };
+            let Some(mesh) = node.try_get_node_as::<godot::classes::MeshInstance3D>("MeshRenderer")
+            else {
+                continue;
+            };
+            if !mesh.is_visible_in_tree() {
+                continue;
+            }
+            let transform = mesh.get_global_transform();
+            let inverse = transform.affine_inverse();
+            let Some(local_hit) = mesh
+                .get_aabb()
+                .intersect_ray(inverse * ray_from, inverse.basis * ray_dir)
+            else {
+                continue;
+            };
+            let distance = (transform * local_hit).distance_to(ray_from);
+            if nearest.as_ref().is_none_or(|(best, _)| distance < *best) {
+                nearest = Some((distance, video_player));
+            }
+        }
+        nearest
+    }
+
+    fn video_player_for_material(&self, item: &MaterialItem) -> Option<Gd<DclVideoPlayer>> {
+        let textures = match &item.dcl_mat {
+            DclMaterial::Unlit(unlit) => vec![&unlit.texture],
+            DclMaterial::Pbr(pbr) => vec![&pbr.texture, &pbr.emissive_texture],
+        };
+        textures
+            .into_iter()
+            .flatten()
+            .find_map(|texture| match &texture.source {
+                DclSourceTex::VideoTexture(video_entity_id) => {
+                    self.video_players.get(video_entity_id).cloned()
+                }
+                _ => None,
+            })
     }
 
     pub fn new(
