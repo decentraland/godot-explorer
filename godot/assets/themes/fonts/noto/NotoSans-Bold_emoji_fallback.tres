@@ -1,4 +1,4 @@
-[gd_resource type="FontVariation" load_steps=3 format=3]
+[gd_resource type="FontVariation" load_steps=3 format=3 uid="uid://cxr2edn0juqtj"]
 
 [ext_resource type="FontFile" uid="uid://47s0vxd5qvi4" path="res://assets/themes/fonts/noto/NotoSans-Bold.ttf" id="1_base"]
 [ext_resource type="FontFile" uid="uid://ivxdopbqg6xx" path="res://assets/themes/fonts/noto/NotoColorEmoji-Regular.ttf" id="2_emoji"]
