@@ -1369,7 +1369,7 @@ impl DclPlayerIdentity {
         let request_response = response.bind();
 
         match UserProfile::from_lambda_response(&request_response, base_url.as_str()) {
-            Ok(profile) => {
+            Ok(mut profile) => {
                 // Never replace the local profile with an OLDER copy. Every realm change
                 // re-fetches the profile (PlayerIdentity._on_realm_changed) and the lambda
                 // can still serve the pre-deploy version right after the user saved an
@@ -1386,6 +1386,23 @@ impl DclPlayerIdentity {
                             current_version
                         );
                         return true;
+                    }
+
+                    // Same version is our own deploy: keep the locally rendered face, which
+                    // profile-images may not have rendered yet (404 for about a minute).
+                    let current_bind = current.bind();
+                    let current_snapshots = &current_bind.inner.content.avatar.snapshots;
+                    let has_local_face = current_snapshots
+                        .as_ref()
+                        .and_then(|s| s.face_url.as_deref())
+                        .is_some_and(|url| url.starts_with("local:"));
+                    if profile.version == current_version && has_local_face {
+                        if let Some(new_snapshots) = profile.content.avatar.snapshots.as_mut() {
+                            new_snapshots.face_url =
+                                current_snapshots.as_ref().and_then(|s| s.face_url.clone());
+                        } else {
+                            profile.content.avatar.snapshots = current_snapshots.clone();
+                        }
                     }
                 }
 
