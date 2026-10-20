@@ -57,6 +57,7 @@ DevLocalhostRelay="*res://src/tool/dev_localhost_relay.gd"
 GltfLoadingCoordinator="*res://src/decentraland_components/gltf_loading_coordinator.gd"
 LightSourceManager="*res://src/decentraland_components/light_source_manager.gd"
 TouchFeedback="*res://src/ui/touch_feedback/touch_feedback_overlay.gd"
+DevIntent="*res://src/ui/components/organisms/dev_intent_panel/dev_intent_overlay.gd"
 
 [debug]
 

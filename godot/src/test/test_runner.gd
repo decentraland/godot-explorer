@@ -16,7 +16,7 @@ func start():
 		GroundedGraceTest.new(),
 		DebugCollectorCountsTest.new(),
 		BeforeSendFreedInstanceTest.new(),
-		ForceBackfaceCullingTest.new()
+		ForceBackfaceCullingTest.new(),
 	]
 	var success: bool = rust_test_runner.run_all_tests(gdscript_tests, 0, true, self)
 

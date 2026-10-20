@@ -135,6 +135,31 @@ fn navbar_profile_hitbox_matches_visible_bubble() {
     );
 }
 
+/// The dev-intent card (docs/dev-intent.md) floats at the top-left of the HUD with the
+/// title and a tickable row per step. Only the checkboxes and the close button are meant
+/// to claim input: the card, its background PanelContainer and every layout container must
+/// stay IGNORE or the reserved area becomes a click wall over the scene (issue #2578).
+#[test]
+fn dev_intent_panel_does_not_block_scene_ui() {
+    let nodes =
+        parse_tscn("../godot/src/ui/components/organisms/dev_intent_panel/dev_intent_panel.tscn");
+    let root = nodes
+        .iter()
+        .find(|n| n.name == "DevIntentPanel")
+        .expect("dev_intent_panel root node not found — was it renamed?");
+    // The root IS the background PanelContainer, so it must be IGNORE as well.
+    assert_click_through(root, "dev_intent_panel");
+    assert_click_through(find(&nodes, "VBoxContainer", "."), "dev_intent_panel");
+    assert_click_through(
+        find(&nodes, "HBoxContainer_Header", "VBoxContainer"),
+        "dev_intent_panel",
+    );
+    assert_click_through(
+        find(&nodes, "VBoxContainer_Steps", "VBoxContainer"),
+        "dev_intent_panel",
+    );
+}
+
 /// The bottom-center version/FPS strip is an HBoxContainer of Labels; the
 /// Labels ignore input but the HBox itself defaulted to PASS.
 #[test]
