@@ -204,10 +204,13 @@ func _render() -> void:
 				. plural(display_day)
 				. format({"day": display_day})
 			)
+			# Keyed off is_d3_claimed(), not display_day < CHECKPOINT_DAY — display_day == 3 means
+			# "today is Day 3, working towards it" right up until it's actually claimed, including
+			# the exact day-3 case a plain "< 3" comparison would wrongly skip straight to LATE.
 			var subtitle_key := (
-				"STREAK_PROGRESS_SUBTITLE_EARLY"
-				if display_day < CHECKPOINT_DAY
-				else "STREAK_PROGRESS_SUBTITLE_LATE"
+				"STREAK_PROGRESS_SUBTITLE_LATE"
+				if Global.streak_manager.is_d3_claimed()
+				else "STREAK_PROGRESS_SUBTITLE_EARLY"
 			)
 			_set_subtitle(subtitle_key)
 			_set_cta(TranslationKey.new("STREAK_CTA_GOT_IT").text(), true)
