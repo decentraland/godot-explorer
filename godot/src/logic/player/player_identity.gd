@@ -37,6 +37,16 @@ func async_fetch_profile(address: String, lambda_server_url: String) -> void:
 		return
 
 	if response is PromiseError:
+		# A profile deployed moments ago can 404 until the catalyst propagates it; keep it.
+		var current := get_profile_or_null()
+		if (
+			current != null
+			and not current.get_name().is_empty()
+			and current.get_ethereum_address().to_lower() == address.to_lower()
+		):
+			print("Keeping local profile, fetch failed for ", address, ": ", response.get_error())
+			return
+
 		# Profile not found or error - clear saved guest profile and start fresh
 		Global.get_config().guest_profile = {}
 		Global.get_config().save_to_settings_file()

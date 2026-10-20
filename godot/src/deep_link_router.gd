@@ -26,6 +26,7 @@ const PENDING_SIGNIN_MAX_AGE_MS: int = 5 * 60 * 1000
 # Parked `?signin=` identity id + when it was parked. Read through
 # take_pending_signin_identity_id() only; lobby.gd is the single consumer.
 var _pending_signin_identity_id: String = ""
+var _pending_signin_auth_request_id: String = ""
 var _pending_signin_parked_at_ms: int = 0
 
 
@@ -182,7 +183,10 @@ func process_deep_link(url: String, start_kind: String = "warm") -> void:
 
 	# Handle signin deep link for mobile auth flow
 	if Global.deep_link_obj.is_signin_request():
-		_handle_signin_deep_link(Global.deep_link_obj.signin_identity_id)
+		_handle_signin_deep_link(
+			Global.deep_link_obj.signin_identity_id,
+			str(Global.deep_link_obj.params.get("authRequestId", ""))
+		)
 		_clear_deep_link()
 	else:
 		deep_link_received.emit.call_deferred()
@@ -286,12 +290,7 @@ func _route_teleport() -> void:
 	var location: Vector2i = Global.deep_link_obj.location
 	var has_location := Global.deep_link_obj.is_location_defined()
 
-	# The deeplink target is captured above and consumed now — clear realm/location on the shared
-	# deep_link_obj so a later explorer boot (e.g. teleporting away after a private-world block)
-	# can't re-read this stale realm and re-trigger the modal (#2569 review, iOS). preview is left
-	# untouched: it drives preview/hot-reload mode with its own lifecycle.
-	Global.deep_link_obj.realm = ""
-	Global.deep_link_obj.location = Vector2i.MAX
+	consume_navigation_target()
 
 	# World realm without explicit location → join_world, skip ban pre-check (deferred post-loading)
 	if not realm.is_empty() and Realm.is_dcl_ens(realm) and not has_location:
@@ -308,7 +307,7 @@ func _route_teleport() -> void:
 ##
 ## The token is self-contained — complete_mobile_connect_account fetches the identity by id
 ## — so the only question is who drives the UI while that fetch runs.
-func _handle_signin_deep_link(identity_id: String) -> void:
+func _handle_signin_deep_link(identity_id: String, auth_request_id: String) -> void:
 	# Checked ahead of the pending branch: abort_try_connect_account clears
 	# pending_mobile_auth, but start_mobile_connect_account's spawn is not abortable and sets
 	# it again on resolve, so a cancel during the browser-opening window leaves it true.
@@ -316,10 +315,16 @@ func _handle_signin_deep_link(identity_id: String) -> void:
 		print("[DEEPLINK] Ignoring signin token: the user cancelled this sign-in")
 		return
 
+	# Bound to a sign-in this install didn't start (or already settled): the server would
+	# reject it without the matching verifier anyway.
+	if Global.player_identity.is_foreign_mobile_signin(auth_request_id):
+		print("[DEEPLINK] Ignoring signin token: it belongs to another sign-in request")
+		return
+
 	if Global.player_identity.has_pending_mobile_auth():
 		# Warm resume: this same process opened the browser, so the lobby is alive with the
 		# AUTH_BROWSER_OPEN spinner up and its auth signals connected. Complete right here.
-		Global.player_identity.complete_mobile_connect_account(identity_id)
+		Global.player_identity.complete_mobile_connect_account(identity_id, auth_request_id)
 		return
 
 	# Already signed in, so this cannot be the cold start we rescue. Parking it leaves a token
@@ -339,6 +344,7 @@ func _handle_signin_deep_link(identity_id: String) -> void:
 	# hasn't connected them yet. Park the token and let the lobby redeem it on its own terms.
 	print("[DEEPLINK] signin token arrived with no pending auth (cold start) — parking it")
 	_pending_signin_identity_id = identity_id
+	_pending_signin_auth_request_id = auth_request_id
 	_pending_signin_parked_at_ms = Time.get_ticks_msec()
 	deep_link_signin_parked.emit.call_deferred()
 
@@ -360,8 +366,23 @@ func take_pending_signin_identity_id() -> String:
 	return identity_id
 
 
+## The `authRequestId` that came with the parked token; read right after taking it.
+func take_pending_signin_auth_request_id() -> String:
+	var auth_request_id := _pending_signin_auth_request_id
+	_pending_signin_auth_request_id = ""
+	return auth_request_id
+
+
 func _clear_deep_link() -> void:
 	# Only clear the URL flag, not deep_link_obj.
 	# deep_link_obj is still needed by scene_fetcher (preview mode)
 	# and other systems that check deep link parameters.
 	Global.deep_link_url = ""
+
+
+## Call only after the target has been read: clears realm/location so a later explorer boot
+## does not land on them again (#2569, #3088). preview is kept: it drives hot-reload.
+func consume_navigation_target() -> void:
+	_clear_deep_link()
+	Global.deep_link_obj.realm = ""
+	Global.deep_link_obj.location = Vector2i.MAX

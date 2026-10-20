@@ -27,6 +27,7 @@
 "AUTH_SIGNED_IN_AS_NAME";"";"";"Has iniciado sesión como
 {name}."
 "AUTH_SIGN_IN_BUTTON";"";"";"INICIAR SESIÓN"
+"AUTH_SIGN_IN_OTHER_REQUEST";"";"";"Este inicio de sesión se inició desde otra sesión. Vuelve a intentarlo."
 "AUTH_SIGN_IN_TITLE";"";"";"Inicia sesión en Decentraland"
 "AUTH_UPDATE_BODY";"";"";"Hay una nueva versión de Decentraland disponible. Actualiza para disfrutar de la mejor experiencia."
 "AUTH_UPDATE_TITLE";"";"";"Nueva versión disponible"

@@ -27,6 +27,7 @@
 "AUTH_SIGNED_IN_AS_NAME";"";"";"Você fez login como
 {name}."
 "AUTH_SIGN_IN_BUTTON";"";"";"ACESSAR"
+"AUTH_SIGN_IN_OTHER_REQUEST";"";"";"Este login foi iniciado em outra sessão. Tente novamente."
 "AUTH_SIGN_IN_TITLE";"";"";"Entre na Decentraland"
 "AUTH_UPDATE_BODY";"";"";"Nova versão da Decentraland disponível. Atualize para a melhor experiência."
 "AUTH_UPDATE_TITLE";"";"";"Nova versão liberada!"
