@@ -29,12 +29,13 @@ const REWARD_ART_FADE_DURATION_SEC := 0.3
 var _state: State = State.WELCOME
 var _progress_day: int = 0
 var _is_guest: bool = false
-# -1 means "not specified, derive from _progress_day" — 0 is itself a meaningful value (today's
-# credit already happened, nothing pending) and must not collapse into that fallback, which is
-# why this isn't a plain ">0" check everywhere it's read (see _update_day_row()). > 0 specifically
-# is "come finish today's mission" reminder territory (Figma "D2-Streak", shown on a Discover
-# landing BEFORE today's jump-in) rather than the post-credit celebration — the day number to
-# render as still-pending in the row/title, since _progress_day itself hasn't caught up to it yet.
+# -1 means "not specified, derive from _progress_day". > 0 is "come finish today's mission"
+# reminder territory (Figma "D2-Streak", shown on a Discover landing BEFORE today's jump-in) —
+# the day number to render as still-pending in the row/title, since _progress_day itself hasn't
+# caught up to it yet. 0 ("today's credit already happened, nothing pending") always reads as
+# "> 0 is false" everywhere this is used (title's display_day, row's today_day) and falls back to
+# _progress_day either way — confirmed against Figma: the just-credited reward day still reads as
+# "today" (not "already passed, unclaimed") until the player actually claims it.
 var _pending_day: int = -1
 # True while claim_button's claim_action is awaiting the claim (and, for guests, the upgrade
 # flow ahead of it) — guards _on_gui_input so tapping outside can't free this modal mid-request
@@ -153,10 +154,14 @@ func _update_day_row() -> void:
 		claimed_days.append(CHECKPOINT_DAY)
 	if Global.streak_manager.is_d7_claimed():
 		claimed_days.append(FINAL_DAY)
-	# _pending_day flows straight through — it's already -1 ("not specified") or a real day
-	# number (0 included), matching StreakDayRow.render()'s own today_day convention exactly, so
-	# a genuine "0, nothing pending today" isn't miscoerced into the progress_day fallback below.
-	streak_day_row.render(_progress_day, [CHECKPOINT_DAY, FINAL_DAY], claimed_days, _pending_day)
+	# Same collapse _render()'s own display_day uses below: a genuine 0 ("today's credit already
+	# happened") falls back to _progress_day here too, so the row's "today" pill matches the title.
+	streak_day_row.render(
+		_progress_day,
+		[CHECKPOINT_DAY, FINAL_DAY],
+		claimed_days,
+		_pending_day if _pending_day > 0 else _progress_day
+	)
 
 
 func _render() -> void:
