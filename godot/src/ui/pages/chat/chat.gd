@@ -251,11 +251,7 @@ func _async_await_frames(count: int) -> bool:
 
 
 func _on_chat_message_arrived(address: String, message: String, timestamp: float):
-	var new_chat = Global.preload_assets.CHAT_MESSAGE.instantiate()
-	v_box_container_chat.add_child(new_chat)
-	new_chat.reduce_text = false
-	new_chat.set_portrait(Global.is_orientation_portrait())
-	new_chat.set_chat(address, message, timestamp)
+	_add_message(address, message, timestamp)
 
 	if !scrolled:
 		_scroll_to_bottom()
@@ -265,11 +261,20 @@ func _on_chat_message_arrived(address: String, message: String, timestamp: float
 		label_new_messages.text = str(new_messages_count)
 
 
+func _add_message(address: String, message: String, timestamp: float) -> void:
+	var new_chat = Global.preload_assets.CHAT_MESSAGE.instantiate()
+	v_box_container_chat.add_child(new_chat)
+	new_chat.reduce_text = false
+	new_chat.set_portrait(Global.is_orientation_portrait())
+	new_chat.set_chat(address, message, timestamp)
+
+
 ## Replays `source`'s messages into this (empty) view, oldest first.
 func copy_messages_from(source: Control) -> void:
 	for node in source.v_box_container_chat.get_children():
 		if node.get_script() == ChatMessage:
-			_on_chat_message_arrived(node.address, node.message, node.timestamp)
+			_add_message(node.address, node.message, node.timestamp)
+	scroll_to_bottom_deferred()
 
 
 func is_at_bottom() -> bool:

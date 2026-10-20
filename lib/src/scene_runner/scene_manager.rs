@@ -253,6 +253,9 @@ const MIN_TIME_TO_PROCESS_SCENE_US: i64 = 2083; // 25% of max_time_per_scene_tic
 const MEMORY_SETTLE_FRAMES: i32 = 90;
 /// Reach of the crosshair/cursor ray, for both the physics raycast and the video-screen test.
 const POINTER_RAY_LENGTH: f32 = 100.0;
+/// How far a video screen can be for the focus-mode prompt. Wider than the 10 m passport
+/// range because event screens are large and watched from a distance.
+const VIDEO_FOCUS_MAX_DISTANCE: f32 = 30.0;
 
 const EXIT_WITHOUT_KILL_SIGNAL: &str = "scene thread exited without kill signal";
 const CRDT_STATE_POISONED: &str = "scene CRDT state poisoned by a renderer panic";
@@ -3024,7 +3027,10 @@ impl SceneManager {
         const CL_POINTER: u32 = 1;
         const CL_AVATAR: u32 = 536870912; // Layer 30 for avatars
 
-        let camera_node = self.base().get_viewport().and_then(|x| x.get_camera_3d())?;
+        let Some(camera_node) = self.base().get_viewport().and_then(|x| x.get_camera_3d()) else {
+            self.pointer_ray = None;
+            return None;
+        };
 
         // Outside tap-cursor mode, aim where the crosshair is drawn (mobile sets
         // it per-frame); desktop keeps the viewport center. The ray ALWAYS starts
@@ -3146,7 +3152,9 @@ impl SceneManager {
     }
 
     /// Most screens have no collider, so the physics ray passes through them: test the video
-    /// screens' mesh bounds along the same ray, ignoring any behind the collider it did hit.
+    /// screens' mesh bounds along the same ray, within VIDEO_FOCUS_MAX_DISTANCE and not behind
+    /// the pointer collider it did hit. Scenes without video players are skipped, so the scan
+    /// only runs where a screen exists.
     fn video_screen_along_pointer_ray(
         &self,
         physics_hit: &Option<GodotDclRaycastResult>,
@@ -3154,13 +3162,48 @@ impl SceneManager {
         let (ray_from, ray_dir) = self.pointer_ray?;
         let max_distance = physics_hit
             .as_ref()
-            .map_or(POINTER_RAY_LENGTH, |hit| hit.hit.length);
-        self.scenes
+            .map_or(VIDEO_FOCUS_MAX_DISTANCE, |hit| {
+                hit.hit.length.min(VIDEO_FOCUS_MAX_DISTANCE)
+            });
+        let (distance, video_player) = self
+            .scenes
             .values()
             .filter_map(|scene| scene.video_screen_along_ray(ray_from, ray_dir))
             .filter(|(distance, _)| *distance <= max_distance)
-            .min_by(|a, b| a.0.total_cmp(&b.0))
-            .map(|(_, video_player)| video_player)
+            .min_by(|a, b| a.0.total_cmp(&b.0))?;
+        if self.is_pointer_ray_occluded(ray_from, ray_from + ray_dir * distance) {
+            return None;
+        }
+        Some(video_player)
+    }
+
+    /// Whether physics-only geometry (a wall whose collider is not on the pointer layer)
+    /// stands between the camera and `to`. Only called once a screen is within reach, so
+    /// this second raycast is rare.
+    fn is_pointer_ray_occluded(&self, from: Vector3, to: Vector3) -> bool {
+        const CL_POINTER_OR_PHYSICS: u32 = 3;
+        // A screen's own collider sits on the surface the bounds test hit; ignore that.
+        const SURFACE_TOLERANCE: f32 = 0.05;
+        let Some(mut space) = self
+            .base()
+            .get_viewport()
+            .and_then(|viewport| viewport.get_camera_3d())
+            .and_then(|camera| camera.get_world_3d())
+            .and_then(|mut world| world.get_direct_space_state())
+        else {
+            return false;
+        };
+        let Some(mut query) = PhysicsRayQueryParameters3D::create(from, to) else {
+            return false;
+        };
+        query.set_collision_mask(CL_POINTER_OR_PHYSICS);
+        query.set_exclude(&self.pointer_raycast_exclude);
+        let result = space.intersect_ray(&query);
+        let Some(position) = result.get("position") else {
+            return false;
+        };
+        let hit_distance = position.to::<Vector3>().distance_to(from);
+        hit_distance + SURFACE_TOLERANCE < to.distance_to(from)
     }
 
     #[signal]

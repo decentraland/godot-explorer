@@ -141,6 +141,8 @@ func _apply_orientation(is_portrait: bool) -> void:
 	_update_video_panel_size()
 	if _chat != null:
 		_chat.apply_orientation(is_portrait)
+		# The docked column is narrow in both orientations, so the chat always uses its
+		# full-width (portrait) layout; apply_orientation only sets the sizes and fonts.
 		_chat.set_layout_portrait()
 
 
@@ -180,8 +182,16 @@ func _kill_exit_label_tween() -> void:
 
 
 func _update_members_count() -> void:
-	# Remote avatars plus the player.
-	_label_members.text = str(Global.avatars.get_avatars_count() + 1)
+	# The same set the Nearby list shows (social_list.gd): loaded avatars with an address,
+	# minus blocked users, plus the player.
+	var count := 1
+	for avatar in Global.avatars.get_avatars():
+		if not avatar is Avatar or avatar.avatar_id.is_empty():
+			continue
+		if Global.social_blacklist and Global.social_blacklist.is_blocked(avatar.avatar_id):
+			continue
+		count += 1
+	_label_members.text = str(count)
 
 
 func _on_avatars_changed(_avatar_or_address: Variant) -> void:

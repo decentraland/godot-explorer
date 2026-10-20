@@ -387,6 +387,10 @@ impl Scene {
         ray_from: godot::builtin::Vector3,
         ray_dir: godot::builtin::Vector3,
     ) -> Option<(f32, Gd<DclVideoPlayer>)> {
+        // Runs every physics tick: most scenes have no video, so they cost one check.
+        if self.video_players.is_empty() {
+            return None;
+        }
         let mut nearest: Option<(f32, Gd<DclVideoPlayer>)> = None;
         for (entity_id, item) in self.materials.iter() {
             let Some(video_player) = self.video_player_for_material(item) else {
