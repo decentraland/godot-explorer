@@ -40,7 +40,8 @@ func setup(image: Texture2D, data: Dictionary) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if disabled:
+	# _input reaches hidden nodes too, and a hidden card keeps its last rect.
+	if disabled or not is_visible_in_tree():
 		return
 	if event is InputEventScreenTouch:
 		if event.pressed:
