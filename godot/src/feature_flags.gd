@@ -46,6 +46,9 @@ const FLAG_DAY1_NOTIFICATION := "day1-notification"
 # Foundation parity, the same flag name Unity reads: scene glTF materials render with
 # backfaces culled, which is what an inverted-hull outline (a `doubleSided` shell with
 # flipped normals) expects. Read at material-fix time — see GltfContainer.fix_material.
+# CLI `--force-backface-culling` / `--no-force-backface-culling` and the deeplink
+# `force-backface-culling=true/false` win over the flag, so QA can see it without the
+# bff serving it.
 const FLAG_FORCE_BACKFACE_CULLING := "alfa-force-backface-culling"
 
 var _flags: Dictionary = {}
@@ -86,6 +89,31 @@ func get_text(flag_name: String, default_value: String) -> String:
 	if value is String:
 		return value
 	return default_value
+
+
+# "true" / "false" when the run sets it locally, "" otherwise. The CLI wins over the
+# deeplink, and both win over the remote flag they override.
+func _local_override(arg_on: String, arg_off: String, param: String) -> String:
+	if Global.cli.has_arg(arg_off):
+		return "false"
+	if Global.cli.has_arg(arg_on):
+		return "true"
+	if Global.deep_link_obj != null:
+		var value := str(Global.deep_link_obj.params.get(param, "")).to_lower()
+		if not value.is_empty():
+			return "true" if value in ["true", "1", "yes"] else "false"
+	return ""
+
+
+# Foundation-parity cull mode for scene glTF materials: the remote flag, with the local
+# opt-in on top (see FLAG_FORCE_BACKFACE_CULLING).
+func is_force_backface_culling_enabled() -> bool:
+	var local_override := _local_override(
+		"--force-backface-culling", "--no-force-backface-culling", "force-backface-culling"
+	)
+	if not local_override.is_empty():
+		return local_override == "true"
+	return is_enabled(FLAG_FORCE_BACKFACE_CULLING, false)
 
 
 # Extracts the flags dictionary from the mobile-bff response:
@@ -173,7 +201,7 @@ func _apply_flags() -> void:
 func _update_async_shader_compilation() -> void:
 	if _async_shaders_enabled:
 		return
-	var local_override := _async_shaders_local_override()
+	var local_override := _local_override("--async-shaders", "--no-async-shaders", "async-shaders")
 	var enabled: bool
 	if not local_override.is_empty():
 		enabled = local_override == "true"
@@ -187,19 +215,6 @@ func _update_async_shader_compilation() -> void:
 		print("[FeatureFlags] async shader compilation: disabled")
 	if SentrySDK.is_enabled():
 		SentrySDK.set_tag("async_shader_compilation", "on" if enabled else "off")
-
-
-# "true" / "false" when the run sets it locally, "" otherwise.
-func _async_shaders_local_override() -> String:
-	if Global.cli.has_arg("--no-async-shaders"):
-		return "false"
-	if Global.cli.has_arg("--async-shaders"):
-		return "true"
-	if Global.deep_link_obj != null:
-		var value := str(Global.deep_link_obj.params.get("async-shaders", "")).to_lower()
-		if not value.is_empty():
-			return "true" if value in ["true", "1", "yes"] else "false"
-	return ""
 
 
 func _enable_async_shader_compilation() -> bool:

@@ -48,6 +48,17 @@ func run() -> bool:
 	ok = _expect(shell.has_meta("dcl_fixed"), true, "material still marked dcl_fixed") and ok
 	ok = _expect(shell.vertex_color_use_as_albedo, false, "vertex color still off") and ok
 
+	# QA opt-in: the deeplink wins over a payload that does not serve the flag.
+	var previous_link: DclParseDeepLink = Global.deep_link_obj
+	Global.deep_link_obj = DclParseDeepLink.parse_decentraland_link(
+		"decentraland://open?force-backface-culling=true"
+	)
+	flags._flags = {}
+	var forced := _double_sided_material()
+	container.fix_material(forced)
+	ok = _expect_cull(forced, BaseMaterial3D.CULL_BACK, "deeplink forces CULL_BACK") and ok
+	Global.deep_link_obj = previous_link
+
 	container.free()
 	Global.feature_flags = previous_flags
 	flags.free()

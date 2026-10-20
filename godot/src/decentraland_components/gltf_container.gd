@@ -238,7 +238,7 @@ func fix_material(mat: BaseMaterial3D, _mesh_name: String = ""):
 	# Foundation parity, flag-gated: Unity force-culls every scene glTF material, which is
 	# what an inverted-hull outline (a `doubleSided` shell with flipped normals) expects.
 	# Off by default — it also drops the back faces of genuinely double-sided content.
-	if Global.feature_flags.is_enabled(FeatureFlags.FLAG_FORCE_BACKFACE_CULLING, false):
+	if Global.feature_flags.is_force_backface_culling_enabled():
 		mat.cull_mode = BaseMaterial3D.CULL_BACK
 
 
