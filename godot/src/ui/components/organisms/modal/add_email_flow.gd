@@ -15,6 +15,11 @@ extends Node
 ## here would hang forever on any kind of cancel/failure (issue #3018).
 signal flow_concluded(upgraded: bool)
 
+## Source tag for upgrades triggered from the streak claim flow — shared with
+## StreakModalController so the UI-copy check here and the metrics attribution there can't drift
+## apart into two differently-spelled literals.
+const SOURCE_LOGIN_STREAK := "login_streak"
+
 static var _add_email_regex: RegEx = RegEx.create_from_string("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
 
 
@@ -27,7 +32,7 @@ static func is_valid_email(text: String) -> bool:
 ## @param grant_campaign_key: RewardCampaigns.CAMPAIGNS key granted on success; pass "" to link the
 ## email without granting anything (caller has its own post-upgrade reward step, e.g. streak claim).
 ## @param source: tags ACCOUNT_UPGRADE_SUCCESS/AUTH_SUCCESS with where the upgrade came from (e.g.
-## "login_streak") — empty for the default nudge entry points, which carry no source today.
+## SOURCE_LOGIN_STREAK) — empty for the default nudge entry points, which carry no source today.
 func async_start_add_email_flow(
 	grant_campaign_key: String = "MobilePet", source: String = ""
 ) -> void:
@@ -35,7 +40,7 @@ func async_start_add_email_flow(
 	# your reward" reads as a direct continuation of what they just tapped, instead of the
 	# generic nudge copy the other (sourceless) entry points show.
 	var title_key := (
-		"MODAL_ADD_EMAIL_TITLE_STREAK" if source == "login_streak" else "MODAL_ADD_EMAIL_TITLE"
+		"MODAL_ADD_EMAIL_TITLE_STREAK" if source == SOURCE_LOGIN_STREAK else "MODAL_ADD_EMAIL_TITLE"
 	)
 	var modal = await Global.modal_manager.async_show_input_modal(
 		TranslationKey.new(title_key),

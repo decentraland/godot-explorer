@@ -132,11 +132,11 @@ func _async_claim_direct(day: int) -> bool:
 
 
 ## Runs the shared OTP upgrade flow once (default grant_campaign_key "MobilePet", so the upgrade
-## reward shows first — chain, not suppress), tagged source="login_streak" for attribution. Awaits
-## AddEmailFlow's own flow_concluded, not Global.guest_upgrade_state_refreshed — that one never
-## fires on cancel/error and would leave the ClaimButton stuck on CLAIMING forever.
+## reward shows first — chain, not suppress), tagged source=SOURCE_LOGIN_STREAK for attribution.
+## Awaits AddEmailFlow's own flow_concluded, not Global.guest_upgrade_state_refreshed — that one
+## never fires on cancel/error and would leave the ClaimButton stuck on CLAIMING forever.
 func async_run_guest_upgrade() -> bool:
-	Global.add_email_flow.async_start_add_email_flow("MobilePet", "login_streak")
+	Global.add_email_flow.async_start_add_email_flow("MobilePet", AddEmailFlow.SOURCE_LOGIN_STREAK)
 	return await Global.add_email_flow.flow_concluded
 
 

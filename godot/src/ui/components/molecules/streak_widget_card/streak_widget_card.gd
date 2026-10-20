@@ -114,10 +114,10 @@ func _on_button_claim_pressed() -> void:
 	if Global.streak_manager.get_claimable_days().is_empty():
 		return
 	Global.metrics.track_click_button("CLAIM", "LOGIN_STREAK_WIDGET_SHOW", "")
-	# Still needs the real pending_day even though get_claimable_days() already makes
-	# compute_modal_state() resolve from its first branch regardless — the day row inside the
-	# modal also reads it (for its own "today" pill), and must land on the same pill look this
-	# widget's own row already shows, or D3/D7 can end up looking different between the two.
+	# Still needs the real pending_day even though get_claimable_days() non-empty already settles
+	# compute_modal_state()'s claim-vs-reset branch — the day row inside the modal also reads it
+	# (for its own "today" pill), and must land on the same pill look this widget's own row
+	# already shows, or D3/D7 can end up looking different between the two.
 	var pending_day := Global.streak_manager.get_pending_today_day()
 	_async_show_streak_modal_and_wait(
 		Global.streak_manager.compute_modal_state(pending_day),
