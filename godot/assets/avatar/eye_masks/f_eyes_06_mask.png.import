@@ -3,19 +3,21 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://ba88ty5o823fv"
-path="res://.godot/imported/f_eyes_06_mask.png-3b193fcafead54fb76da7e0ef8d59558.ctex"
+path.s3tc="res://.godot/imported/f_eyes_06_mask.png-3b193fcafead54fb76da7e0ef8d59558.s3tc.ctex"
+path.etc2="res://.godot/imported/f_eyes_06_mask.png-3b193fcafead54fb76da7e0ef8d59558.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/avatar/eye_masks/f_eyes_06_mask.png"
-dest_files=["res://.godot/imported/f_eyes_06_mask.png-3b193fcafead54fb76da7e0ef8d59558.ctex"]
+dest_files=["res://.godot/imported/f_eyes_06_mask.png-3b193fcafead54fb76da7e0ef8d59558.s3tc.ctex", "res://.godot/imported/f_eyes_06_mask.png-3b193fcafead54fb76da7e0ef8d59558.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -37,4 +39,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=1
+detect_3d/compress_to=0
