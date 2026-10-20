@@ -203,6 +203,10 @@ static func update(avatar) -> void:
 				target_a = _tier_alpha(tier, dist, focused)
 			else:
 				_untrack_plate(ui)
+			# An anchor above the top edge would clip the tag, so keep the drawn plate
+			# inside the viewport.
+			pos.y = maxf(pos.y, 0.0)
+			pos.x = clampf(pos.x, 0.0, maxf(view_rect.size.x - screen_size.x, 0.0))
 			ui.position = pos
 			# Closer avatars draw on top.
 			ui.z_index = clampi(-int(dist * 100.0), -4000, 4000)

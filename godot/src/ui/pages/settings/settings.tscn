@@ -373,11 +373,11 @@ layout_mode = 2
 size_flags_vertical = 0
 theme = ExtResource("12_sa1v7")
 
-[node name="ShowOwnNametag" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionChatAndSocial/VBoxContainer"]
+[node name="ShowOwnNametag" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionChatAndSocial/VBoxContainer" unique_id=271496971]
 layout_mode = 2
 theme_override_constants/separation = 32
 
-[node name="Label_Title" type="Label" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionChatAndSocial/VBoxContainer/ShowOwnNametag"]
+[node name="Label_Title" type="Label" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionChatAndSocial/VBoxContainer/ShowOwnNametag" unique_id=1960996548]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -387,7 +387,7 @@ text = "SETTINGS_SHOW_OWN_NAMETAG"
 label_settings = ExtResource("17_67hd5")
 script = ExtResource("99_orlbl")
 
-[node name="CheckButton_ShowOwnNametag" type="CheckButton" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionChatAndSocial/VBoxContainer/ShowOwnNametag"]
+[node name="CheckButton_ShowOwnNametag" type="CheckButton" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionChatAndSocial/VBoxContainer/ShowOwnNametag" unique_id=653683958]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
@@ -443,7 +443,6 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_replay")
 theme_override_styles/hover = SubResource("StyleBoxFlat_replay")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_replay")
 text = "SETTINGS_REPLAY"
-
 
 [node name="Container_Camera" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay" unique_id=1854347]
 unique_name_in_owner = true
