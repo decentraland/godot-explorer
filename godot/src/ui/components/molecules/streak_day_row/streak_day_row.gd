@@ -47,8 +47,9 @@ func _ensure_pills() -> void:
 ## "today" highlight.
 ## @param reward_days: 1-indexed days that grant a reward (D3 checkpoint + D7 final by default).
 ## @param claimed_days: 1-indexed reward days already claimed (REWARD_DONE's distinct green look).
-## @param today_day: day to render as "current, not yet done" (TODAY/REWARD_TODAY); defaults to
-## progress_day. The Discover widget passes StreakManager.get_pending_today_day() instead, since
+## @param today_day: day to render as "current" (TODAY if not a reward day, REWARD_PENDING if it
+## is and progress_day hasn't caught up to it, REWARD_TODAY if it has); defaults to progress_day.
+## The Discover widget passes StreakManager.get_pending_today_day() instead, since
 ## it's visible even before today's jump-in.
 func render(
 	progress_day: int,
@@ -75,8 +76,8 @@ func render(
 			state = StreakDayPill.State.REWARD_DONE
 		elif day_number <= progress_day:
 			if is_reward_day:
-				# Distinct looks: "today is this reward day" vs "already past it, still
-				# unclaimed" — Figma ships these as two separate exports, not one shared state.
+				# Credited already (today or an earlier day) — claimable either way, same
+				# filled-icon/glow look regardless of which of the two it is.
 				state = (
 					StreakDayPill.State.REWARD_TODAY
 					if is_today
@@ -86,8 +87,10 @@ func render(
 				# Always DONE, never TODAY — TODAY is only for the still-pending day below.
 				state = StreakDayPill.State.DONE
 		elif is_today:
+			# Reached, but today's jump-in hasn't credited it yet — not claimable, outline icon,
+			# no glow (distinct from the credited branch above, which is).
 			state = (
-				StreakDayPill.State.REWARD_TODAY if is_reward_day else StreakDayPill.State.TODAY
+				StreakDayPill.State.REWARD_PENDING if is_reward_day else StreakDayPill.State.TODAY
 			)
 		elif is_reward_day:
 			state = StreakDayPill.State.REWARD_LOCKED

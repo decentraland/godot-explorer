@@ -6,15 +6,20 @@ extends Control
 ## sheet "Slots 1-2-4-5-6" and "Slots 3 y 7 - Reward").
 ##
 ## Each state is a single baked PNG (box + icon + glow all in one export) — no StyleBoxFlat/
-## PanelContainer, %Icon just swaps texture. Non-reward days use empty/current/complete; reward
-## days (D3/D7) additionally distinguish "today is this reward day" from "already past it, still
-## unclaimed" (REWARD_TODAY vs REWARD_PASSED — Figma ships these as two distinct exports, not one
-## shared look). Reward slots read visually bigger than day slots by design: %Icon's own
-## custom_minimum_size changes per state (56x68 for day states, 68x68 for reward states, both at
-## the row's shared 68 height) rather than relying on each baked PNG's internal padding — the
-## control's own box size is what drives the size difference.
+## PanelContainer, %Icon just swaps texture, and the %Claimable_Background glow overlay toggles
+## separately per state. Non-reward days use empty/current/complete; reward days (D3/D7) also
+## distinguish "reached, not credited yet" (REWARD_PENDING — outline icon, glow off) from
+## "credited, claimable now" (REWARD_TODAY/REWARD_PASSED — filled icon, glow on): confirmed
+## against Figma, the same D3 pill reads identically whether it was just credited today or is an
+## older still-unclaimed day — only "not credited yet" looks different. Reward slots read
+## visually bigger than day slots by design: %Icon's own custom_minimum_size changes per state
+## (56x68 for day states, 68x68 for reward states, both at the row's shared 68 height) rather than
+## relying on each baked PNG's internal padding — the control's own box size is what drives the
+## size difference.
 
-enum State { FUTURE, TODAY, DONE, REWARD_LOCKED, REWARD_TODAY, REWARD_PASSED, REWARD_DONE }
+enum State {
+	FUTURE, TODAY, DONE, REWARD_LOCKED, REWARD_PENDING, REWARD_TODAY, REWARD_PASSED, REWARD_DONE
+}
 
 const COLOR_DEFAULT := Color(0.9882353, 0.9882353, 0.9882353)  # DCL/Snow
 const COLOR_REWARD_LOCKED := Color(1, 0.7882353, 0.3568627)  # #FFC95B
@@ -23,18 +28,24 @@ const COLOR_CLAIMABLE := Color(0.8745098, 0.6117647, 1)  # #DF9CFF
 const ICON_SIZE_DAY := Vector2(56, 68)
 const ICON_SIZE_REWARD := Vector2(68, 68)
 const REWARD_STATES := [
-	State.REWARD_LOCKED, State.REWARD_TODAY, State.REWARD_PASSED, State.REWARD_DONE
+	State.REWARD_LOCKED,
+	State.REWARD_PENDING,
+	State.REWARD_TODAY,
+	State.REWARD_PASSED,
+	State.REWARD_DONE,
 ]
 # A reward day's entitlement is never lost once reached (see StreakManager.get_claimable_day) —
 # REWARD_PASSED ("already past it, still unclaimed") is just as claimable as REWARD_TODAY, only
-# without the "this is the one" highlight. REWARD_LOCKED (not reached yet) and REWARD_DONE
-# (already claimed) are the only two reward states that are NOT currently claimable.
+# without the "this is the one" highlight. REWARD_LOCKED (not reached yet), REWARD_PENDING
+# (reached, but today's jump-in hasn't credited it yet) and REWARD_DONE (already claimed) are the
+# only reward states that are NOT currently claimable.
 const CLAIMABLE_STATES := [State.REWARD_TODAY, State.REWARD_PASSED]
 
 @export var texture_future: Texture2D
 @export var texture_today: Texture2D
 @export var texture_done: Texture2D
 @export var texture_reward_locked: Texture2D
+@export var texture_reward_pending: Texture2D
 @export var texture_reward_today: Texture2D
 @export var texture_reward_passed: Texture2D
 @export var texture_reward_done: Texture2D
@@ -68,6 +79,9 @@ func set_state(day_number: int, state: State, all_claimed: bool = false) -> void
 		State.REWARD_LOCKED:
 			icon.texture = texture_reward_locked
 			label_day.modulate = COLOR_REWARD_LOCKED
+		State.REWARD_PENDING:
+			icon.texture = texture_reward_pending
+			label_day.modulate = COLOR_CLAIMABLE
 		State.REWARD_TODAY:
 			icon.texture = texture_reward_today
 			label_day.modulate = COLOR_CLAIMABLE
