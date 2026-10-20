@@ -7,11 +7,8 @@
 
 [node name="StreakDayRow" type="MarginContainer" unique_id=1436934989]
 custom_minimum_size = Vector2(0, 150)
-anchors_preset = 10
-anchor_right = 1.0
-offset_right = -164.0
+offset_right = 464.0
 offset_bottom = 150.0
-grow_horizontal = 2
 theme_override_constants/margin_left = -18
 theme_override_constants/margin_top = -10
 theme_override_constants/margin_right = -18
@@ -19,6 +16,8 @@ theme_override_constants/margin_bottom = -28
 script = ExtResource("1_script")
 streak_day_pill_scene = ExtResource("2_pill")
 metadata/_edit_horizontal_guides_ = [32.0]
+metadata/mobile_preview_orientation = "portrait"
+metadata/_edit_vertical_guides_ = [28.0]
 
 [node name="Background" type="NinePatchRect" parent="." unique_id=712375885]
 unique_name_in_owner = true
@@ -45,7 +44,9 @@ patch_margin_bottom = 50
 
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=1162572896]
 layout_mode = 2
+theme_override_constants/margin_left = 46
 theme_override_constants/margin_top = 3
+theme_override_constants/margin_right = 46
 
 [node name="Row" type="HBoxContainer" parent="MarginContainer" unique_id=2142953711]
 unique_name_in_owner = true
