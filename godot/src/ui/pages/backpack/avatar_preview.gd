@@ -26,6 +26,9 @@ const AVATAR_ROTATION_SMOOTH = 15.0
 @export var top_node_margin: Control = null
 ## Optional Control whose top edge defines the bottom margin boundary.
 @export var bottom_node_margin: Control = null
+## Controls drawn over the preview: a press inside a visible one does not start
+## rotation or zoom. Unlike the margin nodes, they do not affect framing.
+@export var input_blockers: Array[Control] = []
 @export var show_aabb_debug: bool = false
 @export var fit_avatar: bool = true
 ## When true, grow this SubViewportContainer upward so its top edge sits at
@@ -243,7 +246,7 @@ func _input(event: InputEvent):
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
-				if not iinner.has_point(event.position):
+				if not iinner.has_point(event.position) or _is_press_blocked(event.position):
 					return
 				dirty_is_dragging = true
 				start_dragging_position = get_global_mouse_position()
@@ -252,7 +255,12 @@ func _input(event: InputEvent):
 			else:
 				dirty_is_dragging = false
 
-		if not event.pressed and can_drag and iinner.has_point(event.position):
+		if (
+			not event.pressed
+			and can_drag
+			and iinner.has_point(event.position)
+			and not _is_press_blocked(event.position)
+		):
 			var dir: float = 0.0
 			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 				dir = -0.2
@@ -271,7 +279,7 @@ func _input(event: InputEvent):
 
 	if event is InputEventScreenTouch:
 		if event.pressed:
-			if not iinner.has_point(event.position):
+			if not iinner.has_point(event.position) or _is_press_blocked(event.position):
 				return
 			_touch_points[event.index] = event.position
 			if _touch_points.size() == 2 and can_drag:
@@ -295,6 +303,18 @@ func _input(event: InputEvent):
 	if event is InputEventMouseMotion:
 		if dirty_is_dragging and _touch_points.size() < 2:
 			_apply_drag(get_global_mouse_position())
+
+
+# Read on every press, not cached: blockers like a bottom sheet move.
+func _is_press_blocked(pos: Vector2) -> bool:
+	for blocker in input_blockers:
+		if (
+			is_instance_valid(blocker)
+			and blocker.is_visible_in_tree()
+			and blocker.get_global_rect().has_point(pos)
+		):
+			return true
+	return false
 
 
 func _pan_limits() -> Vector2:
