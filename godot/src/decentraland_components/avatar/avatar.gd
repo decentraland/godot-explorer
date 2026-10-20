@@ -23,6 +23,7 @@ const SCREEN_NOTIFIER_AABB: AABB = AABB(Vector3(-1.0, -0.3, -1.0), Vector3(2.0, 
 
 # Fallback nametag height when no meshes are loaded yet (meters above avatar origin).
 const DEFAULT_NAMETAG_HEIGHT := 1.9
+const MASK_MATERIAL = preload("res://assets/avatar/mask_material.tres")
 
 # Base eyes ship without an iris mask, so no client can tint them and the eye color did nothing
 # (#2439). Masks for the base eyes that draw an iris, keyed by the eye texture's content hash;
@@ -160,8 +161,6 @@ var emote_controller: AvatarEmoteController  # Rust binded. Don't change this va
 
 var voice_chat_audio_player: AudioStreamPlayer = null
 var voice_chat_audio_player_gen: AudioStreamGenerator = null
-
-var mask_material = preload("res://assets/avatar/mask_material.tres")
 
 # Signal-based wearable loader for threaded loading
 var wearable_loader: WearableLoader = null
@@ -1273,8 +1272,10 @@ func apply_facial_features_to_meshes(wearable_eyes, wearable_eyebrows, wearable_
 				child.hide()
 
 
-func apply_texture_and_mask(mesh: MeshInstance3D, textures: Array, color: Color, mask_color: Color):
-	var current_material = mask_material.duplicate()
+static func apply_texture_and_mask(
+	mesh: MeshInstance3D, textures: Array, color: Color, mask_color: Color
+):
+	var current_material = MASK_MATERIAL.duplicate()
 	current_material.set_shader_parameter(
 		"base_texture", Global.content_provider.get_texture_from_hash(textures[0])
 	)
