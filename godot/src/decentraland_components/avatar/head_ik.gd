@@ -120,10 +120,36 @@ func update_ik(delta: float, enabled: bool, look_dir: Vector3) -> void:
 	_aim(delta, yaw, pitch)
 
 
+## The wire carries the sender's camera direction in world space, as Unity's
+## Euler yaw/pitch (HeadIKComponent.GetHeadYawAndPitch over
+## Camera.transform.forward). Sending the body-relative turn instead made a peer
+## aim at a world heading: with the body facing anywhere but DCL +Z the received
+## head turned the wrong way, and past the reset limit it did not turn at all.
+## `pitch_deg` is already un-negated by the decoder (ours is + up).
+static func world_dir_to_wire(look_dir: Vector3) -> Vector2:
+	if look_dir.length_squared() < 0.000001:
+		return Vector2.ZERO
+	var dir := look_dir.normalized()
+	var horizontal := sqrt(dir.x * dir.x + dir.z * dir.z)
+	return Vector2(rad_to_deg(atan2(dir.x, -dir.z)), rad_to_deg(atan2(dir.y, horizontal)))
+
+
+## Inverse of world_dir_to_wire: wire angles -> the avatar's own frame, which is
+## what the modifier and the per-axis limits use.
+static func wire_to_body(yaw_deg: float, pitch_deg: float, avatar_basis: Basis) -> Vector2:
+	var yaw := deg_to_rad(wrapf(yaw_deg, -180.0, 180.0))
+	var pitch := deg_to_rad(clampf(wrapf(pitch_deg, -180.0, 180.0), -90.0, 90.0))
+	# DCL +Z is Godot -Z (to_godot_transform_3d flips z), hence the negated z.
+	var world_dir := Vector3(sin(yaw) * cos(pitch), sin(pitch), -cos(yaw) * cos(pitch))
+	var dir := avatar_basis.orthonormalized().inverse() * world_dir
+	var horizontal := sqrt(dir.x * dir.x + dir.z * dir.z)
+	return Vector2(rad_to_deg(atan2(dir.x, -dir.z)), rad_to_deg(atan2(dir.y, horizontal)))
+
+
 ## Per-frame entry for a remote avatar: the turn arrives over the wire as the
-## sender's own head angles (Unity UpdateRemoteIK). They are
-## already in the avatar's frame, so there is no direction to project. Same
-## limits and easing as the local path, so a remote head reads like a local one.
+## sender's own head angles (Unity UpdateRemoteIK), already converted to this
+## avatar's frame by wire_to_body. Same limits and easing as the local path, so
+## a remote head reads like a local one.
 func update_remote(delta: float, enabled: bool, yaw_deg: float, pitch_deg: float) -> void:
 	if not _built:
 		if not enabled:
