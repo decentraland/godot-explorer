@@ -20,7 +20,6 @@ const BOUNCE_OFFSET_PX := 10.0
 const BOUNCE_HALF_DURATION_SEC := 0.9
 const CLAIM_FAILED_SLIDE_OFFSET_PX := 24.0
 const CLAIM_FAILED_SLIDE_DURATION_SEC := 0.3
-const REWARD_ART_FADE_DURATION_SEC := 0.3
 
 ## Shown behind the reward art while it's still unclaimed / once the live claim succeeds.
 @export var texture_pedestal_normal: Texture2D
@@ -85,10 +84,8 @@ static func state_from_pending(pending: String) -> State:
 	return State.WELCOME
 
 
-## Awaits the reward-art fetch before reveal, so the modal never shows while a slot is still
-## mid-fetch — a failed or empty fetch just leaves that slot empty rather than racing the reveal.
-## The art itself still fades in (see _reveal_reward_thumbnails()) right as the modal appears,
-## rather than just popping in fully opaque.
+## Awaits the reward-art fetch before showing, so the modal never shows while a slot is still
+## mid-fetch — a failed or empty fetch just leaves that slot empty.
 # gdlint:ignore = async-function-name
 func async_setup(state: State, progress_day: int, is_guest: bool, pending_day: int = -1) -> void:
 	_state = state
@@ -96,12 +93,11 @@ func async_setup(state: State, progress_day: int, is_guest: bool, pending_day: i
 	_is_guest = is_guest
 	_pending_day = pending_day
 	_render()
-	var reward_targets := await _async_apply_reward_thumbnails()
+	await _async_apply_reward_thumbnails()
 	if not is_instance_valid(self):
 		return
 	show()
 	Global.metrics.track_screen_viewed(_screen_view_name(), "")
-	_reveal_reward_thumbnails(reward_targets)
 
 
 ## RewardShowcase is always visible regardless of state, so the bounce runs for the modal's
@@ -373,31 +369,22 @@ func _async_slide_in_claim_failed() -> void:
 
 ## Fills reward_art_1 (and reward_art_2 when both D3 and D7 are pending — see _render()) with the
 ## real wearable/emote thumbnail(s), sequentially. A failed or empty fetch on either slot just
-## leaves it empty — there's no baked fallback art — it never blocks the claim. Leaves every
-## touched slot at alpha 0 regardless of outcome; _reveal_reward_thumbnails() does the actual
-## fade-in, once the caller is ready to show it. @return the slots this call actually touched, so
-## the caller only reveals those (not whichever slot sits unused/hidden this render).
-func _async_apply_reward_thumbnails() -> Array[TextureRect]:
+## leaves it empty — there's no baked fallback art — it never blocks the claim.
+func _async_apply_reward_thumbnails() -> void:
 	var keys := _preview_campaign_keys()
 	var all_targets: Array[TextureRect] = [reward_art_1, reward_art_2]
-	var touched: Array[TextureRect] = []
 	for i in keys.size():
-		var target := all_targets[i]
-		touched.append(target)
 		await _async_apply_reward_thumbnail(
-			str(RewardCampaigns.CAMPAIGNS[keys[i]].get("urn", "")), target
+			str(RewardCampaigns.CAMPAIGNS[keys[i]].get("urn", "")), all_targets[i]
 		)
 		if not is_instance_valid(self):
-			return touched
-	return touched
+			return
 
 
 ## Resolves `target`'s texture to the real thumbnail, or leaves it untouched (empty) when `urn`
 ## is blank or the fetch fails — same resolve-then-fetch shape as wearable_item.gd/backpack.gd's
-## own thumbnail loads. Leaves the slot fully transparent either way; the caller fades it in once
-## it's ready to show it.
+## own thumbnail loads.
 func _async_apply_reward_thumbnail(urn: String, target: TextureRect) -> void:
-	target.modulate.a = 0.0
 	if urn.is_empty():
 		return
 	var wearable = Global.content_provider.get_wearable(urn)
@@ -420,16 +407,6 @@ func _async_apply_reward_thumbnail(urn: String, target: TextureRect) -> void:
 		push_warning("StreakModal: reward thumbnail fetch failed for ", urn, ": ", res.get_error())
 		return
 	target.texture = res.texture
-
-
-## Fades each of `targets` in from transparent — called once, right as the modal becomes visible,
-## so the reveal plays out on-screen instead of finishing invisibly while the modal was still
-## hidden during the fetch.
-func _reveal_reward_thumbnails(targets: Array[TextureRect]) -> void:
-	for target in targets:
-		var tween := create_tween()
-		tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		tween.tween_property(target, "modulate:a", 1.0, REWARD_ART_FADE_DURATION_SEC)
 
 
 func _screen_view_name() -> String:
