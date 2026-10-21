@@ -74,6 +74,8 @@ var _discard_edit_confirmed = false
 # Monotonic token for the guest-login watchdog. Bumped on every attempt (and on
 # failure) so a stale watchdog can't clobber a newer attempt. See the watchdog.
 var _guest_login_attempt: int = 0
+# Screen the current guest-login attempt waits on; the watchdog fails it if still there.
+var _guest_login_screen: String = ""
 
 @onready var control_main = %Main
 @onready var dcl_line_edit: VBoxContainer = %DclLineEdit
@@ -640,7 +642,8 @@ func _ready():
 	# profile + credits, or they would load from the wrong backend. Block on the
 	# authoritative env resolution here (no-op on non-iOS / once resolved, which is
 	# the usual case after the version-gate round-trip). Only when there's a real
-	# session to restore — the guest/benchmark flags cleared session_account above.
+	# session to restore — the guest/benchmark flags cleared session_account above; the
+	# preview guest login awaits it on its own.
 	if not session_account.is_empty():
 		_recovering_session = true
 		await Iap.async_await_env_resolved()
@@ -1236,6 +1239,7 @@ func _on_button_play_as_guest_pressed():
 	# A per-attempt token stops a stale watchdog from clobbering a fresh attempt.
 	_guest_login_attempt += 1
 	var attempt := _guest_login_attempt
+	_guest_login_screen = "ACCOUNT_GUEST_CREATE"
 	get_tree().create_timer(GUEST_LOGIN_TIMEOUT_SEC).timeout.connect(
 		func(): _on_guest_login_watchdog_timeout(attempt)
 	)
@@ -1260,7 +1264,7 @@ func _on_button_play_as_guest_pressed():
 func _on_guest_login_watchdog_timeout(attempt: int) -> void:
 	if attempt != _guest_login_attempt:
 		return  # superseded / already handled
-	if current_screen_name != "ACCOUNT_GUEST_CREATE":
+	if current_screen_name != _guest_login_screen:
 		return  # navigation succeeded — nothing to do
 	# Expected on flaky networks (that's why the watchdog exists) — the user gets
 	# a retry prompt, so warn instead of erroring into Sentry.
@@ -1277,10 +1281,13 @@ func _on_guest_login_watchdog_timeout(attempt: int) -> void:
 func _fail_guest_login(attempt: int, reason: String) -> void:
 	if attempt != _guest_login_attempt:
 		return
-	if current_screen_name != "ACCOUNT_GUEST_CREATE":
+	if current_screen_name != _guest_login_screen:
 		return
 	_guest_login_attempt += 1
 	waiting_for_new_wallet = false
+	# A preview deeplink that could not sign in is no longer honoured: back to the normal
+	# lobby flow, or the next "Play as guest" would skip avatar creation.
+	_skip_lobby = false
 	# Recoverable — just triggers the retry modal, so keep it out of Sentry.
 	push_warning("Guest login failed: " + reason)
 	show_account_home_screen()
@@ -1307,15 +1314,29 @@ func _async_show_guest_login_error() -> void:
 ## Preview deeplink on an install with no session to recover: sign in silently as the
 ## device-anchored thirdweb guest ("Play as guest" without the lobby), never a disposable
 ## wallet. On success the profile_changed chain takes the _skip_lobby route into the
-## explorer; on failure the lobby's account home is shown so the creator can sign in.
+## explorer; a failure or a stall shows account home with the guest-login retry prompt.
 func _async_preview_guest_login() -> void:
+	_guest_login_attempt += 1
+	var attempt := _guest_login_attempt
+	_guest_login_screen = "DCL_SPLASH"
+	get_tree().create_timer(GUEST_LOGIN_TIMEOUT_SEC).timeout.connect(
+		func(): _on_guest_login_watchdog_timeout(attempt)
+	)
+
+	# Same App Review env invariant as the session recovery in _ready: the guest profile
+	# must be fetched from the resolved backend. Bounded, and a no-op off iOS.
+	await Iap.async_await_env_resolved()
+	if attempt != _guest_login_attempt:
+		return
+
 	var guest_promise: Promise = Global.player_identity.async_create_guest_account(
 		_get_device_anchor_id()
 	)
 	var result = await PromiseUtils.async_awaiter(guest_promise)
+	if attempt != _guest_login_attempt:
+		return
 	if result is PromiseError:
-		push_warning("Preview guest login failed: " + result.get_error())
-		show_account_home_screen()
+		await _fail_guest_login(attempt, result.get_error())
 
 
 func _set_avatar_preview_centered() -> void:
