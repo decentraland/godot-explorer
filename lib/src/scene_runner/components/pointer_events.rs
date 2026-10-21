@@ -146,6 +146,23 @@ impl PbPointerEvents {
             .any(|pe| pe.interaction_type != Some(i32::from(InteractionType::Proximity)))
     }
 
+    /// Whether the scene reacts to a press (down or up) of `action` on this entity, so a
+    /// client prompt must not share the button. An entry without a button means IA_ANY.
+    pub fn handles_press(&self, action: InputAction) -> bool {
+        self.pointer_events.iter().any(|pe| {
+            let pet = pe.event_type();
+            if pet != PointerEventType::PetDown && pet != PointerEventType::PetUp {
+                return false;
+            }
+            let button = pe
+                .event_info
+                .as_ref()
+                .and_then(|info| info.button)
+                .unwrap_or(InputAction::IaAny as i32);
+            button == InputAction::IaAny as i32 || button == action as i32
+        })
+    }
+
     // Returns true if the entity is in an "active hover" state: any non-proximity
     // hover-enter OR hover-leave entry is within its configured interaction range.
     // This single tracked state is what drives cursor HOVER_ENTER/LEAVE, while the
