@@ -62,6 +62,10 @@ func _async_create_streak_modal() -> StreakModal:
 	if not modal:
 		push_error("StreakModalController: Could not instantiate streak modal")
 		return null
+	# Stays hidden through the NodeGuard frames below and async_setup()'s own render/thumbnail
+	# work — otherwise the scene's last-saved look flashes on screen for a couple of frames
+	# before _render() overwrites it with the actual state.
+	modal.visible = false
 
 	if is_instance_valid(_streak_canvas_layer):
 		_streak_canvas_layer.get_parent().remove_child(_streak_canvas_layer)
