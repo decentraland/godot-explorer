@@ -156,12 +156,11 @@ offset_right = 200.0
 offset_bottom = 78.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = -170
+theme_override_constants/separation = -140
 alignment = 2
 
 [node name="TextureRect_RewardArt1" type="TextureRect" parent="VBoxContainer/PanelContainer/MarginContainer2/RewardShowcase/Pedestal/HBoxContainer_Rewards" unique_id=1433207045]
 unique_name_in_owner = true
-z_index = 1
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 size_flags_horizontal = 3

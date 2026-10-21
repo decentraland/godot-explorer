@@ -33,33 +33,34 @@ const CAMPAIGNS := {
 		"assign_value": "",
 		"urn": "",
 	},
-	# login-streak D3 reward, "Rad TV Chill Mode" (an emote) — campaign
+	# login-streak D3 reward, "Mobile Login Jacket" (an upper_body wearable, common) — campaign
 	# decentraland.org/rewards/campaign/?id=4237615f-99b6-46a0-8816-b2073a4f2780, item collection
-	# 0x701d9caddafdd6944a7d3821720953300e1d0fe0 (blockchain id 0, confirmed resolvable against the
-	# catalyst). Not the campaign's own on-chain address (0xca1e4214acd9ba53bda189639878214ecff4de5f)
-	# — that one isn't a collection contract and doesn't resolve as an item.
+	# 0x1deef521ef44172a0dfdce268e30751f05510ca8, blockchain id 1 (confirmed resolvable against the
+	# catalyst). Item swapped 2026-10-21 — was "Rad TV Chill Mode" (an emote) on a different
+	# collection; same campaign_id/campaign_key, only the assigned item changed.
 	"LoginStreakD3":
 	{
 		"campaign_id": "4237615f-99b6-46a0-8816-b2073a4f2780",
 		"campaign_key":
 		"g8k3ewmNR5mxNWqW2ELAQkI3YV+ZtkagiBayBzpPJ4A=.Yp941hk9ViLVjnIhQ+lsI9Ro2Z4qCZwOFC1LQzKz1rw=",
-		"assign_target": "0x701d9caddafdd6944a7d3821720953300e1d0fe0",
-		"assign_value": "0",
-		"urn": "urn:decentraland:matic:collections-v2:0x701d9caddafdd6944a7d3821720953300e1d0fe0:0",
+		"assign_target": "0x1deef521ef44172a0dfdce268e30751f05510ca8",
+		"assign_value": "1",
+		"urn": "urn:decentraland:matic:collections-v2:0x1deef521ef44172a0dfdce268e30751f05510ca8:1",
 	},
-	# login-streak D7 reward, "RegenesisLabs Community Tall Tee" (a wearable) — campaign
+	# login-streak D7 reward, "Mobile Login Helmet" (a helmet wearable, common) — campaign
 	# decentraland.org/rewards/campaign/?id=ec79d7a9-566e-4acc-8c48-40bf5390788b, item collection
-	# 0x996b51131698ba70dcfb3fb5956e6816c5778eda (blockchain id 0, confirmed resolvable against the
-	# catalyst). Not the campaign's own on-chain address (0x914c9cb1e619f24734b61c345108fd69401f96ec)
-	# — same mixup D3 initially had, that one isn't a collection contract either.
+	# 0x1deef521ef44172a0dfdce268e30751f05510ca8, blockchain id 0 (confirmed resolvable against the
+	# catalyst, same collection as D3's item above — just a different token id). Item swapped
+	# 2026-10-21 — was "RegenesisLabs Community Tall Tee" on a different collection; same
+	# campaign_id/campaign_key, only the assigned item changed.
 	"LoginStreakD7":
 	{
 		"campaign_id": "ec79d7a9-566e-4acc-8c48-40bf5390788b",
 		"campaign_key":
 		"vseXLBe9SjyLN5QqHgShjex516lWbkrMjEhAv1OQeIs=.kguLt2+PLXHlMyA0avLtUnGtnJkeJ3ZqzwxYTguokpU=",
-		"assign_target": "0x996b51131698ba70dcfb3fb5956e6816c5778eda",
+		"assign_target": "0x1deef521ef44172a0dfdce268e30751f05510ca8",
 		"assign_value": "0",
-		"urn": "urn:decentraland:matic:collections-v2:0x996b51131698ba70dcfb3fb5956e6816c5778eda:0",
+		"urn": "urn:decentraland:matic:collections-v2:0x1deef521ef44172a0dfdce268e30751f05510ca8:0",
 	},
 	# The guided tutorial's reward (#2767): the "Vibe Coding" emote.
 	"FtueTutorial":
