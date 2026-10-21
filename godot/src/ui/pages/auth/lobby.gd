@@ -591,6 +591,7 @@ func _ready():
 	# Covers a signin deep link that lands *after* this point — Android can deliver the
 	# launch intent asynchronously, so the cold-start token doesn't always beat us here.
 	Global.deep_link_router.deep_link_signin_parked.connect(_on_deep_link_signin_parked)
+	Global.deep_link_router.deep_link_signin_completing.connect(_on_deep_link_signin_completing)
 
 	Global.scene_runner.set_pause(true)
 	# Parse and compile the explorer's script tree on a worker while the lobby/splash is up;
@@ -1118,6 +1119,12 @@ func _async_resume_signin_from_deep_link() -> bool:
 	await Iap.async_await_env_resolved()
 	Global.player_identity.complete_mobile_connect_account(identity_id, auth_request_id)
 	return true
+
+
+func _on_deep_link_signin_completing() -> void:
+	if current_screen_name == "AUTH_BROWSER_OPEN":
+		_auth_target_keys = deeplink_target_keys
+		label_step2_title.text = deeplink_target_keys[0].raw()
 
 
 func _on_deep_link_signin_parked() -> void:
