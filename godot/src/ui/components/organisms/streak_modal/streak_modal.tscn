@@ -299,7 +299,8 @@ texture = ExtResource("11_da6u2")
 expand_mode = 3
 stretch_mode = 3
 
-[node name="RichTextLabel" type="RichTextLabel" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer_ClaimFailed/PanelContainer_ClaimFailed/HBoxContainer" unique_id=22595839]
+[node name="Label_ClaimFailed" type="RichTextLabel" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer_ClaimFailed/PanelContainer_ClaimFailed/HBoxContainer" unique_id=22595839]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)

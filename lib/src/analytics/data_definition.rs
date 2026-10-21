@@ -639,6 +639,11 @@ pub struct SegmentEventLoginStreakClaim {
     pub reward: String,
     // "success" | "error".
     pub result: String,
+    // Raw rewards-server error code (e.g. "already_claimed") when result is "error"; empty on
+    // success. See RewardClaimer's own `code` field — never shown to the player, but needed here
+    // to tell apart WHY a claim failed without reading device logs.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub error_code: String,
 }
 
 #[derive(Serialize, Clone)]

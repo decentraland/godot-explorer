@@ -10,6 +10,11 @@ const STREAK_MODAL_SCENE_PATH = "res://src/ui/components/organisms/streak_modal/
 
 var current_streak_modal: StreakModal = null
 var streak_modal_scene: PackedScene = null
+# Raw rewards-server error code (e.g. "already_claimed") from the most recent failed claim —
+# "" after a successful one or before any claim has run. Debug-only surface (see
+# StreakModal._set_claim_failed_visible): QA needs this to tell apart WHY a claim failed without
+# pulling device logs; a real player only ever sees the generic "Reward claim failed" copy.
+var last_claim_error_code: String = ""
 var _streak_canvas_layer: CanvasLayer = null
 
 
@@ -131,7 +136,7 @@ func async_claim_rewards(days: Array[int]) -> bool:
 func _async_claim_direct(day: int) -> bool:
 	var key := "LoginStreakD3" if day == 3 else "LoginStreakD7"
 	var result := await RewardClaimer.async_claim(RewardCampaigns.CAMPAIGNS[key])
-	_on_streak_claim_resolved(result.ok, day)
+	_on_streak_claim_resolved(result.ok, day, str(result.get("code", "")))
 	return result.ok
 
 
@@ -144,7 +149,10 @@ func async_run_guest_upgrade() -> bool:
 	return await Global.add_email_flow.flow_concluded
 
 
-func _on_streak_claim_resolved(success: bool, day: int) -> void:
+func _on_streak_claim_resolved(success: bool, day: int, error_code: String = "") -> void:
 	if success:
 		Global.streak_manager.mark_claimed(day)
-	Global.metrics.track_login_streak_claim("d%d" % day, "success" if success else "error")
+	last_claim_error_code = "" if success else error_code
+	Global.metrics.track_login_streak_claim(
+		"d%d" % day, "success" if success else "error", error_code
+	)

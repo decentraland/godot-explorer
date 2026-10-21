@@ -12,17 +12,24 @@ const ALREADY_CLAIMED_WINDOW_SEC := 120.0
 
 ## @param campaign: { campaign_id, campaign_key, assign_target?, assign_value? } — see
 ## RewardCampaigns.CAMPAIGNS.
-## @return { ok: bool, already_owned: bool, error_message: String } — error_message is only set
-## when ok is false; already_owned only matters when ok is true.
+## @return { ok: bool, already_owned: bool, error_message: String, code: String } —
+## error_message/code are only set when ok is false; already_owned only matters when ok is true.
+## `code` is the raw rewards-server error code (e.g. "already_claimed") behind error_message's
+## friendly copy — never shown to a player (see _friendly_claim_error), but useful for QA/metrics
+## to tell apart failure reasons a generic "Reward claim failed" can't.
 static func async_claim(campaign: Dictionary) -> Dictionary:
 	var beneficiary := Global.player_identity.get_address_str()
 	if beneficiary.is_empty():
-		return _error(TranslationServer.translate("REWARD_ERROR_WALLET_REQUIRED"))
+		return _error(
+			TranslationServer.translate("REWARD_ERROR_WALLET_REQUIRED"), "wallet_required"
+		)
 
 	var campaign_id := str(campaign.get("campaign_id", ""))
 	var campaign_key := str(campaign.get("campaign_key", ""))
 	if campaign_id.is_empty() or campaign_key.is_empty():
-		return _error(TranslationServer.translate("REWARD_NOT_AVAILABLE"))
+		return _error(
+			TranslationServer.translate("REWARD_NOT_AVAILABLE"), "campaign_not_configured"
+		)
 
 	# The rewards server matches `catalyst` by ORIGIN against the DAO allow-list and then actually
 	# reaches it — must be a REAL reachable catalyst peer, NOT the realm-provider load balancer.
@@ -84,11 +91,15 @@ static func _process_claim_response(response) -> Dictionary:
 		printerr("RewardClaimer: claim failed — ", reason)
 		json = JSON.parse_string(reason)
 		if not (json is Dictionary):
-			return _error(TranslationServer.translate("REWARD_ERROR_SERVER_UNREACHABLE"))
+			return _error(
+				TranslationServer.translate("REWARD_ERROR_SERVER_UNREACHABLE"), "server_unreachable"
+			)
 	else:
 		json = response.get_string_response_as_json()
 		if not (json is Dictionary):
-			return _error(TranslationServer.translate("REWARD_ERROR_INVALID_RESPONSE"))
+			return _error(
+				TranslationServer.translate("REWARD_ERROR_INVALID_RESPONSE"), "invalid_response"
+			)
 
 	return _handle_claim_json(json)
 
@@ -103,16 +114,18 @@ static func _handle_claim_json(json: Dictionary) -> Dictionary:
 		ok == false
 		and code in ["campaign_key_uninitiated", "campaign_disabled", "campaign_finished"]
 	):
-		return _error(TranslationServer.translate("REWARD_NOT_AVAILABLE"))
+		return _error(TranslationServer.translate("REWARD_NOT_AVAILABLE"), code)
 
-	# Any other non-ok response: friendly copy, never the raw code (already logged above).
+	# Any other non-ok response: friendly copy to the UI, but the raw code still travels in
+	# `code` for QA/metrics (see this function's own @return doc) — only error_message is
+	# player-facing.
 	if ok == false:
-		return _error(_friendly_claim_error(code))
+		return _error(_friendly_claim_error(code), code)
 
 	var data = json.get("data", [])
 	# ok but nothing granted → out of stock.
 	if not (data is Array) or data.is_empty():
-		return _error(TranslationServer.translate("REWARD_OUT_OF_STOCK"))
+		return _error(TranslationServer.translate("REWARD_OUT_OF_STOCK"), "out_of_stock")
 
 	# Already owned: assigned more than the window ago (a fresh claim echoes back a recent date).
 	var item = data[0]
@@ -124,9 +137,9 @@ static func _handle_claim_json(json: Dictionary) -> Dictionary:
 			assigned_unix > 0
 			and assigned_unix < Time.get_unix_time_from_system() - ALREADY_CLAIMED_WINDOW_SEC
 		):
-			return {"ok": true, "already_owned": true, "error_message": ""}
+			return {"ok": true, "already_owned": true, "error_message": "", "code": ""}
 
-	return {"ok": true, "already_owned": false, "error_message": ""}
+	return {"ok": true, "already_owned": false, "error_message": "", "code": ""}
 
 
 ## Maps a rewards-server error code to user-facing copy. Unknown codes fall through to a
@@ -145,5 +158,5 @@ static func _friendly_claim_error(code: String) -> String:
 	return TranslationServer.translate("REWARD_CLAIM_FAILED")
 
 
-static func _error(message: String) -> Dictionary:
-	return {"ok": false, "already_owned": false, "error_message": message}
+static func _error(message: String, code: String = "") -> Dictionary:
+	return {"ok": false, "already_owned": false, "error_message": message, "code": code}

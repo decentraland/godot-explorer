@@ -61,6 +61,7 @@ var _tap_to_continue_shown: bool = false
 @onready var reward_art_1: TextureRect = %TextureRect_RewardArt1
 @onready var reward_art_2: TextureRect = %TextureRect_RewardArt2
 @onready var claim_failed_panel: MarginContainer = %MarginContainer_ClaimFailed
+@onready var label_claim_failed: RichTextLabel = %Label_ClaimFailed
 ## Trailing child of the card's own VBoxContainer, same structure reward_modal.tscn uses for its
 ## own Label_TapToContinue — only visible once there's nothing left to claim (see
 ## _show_claim_button).
@@ -338,8 +339,21 @@ func _set_claim_failed_visible(show_failed: bool) -> void:
 	# Hides the whole footer block (label + its separators), not just the label — otherwise the
 	# separators' own spacing stays reserved and leaves a dead gap under the warning panel.
 	footer_container.visible = not show_failed
+	_update_claim_failed_label()
 	if show_failed and not was_shown:
 		_async_slide_in_claim_failed()
+
+
+## Appends the raw rewards-server error code (e.g. "already_claimed") on non-production builds
+## only — QA needs this to tell apart WHY a claim failed without pulling device logs; a real
+## player only ever sees the plain STREAK_CLAIM_FAILED copy a raw code would just confuse.
+func _update_claim_failed_label() -> void:
+	label_claim_failed.text = TranslationKey.new("STREAK_CLAIM_FAILED").text()
+	var error_code := Global.streak_modal_controller.last_claim_error_code
+	if _claim_failed_shown and not Global.is_production() and not error_code.is_empty():
+		label_claim_failed.text += (
+			"\n[font_size=14][color=gray]code: %s[/color][/font_size]" % error_code
+		)
 
 
 func _set_tap_to_continue_visible(show_it: bool) -> void:

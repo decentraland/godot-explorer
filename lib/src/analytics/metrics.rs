@@ -740,12 +740,16 @@ impl Metrics {
     }
 
     /// A D3 or D7 login-streak reward claim resolved (issue #3018). `reward` is "d3" or "d7",
-    /// `result` is "success" or "error". Called from
-    /// StreakModalController._on_streak_claim_resolved() once the claim request actually
-    /// resolves (not when the modal is merely shown).
+    /// `result` is "success" or "error"; `error_code` is the raw rewards-server code (empty on
+    /// success). Called from StreakModalController._on_streak_claim_resolved() once the claim
+    /// request actually resolves (not when the modal is merely shown).
     #[func]
-    pub fn track_login_streak_claim(&mut self, reward: String, result: String) {
-        let event = SegmentEvent::LoginStreakClaim(SegmentEventLoginStreakClaim { reward, result });
+    pub fn track_login_streak_claim(&mut self, reward: String, result: String, error_code: String) {
+        let event = SegmentEvent::LoginStreakClaim(SegmentEventLoginStreakClaim {
+            reward,
+            result,
+            error_code,
+        });
         self.queue_event("LOGIN_STREAK_CLAIM", event);
     }
 
