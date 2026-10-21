@@ -17,10 +17,17 @@ const LANDSCAPE_CHAT_WIDTH := 430
 const DEFAULT_VIDEO_ASPECT := 9.0 / 16.0
 ## get_backend_texture() hands out a 2x2 black placeholder before the first frame.
 const PLACEHOLDER_MAX_SIZE := 2
+## Collapsed chat in portrait: the header plus about three lines of messages.
+const PORTRAIT_COLLAPSED_CHAT_HEIGHT := 220
+## Messages re-measure over a few frames after a relayout; the scroll to the latest line
+## has to wait for that or it lands on the old content height.
+const SCROLL_SETTLE_SECONDS := 0.25
 
 var _video_player: Node = null
 var _chat: Control = null
 var _exit_label_tween: Tween
+## Hidden beside the video in landscape, shrunk to a strip under it in portrait.
+var _chat_collapsed: bool = false
 
 @onready var _layout: BoxContainer = %BoxContainer_Layout
 @onready var _video_panel: Control = %Control_Video
@@ -30,6 +37,8 @@ var _exit_label_tween: Tween
 @onready var _label_members: Label = %Label_Members
 @onready var _button_exit: Button = %Button_Exit
 @onready var _button_rotate: Button = %Button_Rotate
+@onready var _button_collapse_chat: Button = %Button_CollapseChat
+@onready var _button_expand_chat: Button = %Button_ExpandChat
 @onready var _keyboard_margin: Control = %Control_KeyboardMargin
 
 
@@ -38,6 +47,16 @@ func _ready() -> void:
 	set_process(false)
 	_button_exit.pressed.connect(exit)
 	_button_rotate.pressed.connect(_on_button_rotate_pressed)
+	_button_collapse_chat.pressed.connect(_on_button_collapse_chat_pressed)
+	_button_expand_chat.pressed.connect(_on_button_collapse_chat_pressed)
+	# The chevrons turn in place: the style's content margins make the buttons wider than
+	# tall, so the pivot follows the real size.
+	_button_collapse_chat.resized.connect(
+		func(): _button_collapse_chat.pivot_offset = _button_collapse_chat.size * 0.5
+	)
+	_button_expand_chat.resized.connect(
+		func(): _button_expand_chat.pivot_offset = _button_expand_chat.size * 0.5
+	)
 	resized.connect(_update_video_panel_size)
 	Global.scene_runner.open_video_focus_mode.connect(enter)
 	Global.orientation_changed.connect(_on_orientation_changed)
@@ -87,6 +106,7 @@ func enter(video_player: Node) -> void:
 	set_process(true)
 	grab_focus()
 	_spawn_chat()
+	_chat_collapsed = false
 	_apply_orientation(Global.is_orientation_portrait())
 	_show_exit_label()
 	_update_members_count()
@@ -135,21 +155,69 @@ func _spawn_chat() -> void:
 
 func _apply_orientation(is_portrait: bool) -> void:
 	_layout.vertical = is_portrait
-	_chat_column.custom_minimum_size = (
-		Vector2.ZERO if is_portrait else Vector2(LANDSCAPE_CHAT_WIDTH, 0)
-	)
+	_apply_chat_layout()
+	_refresh_chat()
+
+
+## Re-measures the docked chat for the column it is in now. Message widths are measured a
+## few frames after this call, so it runs after the column is visible and sized, never while
+## it is hidden, or the messages keep a stale width and overflow when the column comes back.
+func _refresh_chat() -> void:
+	if _chat == null or not _chat_column.visible:
+		return
+	_chat.apply_orientation(_layout.vertical)
+	# The docked column is narrow in both orientations, so the chat always uses its
+	# full-width (portrait) layout; apply_orientation only sets the sizes and fonts.
+	_chat.set_layout_portrait()
+	# A three-line strip has no room for the write button; expand to type.
+	_chat.button_write.visible = not (_chat_collapsed and _layout.vertical)
+
+
+## Lays the chat out for the orientation and the collapsed state. Landscape: a fixed-width
+## column, or nothing (the video takes the whole screen and an edge tab brings it back).
+## Portrait: the chat fills under the video, or shrinks to a strip and the video takes the rest.
+func _apply_chat_layout() -> void:
+	var is_portrait := _layout.vertical
+	_button_expand_chat.visible = _chat_collapsed and not is_portrait
+	if is_portrait:
+		_chat_column.visible = true
+		if _chat_collapsed:
+			_chat_column.custom_minimum_size = Vector2(0, PORTRAIT_COLLAPSED_CHAT_HEIGHT)
+			_chat_column.size_flags_vertical = Control.SIZE_FILL
+			_video_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		else:
+			_chat_column.custom_minimum_size = Vector2.ZERO
+			_chat_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			_video_panel.size_flags_vertical = Control.SIZE_FILL
+		# Down to minimize, up to bring the chat back.
+		_button_collapse_chat.pivot_offset = _button_collapse_chat.size * 0.5
+		_button_collapse_chat.rotation_degrees = 180.0 if _chat_collapsed else 0.0
+	else:
+		_chat_column.visible = not _chat_collapsed
+		_chat_column.custom_minimum_size = Vector2(LANDSCAPE_CHAT_WIDTH, 0)
+		_chat_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_video_panel.size_flags_vertical = Control.SIZE_FILL
+		# Points at the edge the chat slides out to; the edge tab points back in.
+		_button_collapse_chat.pivot_offset = _button_collapse_chat.size * 0.5
+		_button_collapse_chat.rotation_degrees = -90.0
+		_button_expand_chat.pivot_offset = _button_expand_chat.size * 0.5
+		_button_expand_chat.rotation_degrees = 90.0
 	_update_video_panel_size()
 	if _chat != null:
-		_chat.apply_orientation(is_portrait)
-		# The docked column is narrow in both orientations, so the chat always uses its
-		# full-width (portrait) layout; apply_orientation only sets the sizes and fonts.
-		_chat.set_layout_portrait()
+		_chat.scroll_to_bottom_deferred()
+		get_tree().create_timer(SCROLL_SETTLE_SECONDS).timeout.connect(_scroll_chat_to_bottom)
 
 
-## In portrait the video panel takes the stream's aspect over the full width; in landscape it
-## takes whatever the chat column leaves.
+func _scroll_chat_to_bottom() -> void:
+	if _chat != null and is_instance_valid(_chat):
+		_chat.scroll_to_bottom_deferred()
+
+
+## In portrait the video panel takes the stream's aspect over the full width (or the whole
+## remaining height when the chat is collapsed); in landscape it takes whatever the chat
+## column leaves.
 func _update_video_panel_size() -> void:
-	if not _layout.vertical:
+	if not _layout.vertical or _chat_collapsed:
 		_video_panel.custom_minimum_size = Vector2.ZERO
 		return
 	var aspect := DEFAULT_VIDEO_ASPECT
@@ -196,6 +264,15 @@ func _update_members_count() -> void:
 
 func _on_avatars_changed(_avatar_or_address: Variant) -> void:
 	_update_members_count()
+
+
+func _on_button_collapse_chat_pressed() -> void:
+	Global.send_haptic_feedback()
+	if _chat != null:
+		_chat.close_write_mode_if_active()
+	_chat_collapsed = not _chat_collapsed
+	_apply_chat_layout()
+	_refresh_chat()
 
 
 func _on_button_rotate_pressed() -> void:

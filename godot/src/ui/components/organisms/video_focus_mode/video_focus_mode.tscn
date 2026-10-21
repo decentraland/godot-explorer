@@ -1,10 +1,11 @@
-[gd_scene load_steps=11 format=3 uid="uid://buxjoxmdm2l6v"]
+[gd_scene load_steps=12 format=3 uid="uid://buxjoxmdm2l6v"]
 
 [ext_resource type="Script" uid="uid://dtrv82krgoek8" path="res://src/ui/components/organisms/video_focus_mode/video_focus_mode.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://myp6t306a2n" path="res://src/ui/components/organisms/video_focus_mode/icons/exit-focus.svg" id="2_exit"]
 [ext_resource type="Texture2D" uid="uid://btkyyrt63j7tv" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-flip-orientation.svg" id="3_rotate"]
 [ext_resource type="Texture2D" uid="uid://1bvilol5e3lf" path="res://assets/ui/Members.svg" id="4_members"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="5_font"]
+[ext_resource type="Texture2D" uid="uid://cy1qhm42phf7r" path="res://src/ui/components/organisms/video_focus_mode/icons/chevron-down.svg" id="6_chevron"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
 content_margin_left = 12.0
@@ -158,6 +159,33 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_button")
 icon = ExtResource("3_rotate")
 icon_alignment = 1
 
+[node name="Button_ExpandChat" type="Button" parent="VBoxContainer_Root/BoxContainer_Layout/Control_Video"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -24.0
+offset_right = -16.0
+offset_bottom = 24.0
+grow_horizontal = 0
+grow_vertical = 2
+pivot_offset = Vector2(24, 24)
+focus_mode = 0
+theme_override_constants/icon_max_width = 24
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_button_pressed")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button")
+icon = ExtResource("6_chevron")
+icon_alignment = 1
+
 [node name="PanelContainer_Chat" type="PanelContainer" parent="VBoxContainer_Root/BoxContainer_Layout"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(430, 0)
@@ -201,6 +229,22 @@ layout_mode = 2
 text = "1"
 label_settings = SubResource("LabelSettings_header")
 vertical_alignment = 1
+
+[node name="Button_CollapseChat" type="Button" parent="VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/VBoxContainer/PanelContainer_Header/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+size_flags_vertical = 4
+pivot_offset = Vector2(20, 20)
+focus_mode = 0
+theme_override_constants/icon_max_width = 24
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_button_pressed")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button")
+icon = ExtResource("6_chevron")
+icon_alignment = 1
 
 [node name="Control_ChatSlot" type="Control" parent="VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/VBoxContainer"]
 unique_name_in_owner = true

@@ -12,7 +12,7 @@ const OVERLAY_SCENE := preload(
 )
 
 ## Assertions that actually evaluated; guards against a suite that never ran.
-const EXPECTED_CHECKS := 9
+const EXPECTED_CHECKS := 12
 
 var _failures: Array[String] = []
 var _checks: int = 0
@@ -53,10 +53,24 @@ func _test_lifecycle() -> void:
 	_expect(texture_rect.texture == player.texture, "the player's texture reaches the overlay")
 
 	var layout: BoxContainer = overlay.get_node("%BoxContainer_Layout")
+	var chat_column: Control = overlay.get_node("%PanelContainer_Chat")
+	var collapse: Button = overlay.get_node("%Button_CollapseChat")
+	var expand: Button = overlay.get_node("%Button_ExpandChat")
 	Global.orientation_changed.emit(true)
 	_expect(layout.vertical, "portrait stacks the chat under the video")
+	collapse.pressed.emit()
+	_expect(
+		chat_column.visible and chat_column.size_flags_vertical == Control.SIZE_FILL,
+		"portrait collapse keeps a fixed-height chat strip"
+	)
 	Global.orientation_changed.emit(false)
 	_expect(not layout.vertical, "landscape puts the chat beside the video")
+	_expect(
+		not chat_column.visible and expand.visible,
+		"landscape keeps the collapse: no chat column, edge tab shown"
+	)
+	expand.pressed.emit()
+	_expect(chat_column.visible and not expand.visible, "the edge tab brings the chat back")
 
 	overlay.get_node("%Button_Exit").pressed.emit()
 	_expect(not overlay.visible, "the exit button hides the overlay")
