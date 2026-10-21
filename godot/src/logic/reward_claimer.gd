@@ -92,13 +92,16 @@ static func _process_claim_response(response) -> Dictionary:
 		json = JSON.parse_string(reason)
 		if not (json is Dictionary):
 			return _error(
-				TranslationServer.translate("REWARD_ERROR_SERVER_UNREACHABLE"), "server_unreachable"
+				TranslationServer.translate("REWARD_ERROR_SERVER_UNREACHABLE"),
+				"server_unreachable:" + reason
 			)
 	else:
+		var raw_response := str(response.get_response_as_string())
 		json = response.get_string_response_as_json()
 		if not (json is Dictionary):
 			return _error(
-				TranslationServer.translate("REWARD_ERROR_INVALID_RESPONSE"), "invalid_response"
+				TranslationServer.translate("REWARD_ERROR_INVALID_RESPONSE"),
+				"invalid_response:" + raw_response
 			)
 
 	return _handle_claim_json(json)
@@ -123,9 +126,12 @@ static func _handle_claim_json(json: Dictionary) -> Dictionary:
 		return _error(_friendly_claim_error(code), code)
 
 	var data = json.get("data", [])
-	# ok but nothing granted → out of stock.
+	# ok but nothing granted. "out_of_stock" was this branch's own guessed label at one point —
+	# dropped because a campaign with 9999 units configured on the dashboard still hit it, so it
+	# was actively misleading. The server's own json is whatever it is here; surface it verbatim
+	# in `code` (QA/metrics-only, see this function's @return doc) instead of guessing a reason.
 	if not (data is Array) or data.is_empty():
-		return _error(TranslationServer.translate("REWARD_OUT_OF_STOCK"), "out_of_stock")
+		return _error(TranslationServer.translate("REWARD_OUT_OF_STOCK"), "empty_data:" + str(json))
 
 	# Already owned: assigned more than the window ago (a fresh claim echoes back a recent date).
 	var item = data[0]
