@@ -3177,24 +3177,6 @@ impl SceneManager {
         Some(video_player)
     }
 
-    /// The button the focus prompt binds to on a screen the pointer collider hit: the first
-    /// of pointer/primary/secondary the scene does not react to on that entity, or None when
-    /// it reacts to all of them (IA_ANY).
-    fn video_focus_action(&self, raycast: &GodotDclRaycastResult) -> Option<InputAction> {
-        let Some(pointer_events) =
-            get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
-        else {
-            return Some(InputAction::IaPointer);
-        };
-        [
-            InputAction::IaPointer,
-            InputAction::IaPrimary,
-            InputAction::IaSecondary,
-        ]
-        .into_iter()
-        .find(|action| !pointer_events.handles_press(*action))
-    }
-
     /// Whether physics-only geometry (a wall whose collider is not on the pointer layer)
     /// stands between the camera and `to`. Only called once a screen is within reach, so
     /// this second raycast is rare.
@@ -4124,34 +4106,29 @@ impl INode for SceneManager {
         }
 
         // A video screen is an entity whose material samples a VideoPlayer. A short
-        // press→release on one opens the focus mode, like the passport above. The button is
-        // IA_POINTER unless the scene already handles it on that screen (the Genesis Plaza
-        // theatre binds its own camera mode there), then the first free of primary/secondary.
+        // ia_pointer press→release on one opens the focus mode, like the passport above.
         let raycast_screen = current_pointer_raycast_result.as_ref().and_then(|raycast| {
-            let video_player = self
-                .scenes
+            self.scenes
                 .get(&raycast.scene_id)?
-                .video_player_for_entity(&raycast.entity_id)?;
-            Some((video_player, self.video_focus_action(raycast)))
+                .video_player_for_entity(&raycast.entity_id)
         });
-        let hovered_video: Option<(
-            Gd<crate::godot_classes::dcl_video_player::DclVideoPlayer>,
-            InputAction,
-        )> = match raycast_screen {
-            Some((video_player, Some(action))) => Some((video_player, action)),
-            // The scene reacts to every button on this screen: leave it to the scene.
-            Some((_, None)) => None,
-            // Nothing under the pointer collider-wise, so no scene handler competes.
-            None => self
-                .video_screen_along_pointer_ray(&current_pointer_raycast_result)
-                .map(|video_player| (video_player, InputAction::IaPointer)),
+        // The client claims a screen under the crosshair: the scene gets no pointer events
+        // or prompts for that entity meanwhile, so a tap means focus mode even where the
+        // scene bound its own handler to the pointer (the Genesis Plaza theatre's camera
+        // mode). Screens found only by their bounds have no collider the scene could hit.
+        let scene_pointer_raycast = if raycast_screen.is_some() {
+            None
+        } else {
+            current_pointer_raycast_result.clone()
         };
-        match hovered_video.as_ref() {
-            Some((video_player, action)) => {
-                if changed_inputs.contains(&(*action, true)) {
+        let hovered_video_player = raycast_screen
+            .or_else(|| self.video_screen_along_pointer_ray(&current_pointer_raycast_result));
+        match hovered_video_player.as_ref() {
+            Some(video_player) => {
+                if changed_inputs.contains(&(InputAction::IaPointer, true)) {
                     self.video_pointer_press_time = Some(Instant::now());
                 }
-                if changed_inputs.contains(&(*action, false)) {
+                if changed_inputs.contains(&(InputAction::IaPointer, false)) {
                     if let Some(press_time) = self.video_pointer_press_time.take() {
                         let ui_has_focus = DclGlobal::try_singleton()
                             .is_none_or(|global| global.bind().ui_has_focus());
@@ -4170,17 +4147,15 @@ impl INode for SceneManager {
             let size = viewport.get_visible_rect().size;
             viewport.get_camera_3d().map(|camera| (camera, size))
         });
-        let pointing_at_cursor = current_pointer_raycast_result
-            .as_ref()
-            .is_some_and(|raycast| {
-                get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
-                    .is_some_and(|pe| pe.has_any_pointer_event_without_proximity())
-            });
+        let pointing_at_cursor = scene_pointer_raycast.as_ref().is_some_and(|raycast| {
+            get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
+                .is_some_and(|pe| pe.has_any_pointer_event_without_proximity())
+        });
 
         pointer_events_system(
             &mut self.scenes,
             &changed_inputs,
-            &current_pointer_raycast_result,
+            &scene_pointer_raycast,
             player_position,
             &camera_and_viewport,
             &mut self.last_proximity_entity,
@@ -4189,7 +4164,7 @@ impl INode for SceneManager {
 
         let mut tooltips = VarArray::new();
         let mut new_highlighted: Option<Gd<Node3D>> = None;
-        if let Some(raycast) = current_pointer_raycast_result.as_ref() {
+        if let Some(raycast) = scene_pointer_raycast.as_ref() {
             let mut should_highlight = false;
             // Player distance to the hovered entity, for the feedback range gate
             // (so the overlay respects max_player_distance, matching cursor events).
@@ -4345,11 +4320,11 @@ impl INode for SceneManager {
             }
         }
 
-        if let Some((_, action)) = hovered_video.as_ref() {
+        if hovered_video_player.is_some() {
             let mut focus_dict = VarDictionary::new();
             // A translation key resolved in tooltip_label.gd, like TOOLTIP_VIEW_PROFILE.
             focus_dict.set("text_pet_down", "TOOLTIP_FOCUS_MODE");
-            focus_dict.set("action", GString::from(action.as_str_name()));
+            focus_dict.set("action", "ia_pointer");
             tooltips.push(&focus_dict.to_variant());
         }
 
