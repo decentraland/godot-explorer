@@ -83,6 +83,7 @@ var head_pitch_deg := 0.0
 
 var _avatar: Node3D
 var _skeleton: Skeleton3D
+var _remote_yaw_deg := 0.0
 var _modifier: HeadTurnModifier3D
 var _built := false
 
@@ -120,22 +121,22 @@ func update_ik(delta: float, enabled: bool, look_dir: Vector3) -> void:
 	_aim(delta, yaw, pitch)
 
 
-## The wire carries the sender's camera direction in world space, as Unity's
-## Euler yaw/pitch (HeadIKComponent.GetHeadYawAndPitch over
-## Camera.transform.forward). Sending the body-relative turn instead made a peer
-## aim at a world heading: with the body facing anywhere but DCL +Z the received
-## head turned the wrong way, and past the reset limit it did not turn at all.
-## `pitch_deg` is already un-negated by the decoder (ours is + up).
-static func world_dir_to_wire(look_dir: Vector3) -> Vector2:
-	if look_dir.length_squared() < 0.000001:
-		return Vector2.ZERO
-	var dir := look_dir.normalized()
-	var horizontal := sqrt(dir.x * dir.x + dir.z * dir.z)
-	return Vector2(rad_to_deg(atan2(dir.x, -dir.z)), rad_to_deg(atan2(dir.y, horizontal)))
+## The wire carries the sender's aim in world space, as Unity's Euler yaw/pitch
+## (HeadIKComponent.GetHeadYawAndPitch over Camera.transform.forward). Sending the
+## body-relative turn instead made a peer aim at a world heading: with the body
+## facing anywhere but DCL +Z the received head turned the wrong way, and past
+## the reset limit it did not turn at all.
+##
+## The heading comes from the body plus the aim the local path already froze, not
+## from re-deriving it off the camera: first person clamps pitch at +-90, where
+## the horizontal projection vanishes and atan2 flips 180 deg.
+static func body_to_wire(yaw_deg: float, pitch_deg: float, avatar_basis: Basis) -> Vector2:
+	var body_yaw := rad_to_deg(atan2(-avatar_basis.z.x, avatar_basis.z.z))
+	return Vector2(wrapf(body_yaw + yaw_deg, -180.0, 180.0), pitch_deg)
 
 
-## Inverse of world_dir_to_wire: wire angles -> the avatar's own frame, which is
-## what the modifier and the per-axis limits use.
+## Inverse of body_to_wire: wire angles -> the avatar's own frame, which is what
+## the modifier and the per-axis limits use.
 static func wire_to_body(yaw_deg: float, pitch_deg: float, avatar_basis: Basis) -> Vector2:
 	var yaw := deg_to_rad(wrapf(yaw_deg, -180.0, 180.0))
 	var pitch := deg_to_rad(clampf(wrapf(pitch_deg, -180.0, 180.0), -90.0, 90.0))
@@ -158,6 +159,12 @@ func update_remote(delta: float, enabled: bool, yaw_deg: float, pitch_deg: float
 	_modifier.weight = move_toward(_modifier.weight, 1.0 if enabled else 0.0, WEIGHT_SPEED * delta)
 	if _modifier.weight <= 0.0 or not enabled:
 		return
+	# Same dead zone as the local path: at a vertical aim the wire's heading is
+	# not recoverable, so hold the last one instead of snapping frontal.
+	if absf(cos(deg_to_rad(pitch_deg))) < HeadTurnModifier3D.YAW_DEAD_ZONE:
+		yaw_deg = _remote_yaw_deg
+	else:
+		_remote_yaw_deg = yaw_deg
 	_modifier.frame = _avatar.global_transform.basis.orthonormalized()
 	_aim(delta, yaw_deg, pitch_deg)
 

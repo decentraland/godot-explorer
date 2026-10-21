@@ -64,5 +64,7 @@ func _update_local(delta: float, enabled: bool, movement_speed: float) -> void:
 	_avatar.head_ik_pitch = _head.head_pitch_deg
 	_avatar.head_ik_yaw_enabled = head_on
 	_avatar.head_ik_pitch_enabled = head_on
-	var wire := AvatarHeadIK.world_dir_to_wire(look_dir)
+	var wire := AvatarHeadIK.body_to_wire(
+		_head.head_yaw_deg, _head.head_pitch_deg, _avatar.global_transform.basis
+	)
 	Global.comms.set_head_ik(head_on, wire.x, wire.y)
