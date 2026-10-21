@@ -274,9 +274,10 @@ pub struct CommunicationManager {
     last_position_broadcast_index: u64,
     last_emote_incremental_id: u32,
     is_emoting: bool,
-    /// head sync: the local head turn, pushed every frame by avatar.gd
-    /// (Unity HeadSync). Degrees in the local avatar's own frame, plus whether
-    /// the sender is aiming at all. The movement packet carries it to peers.
+    /// head sync: the local camera direction, pushed every frame by avatar.gd
+    /// (Unity HeadSync). Degrees in world space, Unity Euler yaw/pitch, plus
+    /// whether the sender is aiming at all. The movement packet carries it to
+    /// peers.
     head_ik_enabled: bool,
     head_ik_yaw: f32,
     head_ik_pitch: f32,
