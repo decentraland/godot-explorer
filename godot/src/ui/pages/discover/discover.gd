@@ -3,7 +3,11 @@ extends Control
 
 var search_text: String = ""
 var _generator_statuses: Dictionary = {}
+# Whatever Global.music_player was playing right before the seasonal track took over — restored
+# once Discover is hidden, so leaving it doesn't leave the seasonal track running elsewhere.
+var _music_before_seasonal: String = ""
 
+@onready var texture_rect_seasonal_overlay: TextureRect = %TextureRect_SeasonalOverlay
 @onready var jump_in: SidePanelWrapper = %JumpIn
 @onready var event_details: SidePanelWrapper = %EventDetails
 
@@ -39,6 +43,7 @@ func _ready():
 	jump_in.hide()
 	event_details.hide()
 	search_bar.close_searchbar()
+	Global.seasonal_skin_manager.seasonal_assets_ready.connect(_apply_seasonal_skin)
 
 	jump_in.jump_in.connect(_on_jump_in_jump_in)
 	jump_in.jump_in_world.connect(_on_jump_in_world)
@@ -158,6 +163,42 @@ func _on_visibility_changed():
 		if Global.get_explorer():
 			if button_back_to_explorer:
 				button_back_to_explorer.show()
+		_apply_seasonal_skin()
+	else:
+		# Only ours to put back if the seasonal track is still the one playing — if the player
+		# (or something else) already changed it, leave it alone. An empty _music_before_seasonal
+		# means nothing was playing before it started, so stop() rather than play("") — the
+		# latter fails to load and would just leave the seasonal track running.
+		if Global.music_player.get_current_music() == "seasonal_discover":
+			if _music_before_seasonal.is_empty():
+				Global.music_player.stop()
+			else:
+				Global.music_player.play(_music_before_seasonal)
+			_music_before_seasonal = ""
+
+
+## Shows/hides the seasonal background overlay and swaps Discover's ambient music, per
+## SeasonalSkinManager (issue #3025). A no-op outside an active season — texture_rect_
+## seasonal_overlay just stays hidden and music is left exactly as it was. Also a no-op if the
+## overlay node itself isn't in the scene yet (discover.tscn is a manual scene edit) — treated
+## the same as "feature not ready", not a crash.
+func _apply_seasonal_skin() -> void:
+	if not is_instance_valid(texture_rect_seasonal_overlay):
+		return
+	if not Global.seasonal_skin_manager.is_seasonal_skin_active():
+		texture_rect_seasonal_overlay.visible = false
+		return
+	var overlay_texture := Global.seasonal_skin_manager.get_discover_overlay_texture()
+	if is_instance_valid(overlay_texture):
+		texture_rect_seasonal_overlay.texture = overlay_texture
+		texture_rect_seasonal_overlay.visible = true
+	var audio_stream := Global.seasonal_skin_manager.get_discover_audio_stream()
+	if (
+		is_instance_valid(audio_stream)
+		and Global.music_player.get_current_music() != "seasonal_discover"
+	):
+		_music_before_seasonal = Global.music_player.get_current_music()
+		Global.music_player.play_stream(audio_stream, "seasonal_discover")
 
 
 ## Android-only counterpart of the low-spec-iPhone warning below: shows the "device no longer

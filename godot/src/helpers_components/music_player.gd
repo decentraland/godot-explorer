@@ -31,6 +31,20 @@ func restore_music():
 	play(_last_music)
 
 
+## Plays a stream fetched at runtime (e.g. a seasonal track) instead of a baked
+## res://assets/sfx/ambient/ resource — play()/restore_music() only know how to load() the
+## latter by name, so a dynamic stream goes through this instead, sharing the same
+## AudioStreamPlayer/bus and _last_music bookkeeping.
+func play_stream(stream: AudioStream, stream_name: String) -> void:
+	if !is_instance_valid(_audio_stream) or !is_instance_valid(stream):
+		return
+	if not _current_music.is_empty():
+		_last_music = _current_music
+	_audio_stream.stream = stream
+	_audio_stream.play()
+	_current_music = stream_name
+
+
 func stop():
 	_last_music = _current_music
 	_current_music = ""
