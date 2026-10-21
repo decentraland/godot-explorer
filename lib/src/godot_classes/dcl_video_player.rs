@@ -57,6 +57,12 @@ pub struct DclVideoPlayer {
     /// This is set by Rust when frames arrive
     #[var]
     last_frame_time: f64,
+
+    /// What the scene asked for (PBVideoPlayer.playing), independent of the backend: the
+    /// Noop backend never reaches VIDEO_STATE_PLAYING, and the focus-mode prompt needs this
+    /// on desktop too.
+    #[var]
+    dcl_playing: bool,
 }
 
 #[godot_api]
@@ -101,6 +107,7 @@ impl DclVideoPlayer {
             _ => BackendType::Noop,
         };
         self.dcl_source = source.clone();
+        self.dcl_playing = playing;
 
         tracing::debug!(
             "DclVideoPlayer::init_backend - type={:?}, source={}, playing={}, looping={}",
@@ -154,13 +161,20 @@ impl DclVideoPlayer {
     /// Send a play command to the backend
     #[func]
     pub fn backend_play(&mut self) {
+        self.dcl_playing = true;
         self.base_mut().call("_backend_play", &[]);
     }
 
     /// Send a pause command to the backend
     #[func]
     pub fn backend_pause(&mut self) {
+        self.dcl_playing = false;
         self.base_mut().call("_backend_pause", &[]);
+    }
+
+    /// Whether the scene wants this video playing (see `dcl_playing`).
+    pub fn is_playing(&self) -> bool {
+        self.dcl_playing
     }
 
     /// Set the looping state on the backend

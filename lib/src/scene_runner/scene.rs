@@ -485,7 +485,8 @@ impl Scene {
         Some((transform * local_hit).distance_to(ray_from))
     }
 
-    /// Every texture slot can carry a video (albedo, alpha, emissive, normal).
+    /// Every texture slot can carry a video (albedo, alpha, emissive, normal). Only a playing
+    /// video counts: a paused screen keeps the scene's own prompt (typically "Play Video").
     fn video_player_for_dcl_material(&self, material: &DclMaterial) -> Option<Gd<DclVideoPlayer>> {
         let textures = match material {
             DclMaterial::Unlit(unlit) => vec![&unlit.texture, &unlit.alpha_texture],
@@ -500,9 +501,11 @@ impl Scene {
             .into_iter()
             .flatten()
             .find_map(|texture| match &texture.source {
-                DclSourceTex::VideoTexture(video_entity_id) => {
-                    self.video_players.get(video_entity_id).cloned()
-                }
+                DclSourceTex::VideoTexture(video_entity_id) => self
+                    .video_players
+                    .get(video_entity_id)
+                    .filter(|video_player| video_player.bind().is_playing())
+                    .cloned(),
                 _ => None,
             })
     }
