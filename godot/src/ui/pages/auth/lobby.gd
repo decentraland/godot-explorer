@@ -697,6 +697,12 @@ func _notification(what: int) -> void:
 		if current_screen_name == "AUTH_BROWSER_OPEN" and _auth_target_keys.size() > 1:
 			label_step2_title.text = _auth_target_keys[1].raw()
 
+	# Back from the browser/wallet: the deep link and the session check follow, so show the
+	# loading title right away instead of leaving "Waiting for X" up.
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		if current_screen_name == "AUTH_BROWSER_OPEN" and _auth_target_keys.size() > 1:
+			_on_deep_link_signin_completing()
+
 
 func _process(delta: float) -> void:
 	# Reset logo tap count after timeout
