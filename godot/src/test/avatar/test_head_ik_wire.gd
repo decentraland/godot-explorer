@@ -48,6 +48,8 @@ func _initialize() -> void:
 	# Unity aimed 90 deg to the side.
 	_check_unity_agrees("unity sees east forward", BODY_EAST, Vector2(0.0, 0.0))
 	_check_unity_agrees("unity sees east right", BODY_EAST, Vector2(35.0, 20.0))
+	_check_unity_agrees("unity sees east steep", BODY_EAST, Vector2(37.0, 83.0))
+	_check_unity_agrees("unity sees south left", Basis(Vector3.UP, PI), Vector2(-45.0, -30.0))
 
 	# A peer's angles, projected into this avatar's frame. Wire yaw 0 is DCL +Z,
 	# which is Godot -Z: for a body facing Godot +X that heading sits on its left.
@@ -85,17 +87,26 @@ func _round_trip(label: String, body: Basis, aim: Vector2) -> void:
 
 
 func _check_unity_agrees(label: String, body: Basis, aim: Vector2) -> void:
+	# Where the sender is actually looking, built from the body frame and the
+	# body-relative aim alone: no wire angles, no atan2, nothing shared with the
+	# encoder under test.
+	var aim_yaw := deg_to_rad(aim.x)
+	var aim_pitch := deg_to_rad(aim.y)
+	var local := Vector3(
+		sin(aim_yaw) * cos(aim_pitch), sin(aim_pitch), -cos(aim_yaw) * cos(aim_pitch)
+	)
+	var world := body.orthonormalized() * local
+	# DCL +Z is Godot -Z, so the Godot direction (x, y, z) arrives as (x, y, -z).
+	var dcl_dir := Vector3(world.x, world.y, -world.z).normalized()
+
 	# Quaternion.Euler(pitch, yaw, 0) * Vector3.forward in Unity's left-handed
-	# space, with the wire pitch positive down (what the encoder sends).
+	# space, from the wire pair, with the wire pitch positive down (what the
+	# encoder sends).
 	var wire := HeadIK.body_to_wire(aim.x, aim.y, body)
-	var yaw := deg_to_rad(wire.x)
-	var pitch := deg_to_rad(-wire.y)
-	var unity_dir := Vector3(sin(yaw) * cos(pitch), -sin(pitch), cos(yaw) * cos(pitch))
-	# The same heading as a DCL-space direction (yaw 0 = +Z, pitch + = up).
-	var dcl_yaw := deg_to_rad(wire.x)
-	var dcl_pitch := deg_to_rad(wire.y)
-	var dcl_dir := Vector3(
-		sin(dcl_yaw) * cos(dcl_pitch), sin(dcl_pitch), cos(dcl_yaw) * cos(dcl_pitch)
+	var wire_yaw := deg_to_rad(wire.x)
+	var wire_pitch := deg_to_rad(-wire.y)
+	var unity_dir := Vector3(
+		sin(wire_yaw) * cos(wire_pitch), -sin(wire_pitch), cos(wire_yaw) * cos(wire_pitch)
 	)
 	if unity_dir.distance_to(dcl_dir) > TOL:
 		_failures.append("%s: unity aims %v, camera is %v" % [label, unity_dir, dcl_dir])
