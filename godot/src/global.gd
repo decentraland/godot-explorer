@@ -126,6 +126,8 @@ var locations: Node
 var modal_manager: ModalManager
 var upgrade_nudge_coordinator: UpgradeNudgeCoordinator
 var review_prompt_coordinator: ReviewPromptCoordinator
+var controls_ftue_coordinator: ControlsFtueCoordinator
+var ftue_tutorial_coordinator: FtueTutorialCoordinator
 
 var standalone = false
 
@@ -690,6 +692,12 @@ func _ready():
 	self.review_prompt_coordinator = load("res://src/review_prompt_coordinator.gd").new()
 	self.review_prompt_coordinator.set_name("review_prompt_coordinator")
 
+	self.controls_ftue_coordinator = load("res://src/controls_ftue_coordinator.gd").new()
+	self.controls_ftue_coordinator.set_name("controls_ftue_coordinator")
+
+	self.ftue_tutorial_coordinator = load("res://src/ftue_tutorial_coordinator.gd").new()
+	self.ftue_tutorial_coordinator.set_name("ftue_tutorial_coordinator")
+
 	get_tree().root.add_child.call_deferred(self.cli)
 	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
@@ -698,6 +706,8 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.modal_manager)
 	get_tree().root.add_child.call_deferred(self.upgrade_nudge_coordinator)
 	get_tree().root.add_child.call_deferred(self.review_prompt_coordinator)
+	get_tree().root.add_child.call_deferred(self.controls_ftue_coordinator)
+	get_tree().root.add_child.call_deferred(self.ftue_tutorial_coordinator)
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)
