@@ -18,8 +18,7 @@ var pressed_index: int = 0
 
 var selected_node: PlaceholderManager
 var current_screen_name: String = ""
-var fade_out_tween: Tween = null
-var fade_in_tween: Tween = null
+var _fade_tweens: Dictionary = {}
 var _credits_page: CreditsPage = null
 var _credits_layer: CanvasLayer = null
 var _credits_was_portrait: bool = true
@@ -329,26 +328,29 @@ func fade_in(node: PlaceholderManager):
 	if not is_instance_valid(node.instance):
 		return
 	selected_node = node
-	node.instance.show()
-	if is_instance_valid(fade_in_tween):
-		if fade_in_tween.is_running():
-			fade_in_tween.kill()
-	node.instance.modulate.a = 0.0
-	fade_in_tween = create_tween()
-	fade_in_tween.tween_property(node.instance, "modulate", Color(1, 1, 1), 0.3)
+	if not node.instance.visible:
+		node.instance.modulate.a = 0.0
+		node.instance.show()
+	var tween := _restart_fade_tween(node)
+	tween.tween_property(node.instance, "modulate", Color(1, 1, 1), 0.3)
 
 
 func fade_out(node: PlaceholderManager):
 	if not is_instance_valid(node.instance):
 		return
-	if is_instance_valid(fade_out_tween):
-		if fade_out_tween.is_running():
-			fade_out_tween.kill()
+	var tween := _restart_fade_tween(node)
+	tween.tween_property(node.instance, "modulate", Color(1, 1, 1, 0), 0.3)
+	tween.tween_callback(node.instance.hide)
 
-	node.instance.modulate.a = 1.0
-	fade_out_tween = create_tween()
-	fade_out_tween.tween_property(node.instance, "modulate", Color(1, 1, 1, 0), 0.3)
-	fade_out_tween.tween_callback(node.instance.hide)
+
+## One tween per screen: a shared one would be killed by the next switch before its hide runs.
+func _restart_fade_tween(node: PlaceholderManager) -> Tween:
+	var previous: Tween = _fade_tweens.get(node)
+	if is_instance_valid(previous):
+		previous.kill()
+	var tween := create_tween()
+	_fade_tweens[node] = tween
+	return tween
 
 
 func _on_visibility_changed():
