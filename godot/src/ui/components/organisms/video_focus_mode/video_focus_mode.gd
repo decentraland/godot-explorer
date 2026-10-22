@@ -39,7 +39,7 @@ var _chat_reveal_epoch: int = 0
 @onready var _chat_column: PanelContainer = %PanelContainer_Chat
 @onready var _chat_slot: Control = %Control_ChatSlot
 @onready var _label_members: Label = %Label_Members
-@onready var _button_exit: HudButton = %Button_Exit
+@onready var _button_exit: Button = %Button_Exit
 @onready var _label_exit: Label = %Label_Exit
 @onready var _button_rotate: HudButton = %Button_Rotate
 @onready var _button_collapse_chat: Button = %Button_CollapseChat
@@ -188,9 +188,12 @@ func _refresh_chat() -> void:
 func _apply_chat_layout() -> void:
 	var is_portrait := _layout.vertical
 	# Exit and rotate follow the HUD chat bar's discs: 66 px in landscape, 96 px in portrait.
+	# The exit square takes the same footprint and glyph size as the disc beside it.
 	var preset := HudButton.Size.LARGE if is_portrait else HudButton.Size.SMALL
-	_button_exit.size_preset = preset
 	_button_rotate.size_preset = preset
+	var spec: Vector2i = HudButton.SIZES[preset]
+	_button_exit.custom_minimum_size = Vector2(spec.x, spec.x)
+	_button_exit.add_theme_constant_override("icon_max_width", spec.y)
 	# One LabelSettings is shared by the title and the member count.
 	_label_members.label_settings.font_size = (
 		HEADER_FONT_SIZE_PORTRAIT if is_portrait else HEADER_FONT_SIZE_LANDSCAPE
