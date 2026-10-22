@@ -33,11 +33,21 @@ const R2_BASE_URL := "https://mobile-ota.dclregenesislabs.xyz/seasons/"
 # decoded into memory afterward, not the download itself. Generous for a looped ambient track;
 # a season folder holding anything this large is a mistake in the bucket.
 const MAX_AUDIO_FILE_BYTES := 15 * 1024 * 1024
+# A corrupt asset fails the same way every time (e.g. AudioStreamMP3.set_data raising its engine
+# error on the same bytes) — capping attempts keeps the retry useful for a transient failure
+# without turning a permanently-bad bucket file into one Sentry event per Discover open.
+const MAX_FETCH_ATTEMPTS := 3
 
 var _active := false
 var _assets_requested := false
+# True only while an async_request_assets() run is between kicking off the overlay fetch and
+# emitting the final signal — blocks a second re-show from resetting _assets_requested and
+# starting a concurrent second run on top of a still-in-flight one.
+var _fetching := false
+var _attempts := 0
 var _discover_overlay_texture: Texture2D = null
 var _discover_audio_stream: AudioStream = null
+static var _season_key_regex := RegEx.create_from_string("^[a-z0-9-]+$")
 
 
 func is_seasonal_skin_active() -> bool:
@@ -55,16 +65,16 @@ func get_discover_audio_stream() -> AudioStream:
 ## Idempotent — only the first call after the season is known to be active fetches anything;
 ## every call after that (including ones made before the flags payload arrives) is a no-op,
 ## UNLESS a previous attempt left an asset null while the season is still active, in which case
-## it retries. Discover calls this on every re-show, so that retry is effectively free. Note the
-## retry only ever helps the audio half: fetch_file_by_url (content_provider.rs) drops a resolved
-## promise from its cache either way, so a fresh call re-downloads, while fetch_texture_by_url
-## caches a promise permanently once settled — a failed overlay fetch returns the same rejection
-## for the rest of the session no matter how many times this runs.
+## it retries, up to MAX_FETCH_ATTEMPTS — bounded, not free: a retry re-reads and re-decodes the
+## audio file, and a corrupt one raises its engine error again each time. _fetching blocks a
+## re-show arriving mid-fetch from resetting the latch and starting a second run on top of it.
 # gdlint:ignore = async-function-name
 func async_request_assets() -> void:
 	if (
 		_assets_requested
 		and _active
+		and not _fetching
+		and _attempts < MAX_FETCH_ATTEMPTS
 		and (
 			not is_instance_valid(_discover_overlay_texture)
 			or not is_instance_valid(_discover_audio_stream)
@@ -82,13 +92,15 @@ func async_request_assets() -> void:
 	_active = not season_key.is_empty()
 	if not _active:
 		return
-	if not RegEx.create_from_string("^[a-z0-9-]+$").search(season_key):
+	if not _season_key_regex.search(season_key):
 		# A slash or ".." would escape seasons/ entirely; anything else just 404s. The flag is
 		# admin-set (mobile-hub, ALLOWED_USERS-gated), so this is a typo guard, not a security
 		# boundary — fail loud instead of letting a bad value read as "asset missing".
 		push_warning("SeasonalSkinManager: invalid season key, skin stays off: ", season_key)
 		_active = false
 		return
+	_fetching = true
+	_attempts += 1
 	var season_base := R2_BASE_URL + season_key + "/"
 	# Emitted once per asset, not once at the end: the audio file is the larger download, and
 	# Discover has no reason to wait for it before showing the overlay it already has.
@@ -98,6 +110,7 @@ func async_request_assets() -> void:
 	seasonal_assets_ready.emit()
 	_discover_audio_stream = await _async_fetch_audio_stream(season_base + "discover-ambient.mp3")
 	seasonal_assets_ready.emit()
+	_fetching = false
 
 
 ## Same fetch_texture_by_url + hash-from-url pattern notifications_manager.gd's own
