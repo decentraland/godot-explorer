@@ -20,6 +20,9 @@ const PORTRAIT_COLLAPSED_CHAT_HEIGHT := 220
 ## Messages re-measure over a few frames after a relayout; the scroll to the latest line
 ## has to wait for that or it lands on the old content height.
 const SCROLL_SETTLE_SECONDS := 0.25
+## The NEARBY title and the member count, per the design.
+const HEADER_FONT_SIZE_LANDSCAPE := 24
+const HEADER_FONT_SIZE_PORTRAIT := 28
 
 var _video_player: Node = null
 var _chat: Control = null
@@ -36,9 +39,9 @@ var _chat_reveal_epoch: int = 0
 @onready var _chat_column: PanelContainer = %PanelContainer_Chat
 @onready var _chat_slot: Control = %Control_ChatSlot
 @onready var _label_members: Label = %Label_Members
-@onready var _button_exit: Button = %Button_Exit
+@onready var _button_exit: HudButton = %Button_Exit
 @onready var _label_exit: Label = %Label_Exit
-@onready var _button_rotate: Button = %Button_Rotate
+@onready var _button_rotate: HudButton = %Button_Rotate
 @onready var _button_collapse_chat: Button = %Button_CollapseChat
 @onready var _button_expand_chat: Button = %Button_ExpandChat
 @onready var _keyboard_margin: Control = %Control_KeyboardMargin
@@ -184,6 +187,14 @@ func _refresh_chat() -> void:
 ## Portrait: the chat fills under the video, or shrinks to a strip and the video takes the rest.
 func _apply_chat_layout() -> void:
 	var is_portrait := _layout.vertical
+	# Exit and rotate follow the HUD chat bar's discs: 66 px in landscape, 96 px in portrait.
+	var preset := HudButton.Size.LARGE if is_portrait else HudButton.Size.SMALL
+	_button_exit.size_preset = preset
+	_button_rotate.size_preset = preset
+	# One LabelSettings is shared by the title and the member count.
+	_label_members.label_settings.font_size = (
+		HEADER_FONT_SIZE_PORTRAIT if is_portrait else HEADER_FONT_SIZE_LANDSCAPE
+	)
 	_button_expand_chat.visible = _chat_collapsed and not is_portrait
 	if is_portrait:
 		_chat_column.visible = true
