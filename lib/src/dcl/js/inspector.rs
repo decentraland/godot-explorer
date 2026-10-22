@@ -22,6 +22,8 @@ use deno_core::JsRuntime;
 use fastwebsockets::Frame;
 use fastwebsockets::OpCode;
 use fastwebsockets::WebSocket;
+// The inspector server runs on hyper 0.14, which speaks http 0.2 types.
+use hyper1::http;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::convert::Infallible;
