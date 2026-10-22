@@ -5,6 +5,11 @@ var _current_music: String = ""
 
 var _last_music: String = ""
 
+# True while _current_music names a stream fetched at runtime (play_stream()) rather than a
+# baked res://assets/sfx/ambient/ resource — stop()'s _last_music bookkeeping must never copy
+# one of these names, or a later restore_music() tries to load() a resource that doesn't exist.
+var _current_is_dynamic := false
+
 @onready var _audio_stream: AudioStreamPlayer = AudioStreamPlayer.new()
 
 
@@ -19,12 +24,13 @@ func play(music_name: StringName):
 
 	var new_stream = load("res://assets/sfx/ambient/%s.ogg" % music_name)
 	if is_instance_valid(new_stream):
-		if not _current_music.is_empty():
+		if not _current_music.is_empty() and not _current_is_dynamic:
 			_last_music = _current_music
 
 		_audio_stream.stream = new_stream
 		_audio_stream.play()
 		_current_music = music_name
+		_current_is_dynamic = false
 
 
 func restore_music():
@@ -38,16 +44,19 @@ func restore_music():
 func play_stream(stream: AudioStream, stream_name: String) -> void:
 	if !is_instance_valid(_audio_stream) or !is_instance_valid(stream):
 		return
-	if not _current_music.is_empty():
+	if not _current_music.is_empty() and not _current_is_dynamic:
 		_last_music = _current_music
 	_audio_stream.stream = stream
 	_audio_stream.play()
 	_current_music = stream_name
+	_current_is_dynamic = true
 
 
 func stop():
-	_last_music = _current_music
+	if not _current_is_dynamic:
+		_last_music = _current_music
 	_current_music = ""
+	_current_is_dynamic = false
 	_audio_stream.stop()
 
 

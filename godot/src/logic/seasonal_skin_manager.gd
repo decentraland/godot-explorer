@@ -1,40 +1,42 @@
 class_name SeasonalSkinManager
 extends Node
 
-## Seasonal reskin template (issue #3025), starting with Halloween. Reads the active season key
-## off the already-fetched FeatureFlags payload (godot/src/feature_flags.gd) rather than its own
-## network round-trip, then fetches its two assets — a Discover background overlay image and an
-## ambient audio track — through ContentProvider, same as every other remote-by-URL asset in this
-## client (profile pictures, notification images, place thumbnails): the image goes through
-## fetch_texture_by_url (works with any URL, not just catalyst content — see
-## notifications_manager.gd's own image download), the audio through fetch_file_by_url +
-## get_cache_file_path, since ContentProvider's typed audio fetch is catalyst-content_mapping-only
-## with no by-URL equivalent. Both are disk-cached by ContentProvider itself, so a relaunch
-## doesn't redownload unless the URL (hash) changes.
+## Seasonal reskin template (issue #3025), starting with Halloween. The asset fetch is lazy:
+## async_request_assets() does nothing until something actually needs it (Discover's first
+## show), not at boot — most sessions never open Discover, and downloading both files for every
+## user with the flag on regardless would just compete with cold-start traffic for no reason.
+## Reads the active season key off the already-fetched FeatureFlags payload
+## (godot/src/feature_flags.gd) rather than its own network round-trip, then fetches its two
+## assets — a Discover background overlay image and an ambient audio track — through
+## ContentProvider, same as every other remote-by-URL asset in this client (profile pictures,
+## notification images, place thumbnails): the image goes through fetch_texture_by_url (works
+## with any URL, not just catalyst content — see notifications_manager.gd's own image download),
+## the audio through fetch_file_by_url + get_cache_file_path, since ContentProvider's typed audio
+## fetch is catalyst-content_mapping-only with no by-URL equivalent. Both are disk-cached by
+## ContentProvider itself, so a relaunch doesn't redownload unless the URL (hash) changes.
 ##
 ## The flag's value is a season key (e.g. "halloween"), not a URL — it names a folder under
 ## dcl-regenesislabs/mobile-ota's seasons/ (see that repo's README), and the two asset URLs are
 ## built from it by convention, same filenames every season.
 ##
 ## Fail-open throughout: an empty key, or a fetch/decode failure, just leaves the season inactive
-## — Discover looks and sounds exactly as it does the rest of the year.
+## — Discover looks and sounds exactly as it does the rest of the year. This manager is never
+## freed (it lives as long as Global, godot/src/global.gd), so there's no need to guard an await
+## against the node going away mid-fetch.
 
 signal seasonal_assets_ready
 
 # Flag name exactly as served by the mobile-bff payload; value is a season key, empty = off.
 const FLAG_SEASON_KEY := "seasonal-skin-key"
 const R2_BASE_URL := "https://mobile-ota.dclregenesislabs.xyz/seasons/"
+# Generous for a looped ambient track; a season folder holding anything this large is a mistake
+# in the bucket, not something worth decoding into memory on a phone.
+const MAX_AUDIO_FILE_BYTES := 15 * 1024 * 1024
 
 var _active := false
+var _assets_requested := false
 var _discover_overlay_texture: Texture2D = null
 var _discover_audio_stream: AudioStream = null
-
-
-func _ready() -> void:
-	if Global.feature_flags.is_loaded():
-		_async_load_config()
-	else:
-		Global.feature_flags.flags_loaded.connect(_async_load_config, CONNECT_ONE_SHOT)
 
 
 func is_seasonal_skin_active() -> bool:
@@ -49,9 +51,18 @@ func get_discover_audio_stream() -> AudioStream:
 	return _discover_audio_stream
 
 
+## Idempotent — only the first call after the season is known to be active fetches anything;
+## every call after that (including ones made before the flags payload arrives) is a no-op.
 # gdlint:ignore = async-function-name
-func _async_load_config() -> void:
-	var season_key := Global.feature_flags.get_text(FLAG_SEASON_KEY, "")
+func async_request_assets() -> void:
+	if _assets_requested:
+		return
+	# Set before the await below, not after: a second call arriving while this one is still
+	# waiting on flags_loaded must not treat itself as the first request too.
+	_assets_requested = true
+	if not Global.feature_flags.is_loaded():
+		await Global.feature_flags.flags_loaded
+	var season_key := Global.feature_flags.get_text(FLAG_SEASON_KEY, "").strip_edges()
 	_active = not season_key.is_empty()
 	if not _active:
 		return
@@ -59,11 +70,7 @@ func _async_load_config() -> void:
 	_discover_overlay_texture = await _async_fetch_overlay_texture(
 		season_base + "discover-overlay.png"
 	)
-	if not is_instance_valid(self):
-		return
 	_discover_audio_stream = await _async_fetch_audio_stream(season_base + "discover-ambient.mp3")
-	if not is_instance_valid(self):
-		return
 	seasonal_assets_ready.emit()
 
 
@@ -99,7 +106,13 @@ func _async_fetch_audio_stream(url: String) -> AudioStream:
 	if file == null:
 		push_warning("SeasonalSkinManager: could not open cached audio file: ", local_path)
 		return null
+	var file_length := file.get_length()
+	if file_length > MAX_AUDIO_FILE_BYTES:
+		push_warning(
+			"SeasonalSkinManager: audio file too large (", file_length, " bytes): ", local_path
+		)
+		return null
 	var stream := AudioStreamMP3.new()
-	stream.data = file.get_buffer(file.get_length())
+	stream.data = file.get_buffer(file_length)
 	stream.loop = true
 	return stream

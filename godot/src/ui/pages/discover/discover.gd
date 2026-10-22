@@ -1,6 +1,10 @@
 class_name Discover
 extends Control
 
+# The name play_stream() registers the seasonal track under with MusicPlayer — not a
+# res://assets/sfx/ambient/ resource name, just a marker get_current_music() is compared against.
+const SEASONAL_MUSIC_NAME := "seasonal_discover"
+
 var search_text: String = ""
 var _generator_statuses: Dictionary = {}
 # Whatever Global.music_player was playing right before the seasonal track took over — restored
@@ -227,13 +231,17 @@ func _on_visibility_changed():
 		if Global.get_explorer():
 			if button_back_to_explorer:
 				button_back_to_explorer.show()
+		# Fire-and-forget: a no-op after the first call once the season's known (see
+		# SeasonalSkinManager.async_request_assets()) — kicking it off here instead of at boot
+		# means the two files are only ever downloaded for someone who actually opens Discover.
+		Global.seasonal_skin_manager.async_request_assets()
 		_apply_seasonal_skin()
 	else:
 		# Only ours to put back if the seasonal track is still the one playing — if the player
 		# (or something else) already changed it, leave it alone. An empty _music_before_seasonal
 		# means nothing was playing before it started, so stop() rather than play("") — the
 		# latter fails to load and would just leave the seasonal track running.
-		if Global.music_player.get_current_music() == "seasonal_discover":
+		if Global.music_player.get_current_music() == SEASONAL_MUSIC_NAME:
 			if _music_before_seasonal.is_empty():
 				Global.music_player.stop()
 			else:
@@ -245,7 +253,11 @@ func _on_visibility_changed():
 ## SeasonalSkinManager (issue #3025). A no-op outside an active season — texture_rect_
 ## seasonal_overlay just stays hidden and music is left exactly as it was. Also a no-op if the
 ## overlay node itself isn't in the scene yet (discover.tscn is a manual scene edit) — treated
-## the same as "feature not ready", not a crash.
+## the same as "feature not ready", not a crash. seasonal_assets_ready can fire while Discover is
+## hidden (the fetch it kicks off outlives a quick show-then-leave) — the overlay texture is
+## harmless to set either way since a hidden Control never draws it, but starting music while
+## hidden would leave the seasonal track playing over whatever the player navigated to, so that
+## half is gated on actually being shown.
 func _apply_seasonal_skin() -> void:
 	if not is_instance_valid(texture_rect_seasonal_overlay):
 		return
@@ -256,13 +268,15 @@ func _apply_seasonal_skin() -> void:
 	if is_instance_valid(overlay_texture):
 		texture_rect_seasonal_overlay.texture = overlay_texture
 		texture_rect_seasonal_overlay.visible = true
+	if not is_visible_in_tree():
+		return
 	var audio_stream := Global.seasonal_skin_manager.get_discover_audio_stream()
 	if (
 		is_instance_valid(audio_stream)
-		and Global.music_player.get_current_music() != "seasonal_discover"
+		and Global.music_player.get_current_music() != SEASONAL_MUSIC_NAME
 	):
 		_music_before_seasonal = Global.music_player.get_current_music()
-		Global.music_player.play_stream(audio_stream, "seasonal_discover")
+		Global.music_player.play_stream(audio_stream, SEASONAL_MUSIC_NAME)
 
 
 ## Android-only counterpart of the low-spec-iPhone warning below: shows the "device no longer
