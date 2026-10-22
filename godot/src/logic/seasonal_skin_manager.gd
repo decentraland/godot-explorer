@@ -1,26 +1,29 @@
 class_name SeasonalSkinManager
 extends Node
 
-## Seasonal reskin template (issue #3025), starting with Halloween. Reads whether a season is
-## active off the already-fetched FeatureFlags payload (godot/src/feature_flags.gd) rather than
-## its own network round-trip, then fetches its two assets — a Discover background overlay image
-## and an ambient audio track — through ContentProvider, same as every other remote-by-URL asset
-## in this client (profile pictures, notification images, place thumbnails): the image goes
-## through fetch_texture_by_url (works with any URL, not just catalyst content — see
+## Seasonal reskin template (issue #3025), starting with Halloween. Reads the active season key
+## off the already-fetched FeatureFlags payload (godot/src/feature_flags.gd) rather than its own
+## network round-trip, then fetches its two assets — a Discover background overlay image and an
+## ambient audio track — through ContentProvider, same as every other remote-by-URL asset in this
+## client (profile pictures, notification images, place thumbnails): the image goes through
+## fetch_texture_by_url (works with any URL, not just catalyst content — see
 ## notifications_manager.gd's own image download), the audio through fetch_file_by_url +
 ## get_cache_file_path, since ContentProvider's typed audio fetch is catalyst-content_mapping-only
 ## with no by-URL equivalent. Both are disk-cached by ContentProvider itself, so a relaunch
 ## doesn't redownload unless the URL (hash) changes.
 ##
-## Fail-open throughout: a disabled flag, an empty/missing URL, or a fetch/decode failure just
-## leaves the season inactive — Discover looks and sounds exactly as it does the rest of the year.
+## The flag's value is a season key (e.g. "halloween"), not a URL — it names a folder under
+## dcl-regenesislabs/mobile-ota's seasons/ (see that repo's README), and the two asset URLs are
+## built from it by convention, same filenames every season.
+##
+## Fail-open throughout: an empty key, or a fetch/decode failure, just leaves the season inactive
+## — Discover looks and sounds exactly as it does the rest of the year.
 
 signal seasonal_assets_ready
 
-# Flag names exactly as served by the mobile-bff payload.
-const FLAG_ENABLED := "seasonal-skin-enabled"
-const FLAG_DISCOVER_OVERLAY_URL := "seasonal-skin-discover-overlay-url"
-const FLAG_DISCOVER_AUDIO_URL := "seasonal-skin-discover-audio-url"
+# Flag name exactly as served by the mobile-bff payload; value is a season key, empty = off.
+const FLAG_SEASON_KEY := "seasonal-skin-key"
+const R2_BASE_URL := "https://mobile-ota.dclregenesislabs.xyz/seasons/"
 
 var _active := false
 var _discover_overlay_texture: Texture2D = null
@@ -48,20 +51,17 @@ func get_discover_audio_stream() -> AudioStream:
 
 # gdlint:ignore = async-function-name
 func _async_load_config() -> void:
-	_active = Global.feature_flags.is_enabled(FLAG_ENABLED, false)
+	var season_key := Global.feature_flags.get_text(FLAG_SEASON_KEY, "")
+	_active = not season_key.is_empty()
 	if not _active:
 		return
-	var overlay_url := Global.feature_flags.get_text(FLAG_DISCOVER_OVERLAY_URL, "")
-	var audio_url := Global.feature_flags.get_text(FLAG_DISCOVER_AUDIO_URL, "")
-	if overlay_url.is_empty() and audio_url.is_empty():
-		_active = false
-		return
-	if not overlay_url.is_empty():
-		_discover_overlay_texture = await _async_fetch_overlay_texture(overlay_url)
+	var season_base := R2_BASE_URL + season_key + "/"
+	_discover_overlay_texture = await _async_fetch_overlay_texture(
+		season_base + "discover-overlay.png"
+	)
 	if not is_instance_valid(self):
 		return
-	if not audio_url.is_empty():
-		_discover_audio_stream = await _async_fetch_audio_stream(audio_url)
+	_discover_audio_stream = await _async_fetch_audio_stream(season_base + "discover-ambient.mp3")
 	if not is_instance_valid(self):
 		return
 	seasonal_assets_ready.emit()
