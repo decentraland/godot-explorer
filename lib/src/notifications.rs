@@ -311,6 +311,16 @@ mod local_notification_queue_tests {
             "event reminder stays armed"
         );
 
+        // Disarming again is a no-op: Day 1 is already out of the OS.
+        manager.call("set_day1_notification_enabled", &[Variant::from(false)]);
+        assert_eq!(
+            get_os_scheduled_count(&mut mock),
+            1,
+            "second disarm keeps the queue untouched"
+        );
+        assert!(!is_notification_scheduled(&mut mock, "day1_welcome"));
+        assert!(is_notification_scheduled(&mut mock, "event_flagged"));
+
         manager.call("set_day1_notification_enabled", &[Variant::from(true)]);
         assert_eq!(
             get_os_scheduled_count(&mut mock),
