@@ -2,9 +2,8 @@ class_name VideoFocusMode
 extends Control
 
 ## Full-screen video screen with the Nearby chat docked beside it (landscape) or under it
-## (portrait) — issue #1381. Opens on the scene runner's open_video_focus_mode signal (the
-## crosshair on a video screen, then the "Focus mode" pill) and closes from the exit button,
-## a teleport or the menu.
+## (portrait) — issue #1381. Opened by VideoFocusButton (the HUD button shown while the
+## crosshair points at a playing screen) and closed from the exit button, a teleport or the menu.
 
 const CHAT_SCENE := preload("res://src/ui/pages/chat/chat.tscn")
 # i18n-keys: VIDEO_FOCUS_EXIT
@@ -58,7 +57,6 @@ func _ready() -> void:
 		func(): _button_expand_chat.pivot_offset = _button_expand_chat.size * 0.5
 	)
 	resized.connect(_update_video_panel_size)
-	Global.scene_runner.open_video_focus_mode.connect(enter)
 	Global.orientation_changed.connect(_on_orientation_changed)
 	Global.change_virtual_keyboard.connect(_on_change_virtual_keyboard)
 	Global.loading_started.connect(exit)
@@ -66,8 +64,7 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
-	# Global and its scene_runner outlive this node.
-	Global.scene_runner.open_video_focus_mode.disconnect(enter)
+	# Global outlives this node.
 	Global.orientation_changed.disconnect(_on_orientation_changed)
 	Global.change_virtual_keyboard.disconnect(_on_change_virtual_keyboard)
 	Global.loading_started.disconnect(exit)

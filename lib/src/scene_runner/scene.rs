@@ -369,51 +369,54 @@ impl GodotDclRaycastResult {
 static SCENE_ID_MONOTONIC_COUNTER: once_cell::sync::Lazy<std::sync::atomic::AtomicI32> =
     once_cell::sync::Lazy::new(Default::default);
 
+/// A surface showing a playing video: the player feeding it and the mesh it is drawn on.
+pub struct VideoScreen {
+    pub video_player: Gd<DclVideoPlayer>,
+    pub mesh: Gd<godot::classes::MeshInstance3D>,
+}
+
 impl Scene {
     pub fn new_id() -> SceneId {
         SceneId(SCENE_ID_MONOTONIC_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
     }
 
-    /// The video player a screen entity shows: through its Material on a MeshRenderer, or
-    /// through a GltfNodeModifiers material on one of its glTF nodes (the Genesis Plaza
-    /// theatre). The source kind does not matter here: LiveKit streams, HLS/MP4 URLs and
-    /// local files all end in one DclVideoPlayer per video entity.
-    pub fn video_player_for_entity(&self, entity_id: &SceneEntityId) -> Option<Gd<DclVideoPlayer>> {
+    /// The playing video screen `entity_id` is, if any: its player and the mesh showing it,
+    /// through a Material on a MeshRenderer or through a GltfNodeModifiers material on one
+    /// of its glTF nodes (the Genesis Plaza theatre). The source kind does not matter: LiveKit
+    /// streams, HLS/MP4 URLs and local files all end in one DclVideoPlayer per video entity.
+    pub fn video_screen_for_entity(&self, entity_id: &SceneEntityId) -> Option<VideoScreen> {
+        let node = self.godot_dcl_scene.get_node_or_null_3d(entity_id)?;
         if let Some(video_player) = self
             .materials
             .get(entity_id)
             .and_then(|item| self.video_player_for_dcl_material(&item.dcl_mat))
         {
-            return Some(video_player);
+            let mesh = node.try_get_node_as::<godot::classes::MeshInstance3D>("MeshRenderer")?;
+            return Some(VideoScreen { video_player, mesh });
         }
-        // Video materials never leave `pending_materials`: they are re-bound every frame.
-        self.gltf_node_modifier_states
-            .get(entity_id)?
-            .pending_materials
-            .values()
-            .find_map(|item| self.video_player_for_dcl_material(&item.dcl_material))
+        let state = self.gltf_node_modifier_states.get(entity_id)?;
+        self.modifier_video_meshes(node, state).into_iter().next()
     }
 
-    /// Nearest video screen along the ray, by its mesh bounds rather than a collider (most
-    /// screens have none). Returns the distance from `ray_from` and the screen's player.
+    /// Nearest playing video screen along the ray, by its mesh bounds rather than a collider
+    /// (most screens have none). Returns the distance from `ray_from` and the screen.
     pub fn video_screen_along_ray(
         &self,
         ray_from: godot::builtin::Vector3,
         ray_dir: godot::builtin::Vector3,
-    ) -> Option<(f32, Gd<DclVideoPlayer>)> {
-        use super::components::gltf_node_modifiers::{find_node_by_path, get_gltf_container};
-
+    ) -> Option<(f32, VideoScreen)> {
         // Runs every physics tick: most scenes have no video, so they cost one check.
         if self.video_players.is_empty() {
             return None;
         }
-        let mut nearest: Option<(f32, Gd<DclVideoPlayer>)> = None;
-        let mut consider = |mesh: &Gd<godot::classes::MeshInstance3D>, video_player| {
-            let Some(distance) = Self::mesh_bounds_hit_distance(mesh, ray_from, ray_dir) else {
+        let mut nearest: Option<(f32, VideoScreen)> = None;
+        let mut consider = |screen: VideoScreen| {
+            let Some(distance) = Self::mesh_bounds_hit_distance(&screen.mesh, ray_from, ray_dir)
+            else {
                 return;
             };
             if nearest.as_ref().is_none_or(|(best, _)| distance < *best) {
-                nearest = Some((distance, video_player));
+                nearest = Some((distance, screen));
             }
         };
 
@@ -427,45 +430,59 @@ impl Scene {
             if let Some(mesh) =
                 node.try_get_node_as::<godot::classes::MeshInstance3D>("MeshRenderer")
             {
-                consider(&mesh, video_player);
+                consider(VideoScreen { video_player, mesh });
             }
         }
 
         for (entity_id, state) in self.gltf_node_modifier_states.iter() {
-            let video_materials: Vec<(&String, Gd<DclVideoPlayer>)> = state
-                .pending_materials
-                .iter()
-                .filter_map(|(key, item)| {
-                    self.video_player_for_dcl_material(&item.dcl_material)
-                        .map(|video_player| (key, video_player))
-                })
-                .collect();
-            if video_materials.is_empty() {
-                continue;
-            }
-            let Some(gltf_root) = self
-                .godot_dcl_scene
-                .get_node_or_null_3d(entity_id)
-                .and_then(get_gltf_container)
-                .and_then(|container| container.bind().get_gltf_resource())
-            else {
+            let Some(node) = self.godot_dcl_scene.get_node_or_null_3d(entity_id) else {
                 continue;
             };
-            for (key, video_player) in video_materials {
+            for screen in self.modifier_video_meshes(node, state) {
+                consider(screen);
+            }
+        }
+        nearest
+    }
+
+    /// The glTF meshes of `node` whose modifier material samples a playing video. Video
+    /// materials never leave `pending_materials`: they are re-bound every frame.
+    fn modifier_video_meshes(
+        &self,
+        node: &Gd<godot::classes::Node3D>,
+        state: &GltfNodeModifierState,
+    ) -> Vec<VideoScreen> {
+        use super::components::gltf_node_modifiers::{find_node_by_path, get_gltf_container};
+
+        let video_materials: Vec<(&String, Gd<DclVideoPlayer>)> = state
+            .pending_materials
+            .iter()
+            .filter_map(|(key, item)| {
+                self.video_player_for_dcl_material(&item.dcl_material)
+                    .map(|video_player| (key, video_player))
+            })
+            .collect();
+        if video_materials.is_empty() {
+            return Vec::new();
+        }
+        let Some(gltf_root) =
+            get_gltf_container(node).and_then(|container| container.bind().get_gltf_resource())
+        else {
+            return Vec::new();
+        };
+        video_materials
+            .into_iter()
+            .filter_map(|(key, video_player)| {
                 // Per-surface entries are keyed "<node path>:<surface index>".
                 let node_path = match key.rsplit_once(':') {
                     Some((path, surface)) if surface.parse::<u32>().is_ok() => path,
                     _ => key.as_str(),
                 };
-                let Some(mesh) = find_node_by_path(&gltf_root, node_path)
-                    .and_then(|node| node.try_cast::<godot::classes::MeshInstance3D>().ok())
-                else {
-                    continue;
-                };
-                consider(&mesh, video_player);
-            }
-        }
-        nearest
+                let mesh = find_node_by_path(&gltf_root, node_path)
+                    .and_then(|node| node.try_cast::<godot::classes::MeshInstance3D>().ok())?;
+                Some(VideoScreen { video_player, mesh })
+            })
+            .collect()
     }
 
     /// Distance from `ray_from` to where the ray enters the mesh's bounds, if it does so

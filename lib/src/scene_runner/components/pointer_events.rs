@@ -145,6 +145,7 @@ impl PbPointerEvents {
             .iter()
             .any(|pe| pe.interaction_type != Some(i32::from(InteractionType::Proximity)))
     }
+
     // Returns true if the entity is in an "active hover" state: any non-proximity
     // hover-enter OR hover-leave entry is within its configured interaction range.
     // This single tracked state is what drives cursor HOVER_ENTER/LEAVE, while the

@@ -32,6 +32,7 @@
 [ext_resource type="Resource" uid="uid://ntu4pnce7xxr" path="res://src/ui/layouts/hud_margins.tres" id="34_hudmg"]
 [ext_resource type="PackedScene" uid="uid://v3ktu5kra0ql" path="res://src/ui/components/organisms/preview_hud_panel/preview_hud_panel.tscn" id="35_prevhud"]
 [ext_resource type="PackedScene" uid="uid://buxjoxmdm2l6v" path="res://src/ui/components/organisms/video_focus_mode/video_focus_mode.tscn" id="36_vfocus"]
+[ext_resource type="PackedScene" uid="uid://dga38x08wxhoy" path="res://src/ui/components/organisms/video_focus_mode/video_focus_button.tscn" id="37_vfocusbtn"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_c5h7v"]
 
@@ -306,6 +307,11 @@ size_flags_horizontal = 2
 size_flags_vertical = 2
 icon = ExtResource("27_close")
 icon_normal = ExtResource("27_close")
+
+[node name="VideoFocusButton" parent="UI" instance=ExtResource("37_vfocusbtn")]
+unique_name_in_owner = true
+editor_description = "Focus-mode HUD button, shown while the crosshair points at a playing video screen; tapping it opens VideoFocusMode (issue #1381). Outside SafeAreaHud on purpose: it lives in the right margin column, beyond the interactable area pushed to scenes. Follows InteractableHUD visibility for Hide-UI."
+layout_mode = 1
 
 [node name="VideoFocusMode" parent="UI" instance=ExtResource("36_vfocus")]
 unique_name_in_owner = true

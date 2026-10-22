@@ -6,10 +6,8 @@ extends PanelContainer
 ## PointerEvents text, which must never be looked up — so only this one known marker is resolved
 ## here, never the scene-supplied strings around it. explorer.gd matches on the same constant to
 ## filter the prompt for the "Hide View Profile" setting.
-# i18n-keys: TOOLTIP_VIEW_PROFILE, TOOLTIP_FOCUS_MODE
+# i18n-keys: TOOLTIP_VIEW_PROFILE
 const VIEW_PROFILE_KEY: String = "TOOLTIP_VIEW_PROFILE"
-## The video-screen prompt (issue #1381), emitted by scene_manager.rs the same way.
-const FOCUS_MODE_KEY: String = "TOOLTIP_FOCUS_MODE"
 
 # Set on the stylebox in _ready, which overwrites whatever tooltip_label.tscn declares -- the
 # scene's bg_color never renders, so change it HERE. #161518 at 70% is the pill fill from the
@@ -70,9 +68,7 @@ func set_bg_color(color):
 
 ## Resolve only our own prompts. Anything else is creator copy and passes through untouched.
 static func _resolve(value: String) -> String:
-	if value == VIEW_PROFILE_KEY or value == FOCUS_MODE_KEY:
-		return TranslationServer.translate(value)
-	return value
+	return TranslationServer.translate(value) if value == VIEW_PROFILE_KEY else value
 
 
 func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
