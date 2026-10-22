@@ -27,6 +27,9 @@ var _chat: Control = null
 var _exit_label_tween: Tween
 ## Hidden beside the video in landscape, shrunk to a strip under it in portrait.
 var _chat_collapsed: bool = false
+## Bumped on every relayout and on exit, so a settle timer from an earlier layout (or an
+## earlier session) never reveals or scrolls the chat of a later one.
+var _chat_reveal_epoch: int = 0
 
 @onready var _layout: BoxContainer = %BoxContainer_Layout
 @onready var _video_panel: Control = %Control_Video
@@ -123,6 +126,7 @@ func exit() -> void:
 		_chat.close_write_mode_if_active()
 		_chat.queue_free()
 		_chat = null
+	_chat_reveal_epoch += 1
 	_video_player = null
 	_texture_rect.texture = null
 	_keyboard_margin.custom_minimum_size.y = 0
@@ -205,13 +209,16 @@ func _apply_chat_layout() -> void:
 	_update_video_panel_size()
 	if _chat != null:
 		_chat.scroll_to_bottom_deferred()
-		get_tree().create_timer(SCROLL_SETTLE_SECONDS).timeout.connect(_scroll_chat_to_bottom)
+		_chat_reveal_epoch += 1
+		var settle := get_tree().create_timer(SCROLL_SETTLE_SECONDS)
+		settle.timeout.connect(_scroll_chat_to_bottom.bind(_chat_reveal_epoch))
 
 
-func _scroll_chat_to_bottom() -> void:
-	if _chat != null and is_instance_valid(_chat):
-		_chat.scroll_to_bottom_deferred()
-		_chat.modulate = Color.WHITE
+func _scroll_chat_to_bottom(epoch: int) -> void:
+	if epoch != _chat_reveal_epoch or _chat == null or not is_instance_valid(_chat):
+		return
+	_chat.scroll_to_bottom_deferred()
+	_chat.modulate = Color.WHITE
 
 
 ## In portrait the video panel takes the stream's aspect over the full width (or the whole

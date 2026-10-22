@@ -8,8 +8,11 @@ extends Control
 
 const FADE_SECONDS := 0.15
 
+## The VideoFocusMode the button opens. Found by unique name in explorer.tscn unless a
+## caller (the headless test) set one before adding the button to the tree.
+var overlay: Control = null
+
 var _video_player: Node = null
-var _overlay: Control = null
 var _hud: Control = null
 var _fade: Tween = null
 
@@ -20,13 +23,14 @@ func _ready() -> void:
 	hide()
 	_button.pressed.connect(_on_button_pressed)
 	# Both live next to this node in explorer.tscn; absent in a bare instance.
-	_overlay = get_node_or_null("%VideoFocusMode")
+	if overlay == null:
+		overlay = get_node_or_null("%VideoFocusMode")
 	_hud = get_node_or_null("%InteractableHUD")
 
 
 func _process(_delta: float) -> void:
 	var video_player: Node = Global.scene_runner.hovered_video_player
-	var overlay_open: bool = _overlay != null and _overlay.visible
+	var overlay_open: bool = overlay != null and overlay.visible
 	var hud_hidden: bool = _hud != null and not _hud.visible
 	if video_player == null or overlay_open or hud_hidden:
 		_set_shown(false)
@@ -53,8 +57,8 @@ func _set_shown(shown: bool) -> void:
 
 
 func _on_button_pressed() -> void:
-	if _overlay == null or _video_player == null:
+	if overlay == null or _video_player == null:
 		return
 	Global.send_haptic_feedback()
-	_overlay.enter(_video_player)
+	overlay.enter(_video_player)
 	_set_shown(false)

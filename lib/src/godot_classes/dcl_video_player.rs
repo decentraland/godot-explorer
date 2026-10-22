@@ -172,9 +172,11 @@ impl DclVideoPlayer {
         self.base_mut().call("_backend_pause", &[]);
     }
 
-    /// Whether the scene wants this video playing (see `dcl_playing`).
+    /// Whether the screen shows a running video: the scene asked for it (see `dcl_playing`)
+    /// and the backend has not stopped it, as at the end of a non-looping clip, a dead
+    /// stream or a failed source.
     pub fn is_playing(&self) -> bool {
-        self.dcl_playing
+        self.dcl_playing && !matches!(self.video_state, VIDEO_STATE_PAUSED | VIDEO_STATE_ERROR)
     }
 
     /// Set the looping state on the backend

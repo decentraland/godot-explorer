@@ -2,17 +2,21 @@ extends Node
 
 # Smoke test for the video focus mode (issue #1381): it opens on a player, docks a chat, shows
 # the player's texture, follows orientation and tears down on exit or when the player goes
-# away. Runs as a scene, not --script: the overlay reaches Global (scene_runner, orientation),
-# and a --script run compiles before the autoloads exist, turning every call into a no-op.
-# The runner passes --quit, so everything happens inside _ready: the overlay's per-frame step
-# is driven by hand instead of awaiting frames.
+# away; the HUD button shows while a screen is aimed and opens it. Runs as a scene, not
+# --script: the overlay reaches Global (scene_runner, orientation), and a --script run
+# compiles before the autoloads exist, turning every call into a no-op. The runner passes
+# --quit, so everything happens inside _ready: per-frame steps are driven by hand instead of
+# awaiting frames.
 
 const OVERLAY_SCENE := preload(
 	"res://src/ui/components/organisms/video_focus_mode/video_focus_mode.tscn"
 )
+const BUTTON_SCENE := preload(
+	"res://src/ui/components/organisms/video_focus_mode/video_focus_button.tscn"
+)
 
 ## Assertions that actually evaluated; guards against a suite that never ran.
-const EXPECTED_CHECKS := 12
+const EXPECTED_CHECKS := 16
 
 var _failures: Array[String] = []
 var _checks: int = 0
@@ -31,9 +35,46 @@ class FakeVideoPlayer:
 		return texture
 
 
+## Stands in for VideoFocusMode: the button only needs enter() and `visible`.
+class FakeOverlay:
+	extends Control
+	var entered: Node = null
+
+	func enter(video_player: Node) -> void:
+		entered = video_player
+		show()
+
+
 func _ready() -> void:
 	_test_lifecycle()
+	_test_button()
 	_finish()
+
+
+func _test_button() -> void:
+	var overlay := FakeOverlay.new()
+	overlay.hide()
+	add_child(overlay)
+	var button: Control = BUTTON_SCENE.instantiate()
+	button.overlay = overlay
+	add_child(button)
+	button._process(0.0)
+	_expect(not button.visible, "no button while nothing is aimed")
+
+	# No tick runs inside _ready, so the scene runner does not overwrite the aimed player.
+	var player := DclVideoPlayer.new()
+	Global.scene_runner.hovered_video_player = player
+	button._process(0.0)
+	_expect(button.visible, "the button shows while a playing screen is aimed")
+	button.get_node("%Button_Focus").pressed.emit()
+	_expect(overlay.entered == player, "pressing opens the focus mode on the aimed player")
+	button._process(0.0)
+	_expect(not button.visible, "no button while the focus mode is open")
+
+	Global.scene_runner.hovered_video_player = null
+	player.free()
+	button.queue_free()
+	overlay.queue_free()
 
 
 func _test_lifecycle() -> void:
