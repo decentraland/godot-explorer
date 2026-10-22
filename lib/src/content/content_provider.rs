@@ -40,6 +40,7 @@ use super::{
     audio::load_audio,
     cache_file_name::{cache_file_name, cache_file_path},
     crash_context,
+    font::{font_cache_key, load_font, scene_font_path, warn_font_fallback},
     gltf::{
         build_dcl_emote_gltf, get_last_16_alphanumeric, load_and_save_emote_gltf,
         load_and_save_scene_gltf, load_and_save_wearable_gltf, process_emote_animations,
@@ -1697,6 +1698,59 @@ impl ContentProvider {
 
         self.cache_promise(file_hash, &promise);
 
+        promise
+    }
+
+    /// Loads the TTF a scene's `font_src` names. Rejects (with a warning) anything that
+    /// is not a valid TrueType file in the scene content, so callers keep the built-in font.
+    #[func]
+    pub fn fetch_font(
+        &mut self,
+        font_src: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+        msdf: bool,
+    ) -> Gd<Promise> {
+        let font_src = font_src.to_string();
+        let content_mapping = content_mapping.bind().get_content_mapping();
+        let file_hash = match scene_font_path(&font_src) {
+            Ok(path) => content_mapping
+                .get_hash(path)
+                .cloned()
+                .ok_or("not a file in the scene content (font family names are not supported)"),
+            Err(reason) => Err(reason),
+        };
+        let file_hash = match file_hash {
+            Ok(file_hash) => file_hash,
+            Err(reason) => {
+                warn_font_fallback(&font_src, reason);
+                return Promise::from_rejected(reason.to_string());
+            }
+        };
+
+        let cache_key = font_cache_key(&file_hash, msdf);
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
+            // A rejected load (e.g. offline) is retried on the next request.
+            if !promise.bind().is_rejected() {
+                return promise;
+            }
+        }
+
+        let (promise, get_promise) = Promise::make_to_async();
+        let url = format!("{}{}", content_mapping.base_url, file_hash);
+        let ctx = self.get_context();
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+        TokioRuntime::spawn(async move {
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+            let result = load_font(url, file_hash, msdf, ctx).await;
+            if let Err(error) = &result {
+                warn_font_fallback(&font_src, &error.to_string());
+            }
+            then_promise(get_promise, result);
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
+        });
+
+        self.cache_promise(cache_key, &promise);
         promise
     }
 

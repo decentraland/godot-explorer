@@ -102,6 +102,8 @@ pub struct UiResults {
     pub pointer_event_results: Vec<(SceneEntityId, PbPointerEventsResult)>,
     pub input_results: HashMap<SceneEntityId, PbUiInputResult>,
     pub dropdown_results: HashMap<SceneEntityId, PbUiDropdownResult>,
+    // A scene font finished loading after its text was laid out.
+    pub relayout_requested: bool,
 }
 
 impl UiResults {
@@ -110,6 +112,7 @@ impl UiResults {
             pointer_event_results: Vec::new(),
             input_results: HashMap::new(),
             dropdown_results: HashMap::new(),
+            relayout_requested: false,
         }))
     }
 }
@@ -628,7 +631,8 @@ pub fn update_scene_ui(
         && dirty_lww_components
             .get(&SceneComponentId::UI_INPUT_BINDING)
             .is_none()
-        && !need_update_ui_canvas;
+        && !need_update_ui_canvas
+        && !scene.godot_dcl_scene.ui_results.borrow().relayout_requested;
 
     if need_skip {
         update_input_result(scene, crdt_state);
@@ -640,6 +644,11 @@ pub fn update_scene_ui(
         update_ui_input(scene, crdt_state);
         update_ui_dropdown(scene, crdt_state);
         update_ui_input_binding(scene, crdt_state);
+        scene
+            .godot_dcl_scene
+            .ui_results
+            .borrow_mut()
+            .relayout_requested = false;
         update_layout(scene, crdt_state, ui_canvas_information);
 
         update_input_result(scene, crdt_state);

@@ -6,13 +6,15 @@ use godot::{
 };
 
 use crate::{
+    content::content_mapping::ContentMappingAndUrlRef,
     dcl::components::{
         proto_components::{
-            sdk::components::{common::Font, PbUiDropdown, PbUiDropdownResult},
+            sdk::components::{PbUiDropdown, PbUiDropdownResult},
             WrapToGodot,
         },
         SceneEntityId,
     },
+    godot_classes::font::{FontStyle, SceneFont},
     scene_runner::components::ui::scene_ui::UiResults,
 };
 
@@ -21,7 +23,7 @@ use crate::{
 pub struct DclUiDropdown {
     base: Base<OptionButton>,
 
-    current_font: Font,
+    scene_font: SceneFont,
 
     #[export]
     dcl_entity_id: SceneEntityId,
@@ -34,7 +36,7 @@ impl IOptionButton for DclUiDropdown {
     fn init(base: Base<OptionButton>) -> Self {
         Self {
             base,
-            current_font: Font::FSansSerif,
+            scene_font: SceneFont::default(),
             ui_result: None,
             dcl_entity_id: SceneEntityId::ROOT,
         }
@@ -42,9 +44,7 @@ impl IOptionButton for DclUiDropdown {
 
     fn ready(&mut self) {
         let style_box_empty: Gd<godot::classes::StyleBox> = StyleBoxEmpty::new_gd().upcast();
-        let font_resource = self.current_font.get_font_resource();
-        self.base_mut()
-            .add_theme_font_override("font", &font_resource);
+        self.apply_font();
         self.base_mut()
             .add_theme_stylebox_override("normal", &style_box_empty.clone());
         self.base_mut()
@@ -77,7 +77,21 @@ impl DclUiDropdown {
         value.value = index;
     }
 
-    pub fn change_value(&mut self, new_value: &PbUiDropdown) {
+    #[func]
+    fn apply_font(&mut self) {
+        let font = self.scene_font.get(FontStyle::Regular);
+        self.base_mut().add_theme_font_override("font", &font);
+        // The options list is a separate PopupMenu with its own theme.
+        if let Some(mut popup) = self.base().get_popup() {
+            popup.add_theme_font_override("font", &font);
+        }
+    }
+
+    pub fn change_value(
+        &mut self,
+        new_value: &PbUiDropdown,
+        content_mapping: &ContentMappingAndUrlRef,
+    ) {
         let current_item_count = self.base().get_item_count();
         match current_item_count.cmp(&(new_value.options.len() as i32)) {
             Ordering::Greater => {
@@ -121,8 +135,12 @@ impl DclUiDropdown {
         self.base_mut()
             .add_theme_color_override("font_color", font_color);
 
+        let font_size = new_value.font_size.unwrap_or(10);
         self.base_mut()
-            .add_theme_font_size_override("font_size", new_value.font_size.unwrap_or(10));
+            .add_theme_font_size_override("font_size", font_size);
+        if let Some(mut popup) = self.base().get_popup() {
+            popup.add_theme_font_size_override("font_size", font_size);
+        }
 
         self.base_mut().set_disabled(new_value.disabled);
 
@@ -135,11 +153,14 @@ impl DclUiDropdown {
 
         // self.base.set_align(hor_text_align);
 
-        if new_value.font() != self.current_font {
-            self.current_font = new_value.font();
-            let new_font_resource = self.current_font.get_font_resource();
-            self.base_mut()
-                .add_theme_font_override("font", &new_font_resource);
+        if self.scene_font.update(
+            new_value.font(),
+            new_value.font_src.as_deref(),
+            content_mapping,
+        ) {
+            self.apply_font();
+            self.scene_font
+                .on_loaded(&self.base().callable("apply_font"));
         }
     }
 
