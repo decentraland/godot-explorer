@@ -66,8 +66,12 @@ impl DclUrls {
         urls::comms_gatekeeper_local().to_godot()
     }
     #[func]
-    pub fn social_service() -> GString {
-        urls::social_service().to_godot()
+    pub fn social_api() -> GString {
+        urls::social_api().to_godot()
+    }
+    #[func]
+    pub fn social_service_stream() -> GString {
+        urls::social_service_stream().to_godot()
     }
     #[func]
     pub fn archipelago_stats() -> GString {

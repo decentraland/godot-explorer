@@ -152,11 +152,24 @@ pub fn comms_gatekeeper_local() -> String {
         suffix(ServiceGroup::Comms)
     )
 }
-pub fn social_service() -> String {
-    format!(
-        "wss://rpc-social-service-ea.decentraland.{}",
-        suffix(ServiceGroup::Comms)
-    )
+/// Social service HTTP API (friends, blocks). `DCL_SOCIAL_API_URL` points it at another
+/// deployment, e.g. a local social-service while developing.
+pub fn social_api() -> String {
+    std::env::var("DCL_SOCIAL_API_URL").unwrap_or_else(|_| {
+        format!(
+            "https://social-api.decentraland.{}",
+            suffix(ServiceGroup::Comms)
+        )
+    })
+}
+/// Social service real-time updates (WebSocket). `DCL_SOCIAL_STREAM_URL` overrides it.
+pub fn social_service_stream() -> String {
+    std::env::var("DCL_SOCIAL_STREAM_URL").unwrap_or_else(|_| {
+        format!(
+            "wss://rpc-social-service-ea.decentraland.{}/v1/stream",
+            suffix(ServiceGroup::Comms)
+        )
+    })
 }
 pub fn archipelago_stats() -> String {
     format!(
@@ -558,7 +571,8 @@ mod tests {
             peer_lambdas(),
             comms_gatekeeper(),
             comms_gatekeeper_local(),
-            social_service(),
+            social_api(),
+            social_service_stream(),
             archipelago_stats(),
             ethereum_rpc(),
             places_api(),
