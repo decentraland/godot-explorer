@@ -4,10 +4,14 @@ use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
 
 use crate::auth::ephemeral_auth_chain::EphemeralAuthChain;
-use crate::dcl::components::proto_components::social_service::v2::*;
 use crate::godot_classes::promise::{Promise, PromiseDeferred};
 use crate::scene_runner::tokio_runtime::TokioRuntime;
+use crate::social::api::Pagination;
 use crate::social::social_service_manager::SocialServiceManager;
+use crate::social::types::{
+    BlockStreamEvent, FriendConnectivityStreamEvent, FriendshipRequest, FriendshipStreamEvent,
+    Paginated,
+};
 
 /// Friendship request data: (address, name, has_claimed_name, profile_picture_url, message, created_at, friendship_id)
 type FriendshipRequestData = (String, String, bool, String, String, i64, String);
@@ -359,12 +363,7 @@ impl DclSocialService {
             return 0; // Not initialized = Disconnected
         };
 
-        // Try to read the state - if we can't, assume disconnected
-        // We need to use try_read since we're in a sync context
-        match mgr.try_get_connection_state() {
-            Some(state) => state as i32,
-            None => 0, // Can't get state = assume Disconnected
-        }
+        mgr.connection_state() as i32
     }
 
     /// Check if the social service is connected (convenience method)
@@ -437,7 +436,7 @@ impl DclSocialService {
     // Blocking Features
     // ========================================
 
-    /// Block a user via RPC
+    /// Block a user
     #[func]
     pub fn block_user(&mut self, address: GString) -> Gd<Promise> {
         let (promise, get_promise) = Promise::make_to_async();
@@ -452,7 +451,7 @@ impl DclSocialService {
         promise
     }
 
-    /// Unblock a user via RPC
+    /// Unblock a user
     #[func]
     pub fn unblock_user(&mut self, address: GString) -> Gd<Promise> {
         let (promise, get_promise) = Promise::make_to_async();
@@ -562,7 +561,7 @@ impl DclSocialService {
         manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
         limit: i32,
         offset: i32,
-        status: i32,
+        _status: i32,
     ) -> Result<Vec<(String, String, bool, String)>, String> {
         let manager_guard = manager.read().await;
         let mgr = manager_guard
@@ -574,15 +573,13 @@ impl DclSocialService {
         } else {
             None
         };
-        let status_filter = if status >= 0 { Some(status) } else { None };
-
         let response = mgr
-            .get_friends(pagination, status_filter)
+            .get_friends(pagination)
             .await
             .map_err(|e| format!("Failed to get friends: {}", e))?;
 
         let friends: Vec<(String, String, bool, String)> = response
-            .friends
+            .results
             .into_iter()
             .map(|friend| {
                 (
@@ -616,12 +613,12 @@ impl DclSocialService {
         };
 
         let response = mgr
-            .get_mutual_friends(user_address, pagination)
+            .get_mutual_friends(&user_address, pagination)
             .await
             .map_err(|e| format!("Failed to get mutual friends: {}", e))?;
 
         let friends: Vec<(String, String, bool, String)> = response
-            .friends
+            .results
             .into_iter()
             .map(|friend| {
                 (
@@ -698,7 +695,7 @@ impl DclSocialService {
             .as_ref()
             .ok_or("Social service not initialized")?;
 
-        mgr.send_friend_request(address, message)
+        mgr.send_friend_request(&address, message)
             .await
             .map_err(|e| format!("Failed to send friend request: {}", e))?;
 
@@ -714,7 +711,7 @@ impl DclSocialService {
             .as_ref()
             .ok_or("Social service not initialized")?;
 
-        mgr.accept_friend_request(address)
+        mgr.accept_friend_request(&address)
             .await
             .map_err(|e| format!("Failed to accept friend request: {}", e))?;
 
@@ -730,7 +727,7 @@ impl DclSocialService {
             .as_ref()
             .ok_or("Social service not initialized")?;
 
-        mgr.reject_friend_request(address)
+        mgr.reject_friend_request(&address)
             .await
             .map_err(|e| format!("Failed to reject friend request: {}", e))?;
 
@@ -746,7 +743,7 @@ impl DclSocialService {
             .as_ref()
             .ok_or("Social service not initialized")?;
 
-        mgr.cancel_friend_request(address)
+        mgr.cancel_friend_request(&address)
             .await
             .map_err(|e| format!("Failed to cancel friend request: {}", e))?;
 
@@ -762,7 +759,7 @@ impl DclSocialService {
             .as_ref()
             .ok_or("Social service not initialized")?;
 
-        mgr.delete_friendship(address)
+        mgr.delete_friendship(&address)
             .await
             .map_err(|e| format!("Failed to delete friendship: {}", e))?;
 
@@ -779,12 +776,11 @@ impl DclSocialService {
             .ok_or("Social service not initialized")?;
 
         let response = mgr
-            .get_friendship_status(address)
+            .get_friendship_status(&address)
             .await
             .map_err(|e| format!("Failed to get friendship status: {}", e))?;
 
-        let (status, message) = Self::extract_friendship_status(response);
-        Ok((status, message))
+        Ok((response.status, String::new()))
     }
 
     async fn async_subscribe_to_updates(
@@ -811,7 +807,7 @@ impl DclSocialService {
     }
 
     async fn handle_friendship_updates(
-        rx: &mut tokio::sync::mpsc::UnboundedReceiver<FriendshipUpdate>,
+        rx: &mut tokio::sync::mpsc::UnboundedReceiver<FriendshipStreamEvent>,
         instance_id: InstanceId,
         cancel_token: CancellationToken,
     ) {
@@ -850,70 +846,36 @@ impl DclSocialService {
         }
     }
 
-    fn emit_friendship_update_signal(node: &mut Gd<DclSocialService>, update: FriendshipUpdate) {
-        match update.update {
-            Some(friendship_update::Update::Request(req)) => {
-                if let Some(friend) = req.friend {
-                    let address = friend.address.clone();
-                    let msg = req.message.clone().unwrap_or_default();
-                    node.call_deferred(
-                        "emit_signal",
-                        &[
-                            "friendship_request_received".to_variant(),
-                            address.to_variant(),
-                            msg.to_variant(),
-                        ],
-                    );
-                }
+    fn emit_friendship_update_signal(
+        node: &mut Gd<DclSocialService>,
+        update: FriendshipStreamEvent,
+    ) {
+        let (signal, address, message) = match update {
+            FriendshipStreamEvent::Request {
+                address, message, ..
+            } => (
+                "friendship_request_received",
+                address,
+                Some(message.unwrap_or_default()),
+            ),
+            FriendshipStreamEvent::Accept { address } => {
+                ("friendship_request_accepted", address, None)
             }
-            Some(friendship_update::Update::Accept(accept)) => {
-                if let Some(user) = accept.user {
-                    let address = user.address.clone();
-                    node.call_deferred(
-                        "emit_signal",
-                        &[
-                            "friendship_request_accepted".to_variant(),
-                            address.to_variant(),
-                        ],
-                    );
-                }
+            FriendshipStreamEvent::Reject { address } => {
+                ("friendship_request_rejected", address, None)
             }
-            Some(friendship_update::Update::Reject(reject)) => {
-                if let Some(user) = reject.user {
-                    let address = user.address.clone();
-                    node.call_deferred(
-                        "emit_signal",
-                        &[
-                            "friendship_request_rejected".to_variant(),
-                            address.to_variant(),
-                        ],
-                    );
-                }
+            FriendshipStreamEvent::Delete { address } => ("friendship_deleted", address, None),
+            FriendshipStreamEvent::Cancel { address } => {
+                ("friendship_request_cancelled", address, None)
             }
-            Some(friendship_update::Update::Delete(delete)) => {
-                if let Some(user) = delete.user {
-                    let address = user.address.clone();
-                    node.call_deferred(
-                        "emit_signal",
-                        &["friendship_deleted".to_variant(), address.to_variant()],
-                    );
-                }
-            }
-            Some(friendship_update::Update::Cancel(cancel)) => {
-                if let Some(user) = cancel.user {
-                    let address = user.address.clone();
-                    node.call_deferred(
-                        "emit_signal",
-                        &[
-                            "friendship_request_cancelled".to_variant(),
-                            address.to_variant(),
-                        ],
-                    );
-                }
-            }
-            Some(friendship_update::Update::Block(_)) => {}
-            None => {}
+            FriendshipStreamEvent::Block { .. } => return,
+        };
+
+        let mut args = vec![signal.to_variant(), address.to_variant()];
+        if let Some(message) = message {
+            args.push(message.to_variant());
         }
+        node.call_deferred("emit_signal", &args);
     }
 
     async fn async_subscribe_to_connectivity_updates(
@@ -939,7 +901,7 @@ impl DclSocialService {
     }
 
     async fn handle_connectivity_updates(
-        rx: &mut tokio::sync::mpsc::UnboundedReceiver<FriendConnectivityUpdate>,
+        rx: &mut tokio::sync::mpsc::UnboundedReceiver<FriendConnectivityStreamEvent>,
         instance_id: InstanceId,
         cancel_token: CancellationToken,
     ) {
@@ -957,18 +919,14 @@ impl DclSocialService {
                                 break;
                             };
 
-                            if let Some(friend) = update.friend {
-                                let address = friend.address.clone();
-                                let status = update.status;
-                                node.call_deferred(
-                                    "emit_signal",
-                                    &[
-                                        "friend_connectivity_updated".to_variant(),
-                                        address.to_variant(),
-                                        status.to_variant(),
-                                    ],
-                                );
-                            }
+                            node.call_deferred(
+                                "emit_signal",
+                                &[
+                                    "friend_connectivity_updated".to_variant(),
+                                    update.friend.address.to_variant(),
+                                    update.status.as_i32().to_variant(),
+                                ],
+                            );
                         }
                         None => {
                             // Stream ended
@@ -993,46 +951,23 @@ impl DclSocialService {
     /// Extract friendship requests with full profile data
     /// Returns Vec of (address, name, has_claimed_name, profile_picture_url, message, created_at, friendship_id)
     fn extract_friendship_requests_with_profile(
-        response: PaginatedFriendshipRequestsResponse,
+        response: Paginated<FriendshipRequest>,
     ) -> Vec<FriendshipRequestData> {
-        let Some(paginated_friendship_requests_response::Response::Requests(requests)) =
-            response.response
-        else {
-            return Vec::new();
-        };
-
-        requests
-            .requests
+        response
+            .results
             .into_iter()
-            .filter_map(|req| {
-                let friend = req.friend?;
-                let address = friend.address;
-                let name = friend.name;
-                let has_claimed_name = friend.has_claimed_name;
-                let profile_picture_url = friend.profile_picture_url;
-                let message = req.message.unwrap_or_default();
-                let created_at = req.created_at;
-                let friendship_id = req.id;
-                Some((
-                    address,
-                    name,
-                    has_claimed_name,
-                    profile_picture_url,
-                    message,
-                    created_at,
-                    friendship_id,
-                ))
+            .map(|request| {
+                (
+                    request.friend.address,
+                    request.friend.name,
+                    request.friend.has_claimed_name,
+                    request.friend.profile_picture_url,
+                    request.message.unwrap_or_default(),
+                    request.created_at,
+                    request.id,
+                )
             })
             .collect()
-    }
-
-    fn extract_friendship_status(response: GetFriendshipStatusResponse) -> (i32, String) {
-        match response.response {
-            Some(get_friendship_status_response::Response::Accepted(ok)) => {
-                (ok.status, ok.message.unwrap_or_default())
-            }
-            _ => (-1, "Unknown".to_string()),
-        }
     }
 
     /// Resolves promise with Array of Dictionaries containing friend profile data
@@ -1157,26 +1092,9 @@ impl DclSocialService {
             .as_ref()
             .ok_or("Social service not initialized")?;
 
-        let response = mgr
-            .block_user(address)
+        mgr.block_user(&address)
             .await
-            .map_err(|e| format!("Failed to block user: {}", e))?;
-
-        match response.response {
-            Some(block_user_response::Response::Ok(_)) => Ok(()),
-            Some(block_user_response::Response::InternalServerError(e)) => Err(format!(
-                "Server error blocking user: {}",
-                e.message.unwrap_or_default()
-            )),
-            Some(block_user_response::Response::InvalidRequest(e)) => Err(format!(
-                "Invalid request blocking user: {}",
-                e.message.unwrap_or_default()
-            )),
-            Some(block_user_response::Response::ProfileNotFound(_)) => {
-                Err("Profile not found when blocking user".to_string())
-            }
-            None => Err("Empty response from server when blocking user".to_string()),
-        }
+            .map_err(|e| format!("Failed to block user: {}", e))
     }
 
     async fn async_unblock_user(
@@ -1188,26 +1106,9 @@ impl DclSocialService {
             .as_ref()
             .ok_or("Social service not initialized")?;
 
-        let response = mgr
-            .unblock_user(address)
+        mgr.unblock_user(&address)
             .await
-            .map_err(|e| format!("Failed to unblock user: {}", e))?;
-
-        match response.response {
-            Some(unblock_user_response::Response::Ok(_)) => Ok(()),
-            Some(unblock_user_response::Response::InternalServerError(e)) => Err(format!(
-                "Server error unblocking user: {}",
-                e.message.unwrap_or_default()
-            )),
-            Some(unblock_user_response::Response::InvalidRequest(e)) => Err(format!(
-                "Invalid request unblocking user: {}",
-                e.message.unwrap_or_default()
-            )),
-            Some(unblock_user_response::Response::ProfileNotFound(_)) => {
-                Err("Profile not found when unblocking user".to_string())
-            }
-            None => Err("Empty response from server when unblocking user".to_string()),
-        }
+            .map_err(|e| format!("Failed to unblock user: {}", e))
     }
 
     /// Returns Vec of (address, name, has_claimed_name, profile_picture_url, blocked_at)
@@ -1233,7 +1134,7 @@ impl DclSocialService {
             .map_err(|e| format!("Failed to get blocked users: {}", e))?;
 
         let blocked_users: Vec<BlockedUserData> = response
-            .profiles
+            .results
             .into_iter()
             .map(|profile| {
                 (
@@ -1263,11 +1164,7 @@ impl DclSocialService {
             .await
             .map_err(|e| format!("Failed to get blocking status: {}", e))?;
 
-        // blocked_users and blocked_by_users are already Vec<String> in the proto
-        let blocked_users = response.blocked_users;
-        let blocked_by = response.blocked_by_users;
-
-        Ok((blocked_users, blocked_by))
+        Ok((response.blocked_users, response.blocked_by_users))
     }
 
     async fn async_subscribe_to_block_updates(
@@ -1294,7 +1191,7 @@ impl DclSocialService {
     }
 
     async fn handle_block_updates(
-        rx: &mut tokio::sync::mpsc::UnboundedReceiver<BlockUpdate>,
+        rx: &mut tokio::sync::mpsc::UnboundedReceiver<BlockStreamEvent>,
         instance_id: InstanceId,
         cancel_token: CancellationToken,
     ) {
@@ -1333,8 +1230,7 @@ impl DclSocialService {
         }
     }
 
-    fn emit_block_update_signal(node: &mut Gd<DclSocialService>, update: BlockUpdate) {
-        // BlockUpdate has fields: address (string) and is_blocked (bool)
+    fn emit_block_update_signal(node: &mut Gd<DclSocialService>, update: BlockStreamEvent) {
         let address = update.address;
         let is_blocked = update.is_blocked;
 
