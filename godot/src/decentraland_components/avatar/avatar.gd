@@ -1502,7 +1502,7 @@ func _process(delta):
 		emote_controller.is_playing() and (self_idle or emote_controller.playing_masked)
 	)
 	if is_local_player:
-		Global.comms.set_emoting(is_emoting)
+		Global.comms.set_emoting(is_emoting, emote_controller.playing_loop)
 
 	# #2856: one read per movement flag per frame: these live in Rust (Avatar
 	# extends DclAvatar) and a read crosses the extension boundary at ~0.9 us.
