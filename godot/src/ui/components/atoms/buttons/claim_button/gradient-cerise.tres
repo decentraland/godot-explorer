@@ -1,0 +1,13 @@
+[gd_resource type="GradientTexture2D" format=3 uid="uid://ctk53fjldfod1"]
+
+[sub_resource type="Gradient" id="Gradient_itmpu"]
+offsets = PackedFloat32Array(0.1, 0.9)
+colors = PackedColorArray(1, 0.1764706, 0.33333334, 1, 0.7764706, 0.2509804, 0.8039216, 1)
+metadata/_snap_enabled = true
+
+[resource]
+gradient = SubResource("Gradient_itmpu")
+width = 624
+height = 74
+fill_from = Vector2(0.95, 0.28)
+fill_to = Vector2(0.05, 0.72)
