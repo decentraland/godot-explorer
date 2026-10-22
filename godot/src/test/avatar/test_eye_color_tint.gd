@@ -1,10 +1,13 @@
 extends Node
 
-# Base eyes ship a color texture and no _mask.png, so the facial material got a null mask and the
-# eye color was never applied (#2439). Their bundled iris masks must be picked by texture content
-# hash, and a texture with no mask of its own must stay untinted instead of tinting the sclera.
+# Base eyes ship a colour texture and no _mask.png of their own, so the facial material had nothing
+# to tint and the eye colour was dropped (#2439). The bundled iris masks are picked by the eye
+# texture's content hash; a texture with no bundled mask must stay untinted instead of tinting the
+# sclera, and the eyes whose iris is a solid black disc must replace it, since a multiply on black
+# stays black.
 
 const EYES_02_HASH := "bafkreidbeafduyssl7y2gdjoxq3ouagn6beivty4v6eovpl5iz2z72jeqm"
+const EYES_03_HASH := "bafkreieo2imr2lvlfiesq4ollve3oflwwlmfmjg5pjytz46kc5gontdjxm"
 const UNKNOWN_HASH := "bafyreyeinternalplaceholder"
 
 var _failures := 0
@@ -12,6 +15,8 @@ var _failures := 0
 
 func _ready() -> void:
 	_check_base_eye_gets_its_bundled_mask()
+	_check_every_bundled_mask_resolves()
+	_check_solid_black_iris_replaces_instead_of_multiplying()
 	_check_unknown_maskless_texture_stays_untinted()
 	_check_maskless_mouth_keeps_tinting_the_whole_texture()
 
@@ -57,6 +62,36 @@ func _check_base_eye_gets_its_bundled_mask() -> void:
 	_expect(
 		material.get_shader_parameter("mask_color") == Color.WHITE,
 		"eyes must keep the white mask_color so only the iris is tinted"
+	)
+	_expect(
+		material.get_shader_parameter("mask_replace") == 0.0,
+		"a shaded iris must multiply, not replace, so its pupil and shading survive"
+	)
+
+
+func _check_every_bundled_mask_resolves() -> void:
+	for hash_key in EyeMasks.BASE_EYE_MASKS:
+		var path: String = EyeMasks.BASE_EYE_MASKS[hash_key]
+		_expect(ResourceLoader.exists(path), "bundled mask missing for %s: %s" % [hash_key, path])
+		_expect(
+			(
+				_apply([hash_key], Color.GREEN, Color.WHITE).get_shader_parameter("mask_texture")
+				is Texture2D
+			),
+			"base eye %s resolved no mask, so its eye color does nothing (#2439)" % hash_key
+		)
+
+
+func _check_solid_black_iris_replaces_instead_of_multiplying() -> void:
+	var material := _apply([EYES_03_HASH], Color.GREEN, Color.WHITE)
+
+	_expect(
+		material.get_shader_parameter("mask_texture") is Texture2D,
+		"the solid black iris eye has no bundled mask"
+	)
+	_expect(
+		material.get_shader_parameter("mask_replace") == 1.0,
+		"a solid black iris stays black when multiplied, so it must replace (#2439)"
 	)
 
 
