@@ -1,25 +1,15 @@
 [gd_scene format=3 uid="uid://v3ktu5kra0ql"]
 
 [ext_resource type="Script" uid="uid://k1ucbqns4fyy" path="res://src/ui/components/organisms/preview_hud_panel/preview_hud_panel.gd" id="1_script"]
-[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="2_theme"]
-[ext_resource type="Texture2D" uid="uid://c7rx0q1yjyde0" path="res://assets/ui/console_icon.svg" id="3_console"]
-[ext_resource type="Texture2D" uid="uid://dgchxj5lqd237" path="res://assets/ui/scene_stats_monitor.svg" id="4_monitor"]
-[ext_resource type="Texture2D" uid="uid://c0n8k2q368jvf" path="res://assets/ui/reload_icon.svg" id="5_reload"]
-[ext_resource type="PackedScene" uid="uid://dua04n3geh0yf" path="res://src/ui/components/organisms/debug_panel/debug_panel.tscn" id="6_debug"]
+[ext_resource type="Texture2D" uid="uid://c5ypuaeoovxnf" path="res://assets/ui/chevron_right.svg" id="2_chevron"]
+[ext_resource type="Texture2D" uid="uid://200m3s5s703u" path="res://assets/ui/chat_icon.svg" id="3_chat"]
+[ext_resource type="Texture2D" uid="uid://c7rx0q1yjyde0" path="res://assets/ui/console_icon.svg" id="4_console"]
+[ext_resource type="Texture2D" uid="uid://dgchxj5lqd237" path="res://assets/ui/scene_stats_monitor.svg" id="5_monitor"]
+[ext_resource type="Texture2D" uid="uid://c0n8k2q368jvf" path="res://assets/ui/reload_icon.svg" id="6_reload"]
+[ext_resource type="PackedScene" uid="uid://dua04n3geh0yf" path="res://src/ui/components/organisms/debug_panel/debug_panel.tscn" id="7_debug"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_normal"]
-bg_color = Color(0.078431375, 0.023529412, 0.1254902, 1)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-corner_radius_top_left = 100
-corner_radius_top_right = 100
-corner_radius_bottom_right = 100
-corner_radius_bottom_left = 100
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bbus7"]
-bg_color = Color(0.078431375, 0.023529412, 0.1254902, 1)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_unibar"]
+bg_color = Color(0.078431375, 0.023529412, 0.1254902, 0.9)
 corner_radius_top_left = 100
 corner_radius_top_right = 100
 corner_radius_bottom_right = 100
@@ -58,45 +48,75 @@ custom_minimum_size = Vector2(101, 0)
 layout_mode = 2
 mouse_filter = 2
 
-[node name="Button_Console" type="Button" parent="VBoxContainer/MarginContainer/HBoxContainer_Header" unique_id=1761087111]
+[node name="Panel_Unibar" type="PanelContainer" parent="VBoxContainer/MarginContainer/HBoxContainer_Header" unique_id=822915904]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_unibar")
+
+[node name="HBoxContainer_Unibar" type="HBoxContainer" parent="VBoxContainer/MarginContainer/HBoxContainer_Header/Panel_Unibar" unique_id=404803997]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Button_Toggle" type="Button" parent="VBoxContainer/MarginContainer/HBoxContainer_Header/Panel_Unibar/HBoxContainer_Unibar" unique_id=1582165224]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
-size_flags_vertical = 4
 focus_mode = 0
-theme = ExtResource("2_theme")
-theme_type_variation = &"SecondaryLittle"
-theme_override_constants/icon_max_width = 38
-theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
-icon = ExtResource("3_console")
+theme_override_constants/icon_max_width = 32
+icon = ExtResource("2_chevron")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Button_SceneStatus" type="Button" parent="VBoxContainer/MarginContainer/HBoxContainer_Header" unique_id=1272115698]
+[node name="Control_Drawer" type="Control" parent="VBoxContainer/MarginContainer/HBoxContainer_Header/Panel_Unibar/HBoxContainer_Unibar" unique_id=262548360]
+unique_name_in_owner = true
+clip_contents = true
+custom_minimum_size = Vector2(0, 66)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="HBoxContainer_Items" type="HBoxContainer" parent="VBoxContainer/MarginContainer/HBoxContainer_Header/Panel_Unibar/HBoxContainer_Unibar/Control_Drawer" unique_id=533325043]
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Button_Chat" type="Button" parent="VBoxContainer/MarginContainer/HBoxContainer_Header/Panel_Unibar/HBoxContainer_Unibar/Control_Drawer/HBoxContainer_Items" unique_id=1371648882]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
-size_flags_vertical = 4
 focus_mode = 0
-theme = ExtResource("2_theme")
-theme_type_variation = &"SecondaryLittle"
 theme_override_constants/icon_max_width = 38
-theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
-icon = ExtResource("4_monitor")
+icon = ExtResource("3_chat")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Button_Reload" type="Button" parent="VBoxContainer/MarginContainer/HBoxContainer_Header" unique_id=265092282]
+[node name="Button_Console" type="Button" parent="VBoxContainer/MarginContainer/HBoxContainer_Header/Panel_Unibar/HBoxContainer_Unibar/Control_Drawer/HBoxContainer_Items" unique_id=1761087111]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
-size_flags_vertical = 4
 focus_mode = 0
-theme = ExtResource("2_theme")
-theme_type_variation = &"SecondaryLittle"
 theme_override_constants/icon_max_width = 38
-theme_override_styles/normal = SubResource("StyleBoxFlat_bbus7")
-icon = ExtResource("5_reload")
+icon = ExtResource("4_console")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Button_SceneStatus" type="Button" parent="VBoxContainer/MarginContainer/HBoxContainer_Header/Panel_Unibar/HBoxContainer_Unibar/Control_Drawer/HBoxContainer_Items" unique_id=1272115698]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(66, 66)
+layout_mode = 2
+focus_mode = 0
+theme_override_constants/icon_max_width = 38
+icon = ExtResource("5_monitor")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Button_Reload" type="Button" parent="VBoxContainer/MarginContainer/HBoxContainer_Header/Panel_Unibar/HBoxContainer_Unibar/Control_Drawer/HBoxContainer_Items" unique_id=265092282]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(66, 66)
+layout_mode = 2
+focus_mode = 0
+theme_override_constants/icon_max_width = 38
+icon = ExtResource("6_reload")
 icon_alignment = 1
 expand_icon = true
 
@@ -107,7 +127,7 @@ size_flags_horizontal = 0
 mouse_filter = 2
 theme_override_constants/separation = 8
 
-[node name="DebugPanel" parent="VBoxContainer/Body" unique_id=287381210 instance=ExtResource("6_debug")]
+[node name="DebugPanel" parent="VBoxContainer/Body" unique_id=287381210 instance=ExtResource("7_debug")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
