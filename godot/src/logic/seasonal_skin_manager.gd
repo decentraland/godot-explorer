@@ -101,4 +101,5 @@ func _async_fetch_audio_stream(url: String) -> AudioStream:
 		return null
 	var stream := AudioStreamMP3.new()
 	stream.data = file.get_buffer(file.get_length())
+	stream.loop = true
 	return stream
