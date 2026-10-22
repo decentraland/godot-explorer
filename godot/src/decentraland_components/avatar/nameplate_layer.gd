@@ -418,9 +418,7 @@ static func _occluded(avatar, from: Vector3, to: Vector3) -> bool:
 		if parent is CollisionObject3D:
 			exclude.append(parent.get_rid())
 
-	# Query A: solid bodies — world geometry + TriggerDetector/player bodies. A hit on
-	# a hidden avatar's collider (blocked / modifier-area hidden) doesn't count: the
-	# invisible avatar must not hide the tags behind it.
+	# Query A: solid bodies — world geometry + TriggerDetector/player bodies.
 	var body_query := PhysicsRayQueryParameters3D.create(from, to)
 	body_query.collision_mask = BODY_MASK
 	body_query.collide_with_areas = false
@@ -433,6 +431,11 @@ static func _occluded(avatar, from: Vector3, to: Vector3) -> bool:
 		if body_hit.is_empty():
 			break
 		var collider = body_hit.get("collider")
+		# Scene colliders generated for invisible meshes (`*_colgen`) are invisible nodes
+		# too, so the hidden-avatar escape below must only apply to CL_PLAYER bodies —
+		# otherwise walls stop occluding and every tag shows through them.
+		if collider is CollisionObject3D and (collider.collision_layer & CL_PHYSICS) != 0:
+			return true
 		if not (collider is Node3D) or collider.is_visible_in_tree():
 			return true
 		body_query.exclude = body_query.exclude + [body_hit.get("rid")]
