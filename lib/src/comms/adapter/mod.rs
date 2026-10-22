@@ -6,3 +6,6 @@ pub mod livekit;
 pub mod message_processor;
 pub mod movement_compressed;
 pub mod ws_room;
+
+#[cfg(feature = "use_livekit")]
+mod island_session;

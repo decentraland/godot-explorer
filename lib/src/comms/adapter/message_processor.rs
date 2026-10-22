@@ -43,6 +43,8 @@ pub struct IncomingMessage {
 pub enum DisconnectReason {
     /// Another participant with the same identity has joined the room
     DuplicateIdentity,
+    /// Gatekeeper revoked this island session; Pulse supplies the authoritative reason.
+    IslandRemoved,
     /// The room was closed
     RoomClosed,
     /// Participant was removed/kicked from the server
@@ -328,7 +330,7 @@ pub struct MessageProcessor {
     video_switched_at: Instant,
 
     // Disconnect reason if disconnected from the server, along with the room_id
-    disconnect_reason: Option<(DisconnectReason, String)>,
+    disconnects: Vec<(DisconnectReason, String)>,
 
     // Set to true when room metadata indicates the local player is banned
     room_metadata_banned: bool,
@@ -395,7 +397,7 @@ impl MessageProcessor {
             selected_video_sid: None,
             active_speakers: Vec::new(),
             video_switched_at: Instant::now(),
-            disconnect_reason: None,
+            disconnects: Vec::new(),
             room_metadata_banned: false,
         }
     }
@@ -594,8 +596,8 @@ impl MessageProcessor {
     /// Clears the reason after returning it
     ///
     /// CommunicationManager should call this regularly to check for disconnection
-    pub fn consume_disconnect_reason(&mut self) -> Option<(DisconnectReason, String)> {
-        self.disconnect_reason.take()
+    pub fn consume_disconnects(&mut self) -> Vec<(DisconnectReason, String)> {
+        std::mem::take(&mut self.disconnects)
     }
 
     /// Returns true (and resets) if room metadata indicated the local player was banned.
@@ -959,11 +961,14 @@ impl MessageProcessor {
             return;
         }
         if let MessageType::Disconnected(reason) = &message.message {
-            // Set disconnect_reason if not already set (first disconnect wins).
-            // Routed here because room-level events use H160::zero() and would
-            // otherwise be filtered out by the is_player_address check below.
-            if self.disconnect_reason.is_none() {
-                self.disconnect_reason = Some((*reason, message.room_id));
+            // Preserve distinct reasons (especially a later terminal eviction), but
+            // repeated events from one room must not consume the UI retry budget.
+            if !self
+                .disconnects
+                .iter()
+                .any(|(queued_reason, room)| queued_reason == reason && room == &message.room_id)
+            {
+                self.disconnects.push((*reason, message.room_id));
             }
             return;
         }

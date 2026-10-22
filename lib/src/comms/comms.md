@@ -4,6 +4,61 @@
 
 The communication system in Decentraland Godot Explorer manages all network communications between players, including movement, chat, profiles, and voice. It uses a centralized message processing architecture that can handle multiple simultaneous room connections.
 
+## Pulse session ownership
+
+Pulse is required for normal multiplayer. Remote `pulse` and `dual-channel` flags do not
+control activation or restore the retired LiveKit avatar fallback. Movement and emotes use
+Pulse; `--livekit-movement` / `dual-channel=true` explicitly duplicate them for development.
+`--no-pulse` / `pulse=false` means no island multiplayer. Local previews remain opt-in via
+`--pulse`, an explicit Pulse endpoint, or an explicit Pulse realm.
+
+The WS Connector still delivers island assignments, but only while Pulse is established.
+Losing Pulse drops the island and its cached token. After Pulse recovers, the connector
+re-handshakes to obtain a fresh assignment from gatekeeper. It retries the handshake if no
+assignment arrives, including when gatekeeper still sees a closing participant.
+
+- Retryable Pulse failures back off from 2 seconds to a 30-second cap. Transport connection
+  attempts time out after 10 seconds. A 10-second observed outage shows the existing Retry
+  modal without stopping transport recovery; establishment clears the outage modal.
+- Island `ParticipantRemoved` discards the token and waits 10 seconds for Pulse's reason.
+  If Pulse survives, a fresh WS handshake requests a new assignment; the debug panel shows
+  `removed_waiting_for_pulse` during the grace period.
+- Pulse `DuplicateSession` stops all automatic comms recovery and shows Session Ended
+  (Sign in / Exit). Pulse `Banned` shows a terminal ban modal
+  (Sign in / Exit), separate from scene-ban navigation. Other terminal Pulse failures require
+  explicit Retry rather than an automatic loop.
+- Resume grace lasts 30 seconds and permits one Pulse session reclaim. Repeated duplicate
+  eviction cannot continuously reclaim the account during that window.
+- Cleanup replaces the scene-room result channel, invalidating pending requests from the
+  previous session. Loading, flag callbacks, and delayed retries cannot reopen an ended session.
+
+### Validation
+
+Automated checks:
+
+```sh
+cargo run -- test-gdscript
+cargo test --manifest-path lib/Cargo.toml --lib comms::
+cargo clippy --manifest-path lib/Cargo.toml --lib -- -D warnings
+```
+
+Headless UI tests are `godot/src/test/comms/test_disconnect_handler.gd` and
+`test_disconnect_modal.gd`. They load the production scripts with fake services and test
+retry cancellation, deferred modals, recovery, and sign-in without connecting to servers.
+Both suites are discovered by the standard test command above.
+
+Device acceptance checks (require a running client and the migrated backend):
+
+1. Start with `--pulse-server 127.0.0.1:65534` targeting an unused UDP port: Retry appears,
+   Pulse keeps retrying, and no island joins occur. Restore a reachable endpoint and confirm recovery.
+2. On zone, record the resolved realm provider, Pulse endpoint, and WS Connector endpoint
+   before testing; do not substitute a legacy catalyst Archipelago endpoint.
+3. Sign the same wallet into two devices: the older session shows Session Ended and stops
+   reconnecting. Verify both island-first and Pulse-first disconnect ordering in logs.
+4. Background for 10 seconds and resume; briefly enable airplane mode for 5 seconds.
+   Peers should recover without a modal or repeated island token rejection.
+5. Verify normal login, realm teleport, scene voice, and bans. Run on Android and iOS.
+
 ## Architecture Components
 
 ### 1. CommunicationManager (communication_manager.rs)
@@ -48,7 +103,7 @@ Key features:
   - `false`: Manual subscription control (used for scene rooms)
 
 #### ArchipelagoManager (adapter/archipelago.rs)
-- Manages connection to Archipelago service
+- Maintains the supported WS Connector protocol for Pulse-owned island assignments
 - Handles authentication and island changes
 - Creates LiveKit rooms dynamically when moving between islands
 - Always uses the shared MessageProcessor (no local processing)
