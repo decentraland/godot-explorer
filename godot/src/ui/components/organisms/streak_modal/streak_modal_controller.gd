@@ -152,7 +152,13 @@ func async_run_guest_upgrade() -> bool:
 func _on_streak_claim_resolved(success: bool, day: int, error_code: String = "") -> void:
 	if success:
 		Global.streak_manager.mark_claimed(day)
+	# error_code can carry the server's raw JSON/response text after a colon (see
+	# RewardClaimer's empty_data/server_unreachable/invalid_response branches) — exactly what
+	# the debug-only panel needs to show, but free text would fragment a Segment dashboard
+	# grouping on this field. Metrics only ever get the short category before the colon;
+	# last_claim_error_code (QA/debug display) keeps the full detail.
 	last_claim_error_code = "" if success else error_code
+	var metrics_error_code := error_code.split(":", true, 1)[0]
 	Global.metrics.track_login_streak_claim(
-		"d%d" % day, "success" if success else "error", error_code
+		"d%d" % day, "success" if success else "error", metrics_error_code
 	)

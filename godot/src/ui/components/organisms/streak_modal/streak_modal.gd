@@ -48,6 +48,11 @@ var _claim_failed_shown: bool = false
 # Same reasoning as _claim_failed_shown, for Label_TapToContinue — it also defaults to visible
 # in the .tscn and relies entirely on code to hide it initially.
 var _tap_to_continue_shown: bool = false
+# The CTA's own i18n key (e.g. "STREAK_CTA_LETS_GO"), set alongside button_cta.text/
+# claim_button.text_normal by _set_cta()/_show_claim_button() — used by
+# _on_button_cta_pressed() so CLICK_BUTTON reports a stable, English identifier instead of
+# whatever language the button happens to be rendered in.
+var _cta_metrics_key: String = ""
 
 @onready var label_title: Label = %Label_Title
 @onready var label_subtitle: RichTextLabel = %Label_Subtitle
@@ -193,7 +198,7 @@ func _render() -> void:
 		State.WELCOME:
 			label_title.text = TranslationKey.new("STREAK_WELCOME_TITLE").text()
 			_set_subtitle("STREAK_WELCOME_SUBTITLE")
-			_set_cta(TranslationKey.new("STREAK_CTA_LETS_GO").text(), false)
+			_set_cta("STREAK_CTA_LETS_GO", false)
 		State.DAY_PROGRESS:
 			label_title.text = (
 				TranslationKey
@@ -210,7 +215,7 @@ func _render() -> void:
 				else "STREAK_PROGRESS_SUBTITLE_EARLY"
 			)
 			_set_subtitle(subtitle_key)
-			_set_cta(TranslationKey.new("STREAK_CTA_GOT_IT").text(), true)
+			_set_cta("STREAK_CTA_GOT_IT", true)
 		State.LOST:
 			label_title.text = TranslationKey.new("STREAK_LOST_TITLE").text()
 			# credit_jump_in()'s gap branch always resets to exactly day 1 (never reached the
@@ -220,7 +225,7 @@ func _render() -> void:
 				"STREAK_LOST_SUBTITLE_LATE" if _progress_day > 1 else "STREAK_LOST_SUBTITLE"
 			)
 			_set_subtitle(lost_key)
-			_set_cta(TranslationKey.new("STREAK_CTA_START_AGAIN").text(), false)
+			_set_cta("STREAK_CTA_START_AGAIN", false)
 		State.D3_COMPLETE, State.D7_COMPLETE:
 			var is_d7 := _state == State.D7_COMPLETE
 			var title_key := "STREAK_D7_TITLE" if is_d7 else "STREAK_D3_TITLE"
@@ -270,11 +275,12 @@ func _set_subtitle(key: String) -> void:
 ## "SecondaryButton" variant), false for the default (primary red) Button look used everywhere
 ## else. Shows Button_CTA and hides ClaimButton — the reward isn't claimable yet in any state
 ## that calls this.
-func _set_cta(text: String, secondary: bool) -> void:
+func _set_cta(key: String, secondary: bool) -> void:
 	button_cta.visible = true
 	claim_button.visible = false
-	button_cta.text = text
+	button_cta.text = TranslationKey.new(key).text()
 	button_cta.theme_type_variation = &"SecondaryButton" if secondary else &""
+	_cta_metrics_key = key
 
 
 ## Hides Button_CTA and shows ClaimButton instead — used once the D3/D7 reward is actually
@@ -286,6 +292,7 @@ func _show_claim_button(text_key: String) -> void:
 	button_cta.visible = false
 	claim_button.visible = true
 	claim_button.text_normal = text_key
+	_cta_metrics_key = text_key
 	var days := Global.streak_manager.get_claimable_days()
 	if days.is_empty():
 		# Revisiting D3_COMPLETE/D7_COMPLETE after everything is already claimed (e.g. tapping
@@ -435,12 +442,7 @@ func _screen_view_name() -> String:
 
 
 func _on_button_cta_pressed() -> void:
-	var cta_text := (
-		button_cta.text
-		if button_cta.visible
-		else TranslationKey.new(claim_button.text_normal).text()
-	)
-	Global.metrics.track_click_button(cta_text, _screen_view_name(), "")
+	Global.metrics.track_click_button(_cta_metrics_key, _screen_view_name(), "")
 	# D3_COMPLETE/D7_COMPLETE: ClaimButton owns the claim lifecycle itself (see _show_claim_button)
 	# and stays open through CLAIMING/CLAIMED — dismissing is the "tap outside" gesture below.
 	if _state in [State.WELCOME, State.DAY_PROGRESS, State.LOST]:

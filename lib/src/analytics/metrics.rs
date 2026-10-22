@@ -745,6 +745,16 @@ impl Metrics {
     /// request actually resolves (not when the modal is merely shown).
     #[func]
     pub fn track_login_streak_claim(&mut self, reward: String, result: String, error_code: String) {
+        // Low-frequency event (at most a couple per day per player) — info-level is fine,
+        // unlike a per-frame log; added to confirm this call actually reaches Rust after
+        // LOGIN_STREAK_CLAIM was never once observed in the warehouse despite surrounding
+        // click_button/screen_viewed events from the same tap landing fine.
+        tracing::info!(
+            "[Metrics] track_login_streak_claim reward={} result={} error_code={}",
+            reward,
+            result,
+            error_code
+        );
         let event = SegmentEvent::LoginStreakClaim(SegmentEventLoginStreakClaim {
             reward,
             result,
