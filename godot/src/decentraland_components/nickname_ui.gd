@@ -20,6 +20,7 @@ var send_message_action = func(): async_show_message.bind(send_message).call()
 			return
 		hash_container.visible = !value
 		checkmark_container.visible = value
+		NameplateLayer.reassert_tier(self)
 
 @export var mic_enabled := false:
 	set(value):
@@ -27,6 +28,7 @@ var send_message_action = func(): async_show_message.bind(send_message).call()
 		if !is_inside_tree():
 			return
 		mic_enabled_icon.visible = mic_enabled
+		NameplateLayer.reassert_tier(self)
 
 @export var nickname := "nickname":
 	set(value):

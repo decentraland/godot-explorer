@@ -786,6 +786,11 @@ func _request_nickname_redraw() -> void:
 	nickname_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
+## Re-evaluate the nametag gate after an external setting changed (own nametag).
+func refresh_nametag_visibility() -> void:
+	_apply_nickname_visibility()
+
+
 func _apply_nickname_visibility() -> void:
 	if nickname_quad == null:
 		return
@@ -802,6 +807,8 @@ func _apply_nickname_visibility() -> void:
 		is_avatar_shape and (current_name.is_empty() or current_name == "NPC")
 	)
 	var far_lod: bool = _lod_state == LODState.FAR
+	# Own nametag defaults off; the Settings toggle re-enables it (#2938).
+	var own_nametag_off: bool = is_local_player and not Global.get_config().show_own_nametag
 	var should_hide := (
 		avatar_shape_has_no_name
 		or hide_name
@@ -809,6 +816,7 @@ func _apply_nickname_visibility() -> void:
 		or far_lod
 		or nametag_hidden
 		or hidden
+		or own_nametag_off
 		or (profile_pending and Global.is_production())
 	)
 	if _use_2d_nameplate:
