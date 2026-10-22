@@ -82,6 +82,13 @@ func async_request_assets() -> void:
 	_active = not season_key.is_empty()
 	if not _active:
 		return
+	if not RegEx.create_from_string("^[a-z0-9-]+$").search(season_key):
+		# A slash or ".." would escape seasons/ entirely; anything else just 404s. The flag is
+		# admin-set (mobile-hub, ALLOWED_USERS-gated), so this is a typo guard, not a security
+		# boundary — fail loud instead of letting a bad value read as "asset missing".
+		push_warning("SeasonalSkinManager: invalid season key, skin stays off: ", season_key)
+		_active = false
+		return
 	var season_base := R2_BASE_URL + season_key + "/"
 	# Emitted once per asset, not once at the end: the audio file is the larger download, and
 	# Discover has no reason to wait for it before showing the overlay it already has.
