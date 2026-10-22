@@ -202,7 +202,7 @@ var _time_since_last_jump: float = 1000.0
 var _time_since_glide_end: float = 1000.0
 var _air_jump_delay_timer: float = 0.0
 var _air_jump_direction: Vector3 = Vector3.ZERO
-var _ground_distance: float = INF
+var _ground_distance: float = 0.0
 # True while AvatarRaycast is aimed at the crosshair (mobile, non-cinematic) —
 # gates the restore-to-default so it doesn't write constants every tick.
 var _avatar_raycast_crosshair_active: bool = false
@@ -239,6 +239,10 @@ var _camera_mode_tween: Tween = null
 # side-effects at all.
 var _step_armed := true
 var _step_pending := false
+# #2960: "grounded" as the jump chain sees it last physics tick — supported OR
+# inside the coyote window. get_jump_action() reads it so the icon matches the
+# press: a one-tick is_on_floor() drop still fires a ground jump.
+var _jump_action_grounded := true
 
 @onready var mount_camera := $Mount
 @onready var camera: DclCamera3D = $Mount/CameraArm/Camera3D
@@ -655,7 +659,10 @@ func _physics_process(dt: float) -> void:
 	# long after leaving the floor, and the glide gate must not eat the press.
 	# velocity.y guard: the window only opens when walking off a ledge, never
 	# on the way up (a jump-pad launch must not become a cancellable "ground").
-	var in_coyote := not supported and time_falling <= COYOTE_WINDOW and velocity.y <= 0.0
+	var in_coyote := in_coyote_window(supported, time_falling, velocity.y)
+	# #2960: same grounded signal the jump branches use below (a buffered press
+	# in coyote runs the ground jump), so the joypad icon can never disagree.
+	_jump_action_grounded = supported or in_coyote
 
 	# Air-jump hover phase: freeze gravity, then fire impulse + horizontal dash
 	# when the timer expires. Leaves avatar.rise/fall untouched on purpose —
@@ -723,9 +730,21 @@ func _physics_process(dt: float) -> void:
 		if _jump_buffer > 0.0 and glide_state == GLIDE_CLOSED:
 			var gate_enabled := not jump_disabled and not glide_disabled
 			var gate_altitude := _ground_distance > GLIDE_MIN_GROUND_DISTANCE
+			# #2960: a step-up spends a frame in this branch with vy > 0 (the riser
+			# slide), so `in_coyote` is false while the fall timer is still at one
+			# tick — and the ground below the new step can be past the altitude
+			# gate. Without real airborne time that frame opens the glider, and the
+			# joypad icon flashes with it.
+			var gate_airborne := time_falling > COYOTE_WINDOW
 			var gate_jump_interval := _time_since_last_jump >= JUMP_TO_GLIDE_INTERVAL
 			var gate_cooldown := _time_since_glide_end >= GLIDE_COOLDOWN
-			if gate_enabled and gate_altitude and gate_jump_interval and gate_cooldown:
+			if (
+				gate_enabled
+				and gate_altitude
+				and gate_airborne
+				and gate_jump_interval
+				and gate_cooldown
+			):
 				glide_state = GLIDE_OPENING
 				_glide_timer = GLIDE_OPENING_TIME
 				_jump_buffer = 0.0
@@ -1659,36 +1678,90 @@ func get_avatar_under_crosshair() -> Avatar:
 	return null
 
 
-func get_jump_action() -> int:
-	if Global.is_jump_disabled() or Global.is_all_input_disabled():
+# #2960: ground distance from a 20 m down ray, with the ray-miss fallback.
+# A miss means nothing solid is below, and the realm floor (y = 0) is
+# clamp-held rather than a collider, so an INF reading there would pass every
+# altitude gate. Extracted for regression testing.
+static func resolve_ground_distance(has_hit: bool, hit_y: float, from_y: float) -> float:
+	if not has_hit:
+		return maxf(from_y, 0.0)
+	return from_y - hit_y
+
+
+# #2960: the coyote window — a buffered jump still runs the GROUND jump here,
+# so a one-tick is_on_floor() drop must not report a glide toggle. velocity.y
+# guard: only a walk-off opens it, never the way up (a jump-pad launch stays a
+# cancellable "ground").
+static func in_coyote_window(supported: bool, fall_elapsed: float, vy: float) -> bool:
+	return not supported and fall_elapsed <= COYOTE_WINDOW and vy <= 0.0
+
+
+# What pressing jump does right now, for the joypad icon. Mirrors the decision
+# tree in _physics_process — when the two disagree the icon flickers (#2960).
+# `grounded` is that tick's `supported or in_coyote`: a one-tick is_on_floor()
+# drop is still a ground jump, so it must not offer the glider.
+static func resolve_jump_action(
+	jump_disabled: bool,
+	all_input_disabled: bool,
+	hard_landing: bool,
+	grounded: bool,
+	glide_state_id: int,
+	air_jump_count: int,
+	double_jump_disabled: bool,
+	glide_disabled: bool,
+	ground_distance: float,
+	fall_elapsed: float,
+	since_last_jump: float,
+	since_glide_end: float
+) -> int:
+	if jump_disabled or all_input_disabled:
 		return JUMP_ACTION_NONE
-	if _hard_landing_timer > 0.0:
+	if hard_landing:
 		return JUMP_ACTION_NONE
-	if is_on_floor() or position.y <= 0.0:
+	if grounded:
 		return JUMP_ACTION_JUMP
 	# Airborne. Report GLIDE_TOGGLE while the glider is open even if the
 	# current scene disables gliding — the force-close in _physics_process
 	# will transition to CLOSING on the next tick, and reporting NONE here
 	# would flicker the icon in the intervening frame.
-	if glide_state == GLIDE_OPENING or glide_state == GLIDE_GLIDING:
+	if glide_state_id == GLIDE_OPENING or glide_state_id == GLIDE_GLIDING:
 		return JUMP_ACTION_GLIDE_TOGGLE
-	if glide_state == GLIDE_CLOSING:
+	if glide_state_id == GLIDE_CLOSING:
 		return JUMP_ACTION_NONE
 	# glide_state == GLIDE_CLOSED. Air-jump takes priority over glide-open.
 	if (
-		jump_count <= MAX_AIR_JUMPS
-		and not Global.is_double_jump_disabled()
-		and _time_since_last_jump >= JUMP_COOLDOWN
+		air_jump_count <= MAX_AIR_JUMPS
+		and not double_jump_disabled
+		and since_last_jump >= JUMP_COOLDOWN
 	):
 		return JUMP_ACTION_JUMP
 	if (
-		not Global.is_glide_disabled()
-		and _ground_distance > GLIDE_MIN_GROUND_DISTANCE
-		and _time_since_last_jump >= JUMP_TO_GLIDE_INTERVAL
-		and _time_since_glide_end >= GLIDE_COOLDOWN
+		not glide_disabled
+		and ground_distance > GLIDE_MIN_GROUND_DISTANCE
+		# #2960: not a single skipped support tick (step-up, edge, margin cloud).
+		and fall_elapsed > COYOTE_WINDOW
+		and since_last_jump >= JUMP_TO_GLIDE_INTERVAL
+		and since_glide_end >= GLIDE_COOLDOWN
 	):
 		return JUMP_ACTION_GLIDE_TOGGLE
 	return JUMP_ACTION_NONE
+
+
+func get_jump_action() -> int:
+	return resolve_jump_action(
+		Global.is_jump_disabled(),
+		Global.is_all_input_disabled(),
+		_hard_landing_timer > 0.0,
+		_jump_action_grounded,
+		glide_state,
+		jump_count,
+		Global.is_double_jump_disabled(),
+		Global.is_glide_disabled(),
+		_ground_distance,
+		time_falling,
+		_time_since_last_jump,
+		_time_since_glide_end,
+	)
 
 
 # True while the next jump press would open or close the glider.
@@ -1736,14 +1809,14 @@ func move_to(target: Vector3, check_stuck: bool = true):
 		stuck_detector.check_stuck()
 
 
-# Distance from feet to ground for glide entry/close gating. Returns INF beyond
-# 20m. Uses GROUND_RAYCAST_MASK so it only sees the world/terrain layer;
-# the exclude list is kept as a belt-and-suspenders for avatar colliders
-# that might briefly share the world mask.
+# Distance from feet to ground for glide entry/close gating. A ray miss reads as
+# the height above the clamp-held realm floor, not as INF. Uses GROUND_RAYCAST_MASK so
+# it only sees the world/terrain layer; the exclude list is kept as a belt-and-suspenders
+# for avatar colliders that might briefly share the world mask.
 func _measure_ground_distance() -> float:
 	var space := get_world_3d().direct_space_state
 	if space == null:
-		return INF
+		return 0.0
 	var from := global_position + Vector3(0.0, 0.1, 0.0)  # above feet to avoid self-hit
 	var to := from + Vector3(0.0, -20.0, 0.0)
 	var query := PhysicsRayQueryParameters3D.create(from, to)
@@ -1754,9 +1827,12 @@ func _measure_ground_distance() -> float:
 	query.collide_with_bodies = true
 	query.collide_with_areas = false
 	var hit := space.intersect_ray(query)
-	if hit.is_empty():
-		return INF
-	return from.y - (hit.position as Vector3).y
+	# #2960: a miss is not altitude. The realm floor is held by the y clamp, not
+	# by a body, so a step down onto it must measure its real height — INF here
+	# cleared the glide altitude gate and flashed the joypad icon to the glider.
+	return resolve_ground_distance(
+		not hit.is_empty(), (hit.position as Vector3).y if hit else 0.0, from.y
+	)
 
 
 func _build_raycast_exclude() -> void:

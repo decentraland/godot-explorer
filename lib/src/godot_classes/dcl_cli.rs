@@ -803,6 +803,18 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Testing".to_string(),
             },
+            ArgDefinition {
+                name: "--force-backface-culling".to_string(),
+                description: "Cull the back faces of scene glTF materials (inverted-hull outlines) even when the server feature flag is absent or off".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Testing".to_string(),
+            },
+            ArgDefinition {
+                name: "--no-force-backface-culling".to_string(),
+                description: "Keep the authored cull mode of scene glTF materials for this run, whatever the server feature flag says".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Testing".to_string(),
+            },
             // Comms
             ArgDefinition {
                 name: "--pulse".to_string(),

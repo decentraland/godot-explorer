@@ -154,7 +154,8 @@ struct Peer {
     peer_version: Option<String>,            // Client version for staging/dev builds
     lambdas_endpoint: Option<String>, // Peer's lambda URL from LiveKit metadata (lambdasEndpoint)
     last_movement_timestamp: f32,     // Dedup: last movement timestamp received
-    last_emote_incremental_id: u32,   // Dedup: last emote incremental ID received
+    last_emote_incremental_id: u32,   // Dedup: last Pulse emote tick received
+    last_emote_timestamp: f32,        // Dedup: last LiveKit emote timestamp received
     /// Transport-preference gate: true while this peer is a live member of the "pulse" room
     /// (set on any pulse-bridged message, cleared by a pulse PeerLeft). While set, this peer's
     /// movement/emotes from LiveKit rooms are DISCARDED — never merged: LiveKit timestamps are
@@ -413,6 +414,34 @@ impl MessageProcessor {
                 | rfc4::packet::Message::MovementCompressed(_)
                 | rfc4::packet::Message::PlayerEmote(_)
         )
+    }
+
+    /// Whether `emote` is a copy of one already played from this peer (it arrives once per
+    /// LiveKit room); otherwise records it as the newest. LiveKit emotes order on the
+    /// sender-clock `timestamp` the room copies share, not on `incremental_id`: Unity sends 0,
+    /// or echoes the id of an emote it received. Pulse-bridged emotes have no timestamp and
+    /// order on the server tick carried in `incremental_id`.
+    fn is_duplicate_emote(
+        emote: &rfc4::PlayerEmote,
+        last_incremental_id: &mut u32,
+        last_timestamp: &mut f32,
+    ) -> bool {
+        if emote.timestamp > 0.0 {
+            if emote.timestamp <= *last_timestamp {
+                return true;
+            }
+            *last_timestamp = emote.timestamp;
+            return false;
+        }
+        // No usable ordering at all: let it through (the emote cooldown absorbs repeats).
+        if emote.incremental_id == 0 {
+            return false;
+        }
+        if emote.incremental_id <= *last_incremental_id {
+            return true;
+        }
+        *last_incremental_id = emote.incremental_id;
+        false
     }
 
     /// Compares two lambdas endpoints ignoring trailing-slash style — Godot
@@ -1033,6 +1062,7 @@ impl MessageProcessor {
                     lambdas_endpoint: None,
                     last_movement_timestamp: f32::NEG_INFINITY,
                     last_emote_incremental_id: 0,
+                    last_emote_timestamp: f32::NEG_INFINITY,
                     pulse_live: false,
                 },
             );
@@ -1256,6 +1286,7 @@ impl MessageProcessor {
         peer.pulse_live = live;
         peer.last_movement_timestamp = f32::NEG_INFINITY;
         peer.last_emote_incremental_id = 0;
+        peer.last_emote_timestamp = f32::NEG_INFINITY;
         let alias = peer.alias;
         tracing::debug!(
             "🔀 Peer {:#x} (alias: {}) transport preference → {}",
@@ -1961,9 +1992,9 @@ impl MessageProcessor {
             }
             rfc4::packet::Message::Voice(_voice) => {}
             rfc4::packet::Message::PlayerEmote(player_emote) => {
-                // A stop signal ends the looping emote. Handled BEFORE the incremental-id
-                // dedup: a stop must neither depend on nor affect id ordering (Pulse stops
-                // carry no meaningful id; Unity's LiveKit stops reuse the start's id).
+                // A stop signal ends the looping emote. Handled BEFORE the dedup: a stop must
+                // neither depend on nor affect emote ordering (Pulse stops and Unity's carry no
+                // meaningful id; this client's reuse the start's id).
                 if player_emote.is_stopping == Some(true) {
                     tracing::debug!("Received PlayerEmote stop from {:#x}", address);
                     let mut avatar_scene_ref = self.avatars.clone();
@@ -1971,18 +2002,21 @@ impl MessageProcessor {
                     return;
                 }
 
-                // Deduplicate: skip if incremental_id is not newer (dual-room broadcasting)
+                // Deduplicate the copies dual-room broadcasting delivers.
                 if let Some(peer) = self.peer_identities.get_mut(&address) {
-                    if player_emote.incremental_id <= peer.last_emote_incremental_id {
+                    if Self::is_duplicate_emote(
+                        &player_emote,
+                        &mut peer.last_emote_incremental_id,
+                        &mut peer.last_emote_timestamp,
+                    ) {
                         tracing::debug!(
-                            "Discarding duplicate PlayerEmote from {:#x}: id {} <= {}",
+                            "Discarding duplicate PlayerEmote from {:#x}: id {} ts {}",
                             address,
                             player_emote.incremental_id,
-                            peer.last_emote_incremental_id
+                            player_emote.timestamp
                         );
                         return;
                     }
-                    peer.last_emote_incremental_id = player_emote.incremental_id;
                 }
 
                 tracing::debug!(
@@ -1996,7 +2030,6 @@ impl MessageProcessor {
                 let mut avatar_scene = avatar_scene_ref.bind_mut();
                 avatar_scene.play_emote(
                     peer_alias,
-                    player_emote.incremental_id,
                     &player_emote.urn,
                     crate::avatars::emote_mask::internal_from_wire_mask(player_emote.mask),
                 );
@@ -2139,6 +2172,97 @@ mod tests {
         ));
         assert!(!MessageProcessor::is_gated_by_pulse_preference(
             &Message::ProfileResponse(rfc4::ProfileResponse::default())
+        ));
+    }
+
+    fn emote(incremental_id: u32, timestamp: f32) -> rfc4::PlayerEmote {
+        rfc4::PlayerEmote {
+            incremental_id,
+            timestamp,
+            urn: "wave".to_string(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn livekit_emotes_dedup_on_timestamp() {
+        let (mut last_id, mut last_ts) = (0, f32::NEG_INFINITY);
+        assert!(!MessageProcessor::is_duplicate_emote(
+            &emote(1, 5.0),
+            &mut last_id,
+            &mut last_ts
+        ));
+        // Same emote from the second room.
+        assert!(MessageProcessor::is_duplicate_emote(
+            &emote(1, 5.0),
+            &mut last_id,
+            &mut last_ts
+        ));
+        assert!(!MessageProcessor::is_duplicate_emote(
+            &emote(2, 6.0),
+            &mut last_id,
+            &mut last_ts
+        ));
+        // A late copy of an older emote.
+        assert!(MessageProcessor::is_duplicate_emote(
+            &emote(1, 5.0),
+            &mut last_id,
+            &mut last_ts
+        ));
+        assert_eq!(last_id, 0);
+    }
+
+    #[test]
+    fn unity_emotes_play_whatever_id_they_carry() {
+        // Unity sends id 0, or echoes the id of an emote it received from this client.
+        let (mut last_id, mut last_ts) = (0, f32::NEG_INFINITY);
+        for (id, ts) in [(0, 12.5), (1, 14.0), (1, 15.0), (0, 16.0)] {
+            assert!(!MessageProcessor::is_duplicate_emote(
+                &emote(id, ts),
+                &mut last_id,
+                &mut last_ts
+            ));
+            assert!(MessageProcessor::is_duplicate_emote(
+                &emote(id, ts),
+                &mut last_id,
+                &mut last_ts
+            ));
+        }
+    }
+
+    #[test]
+    fn pulse_emotes_dedup_on_tick() {
+        // The Pulse bridge stamps the server tick as incremental_id and no timestamp.
+        let (mut last_id, mut last_ts) = (0, f32::NEG_INFINITY);
+        assert!(!MessageProcessor::is_duplicate_emote(
+            &emote(100, 0.0),
+            &mut last_id,
+            &mut last_ts
+        ));
+        assert!(MessageProcessor::is_duplicate_emote(
+            &emote(100, 0.0),
+            &mut last_id,
+            &mut last_ts
+        ));
+        assert!(!MessageProcessor::is_duplicate_emote(
+            &emote(130, 0.0),
+            &mut last_id,
+            &mut last_ts
+        ));
+    }
+
+    #[test]
+    fn unordered_emotes_are_never_dropped() {
+        let (mut last_id, mut last_ts) = (0, f32::NEG_INFINITY);
+        assert!(!MessageProcessor::is_duplicate_emote(
+            &emote(0, 0.0),
+            &mut last_id,
+            &mut last_ts
+        ));
+        assert!(!MessageProcessor::is_duplicate_emote(
+            &emote(0, 0.0),
+            &mut last_id,
+            &mut last_ts
         ));
     }
 
