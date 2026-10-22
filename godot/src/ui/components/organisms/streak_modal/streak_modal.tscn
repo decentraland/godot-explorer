@@ -324,7 +324,6 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_da6u2")
 [node name="Label_Footer" type="RichTextLabel" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/VBoxContainer_Footer" unique_id=427209760]
 unique_name_in_owner = true
 auto_translate_mode = 1
-custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 size_flags_stretch_ratio = 1.33
 theme_override_colors/default_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
@@ -333,7 +332,7 @@ theme_override_fonts/bold_font = ExtResource("20_footer_bold")
 theme_override_font_sizes/normal_font_size = 20
 theme_override_font_sizes/bold_font_size = 20
 bbcode_enabled = true
-text = "STREAK_FOOTER_CAPTION_GUEST"
+text = "STREAK_FOOTER_CAPTION"
 fit_content = true
 autowrap_mode = 2
 horizontal_alignment = 1
