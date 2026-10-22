@@ -16,6 +16,9 @@ signal deep_link_open_place(place_id: String)
 ## before, lobby._ready reads the parked token directly. Both go through
 ## take_pending_signin_identity_id(), which only hands it out once.
 signal deep_link_signin_parked
+## A `?signin=` token for this process's own pending auth arrived (warm resume); the lobby
+## switches its spinner from "waiting for browser" to "finishing sign in".
+signal deep_link_signin_completing
 
 # How long a parked `?signin=` token stays redeemable. Only meant to cover the boot it
 # arrived on (lobby._ready lands a couple of seconds in); the cap exists so a token nobody
@@ -324,6 +327,7 @@ func _handle_signin_deep_link(identity_id: String, auth_request_id: String) -> v
 	if Global.player_identity.has_pending_mobile_auth():
 		# Warm resume: this same process opened the browser, so the lobby is alive with the
 		# AUTH_BROWSER_OPEN spinner up and its auth signals connected. Complete right here.
+		deep_link_signin_completing.emit()
 		Global.player_identity.complete_mobile_connect_account(identity_id, auth_request_id)
 		return
 

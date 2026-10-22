@@ -6,6 +6,11 @@ var _generator_statuses: Dictionary = {}
 # Whatever Global.music_player was playing right before the seasonal track took over — restored
 # once Discover is hidden, so leaving it doesn't leave the seasonal track running elsewhere.
 var _music_before_seasonal: String = ""
+# Guards _show_streak_modal_if_pending() against overlapping calls — it's awaited from both
+# _ready() and every _on_visibility_changed() re-show, and take_pending_modal()/
+# take_current_reminder() being one-shot consuming reads doesn't stop two concurrent calls from
+# each resolving a different state and racing to show/suppress-nudge/resume-nudge independently.
+var _showing_streak_modal: bool = false
 
 @onready var texture_rect_seasonal_overlay: TextureRect = %TextureRect_SeasonalOverlay
 @onready var jump_in: SidePanelWrapper = %JumpIn
@@ -26,6 +31,7 @@ var _music_before_seasonal: String = ""
 @onready var container_content: ScrollRubberContainer = %ScrollContainer_Content
 @onready var friend_jump_in: SidePanelWrapper = %FriendJumpIn
 @onready var guest_upgrade_card: GuestUpgradeCard = %GuestUpgradeCard
+@onready var streak_widget_card: StreakWidgetCard = %StreakWidgetCard
 @onready var button_credits: CreditsBalanceButton = %Button_Credits
 
 static var _low_spec_warning_shown: bool = false
@@ -61,6 +67,10 @@ func _ready():
 	search_bar.cleared.connect(_on_search_bar_cleared)
 	container_content.show()
 
+	if streak_widget_card:
+		streak_widget_card.refresh_visibility()
+	_show_streak_modal_if_pending()
+
 	friends_online.generator.report_loading_status.connect(
 		_on_report_loading_status.bind(friends_online)
 	)
@@ -74,6 +84,52 @@ func _ready():
 	places_favorites.generator.report_loading_status.connect(
 		_on_report_loading_status.bind(places_favorites)
 	)
+
+
+## Consumes StreakManager's queued modal (set in-world by credit_jump_in(), issue #3018) and
+## shows it here — Discover is the only place login-streak modals appear. A fresh credit's own
+## celebration always wins; only if there isn't one does a "come finish today's mission" reminder
+## (Figma "D2-Streak", for a day the player hasn't jumped into yet) get a chance to show instead.
+# gdlint:ignore = async-function-name
+func _show_streak_modal_if_pending() -> void:
+	if _showing_streak_modal:
+		return
+	_showing_streak_modal = true
+	var pending := Global.streak_manager.take_pending_modal()
+	if not pending.is_empty():
+		await _async_show_streak_modal_and_wait(
+			StreakModal.state_from_pending(pending), Global.streak_manager.get_progress_day()
+		)
+	else:
+		await _async_show_streak_current_reminder_if_pending()
+	_showing_streak_modal = false
+
+
+# gdlint:ignore = async-function-name
+func _async_show_streak_current_reminder_if_pending() -> void:
+	var pending_day := Global.streak_manager.take_current_reminder()
+	if pending_day == 0:
+		return
+	await _async_show_streak_modal_and_wait(
+		Global.streak_manager.compute_modal_state(pending_day),
+		Global.streak_manager.get_effective_progress_day(),
+		pending_day
+	)
+
+
+func _async_show_streak_modal_and_wait(
+	state: int, progress_day: int, pending_day: int = -1
+) -> void:
+	var is_guest := StreakManager.is_unlinked_guest()
+	Global.upgrade_nudge_coordinator.suppress_until_cleared("streak")
+	var shown := await Global.streak_modal_controller.async_show_streak_modal(
+		state, progress_day, is_guest, pending_day
+	)
+	if shown and is_instance_valid(Global.streak_modal_controller.current_streak_modal):
+		await Global.streak_modal_controller.current_streak_modal.tree_exited
+	if streak_widget_card:
+		streak_widget_card.refresh_visibility()
+	Global.upgrade_nudge_coordinator.resume("streak")
 
 
 func _on_featured_card_tapped(index: int) -> void:
@@ -151,6 +207,14 @@ func _on_visibility_changed():
 	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
 		last_visited.generator.async_request_last_places(0, 10)
 		friends_online.generator.on_request(0, 10)
+		# Discover lives for one whole menu session (menu.gd's _free_screens doc) — switching
+		# tabs away and back just shows()/hides() this same instance, _ready() never runs again.
+		# Re-check both on every re-show, not just the first, or a streak credited while on
+		# another tab (e.g. the Settings "Advance Streak Day" dev button) never surfaces its
+		# modal/widget update.
+		if streak_widget_card:
+			streak_widget_card.refresh_visibility()
+		_show_streak_modal_if_pending()
 		# Must run before set_orientation_portrait() below: if a device-support modal is due, it
 		# suppresses UpgradeNudgeCoordinator synchronously so the orientation-change signal that
 		# call fires can't open the guest-upgrade modal first (#2936 / #2935 outrank it).
@@ -254,7 +318,7 @@ func _show_device_support_modal_if_needed() -> void:
 ## happen here, after the modal is confirmed on screen — not in the caller before this even runs —
 ## so a creation failure can't silently burn below-minspec's only-ever chance to show.
 func _async_show_then_resume_nudge(is_end_of_support: bool, forced: bool) -> void:
-	Global.upgrade_nudge_coordinator.suppress_until_cleared()
+	Global.upgrade_nudge_coordinator.suppress_until_cleared("device_support")
 	if is_end_of_support:
 		await Global.modal_manager.async_show_end_of_device_support_modal()
 	else:
@@ -277,7 +341,7 @@ func _async_show_then_resume_nudge(is_end_of_support: bool, forced: bool) -> voi
 				config.below_minspec_modal_shown = true
 			config.save_to_settings_file()
 		await modal.tree_exited
-	Global.upgrade_nudge_coordinator.resume_after_device_support()
+	Global.upgrade_nudge_coordinator.resume("device_support")
 
 
 func _show_low_spec_warning_if_needed():
@@ -315,6 +379,8 @@ func _on_search_bar_opened() -> void:
 		button_credits.hide()
 	if guest_upgrade_card:
 		guest_upgrade_card.hide()
+	if streak_widget_card:
+		streak_widget_card.hide()
 
 
 func _on_search_bar_cleared() -> void:
@@ -341,6 +407,8 @@ func set_search_filter_text(new_text: String) -> void:
 			# Don't force it visible — let the card re-evaluate its own upgrade state
 			# so already-upgraded users never see it flash (#2483).
 			guest_upgrade_card.refresh_visibility()
+		if streak_widget_card:
+			streak_widget_card.refresh_visibility()
 	else:
 		friends_online.hide()
 		last_visited.hide()
@@ -350,6 +418,8 @@ func set_search_filter_text(new_text: String) -> void:
 		places_most_active.title = "DISCOVER_SCENES"
 		if guest_upgrade_card:
 			guest_upgrade_card.hide()
+		if streak_widget_card:
+			streak_widget_card.hide()
 	places_most_active.set_search_param(new_text)
 	events.set_search_param(new_text)
 	_scroll_all_carousels_to_start()
