@@ -6,8 +6,10 @@ extends PanelContainer
 ## PointerEvents text, which must never be looked up — so only this one known marker is resolved
 ## here, never the scene-supplied strings around it. explorer.gd matches on the same constant to
 ## filter the prompt for the "Hide View Profile" setting.
-# i18n-keys: TOOLTIP_VIEW_PROFILE
+# i18n-keys: TOOLTIP_VIEW_PROFILE, TOOLTIP_FOCUS_MODE
 const VIEW_PROFILE_KEY: String = "TOOLTIP_VIEW_PROFILE"
+## The video-screen prompt (issue #1381), emitted by scene_manager.rs the same way.
+const FOCUS_MODE_KEY: String = "TOOLTIP_FOCUS_MODE"
 
 # Set on the stylebox in _ready, which overwrites whatever tooltip_label.tscn declares -- the
 # scene's bg_color never renders, so change it HERE. #161518 at 70% is the pill fill from the
@@ -29,6 +31,10 @@ const TAP_GROW_X: float = 24.0
 const TAP_GROW_Y: float = 24.0
 # Desktop-only: the left-click glyph has no joypad counterpart, so it is not in ActionIcons.
 const ICON_LEFT_CLICK = preload("uid://cljfaeb8np0ma")
+## The focus-mode prompt shows what it opens (the design's eye) instead of the pointer button.
+const ICON_FOCUS_MODE = preload(
+	"res://src/ui/components/molecules/pointer_tooltip/icons/focus-mode.svg"
+)
 ## Widest the label may grow before the text is elided. This must be applied as a clamp in code:
 ## with text_overrun_behavior set, a Label's minimum width collapses to ~0, so putting the cap in
 ## custom_minimum_size makes it a fixed width and every pill ends up this wide.
@@ -46,6 +52,8 @@ var stylebox: StyleBox
 # Content hash of the scene-replaced (PBTouchScreenControls) icon we're currently loading,
 # so a stale async fetch can bail if the tooltip is reused for another action meanwhile.
 var _custom_icon_hash: String = ""
+# The client's focus-mode prompt: keeps the eye glyph, never a scene-replaced pointer icon.
+var _is_focus_prompt: bool = false
 
 @onready var label_action = %Label_Action
 @onready var texture_rect_action_icon = %TextureRect_ActionIcon
@@ -68,7 +76,9 @@ func set_bg_color(color):
 
 ## Resolve only our own prompts. Anything else is creator copy and passes through untouched.
 static func _resolve(value: String) -> String:
-	return TranslationServer.translate(value) if value == VIEW_PROFILE_KEY else value
+	if value == VIEW_PROFILE_KEY or value == FOCUS_MODE_KEY:
+		return TranslationServer.translate(value)
+	return value
 
 
 func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
@@ -139,6 +149,11 @@ func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
 			hide()
 			action_to_trigger = ""
 			printerr("Action doesn't exist ", action)
+
+	_is_focus_prompt = text_pet_down == FOCUS_MODE_KEY
+	if _is_focus_prompt:
+		_show_keyboard_icon(ICON_FOCUS_MODE)
+		return
 
 	# If a scene replaced this action's icon (PBTouchScreenControls), swap the default glyph
 	# for that same icon so the hint matches the on-screen gamepad button. The default stays
@@ -214,7 +229,7 @@ func _physics_process(_delta):
 	# React to live icon changes (e.g. the Controls Builder reassigning a glyph) while the
 	# tooltip stays on screen: if this action's scene-replaced icon changed (added, swapped,
 	# or removed), re-resolve the glyph. Cheap no-op when the hash is unchanged.
-	if not action_to_trigger.is_empty():
+	if not action_to_trigger.is_empty() and not _is_focus_prompt:
 		var desired_hash := String(
 			SdkTouchControlsApplier.get_custom_icon_for_action(action_to_trigger).get("hash", "")
 		)

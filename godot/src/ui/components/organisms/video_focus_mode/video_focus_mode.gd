@@ -2,12 +2,11 @@ class_name VideoFocusMode
 extends Control
 
 ## Full-screen video screen with the Nearby chat docked beside it (landscape) or under it
-## (portrait) — issue #1381. Opened by VideoFocusButton (the HUD button shown while the
-## crosshair points at a playing screen) and closed from the exit button, a teleport or the menu.
+## (portrait) — issue #1381. Opens on the scene runner's open_video_focus_mode signal (the
+## crosshair on a playing video screen, then the "Focus mode" pill) and closes from the exit
+## button, a teleport or the menu.
 
 const CHAT_SCENE := preload("res://src/ui/pages/chat/chat.tscn")
-# i18n-keys: VIDEO_FOCUS_EXIT
-const EXIT_LABEL_KEY := "VIDEO_FOCUS_EXIT"
 ## How long the exit button keeps its label before collapsing to the icon.
 const EXIT_LABEL_SECONDS := 3.0
 ## Chat column beside the video (design: 430 of 1600 landscape px).
@@ -38,6 +37,7 @@ var _chat_reveal_epoch: int = 0
 @onready var _chat_slot: Control = %Control_ChatSlot
 @onready var _label_members: Label = %Label_Members
 @onready var _button_exit: Button = %Button_Exit
+@onready var _label_exit: Label = %Label_Exit
 @onready var _button_rotate: Button = %Button_Rotate
 @onready var _button_collapse_chat: Button = %Button_CollapseChat
 @onready var _button_expand_chat: Button = %Button_ExpandChat
@@ -60,6 +60,7 @@ func _ready() -> void:
 		func(): _button_expand_chat.pivot_offset = _button_expand_chat.size * 0.5
 	)
 	resized.connect(_update_video_panel_size)
+	Global.scene_runner.open_video_focus_mode.connect(enter)
 	Global.orientation_changed.connect(_on_orientation_changed)
 	Global.change_virtual_keyboard.connect(_on_change_virtual_keyboard)
 	Global.loading_started.connect(exit)
@@ -67,7 +68,8 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
-	# Global outlives this node.
+	# Global and its scene_runner outlive this node.
+	Global.scene_runner.open_video_focus_mode.disconnect(enter)
 	Global.orientation_changed.disconnect(_on_orientation_changed)
 	Global.change_virtual_keyboard.disconnect(_on_change_virtual_keyboard)
 	Global.loading_started.disconnect(exit)
@@ -239,16 +241,13 @@ func _update_video_panel_size() -> void:
 	_video_panel.custom_minimum_size = Vector2(0, roundf(size.x * aspect))
 
 
+## The caption beside the exit button, shown for a few seconds on every entry.
 func _show_exit_label() -> void:
 	_kill_exit_label_tween()
-	_button_exit.text = EXIT_LABEL_KEY
+	_label_exit.show()
 	_exit_label_tween = create_tween()
 	_exit_label_tween.tween_interval(EXIT_LABEL_SECONDS)
-	_exit_label_tween.tween_callback(_collapse_exit_label)
-
-
-func _collapse_exit_label() -> void:
-	_button_exit.text = ""
+	_exit_label_tween.tween_callback(_label_exit.hide)
 
 
 func _kill_exit_label_tween() -> void:

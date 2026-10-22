@@ -1,33 +1,12 @@
-[gd_scene load_steps=12 format=3 uid="uid://buxjoxmdm2l6v"]
+[gd_scene load_steps=11 format=3 uid="uid://buxjoxmdm2l6v"]
 
 [ext_resource type="Script" uid="uid://dtrv82krgoek8" path="res://src/ui/components/organisms/video_focus_mode/video_focus_mode.gd" id="1_script"]
-[ext_resource type="Texture2D" uid="uid://myp6t306a2n" path="res://src/ui/components/organisms/video_focus_mode/icons/exit-focus.svg" id="2_exit"]
+[ext_resource type="Texture2D" uid="uid://drjenu4ayufgu" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-exit-focus.svg" id="2_exit"]
 [ext_resource type="Texture2D" uid="uid://btkyyrt63j7tv" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-flip-orientation.svg" id="3_rotate"]
 [ext_resource type="Texture2D" uid="uid://1bvilol5e3lf" path="res://assets/ui/Members.svg" id="4_members"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="5_font"]
-[ext_resource type="Texture2D" uid="uid://cy1qhm42phf7r" path="res://src/ui/components/organisms/video_focus_mode/icons/chevron-down.svg" id="6_chevron"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
-content_margin_left = 12.0
-content_margin_top = 8.0
-content_margin_right = 16.0
-content_margin_bottom = 8.0
-bg_color = Color(0.0862745, 0.0823529, 0.0941176, 0.7)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_pressed"]
-content_margin_left = 12.0
-content_margin_top = 8.0
-content_margin_right = 16.0
-content_margin_bottom = 8.0
-bg_color = Color(0.266667, 0.262745, 0.282353, 0.7)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+[ext_resource type="Texture2D" uid="uid://bjbfujytp6lmu" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-chevron-down.svg" id="6_chevron"]
+[ext_resource type="PackedScene" uid="uid://bdlssvxebe4kt" path="res://src/ui/components/atoms/buttons/hud_button/hud_button.tscn" id="7_hud"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_chat"]
 bg_color = Color(0.113725, 0.109804, 0.12549, 1)
@@ -115,76 +94,56 @@ theme_override_constants/margin_bottom = 24
 [node name="HBoxContainer_Controls" type="HBoxContainer" parent="VBoxContainer_Root/BoxContainer_Layout/Control_Video/MarginContainer_Controls"]
 layout_mode = 2
 mouse_filter = 2
+theme_override_constants/separation = 12
 
-[node name="Button_Exit" type="Button" parent="VBoxContainer_Root/BoxContainer_Layout/Control_Video/MarginContainer_Controls/HBoxContainer_Controls"]
+[node name="Button_Exit" parent="VBoxContainer_Root/BoxContainer_Layout/Control_Video/MarginContainer_Controls/HBoxContainer_Controls" instance=ExtResource("7_hud")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(48, 48)
 layout_mode = 2
 size_flags_vertical = 0
-focus_mode = 0
+icon = ExtResource("2_exit")
+icon_normal = ExtResource("2_exit")
+
+[node name="Label_Exit" type="Label" parent="VBoxContainer_Root/BoxContainer_Layout/Control_Video/MarginContainer_Controls/HBoxContainer_Controls"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 66)
+layout_mode = 2
+size_flags_vertical = 0
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/font_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/font_hover_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/font_hover_pressed_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_colors/font_focus_color = Color(0.988235, 0.988235, 0.988235, 1)
-theme_override_constants/h_separation = 10
-theme_override_constants/icon_max_width = 26
 theme_override_fonts/font = ExtResource("5_font")
 theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxFlat_button")
-theme_override_styles/hover = SubResource("StyleBoxFlat_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
-theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_button_pressed")
-theme_override_styles/focus = SubResource("StyleBoxFlat_button")
 text = "VIDEO_FOCUS_EXIT"
-icon = ExtResource("2_exit")
+vertical_alignment = 1
 
 [node name="Control_Spacer" type="Control" parent="VBoxContainer_Root/BoxContainer_Layout/Control_Video/MarginContainer_Controls/HBoxContainer_Controls"]
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 
-[node name="Button_Rotate" type="Button" parent="VBoxContainer_Root/BoxContainer_Layout/Control_Video/MarginContainer_Controls/HBoxContainer_Controls"]
+[node name="Button_Rotate" parent="VBoxContainer_Root/BoxContainer_Layout/Control_Video/MarginContainer_Controls/HBoxContainer_Controls" instance=ExtResource("7_hud")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(48, 48)
 layout_mode = 2
 size_flags_vertical = 0
-focus_mode = 0
-theme_override_constants/icon_max_width = 28
-theme_override_styles/normal = SubResource("StyleBoxFlat_button")
-theme_override_styles/hover = SubResource("StyleBoxFlat_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
-theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_button_pressed")
-theme_override_styles/focus = SubResource("StyleBoxFlat_button")
 icon = ExtResource("3_rotate")
-icon_alignment = 1
+icon_normal = ExtResource("3_rotate")
 
-[node name="Button_ExpandChat" type="Button" parent="VBoxContainer_Root/BoxContainer_Layout/Control_Video"]
+[node name="Button_ExpandChat" parent="VBoxContainer_Root/BoxContainer_Layout/Control_Video" instance=ExtResource("7_hud")]
 unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(48, 48)
 layout_mode = 1
 anchors_preset = 6
 anchor_left = 1.0
 anchor_top = 0.5
 anchor_right = 1.0
 anchor_bottom = 0.5
-offset_left = -64.0
-offset_top = -24.0
-offset_right = -16.0
-offset_bottom = 24.0
+offset_left = -90.0
+offset_top = -33.0
+offset_right = -24.0
+offset_bottom = 33.0
 grow_horizontal = 0
 grow_vertical = 2
-pivot_offset = Vector2(24, 24)
-focus_mode = 0
-theme_override_constants/icon_max_width = 24
-theme_override_styles/normal = SubResource("StyleBoxFlat_button")
-theme_override_styles/hover = SubResource("StyleBoxFlat_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
-theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_button_pressed")
-theme_override_styles/focus = SubResource("StyleBoxFlat_button")
+pivot_offset = Vector2(33, 33)
 icon = ExtResource("6_chevron")
-icon_alignment = 1
+icon_normal = ExtResource("6_chevron")
 
 [node name="PanelContainer_Chat" type="PanelContainer" parent="VBoxContainer_Root/BoxContainer_Layout"]
 unique_name_in_owner = true
@@ -230,21 +189,21 @@ text = "1"
 label_settings = SubResource("LabelSettings_header")
 vertical_alignment = 1
 
-[node name="Button_CollapseChat" type="Button" parent="VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/VBoxContainer/PanelContainer_Header/HBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(40, 40)
+[node name="Control_CollapseSlot" type="Control" parent="VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/VBoxContainer/PanelContainer_Header/HBoxContainer"]
+editor_description = "Plain Control between the header HBox and the chevron: a Container resets its children's rotation on every sort, so the rotated chevron cannot be a direct child of the HBox."
+custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
 size_flags_vertical = 4
-pivot_offset = Vector2(20, 20)
-focus_mode = 0
-theme_override_constants/icon_max_width = 24
-theme_override_styles/normal = SubResource("StyleBoxFlat_button")
-theme_override_styles/hover = SubResource("StyleBoxFlat_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
-theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_button_pressed")
-theme_override_styles/focus = SubResource("StyleBoxFlat_button")
+mouse_filter = 2
+
+[node name="Button_CollapseChat" parent="VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/VBoxContainer/PanelContainer_Header/HBoxContainer/Control_CollapseSlot" instance=ExtResource("7_hud")]
+unique_name_in_owner = true
+layout_mode = 0
+offset_right = 66.0
+offset_bottom = 66.0
+pivot_offset = Vector2(33, 33)
 icon = ExtResource("6_chevron")
-icon_alignment = 1
+icon_normal = ExtResource("6_chevron")
 
 [node name="Control_ChatSlot" type="Control" parent="VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/VBoxContainer"]
 unique_name_in_owner = true
