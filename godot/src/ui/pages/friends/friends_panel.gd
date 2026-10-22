@@ -65,6 +65,8 @@ var _is_loading: bool = false
 @onready var button_friends: Button = %Button_Friends
 @onready var button_requests: Button = %Button_Requests
 @onready var button_nearby: Button = %Button_Nearby
+@onready var label_nearby: Label = %Label_Nearby
+@onready var label_nearby_count: Label = %Label_NearbyCount
 @onready var requests_badge: Panel = %RequestsBadge
 
 @onready var h_box_container_friends_tab: HBoxContainer = %HBoxContainer_FriendsTab
@@ -297,6 +299,10 @@ func _on_button_nearby_toggled(toggled_on: bool) -> void:
 		# nearby_menu_opened metric
 		Global.metrics.track_click_button("nearby_menu_opened", "SOCIAL_PANEL", "")
 		toggle_nearby()
+
+	label_nearby.label_settings.font_color = button_nearby.get_theme_color(
+		"font_pressed_color" if toggled_on else "font_color"
+	)
 
 
 func toggle_nearby() -> void:
@@ -684,9 +690,16 @@ func _on_blocked_button_mouse_exited() -> void:
 	blocked_container.self_modulate = "#ffffff00"
 
 
-## Refreshes the NEARBY tab. The tab title is static ("NEARBY", set in the scene like FRIENDS /
-## REQUESTS — no count), so this only toggles the list with its empty state.
+## Refreshes the NEARBY tab: the player count next to the tab title, and the list vs. empty state.
 func _on_nearby_list_size_changed() -> void:
+	if nearby_list.list_size > 0:
+		label_nearby_count.text = str(nearby_list.list_size)
+		label_nearby_count.show()
+	else:
+		label_nearby_count.hide()
+
+	_resize_nearby_button()
+
 	# Empty state vs list (Nearby tab)
 	if nearby_list.list_size == 0:
 		nearby_list.hide()
@@ -694,6 +707,13 @@ func _on_nearby_list_size_changed() -> void:
 	else:
 		margin_container_no_nearby.hide()
 		nearby_list.show()
+
+
+## Fits Button_Nearby's width to its label content (title + count change with locale and player
+## count), adding the same 4px/4px side margin the other tab buttons get from their style.
+func _resize_nearby_button() -> void:
+	var content_width: float = label_nearby_count.get_parent().get_minimum_size().x
+	button_nearby.custom_minimum_size.x = content_width + 8.0
 
 
 func _on_visibility_changed() -> void:

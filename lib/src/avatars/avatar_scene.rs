@@ -105,7 +105,7 @@ struct PendingAvatar {
     transform: Option<DclTransformAndParent>,
     blocked: bool,
     voice: Option<(u32, u32, u32)>,
-    emote: Option<(u32, String, i64)>,
+    emote: Option<(String, i64)>,
 }
 
 #[derive(GodotClass)]
@@ -127,8 +127,6 @@ pub struct AvatarScene {
     // Timestamp tracking for movement messages
     last_movement_timestamp: HashMap<AvatarAlias, f32>,
     last_position_index: HashMap<AvatarAlias, u32>,
-
-    last_emote_incremental_id: HashMap<AvatarAlias, u32>,
 
     impostor_multimesh: Option<Gd<MultiMeshInstance3D>>,
     impostor_texture_array: Option<Gd<Texture2DArray>>,
@@ -157,7 +155,6 @@ impl INode for AvatarScene {
             last_updated_profile: HashMap::new(),
             last_movement_timestamp: HashMap::new(),
             last_position_index: HashMap::new(),
-            last_emote_incremental_id: HashMap::new(),
             impostor_multimesh: None,
             impostor_texture_array: None,
             impostor_slots: HashMap::new(),
@@ -1555,8 +1552,8 @@ impl AvatarScene {
         if let Some((sample_rate, num_channels, samples_per_channel)) = pending.voice {
             self.spawn_voice_channel(alias, sample_rate, num_channels, samples_per_channel);
         }
-        if let Some((incremental_id, urn, mask)) = pending.emote {
-            self.play_emote(alias, incremental_id, &urn, mask);
+        if let Some((urn, mask)) = pending.emote {
+            self.play_emote(alias, &urn, mask);
         }
         if let Some(profile) = pending.profile {
             self.update_avatar_by_alias(alias, &profile);
@@ -1608,7 +1605,6 @@ impl AvatarScene {
         self.avatar_address.clear();
         self.last_movement_timestamp.clear();
         self.last_position_index.clear();
-        self.last_emote_incremental_id.clear();
         // PLAYER is the local player's profile and outlives the connection.
         self.last_updated_profile
             .retain(|entity_id, _| *entity_id == SceneEntityId::PLAYER);
@@ -1666,7 +1662,6 @@ impl AvatarScene {
             self.pending_avatars.remove(index);
             self.last_movement_timestamp.remove(&alias);
             self.last_position_index.remove(&alias);
-            self.last_emote_incremental_id.remove(&alias);
             return;
         }
 
@@ -2066,38 +2061,16 @@ impl AvatarScene {
     }
 
     /// `mask` uses the internal convention: -1 = full body, 0 = AM_UPPER_BODY.
-    pub fn play_emote(&mut self, alias: u32, incremental_id: u32, emote_urn: &String, mask: i64) {
+    /// Duplicates are already dropped by `MessageProcessor::is_duplicate_emote`.
+    pub fn play_emote(&mut self, alias: u32, emote_urn: &String, mask: i64) {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
         } else {
             if let Some(pending) = self.pending_avatar_mut(alias) {
-                if pending
-                    .emote
-                    .as_ref()
-                    .is_none_or(|(last_id, _, _)| incremental_id > *last_id)
-                {
-                    pending.emote = Some((incremental_id, emote_urn.clone(), mask));
-                }
+                pending.emote = Some((emote_urn.clone(), mask));
             }
             return;
         };
-
-        // Discard if the emote is less than or equal to the last played emote
-        if let Some(last_incremental_id) = self.last_emote_incremental_id.get(&alias) {
-            if incremental_id <= *last_incremental_id {
-                tracing::debug!(
-                    "Discarding emote {} for alias {}: incremental_id {} <= last_emote_incremental_id {}",
-                    emote_urn,
-                    alias,
-                    incremental_id,
-                    last_incremental_id
-                );
-                return;
-            }
-        }
-
-        // Store the last emote incremental ID for this alias
-        self.last_emote_incremental_id.insert(alias, incremental_id);
 
         if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(&entity_id) {
             avatar_scene.call(
@@ -2108,8 +2081,7 @@ impl AvatarScene {
     }
 
     /// Stop a remote avatar's looping emote (rfc4 `PlayerEmote.is_stopping` — sent by Unity
-    /// peers over LiveKit and synthesized from Pulse `EmoteStopped`). Deliberately does not
-    /// touch the incremental-id dedup: a stop must neither depend on nor affect id ordering.
+    /// peers over LiveKit and synthesized from Pulse `EmoteStopped`).
     pub fn stop_emote(&mut self, alias: u32) {
         let Some(entity_id) = self.avatar_entity.get(&alias) else {
             if let Some(pending) = self.pending_avatar_mut(alias) {
@@ -2122,13 +2094,12 @@ impl AvatarScene {
         }
     }
 
-    /// Clear the per-alias movement/emote dedup state. Called by MessageProcessor when a peer's
+    /// Clear the per-alias movement dedup state. Called by MessageProcessor when a peer's
     /// preferred transport flips (Pulse ⇄ LiveKit): the two sources use incomparable clocks
     /// (sender clock vs Pulse server tick), so carrying dedup state across the switch would
     /// permanently starve the newly-preferred source.
     pub fn reset_movement_dedup(&mut self, alias: u32) {
         self.last_movement_timestamp.remove(&alias);
-        self.last_emote_incremental_id.remove(&alias);
     }
 
     pub fn update_avatar(&mut self, entity_id: SceneEntityId, profile: &UserProfile) {
