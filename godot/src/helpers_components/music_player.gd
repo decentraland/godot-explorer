@@ -8,6 +8,10 @@ var _last_music: String = ""
 # True while _current_music names a stream fetched at runtime (play_stream()) rather than a
 # baked res://assets/sfx/ambient/ resource — stop()'s _last_music bookkeeping must never copy
 # one of these names, or a later restore_music() tries to load() a resource that doesn't exist.
+# restore_music() has no caller yet (discover.gd hand-rolls its own restore instead, since it
+# also needs "stop if nothing was playing before"), so this is defending a path nothing
+# exercises today — kept because the next caller of restore_music() shouldn't have to rediscover
+# why a dynamic stream's name can't go through play().
 var _current_is_dynamic := false
 
 @onready var _audio_stream: AudioStreamPlayer = AudioStreamPlayer.new()

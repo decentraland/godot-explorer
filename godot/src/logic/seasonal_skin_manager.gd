@@ -29,8 +29,9 @@ signal seasonal_assets_ready
 # Flag name exactly as served by the mobile-bff payload; value is a season key, empty = off.
 const FLAG_SEASON_KEY := "seasonal-skin-key"
 const R2_BASE_URL := "https://mobile-ota.dclregenesislabs.xyz/seasons/"
-# Generous for a looped ambient track; a season folder holding anything this large is a mistake
-# in the bucket, not something worth decoding into memory on a phone.
+# fetch_file_by_url still downloads the whole file to disk first — this only caps what gets
+# decoded into memory afterward, not the download itself. Generous for a looped ambient track;
+# a season folder holding anything this large is a mistake in the bucket.
 const MAX_AUDIO_FILE_BYTES := 15 * 1024 * 1024
 
 var _active := false
@@ -52,9 +53,24 @@ func get_discover_audio_stream() -> AudioStream:
 
 
 ## Idempotent — only the first call after the season is known to be active fetches anything;
-## every call after that (including ones made before the flags payload arrives) is a no-op.
+## every call after that (including ones made before the flags payload arrives) is a no-op,
+## UNLESS a previous attempt left an asset null while the season is still active, in which case
+## it retries. Discover calls this on every re-show, so that retry is effectively free. Note the
+## retry only ever helps the audio half: fetch_file_by_url (content_provider.rs) drops a resolved
+## promise from its cache either way, so a fresh call re-downloads, while fetch_texture_by_url
+## caches a promise permanently once settled — a failed overlay fetch returns the same rejection
+## for the rest of the session no matter how many times this runs.
 # gdlint:ignore = async-function-name
 func async_request_assets() -> void:
+	if (
+		_assets_requested
+		and _active
+		and (
+			not is_instance_valid(_discover_overlay_texture)
+			or not is_instance_valid(_discover_audio_stream)
+		)
+	):
+		_assets_requested = false
 	if _assets_requested:
 		return
 	# Set before the await below, not after: a second call arriving while this one is still
@@ -67,9 +83,12 @@ func async_request_assets() -> void:
 	if not _active:
 		return
 	var season_base := R2_BASE_URL + season_key + "/"
+	# Emitted once per asset, not once at the end: the audio file is the larger download, and
+	# Discover has no reason to wait for it before showing the overlay it already has.
 	_discover_overlay_texture = await _async_fetch_overlay_texture(
 		season_base + "discover-overlay.png"
 	)
+	seasonal_assets_ready.emit()
 	_discover_audio_stream = await _async_fetch_audio_stream(season_base + "discover-ambient.mp3")
 	seasonal_assets_ready.emit()
 
@@ -114,5 +133,10 @@ func _async_fetch_audio_stream(url: String) -> AudioStream:
 		return null
 	var stream := AudioStreamMP3.new()
 	stream.data = file.get_buffer(file_length)
+	if stream.data.is_empty():
+		# set_data() leaves data empty (and raises an engine error) when the buffer isn't a
+		# decodable mp3 — a wrong file in the bucket, not something to swap the music for.
+		push_warning("SeasonalSkinManager: audio file is not a decodable mp3: ", local_path)
+		return null
 	stream.loop = true
 	return stream
