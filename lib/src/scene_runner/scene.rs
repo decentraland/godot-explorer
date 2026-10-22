@@ -468,7 +468,10 @@ impl Scene {
         nearest
     }
 
-    /// Distance from `ray_from` to where the ray enters the mesh's bounds, if it does.
+    /// Distance from `ray_from` to where the ray enters the mesh's bounds, if it does so
+    /// ahead of the origin. gdext's `Aabb::intersect_ray` is a line test: a box behind the
+    /// camera still returns its (negative) intersection, which `distance_to` would turn
+    /// into a positive hit, so the hit is projected onto the ray instead.
     fn mesh_bounds_hit_distance(
         mesh: &Gd<godot::classes::MeshInstance3D>,
         ray_from: godot::builtin::Vector3,
@@ -482,7 +485,8 @@ impl Scene {
         let local_hit = mesh
             .get_aabb()
             .intersect_ray(inverse * ray_from, inverse.basis * ray_dir)?;
-        Some((transform * local_hit).distance_to(ray_from))
+        let along_ray = (transform * local_hit - ray_from).dot(ray_dir);
+        (along_ray > 0.0).then_some(along_ray)
     }
 
     /// Every texture slot can carry a video (albedo, alpha, emissive, normal). Only a playing

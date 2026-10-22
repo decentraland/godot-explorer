@@ -146,10 +146,13 @@ func _spawn_chat() -> void:
 	# EXPAND keeps the ScrollContainer sizing the list to its own height; SHRINK_END then
 	# places a shorter list at the bottom of that height.
 	_chat.v_box_container_chat.size_flags_vertical = (Control.SIZE_EXPAND | Control.SIZE_SHRINK_END)
+	# Invisible until the first layout settles: chat.gd hides itself one deferred call after
+	# _ready, then re-shows, and the replayed messages re-measure over a few frames. Drawn
+	# meanwhile, that reads as the text flickering. _scroll_chat_to_bottom reveals it.
+	_chat.modulate = Color.TRANSPARENT
 	var explorer = Global.get_explorer()
 	if explorer != null:
 		_chat.copy_messages_from(explorer.chat_panel.chat)
-	# chat.gd hides itself one deferred call after _ready; this queues behind it.
 	_chat.async_start_chat.call_deferred()
 
 
@@ -211,6 +214,7 @@ func _apply_chat_layout() -> void:
 func _scroll_chat_to_bottom() -> void:
 	if _chat != null and is_instance_valid(_chat):
 		_chat.scroll_to_bottom_deferred()
+		_chat.modulate = Color.WHITE
 
 
 ## In portrait the video panel takes the stream's aspect over the full width (or the whole
