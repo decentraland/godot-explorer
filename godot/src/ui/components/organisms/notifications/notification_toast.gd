@@ -49,11 +49,23 @@ func async_show_notification(notification: Dictionary) -> void:
 	var tween = create_tween()
 	tween.set_ease(Tween.EASE_OUT)
 	tween.set_trans(Tween.TRANS_BACK)
-	tween.tween_property(self, "position:y", -15.0, SLIDE_IN_DURATION)
+	tween.tween_property(self, "position:y", -15.0 + _safe_area_top(), SLIDE_IN_DURATION)
 	await tween.finished
 
 	# Start auto-hide timer
 	_timer.start(DISPLAY_DURATION)
+
+
+## Top device inset (status bar / camera cutout) in viewport units, so the toast never lands
+## under the front camera in portrait (#2967). Same scaling as SafeMarginContainer.
+func _safe_area_top() -> float:
+	if not (Global.is_mobile() or Global.is_emulating_safe_area()):
+		return 0.0
+	var window_size: Vector2i = DisplayServer.window_get_size()
+	if window_size.y <= 0:
+		return 0.0
+	var y_factor: float = get_viewport().get_visible_rect().size.y / float(window_size.y)
+	return maxi(0, Global.get_safe_area().position.y) * y_factor
 
 
 func _on_timer_timeout() -> void:
