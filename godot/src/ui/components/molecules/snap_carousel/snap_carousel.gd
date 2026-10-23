@@ -42,6 +42,9 @@ const FeaturedDataProvider = preload(
 @export var snap_duration: float = 0.25
 @export var auto_fetch: bool = false
 @export var fetch_tag: String = "featured"
+## If set, and fetch_tag comes back with no places, retried once with this tag instead — e.g. a
+## seasonal tag falling back to the evergreen one when nothing's tagged for the season yet.
+@export var fallback_fetch_tag: String = ""
 @export var auto_scroll: bool = false
 @export var auto_scroll_interval: float = 3.0
 
@@ -101,7 +104,13 @@ func _apply_mode() -> void:
 # gdlint: ignore=async-function-name
 func fetch() -> void:
 	var places = await FeaturedDataProvider.async_fetch_places(fetch_tag)
-	if not is_instance_valid(self) or places.is_empty():
+	if not is_instance_valid(self):
+		return
+	if places.is_empty() and not fallback_fetch_tag.is_empty():
+		places = await FeaturedDataProvider.async_fetch_places(fallback_fetch_tag)
+		if not is_instance_valid(self):
+			return
+	if places.is_empty():
 		return
 	set_items(places)
 

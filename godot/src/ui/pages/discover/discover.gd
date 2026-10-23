@@ -278,16 +278,15 @@ func _apply_seasonal_skin() -> void:
 
 ## Swaps the home-tab featured carousel's query tag between "featured" and "season" to match
 ## SeasonalSkinManager (issue #3025) — content ops tags places "season" for the duration instead
-## of a separate flag. No-op once already on the right tag, so a re-show doesn't re-fetch for
-## nothing.
+## of a separate flag. Falls back to "featured" if nothing's tagged "season" yet (e.g. ops hasn't
+## caught up with content), so the carousel is never left empty. No-op once already on the right
+## tag, so a re-show doesn't re-fetch for nothing.
 func _apply_seasonal_featured_tag() -> void:
 	if not is_instance_valid(places_featured):
 		return
-	var tag := (
-		SEASONAL_FEATURED_TAG
-		if Global.seasonal_skin_manager.is_seasonal_skin_active()
-		else DEFAULT_FEATURED_TAG
-	)
+	var season_active := Global.seasonal_skin_manager.is_seasonal_skin_active()
+	var tag := SEASONAL_FEATURED_TAG if season_active else DEFAULT_FEATURED_TAG
+	places_featured.fallback_fetch_tag = DEFAULT_FEATURED_TAG if season_active else ""
 	if places_featured.fetch_tag == tag:
 		return
 	places_featured.fetch_tag = tag
