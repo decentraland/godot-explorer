@@ -16,7 +16,7 @@ var _font: Font
 var _bold_font: Font
 var _font_index: int = -1
 var _font_src: String = ""
-var _custom_font: FontFile
+var _custom_faces: Dictionary = {}
 var _renderer: Node3D
 
 
@@ -47,24 +47,21 @@ func _resolve_font() -> void:
 	_font_index = fi
 	if src != _font_src:
 		_font_src = src
-		_custom_font = null
+		_custom_faces = {}
 		if not src.is_empty():
 			_request_custom_font(src)
 	_apply_fonts()
 
 
-## The scene TTF named by `font_src` once loaded (built-in face as glyph fallback),
-## otherwise the built-in face for the `font` enum.
+## The scene TTF or font family named by `font_src` once loaded (built-in face as glyph
+## fallback), otherwise the built-in face for the `font` enum.
 func _apply_fonts() -> void:
-	if _custom_font != null:
-		var fallbacks: Array[Font] = [TextLayout.load_font(_font_index)]
-		var variation := FontVariation.new()
-		variation.base_font = _custom_font
-		variation.fallbacks = fallbacks
-		variation.set_meta(TextLayout.CUSTOM_FONT_META, true)
-		_font = variation
-		# A scene TTF has a single face, and faux bold mangles MSDF glyphs.
-		_bold_font = variation
+	if _custom_faces.has("regular"):
+		_font = _custom_variation(_custom_faces["regular"])
+		# Without a bold face keep the regular one: faux bold mangles MSDF glyphs.
+		_bold_font = (
+			_custom_variation(_custom_faces["bold"]) if _custom_faces.has("bold") else _font
+		)
 	else:
 		_font = TextLayout.load_font(_font_index)
 		_bold_font = TextLayout.load_bold_font(_font_index)
@@ -73,10 +70,19 @@ func _apply_fonts() -> void:
 		_renderer.setup(_font, _bold_font)
 
 
+func _custom_variation(base: FontFile) -> FontVariation:
+	var fallbacks: Array[Font] = [TextLayout.load_font(_font_index)]
+	var variation := FontVariation.new()
+	variation.base_font = base
+	variation.fallbacks = fallbacks
+	variation.set_meta(TextLayout.CUSTOM_FONT_META, true)
+	return variation
+
+
 func _request_custom_font(src: String) -> void:
 	var promise: Promise = Global.content_provider.fetch_font(src, _params["content_mapping"], true)
 	if promise.is_resolved():
-		_custom_font = promise.get_data() as FontFile
+		_custom_faces = _faces_from(promise)
 	else:
 		var on_loaded := _on_custom_font_loaded.bind(promise, src)
 		if not promise.on_resolved.is_connected(on_loaded):
@@ -86,10 +92,15 @@ func _request_custom_font(src: String) -> void:
 func _on_custom_font_loaded(promise: Promise, src: String) -> void:
 	if src != _font_src:
 		return
-	_custom_font = promise.get_data() as FontFile
-	if _custom_font == null:
+	_custom_faces = _faces_from(promise)
+	if _custom_faces.is_empty():
 		return
 	_apply_fonts()
 	if _renderer != null:
 		_resolved = TextLayout.resolve(_params, _font)
 		_renderer.apply(_resolved)
+
+
+static func _faces_from(promise: Promise) -> Dictionary:
+	var data = promise.get_data()
+	return data if data is Dictionary else {}
