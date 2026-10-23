@@ -400,22 +400,23 @@ impl Scene {
         &self,
         ray_from: godot::builtin::Vector3,
         ray_dir: godot::builtin::Vector3,
-    ) -> Option<(f32, Gd<DclVideoPlayer>)> {
+    ) -> Option<(f32, SceneEntityId, Gd<DclVideoPlayer>)> {
         use super::components::gltf_node_modifiers::{find_node_by_path, get_gltf_container};
 
         // Runs every physics tick: most scenes have no video, so they cost one check.
         if self.video_players.is_empty() {
             return None;
         }
-        let mut nearest: Option<(f32, Gd<DclVideoPlayer>)> = None;
-        let mut consider = |mesh: &Gd<godot::classes::MeshInstance3D>, video_player| {
-            let Some(distance) = Self::mesh_bounds_hit_distance(mesh, ray_from, ray_dir) else {
-                return;
+        let mut nearest: Option<(f32, SceneEntityId, Gd<DclVideoPlayer>)> = None;
+        let mut consider =
+            |mesh: &Gd<godot::classes::MeshInstance3D>, entity_id: &SceneEntityId, video_player| {
+                let Some(distance) = Self::mesh_bounds_hit_distance(mesh, ray_from, ray_dir) else {
+                    return;
+                };
+                if nearest.as_ref().is_none_or(|(best, _, _)| distance < *best) {
+                    nearest = Some((distance, *entity_id, video_player));
+                }
             };
-            if nearest.as_ref().is_none_or(|(best, _)| distance < *best) {
-                nearest = Some((distance, video_player));
-            }
-        };
 
         for (entity_id, item) in self.materials.iter() {
             let Some(video_player) = self.video_player_for_dcl_material(&item.dcl_mat) else {
@@ -427,7 +428,7 @@ impl Scene {
             if let Some(mesh) =
                 node.try_get_node_as::<godot::classes::MeshInstance3D>("MeshRenderer")
             {
-                consider(&mesh, video_player);
+                consider(&mesh, entity_id, video_player);
             }
         }
 
@@ -462,10 +463,36 @@ impl Scene {
                 else {
                     continue;
                 };
-                consider(&mesh, video_player);
+                consider(&mesh, entity_id, video_player);
             }
         }
         nearest
+    }
+
+    /// Whether `collider` is the click box of the video screen `screen`: a child or parent
+    /// of it at any depth, or a sibling under a shared parent. Siblings directly under the
+    /// scene root do not count, or any top-level door would claim a distant screen.
+    pub fn is_click_box_of(&self, collider: &SceneEntityId, screen: &SceneEntityId) -> bool {
+        let (Some(collider), Some(screen)) = (
+            self.godot_dcl_scene.get_node_or_null_3d(collider),
+            self.godot_dcl_scene.get_node_or_null_3d(screen),
+        ) else {
+            return false;
+        };
+        let collider = collider.clone().upcast::<godot::classes::Node>();
+        let screen = screen.clone().upcast::<godot::classes::Node>();
+        if collider.is_ancestor_of(&screen) || screen.is_ancestor_of(&collider) {
+            return true;
+        }
+        let root = self
+            .godot_dcl_scene
+            .root_node_3d
+            .clone()
+            .upcast::<godot::classes::Node>();
+        match (collider.get_parent(), screen.get_parent()) {
+            (Some(a), Some(b)) => a == b && a != root,
+            _ => false,
+        }
     }
 
     /// Distance from `ray_from` to where the ray enters the mesh's bounds, if it does so

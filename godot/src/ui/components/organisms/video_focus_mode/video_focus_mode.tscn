@@ -17,6 +17,7 @@ content_margin_right = 16.0
 bg_color = Color(0.0431373, 0.0431373, 0.0509804, 1)
 
 [sub_resource type="LabelSettings" id="LabelSettings_header"]
+resource_local_to_scene = true
 font = ExtResource("5_font")
 font_size = 24
 font_color = Color(0.988235, 0.988235, 0.988235, 1)

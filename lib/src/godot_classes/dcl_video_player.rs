@@ -172,11 +172,9 @@ impl DclVideoPlayer {
         self.base_mut().call("_backend_pause", &[]);
     }
 
-    /// Whether the screen shows a running video: the scene asked for it (see `dcl_playing`)
-    /// and the backend has not stopped it, as at the end of a non-looping clip, a dead
-    /// stream or a failed source.
+    /// Whether the screen shows a running video (see `screen_is_playing`).
     pub fn is_playing(&self) -> bool {
-        self.dcl_playing && !matches!(self.video_state, VIDEO_STATE_PAUSED | VIDEO_STATE_ERROR)
+        screen_is_playing(self.dcl_playing, self.video_state)
     }
 
     /// Set the looping state on the backend
@@ -213,5 +211,37 @@ impl DclVideoPlayer {
     pub fn get_backend_texture(&mut self) -> Option<Gd<godot::classes::Texture2D>> {
         let result = self.base_mut().call("_get_backend_texture", &[]);
         result.try_to::<Gd<godot::classes::Texture2D>>().ok()
+    }
+}
+
+/// Whether a screen shows a running video: the scene asked for it (`PBVideoPlayer.playing`)
+/// and the backend has not stopped it, as at the end of a non-looping clip, a dead stream or
+/// a failed source. The Noop backend never leaves `VIDEO_STATE_NONE`, so desktop follows the
+/// scene's intent alone.
+pub fn screen_is_playing(dcl_playing: bool, video_state: i32) -> bool {
+    dcl_playing && !matches!(video_state, VIDEO_STATE_PAUSED | VIDEO_STATE_ERROR)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn playing_follows_scene_intent_unless_the_backend_stopped() {
+        for state in [
+            VIDEO_STATE_NONE,
+            VIDEO_STATE_LOADING,
+            VIDEO_STATE_READY,
+            VIDEO_STATE_PLAYING,
+            VIDEO_STATE_BUFFERING,
+            VIDEO_STATE_SEEKING,
+        ] {
+            assert!(screen_is_playing(true, state), "state {state}");
+            assert!(!screen_is_playing(false, state), "state {state}");
+        }
+        for state in [VIDEO_STATE_PAUSED, VIDEO_STATE_ERROR] {
+            assert!(!screen_is_playing(true, state), "state {state}");
+            assert!(!screen_is_playing(false, state), "state {state}");
+        }
     }
 }

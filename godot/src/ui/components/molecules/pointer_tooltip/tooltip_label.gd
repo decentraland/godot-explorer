@@ -32,9 +32,7 @@ const TAP_GROW_Y: float = 24.0
 # Desktop-only: the left-click glyph has no joypad counterpart, so it is not in ActionIcons.
 const ICON_LEFT_CLICK = preload("uid://cljfaeb8np0ma")
 ## The focus-mode prompt shows what it opens (the design's eye) instead of the pointer button.
-const ICON_FOCUS_MODE = preload(
-	"res://src/ui/components/molecules/pointer_tooltip/icons/focus-mode.svg"
-)
+const ICON_FOCUS_MODE = preload("uid://dfv20y2bu8rl5")
 ## Widest the label may grow before the text is elided. This must be applied as a clamp in code:
 ## with text_overrun_behavior set, a Label's minimum width collapses to ~0, so putting the cap in
 ## custom_minimum_size makes it a fixed width and every pill ends up this wide.

@@ -194,6 +194,7 @@ func _apply_chat_layout() -> void:
 	var spec: Vector2i = HudButton.SIZES[preset]
 	_button_exit.custom_minimum_size = Vector2(spec.x, spec.x)
 	_button_exit.add_theme_constant_override("icon_max_width", spec.y)
+	_label_exit.custom_minimum_size = Vector2(0, spec.x)
 	# One LabelSettings is shared by the title and the member count.
 	_label_members.label_settings.font_size = (
 		HEADER_FONT_SIZE_PORTRAIT if is_portrait else HEADER_FONT_SIZE_LANDSCAPE

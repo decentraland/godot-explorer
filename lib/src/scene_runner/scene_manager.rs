@@ -258,6 +258,8 @@ const POINTER_RAY_LENGTH: f32 = 100.0;
 const VIDEO_FOCUS_MAX_DISTANCE: f32 = 30.0;
 /// A pointer collider this close in front of a video screen's surface is its click box
 /// (scenes size the collider separately when the model is scaled), so it is claimed too.
+/// A deeper box is claimed when its entity is related to the screen's
+/// (`Scene::is_click_box_of`).
 const VIDEO_CLICK_BOX_TOLERANCE: f32 = 0.25;
 
 const EXIT_WITHOUT_KILL_SIGNAL: &str = "scene thread exited without kill signal";
@@ -3163,6 +3165,8 @@ impl SceneManager {
         physics_hit: &Option<GodotDclRaycastResult>,
     ) -> Option<(
         f32,
+        SceneId,
+        SceneEntityId,
         Gd<crate::godot_classes::dcl_video_player::DclVideoPlayer>,
     )> {
         let (ray_from, ray_dir) = self.pointer_ray?;
@@ -3171,18 +3175,24 @@ impl SceneManager {
             .map_or(VIDEO_FOCUS_MAX_DISTANCE, |hit| {
                 hit.hit.length.min(VIDEO_FOCUS_MAX_DISTANCE)
             });
-        let (distance, video_player) = self
+        let (distance, scene_id, entity_id, video_player) = self
             .scenes
-            .values()
-            .filter_map(|scene| scene.video_screen_along_ray(ray_from, ray_dir))
-            .filter(|(distance, _)| *distance <= max_distance)
+            .iter()
+            .filter_map(|(scene_id, scene)| {
+                scene.video_screen_along_ray(ray_from, ray_dir).map(
+                    |(distance, entity_id, video_player)| {
+                        (distance, *scene_id, entity_id, video_player)
+                    },
+                )
+            })
+            .filter(|(distance, _, _, _)| *distance <= max_distance)
             .min_by(|a, b| a.0.total_cmp(&b.0))?;
         // Only the nearest candidate is tested: a screen hidden behind a wall in front of a
         // visible one would need a raycast per candidate, for a layout that does not occur.
         if self.is_pointer_ray_occluded(ray_from, ray_from + ray_dir * distance) {
             return None;
         }
-        Some((distance, video_player))
+        Some((distance, scene_id, entity_id, video_player))
     }
 
     /// Whether physics-only geometry (a wall whose collider is not on the pointer layer)
@@ -4125,17 +4135,26 @@ impl INode for SceneManager {
             None => self.video_screen_along_pointer_ray(&current_pointer_raycast_result),
         };
         // The client claims IA_POINTER on a playing screen under the crosshair, whether the
-        // collider hit is the screen itself or a click box on its surface: the scene keeps
-        // hover and the other buttons, but a tap means focus mode even where the scene
-        // bound its own handler to the pointer (the Genesis Plaza theatre's camera mode).
+        // collider hit is the screen itself or its click box (an entity related to the
+        // screen, or any collider on its surface): the scene keeps hover and the other
+        // buttons, but a tap means focus mode even where the scene bound its own handler to
+        // the pointer (the Genesis Plaza theatre's camera mode).
         let claimed_pointer = raycast_screen.is_some()
-            || matches!(
-                (current_pointer_raycast_result.as_ref(), bounds_screen.as_ref()),
-                (Some(hit), Some((distance, _)))
-                    if (hit.hit.length - distance).abs() <= VIDEO_CLICK_BOX_TOLERANCE
-            );
+            || match (
+                current_pointer_raycast_result.as_ref(),
+                bounds_screen.as_ref(),
+            ) {
+                (Some(hit), Some((distance, scene_id, screen_entity, _))) => {
+                    (hit.hit.length - distance).abs() <= VIDEO_CLICK_BOX_TOLERANCE
+                        || (hit.scene_id == *scene_id
+                            && self.scenes.get(scene_id).is_some_and(|scene| {
+                                scene.is_click_box_of(&hit.entity_id, screen_entity)
+                            }))
+                }
+                _ => false,
+            };
         let hovered_video_player =
-            raycast_screen.or_else(|| bounds_screen.map(|(_, video_player)| video_player));
+            raycast_screen.or_else(|| bounds_screen.map(|(_, _, _, video_player)| video_player));
         match hovered_video_player.as_ref() {
             Some(video_player) => {
                 if changed_inputs.contains(&(InputAction::IaPointer, true)) {
@@ -4220,8 +4239,12 @@ impl INode for SceneManager {
                         let input_action =
                             InputAction::from_i32(*info.button.as_ref().unwrap_or(&0))
                                 .unwrap_or(InputAction::IaAny);
-                        // The pointer prompt on a claimed screen is the client's (below).
-                        if claimed_pointer && input_action == InputAction::IaPointer {
+                        // The pointer prompt on a claimed screen is the client's (below); an
+                        // IA_ANY handler stays reachable through the other buttons but its
+                        // prompt would read as a second pointer prompt.
+                        if claimed_pointer
+                            && matches!(input_action, InputAction::IaPointer | InputAction::IaAny)
+                        {
                             continue;
                         }
 

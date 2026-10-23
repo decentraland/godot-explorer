@@ -12,7 +12,7 @@ const OVERLAY_SCENE := preload(
 )
 
 ## Assertions that actually evaluated; guards against a suite that never ran.
-const EXPECTED_CHECKS := 12
+const EXPECTED_CHECKS := 16
 
 var _failures: Array[String] = []
 var _checks: int = 0
@@ -47,6 +47,12 @@ func _test_lifecycle() -> void:
 	_expect(overlay.visible, "enter shows the overlay")
 	var chat_slot: Control = overlay.get_node("%Control_ChatSlot")
 	_expect(chat_slot.get_child_count() == 1, "enter docks one chat")
+	# The settle timer carries the layout epoch it was armed for: a stale one must not reveal.
+	var chat: Control = chat_slot.get_child(0)
+	overlay._scroll_chat_to_bottom(overlay._chat_reveal_epoch - 1)
+	_expect(chat.modulate == Color.TRANSPARENT, "a stale settle timer leaves the chat hidden")
+	overlay._scroll_chat_to_bottom(overlay._chat_reveal_epoch)
+	_expect(chat.modulate == Color.WHITE, "the current settle timer reveals the chat")
 
 	overlay._process(0.0)
 	var texture_rect: TextureRect = overlay.get_node("%TextureRect_Video")
@@ -56,8 +62,13 @@ func _test_lifecycle() -> void:
 	var chat_column: Control = overlay.get_node("%PanelContainer_Chat")
 	var collapse: Button = overlay.get_node("%Button_CollapseChat")
 	var expand: Button = overlay.get_node("%Button_ExpandChat")
+	var button_exit: Button = overlay.get_node("%Button_Exit")
 	Global.orientation_changed.emit(true)
 	_expect(layout.vertical, "portrait stacks the chat under the video")
+	_expect(
+		button_exit.custom_minimum_size == Vector2(96, 96),
+		"portrait sizes the exit button like the HUD chat disc (96)"
+	)
 	collapse.pressed.emit()
 	_expect(
 		chat_column.visible and chat_column.size_flags_vertical == Control.SIZE_FILL,
@@ -65,6 +76,10 @@ func _test_lifecycle() -> void:
 	)
 	Global.orientation_changed.emit(false)
 	_expect(not layout.vertical, "landscape puts the chat beside the video")
+	_expect(
+		button_exit.custom_minimum_size == Vector2(66, 66),
+		"landscape sizes the exit button like the HUD chat disc (66)"
+	)
 	_expect(
 		not chat_column.visible and expand.visible,
 		"landscape keeps the collapse: no chat column, edge tab shown"
