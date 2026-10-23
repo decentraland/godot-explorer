@@ -24,11 +24,21 @@ static var _styled_cache: Dictionary = {}
 static func styled_font(base: Font, bold: bool, italic: bool, glyph_spacing: int = 0) -> Font:
 	if not bold and not italic and glyph_spacing == 0:
 		return base
-	var key := "%s_%d_%d_%d" % [base.resource_path, int(bold), int(italic), glyph_spacing]
+	# A scene font arrives as a plain FontVariation (no resource_path) over a shared FontFile:
+	# style that FontFile directly and keep the variation's glyph fallbacks.
+	var source := base
+	var face_id: String = base.resource_path
+	if base.has_meta(TextLayout.CUSTOM_FONT_META):
+		source = (base as FontVariation).base_font
+		face_id = "%d_%s" % [source.get_instance_id(), base.fallbacks[0].resource_path]
+	var key := "%s_%d_%d_%d" % [face_id, int(bold), int(italic), glyph_spacing]
 	if _styled_cache.has(key):
 		return _styled_cache[key]
 	var fv := FontVariation.new()
-	fv.base_font = base
+	fv.base_font = source
+	if source != base:
+		fv.fallbacks = base.fallbacks
+		fv.set_meta(TextLayout.CUSTOM_FONT_META, true)
 	if bold:
 		fv.variation_embolden = FAUX_BOLD_EMBOLDEN
 	if italic:

@@ -7,6 +7,12 @@
 class_name TextLayout
 extends RefCounted
 
+## Scene fonts (TextShape `font_src`) cannot be calibrated per face: they use the mean of the
+## three calibrated faces in every per-face table, under this key. Not measured against Unity.
+const CUSTOM_FONT_KEY := "__custom__"
+## Meta set on a scene font's FontVariation so the per-face tables use CUSTOM_FONT_KEY.
+const CUSTOM_FONT_META := &"dcl_custom_font"
+
 ## Unity TMP `fontSize` -> Godot glyph pixels, per font face (keyed by .ttf filename).
 ## ONE combined number per face — it folds the old base conversion (22) x pitch-match factor
 ## (0.887) = 19.514, AND a per-font glyph-size correction, into a single multiplier. Calibrated
@@ -20,6 +26,7 @@ const TMP_TO_LABEL3D_FONT_SIZE := {
 	"Inter-SemiBold.ttf": 18.242,
 	"NotoSerif.ttf": 18.812,
 	"AtkinsonHyperlegibleMono.ttf": 19.122,
+	CUSTOM_FONT_KEY: 18.725,
 }
 const TMP_TO_LABEL3D_FONT_SIZE_DEFAULT: float = 19.514
 
@@ -40,6 +47,7 @@ const GLYPH_SPACING_PER_MILLE := {
 	"Inter-SemiBold.ttf": 61.0,
 	"NotoSerif.ttf": 38.0,
 	"AtkinsonHyperlegibleMono.ttf": 28.0,
+	CUSTOM_FONT_KEY: 42.0,
 }
 const GLYPH_SPACING_PER_MILLE_DEFAULT: float = 75.0
 
@@ -88,6 +96,7 @@ const TEXTSHAPE_ANCHOR_OFFSET_EM := {
 	"Inter-SemiBold.ttf": 0.088,
 	"NotoSerif.ttf": 0.064,
 	"AtkinsonHyperlegibleMono.ttf": 0.029,
+	CUSTOM_FONT_KEY: 0.060,
 }
 const TEXTSHAPE_ANCHOR_OFFSET_DEFAULT: float = 0.088
 
@@ -100,6 +109,7 @@ const TEXTSHAPE_LINE_SPACING_EM := {
 	"Inter-SemiBold.ttf": 0.086,
 	"NotoSerif.ttf": 0.056,
 	"AtkinsonHyperlegibleMono.ttf": 0.031,
+	CUSTOM_FONT_KEY: 0.058,
 }
 const TEXTSHAPE_LINE_SPACING_DEFAULT: float = 0.0
 
@@ -131,6 +141,8 @@ const FONT_MONO_BOLD: String = "uid://bfqjyubth6dkc"  # AtkinsonHyperlegibleMono
 static func _per_font(table: Dictionary, font: Font, fallback: float) -> float:
 	if font != null:
 		var key := String(font.resource_path).get_file()
+		if font.has_meta(CUSTOM_FONT_META):
+			key = CUSTOM_FONT_KEY
 		if table.has(key):
 			return table[key]
 	return fallback
