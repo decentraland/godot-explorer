@@ -1377,7 +1377,18 @@ impl DclPlayerIdentity {
                 // (#2489). Mirrors the peer-profile version guard in message_processor.
                 // Returns true: a stale response is handled, not a parse failure (false
                 // would make the GDScript caller reset to the default profile).
-                if let Some(current) = self.profile.as_ref() {
+                // Only the same account's profile counts: after "use another account" the
+                // previous account's profile is still in memory, and its higher version
+                // would swallow the new account's profile, so the lobby never advances.
+                let same_account = |current: &Gd<DclUserProfile>| {
+                    current
+                        .bind()
+                        .inner
+                        .content
+                        .eth_address
+                        .eq_ignore_ascii_case(&profile.content.eth_address)
+                };
+                if let Some(current) = self.profile.as_ref().filter(|c| same_account(c)) {
                     let current_version = current.bind().inner.version;
                     if profile.version < current_version {
                         tracing::warn!(

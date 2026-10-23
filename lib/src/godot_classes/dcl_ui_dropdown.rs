@@ -45,6 +45,9 @@ impl IOptionButton for DclUiDropdown {
         let font_resource = self.current_font.get_font_resource();
         self.base_mut()
             .add_theme_font_override("font", &font_resource);
+        if let Some(mut popup) = self.base().get_popup() {
+            popup.add_theme_font_override("font", &font_resource);
+        }
         self.base_mut()
             .add_theme_stylebox_override("normal", &style_box_empty.clone());
         self.base_mut()
@@ -140,6 +143,9 @@ impl DclUiDropdown {
             let new_font_resource = self.current_font.get_font_resource();
             self.base_mut()
                 .add_theme_font_override("font", &new_font_resource);
+            if let Some(mut popup) = self.base().get_popup() {
+                popup.add_theme_font_override("font", &new_font_resource);
+            }
         }
     }
 

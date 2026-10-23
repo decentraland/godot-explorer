@@ -1,6 +1,9 @@
 class_name NameplateLayer
 extends RefCounted
 
+## Content tiers per #2938.
+enum Tier { FULL, BADGE, NAME }
+
 ## Shared screen-space layer + runtime for all avatar nameplates (#2215). Avatars
 ## add their NicknameUI Control here instead of rendering it into a per-avatar
 ## SubViewport texture (which showed uninitialized-VRAM garbage on mobile). The
@@ -9,14 +12,23 @@ extends RefCounted
 ## throttled raycast, and depth-sorted.
 ## `layer = -1` draws above the 3D world but below the default-layer HUD.
 
-# On-screen size and distance fade (full < FADE_START, fade to FADE_END), per
-# nickname_quad.gd. SCALE is 15% larger than the prior 0.25.
+# On-screen size and distance tiers (#2938): full content < TIER_FULL_END, badge
+# dropped past TIER_BADGE_END, name-only (smaller, dimmer) past TIER_NAME_END,
+# fade to FADE_END, hidden beyond. SCALE is 15% larger than the prior 0.25.
 const SCALE := 0.2875
 # Fraction of the tag height kept ABOVE the head anchor (1.0 = bottom edge sits on the
 # anchor). Below 1.0 nudges the whole tag down toward the head.
 const ANCHOR_HEIGHT_FACTOR := 0.85
-const FADE_START := 10.0
-const FADE_END := 15.0
+const TIER_FULL_END := 8.0
+const TIER_BADGE_END := 12.0
+const TIER_NAME_END := 20.0
+const FADE_END := 25.0
+# Name-only tier: reduced size and max opacity.
+const TIER_NAME_SCALE := 0.8
+const TIER_NAME_ALPHA := 0.7
+# Crowd cap: at most this many plates show FULL content; the rest degrade to the
+# badge tier. Focused (crosshair) and nearest win.
+const CROWD_MAX_FULL := 7
 # Alpha units/sec for smooth occlusion fade in/out.
 const FADE_SPEED := 6.0
 # Occlusion needs to see (a) solid world geometry + avatar bodies, and (b) other
@@ -37,40 +49,24 @@ const FAR_SKIP_DISTANCE := FADE_END + 5.0
 # Small gap above the computed bounds top (clearance already covers head/hat
 # volume — see Avatar.get_bounds_top_y).
 const NAMETAG_MARGIN := 0.1
-# Vertical gap kept between stacked nameplates.
-const STACK_PAD := 2.0
-# Fraction of the plate height excluded (top AND bottom) from the de-overlap
-# collision rect: the visible pill is much smaller than the Control (theme
-# margins), so colliding with the full rect leaves a big transparent gap.
-const STACK_COLLISION_INSET := 0.22
-# Fraction of the overlap corrected per frame (frame-to-frame relaxation) and of
-# the offset decayed back to the anchor when unconstrained (spring home). Partial
-# corrections are what make stacking smooth instead of snappy/jittery.
-const STACK_RELAX := 0.3
-# Extra separation (px) other plates keep from a fully-faded plate — fading tags
-# drift away instead of crowding while they disappear.
-const STACK_FADE_PAD := 30.0
-# Weakest spring factor for a fading plate (alpha 0 = this fraction of RELAX).
-const STACK_FADE_MIN_RELAX := 0.15
 # Debug: set true at runtime (e.g. the scene-inspector `eval` command, non-production) to bypass
 # the occlusion raycast entirely so tags fade by distance only — confirms whether a
 # vanishing tag is an occlusion artifact. `NameplateLayer.debug_disable_occlusion = true`.
 static var debug_disable_occlusion := false
 
 static var _root: Control = null
-# De-overlap state per visible plate (ui instance_id -> last placed Rect2 /
-# accumulated displacement from its projected anchor). Plates drift smoothly:
-# the offset springs back to zero when nothing overlaps, and overlaps are
-# resolved by partial per-frame corrections against other plates' rects.
-static var _plate_rects: Dictionary = {}
-static var _plate_offsets: Dictionary = {}
-# ui instance_id -> last known alpha (for fade-aware spacing).
-static var _plate_alphas: Dictionary = {}
-# ui instance_id -> world point the tag is drawn at (stacked screen pos unprojected
-# at anchor depth). Occlusion rays go HERE, not to the head anchor: the tag is
-# visible iff the camera can see the spot where it is actually drawn — otherwise a
-# cluster behind one occluder would lose every tag, even the stacked ones.
+# ui instance_id -> world point the tag is drawn at (screen pos unprojected at
+# anchor depth). Occlusion rays go HERE, not to the head anchor: the tag is
+# visible iff the camera can see the spot where it is actually drawn.
 static var _plate_ray_targets: Dictionary = {}
+# ui instance_id -> {dist, focused} for visible plates (crowd ranking) and -> last
+# applied content tier [tier, show_chat] (apply only on change).
+static var _plate_dists: Dictionary = {}
+static var _plate_tiers: Dictionary = {}
+# Focused (crosshair-hovered) avatar, resolved once per frame —
+# Global.get_selected_avatar() is an FFI call and update() runs per avatar.
+static var _focused_frame := -1
+static var _focused_avatar: Variant = null
 # Occlusion is driven by one node (OcclusionDriver): attached avatars sit in OCCLUSION_PERIOD
 # buckets and only plates update() found on screen are raycast. A plate entering the screen
 # is tested on the next step and held at alpha 0 until then.
@@ -175,9 +171,12 @@ static func update(avatar) -> void:
 		# Fade by the camera distance — what the camera actually sees.
 		var dist: float = cam.global_position.distance_to(anchor)
 		if dist <= FADE_END and not cam.is_position_behind(anchor):
+			var focused := _is_focused(avatar)
+			var tier := _content_tier(ui, dist, focused)
 			ui.size = ui.get_combined_minimum_size()
-			ui.scale = Vector2(SCALE, SCALE)
-			var screen_size: Vector2 = ui.size * SCALE
+			var scale_f: float = SCALE * (TIER_NAME_SCALE if tier == Tier.NAME else 1.0)
+			ui.scale = Vector2(scale_f, scale_f)
+			var screen_size: Vector2 = ui.size * scale_f
 			var pos: Vector2 = (
 				cam.unproject_position(anchor)
 				- Vector2(screen_size.x * 0.5, screen_size.y * ANCHOR_HEIGHT_FACTOR)
@@ -187,17 +186,31 @@ static func update(avatar) -> void:
 			_set_on_screen(avatar, on_screen)
 			var untested: bool = _occlusion_untested.has(avatar.get_instance_id())
 			if on_screen and not avatar._nameplate_occluded and not untested:
-				# De-overlap: soft-constraint stack against the other visible plates,
-				# so close-together avatars' tags (and their chat bubbles, which live
-				# inside the same Control) stay readable.
-				pos = _stack_position(ui, pos, screen_size, view_rect.size)
-				target_a = clampf((FADE_END - dist) / (FADE_END - FADE_START), 0.0, 1.0)
+				# Plates stay pinned to their anchor (no de-overlap shifting) —
+				# design decision on #2938: in crowds the cap limits full tags
+				# instead of moving them around.
+				# Chat bubbles gate on distance only (#2938) — the crowd cap must not
+				# hide the bubble of someone standing next to you.
+				var show_chat := focused or dist <= TIER_FULL_END
+				_apply_tier(ui, tier, show_chat)
+				# Mutate the entry in place: a fresh Dictionary literal per plate per
+				# frame showed up in allocation profiles.
+				var id: int = ui.get_instance_id()
+				var entry: Dictionary = _plate_dists.get(id, {})
+				entry.dist = dist
+				entry.focused = focused
+				_plate_dists[id] = entry
+				target_a = _tier_alpha(tier, dist, focused)
 			else:
 				_untrack_plate(ui)
+			# An anchor above the top edge would clip the tag, so keep the drawn plate
+			# inside the viewport.
+			pos.y = maxf(pos.y, 0.0)
+			pos.x = clampf(pos.x, 0.0, maxf(view_rect.size.x - screen_size.x, 0.0))
 			ui.position = pos
 			# Closer avatars draw on top.
 			ui.z_index = clampi(-int(dist * 100.0), -4000, 4000)
-			# Where the tag is actually drawn (center of its collision rect), as a
+			# Where the tag is actually drawn, as a
 			# world point at anchor depth — the occlusion ray targets this.
 			var draw_center := pos + screen_size * 0.5
 			_plate_ray_targets[ui.get_instance_id()] = (
@@ -219,6 +232,89 @@ static func update(avatar) -> void:
 	ui.visible = ui.modulate.a > 0.01
 
 
+## Crosshair-hovered avatar always gets the full tag (#2938).
+static func _is_focused(avatar) -> bool:
+	var frame := Engine.get_process_frames()
+	if frame != _focused_frame:
+		_focused_frame = frame
+		_focused_avatar = Global.get_selected_avatar()
+	return _focused_avatar == avatar
+
+
+## Content tier for a plate at `dist`: distance bands, with the crowd cap
+## degrading excess close plates one tier and focused always FULL.
+static func _content_tier(ui: Control, dist: float, focused: bool) -> int:
+	if focused:
+		return Tier.FULL
+	if dist > TIER_BADGE_END:
+		return Tier.NAME
+	if dist > TIER_FULL_END:
+		return Tier.BADGE
+	if _crowd_allows_full(ui.get_instance_id(), dist):
+		return Tier.FULL
+	return Tier.BADGE
+
+
+## Alpha target per tier: full until TIER_NAME_END, fade to FADE_END; name-only
+## tier is additionally dimmed. Focused ignores the fade.
+static func _tier_alpha(tier: int, dist: float, focused: bool) -> float:
+	if focused:
+		return 1.0
+	var fade := clampf((FADE_END - dist) / (FADE_END - TIER_NAME_END), 0.0, 1.0)
+	if tier == Tier.NAME:
+		return minf(TIER_NAME_ALPHA, fade)
+	return fade
+
+
+## True if this plate is within the CROWD_MAX_FULL closest (focused plates take
+## priority; ties break by instance id so equal-distance plates don't all lose).
+## Plates already FULL get one extra slot of stickiness so borderline crowds
+## don't flicker tiers as people walk. Ranks against last-frame distances — a
+## 1-frame lag in a crowd swap is invisible.
+static func _crowd_allows_full(ui_id: int, dist: float) -> bool:
+	var better := 0
+	for other_id in _plate_dists:
+		if other_id == ui_id:
+			continue
+		var other: Dictionary = _plate_dists[other_id]
+		# Only close or focused plates compete for full-tier slots.
+		if not other.focused and other.dist > TIER_FULL_END:
+			continue
+		if other.focused or other.dist < dist or (other.dist == dist and other_id < ui_id):
+			better += 1
+	var cached = _plate_tiers.get(ui_id)
+	var was_full: bool = cached != null and cached[0] == Tier.FULL
+	return better < CROWD_MAX_FULL + (1 if was_full else 0)
+
+
+## Show/hide the NicknameUI rows for the tier: hash `#xxxx` only in FULL, badge
+## (claimed checkmark + mic) dropped in NAME; the chat bubble follows distance
+## (`show_chat`), not the capped tier. Cached per plate — the setters in
+## nickname_ui.gd (mic/name_claimed) re-apply on their own writes.
+static func _apply_tier(ui: Control, tier: int, show_chat: bool) -> void:
+	var id := ui.get_instance_id()
+	var cached = _plate_tiers.get(id)
+	if cached != null and cached[0] == tier and cached[1] == show_chat:
+		return
+	_plate_tiers[id] = [tier, show_chat]
+	_set_tier_nodes(ui, tier, show_chat)
+
+
+## Re-apply the cached tier after a nickname_ui setter (mic, name_claimed) wrote
+## row visibility directly. No-op for plates without an applied tier.
+static func reassert_tier(ui: Control) -> void:
+	var cached = _plate_tiers.get(ui.get_instance_id())
+	if cached != null:
+		_set_tier_nodes(ui, cached[0], cached[1])
+
+
+static func _set_tier_nodes(ui: Control, tier: int, show_chat: bool) -> void:
+	ui.hash_container.visible = tier == Tier.FULL and not ui.name_claimed
+	ui.message_clip.visible = show_chat
+	ui.checkmark_container.visible = tier != Tier.NAME and ui.name_claimed
+	ui.mic_enabled_icon.visible = tier != Tier.NAME and ui.mic_enabled
+
+
 ## Occlusion raycast for one plate. MUST run from _physics_process — direct_space_state
 ## crashes when queried from _process (idle frame). Throttling is the driver's job.
 static func update_occlusion(avatar) -> void:
@@ -233,7 +329,7 @@ static func update_occlusion(avatar) -> void:
 	var anchor: Vector3 = _anchor(avatar)
 	if cam.global_position.distance_to(anchor) > FADE_END:
 		return
-	# Occlusion is evaluated against the tag's DRAWN (stacked) position, falling
+	# Occlusion is evaluated against the tag's DRAWN position, falling
 	# back to the head anchor before the first placement.
 	var target: Vector3 = anchor
 	if avatar.nickname_ui != null:
@@ -285,74 +381,12 @@ static func _set_on_screen(avatar, on_screen: bool) -> void:
 		_occlusion_untested.erase(avatar_id)
 
 
-## Soft de-overlap: each visible plate carries an offset from its projected anchor.
-## The offset springs home when unconstrained, and overlaps push it apart — along
-## the axis of least penetration (sideways when cheaper, else up) — easing by a
-## fraction per frame. ponytail: O(n²) over visible plates within FADE_END (15m);
-## n is small. Upgrade to a spatial hash if ever laggy.
-static func _stack_position(
-	ui: Control, desired: Vector2, screen_size: Vector2, view_size: Vector2
-) -> Vector2:
-	var id := ui.get_instance_id()
-	var alpha: float = clampf(ui.modulate.a, 0.0, 1.0)
-	var offset: Vector2 = _plate_offsets.get(id, Vector2.ZERO)
-	# Collide with the visible pill, not the whole Control (transparent margins).
-	var inset := screen_size.y * STACK_COLLISION_INSET
-	var col_size := Vector2(screen_size.x, screen_size.y - inset * 2.0)
-	# Hard target: fully clear any overlapping plate along the axis of LEAST
-	# penetration (sideways when that's cheaper, upward otherwise — no name
-	# towers), computed from their last placed collision rects. Fixed point per
-	# frame, so no limit cycle. Only the higher-instance-id plate yields: if both
-	# moved, a pair would escalate without bound. ponytail: yield order is arbitrary
-	# (instance id = spawn order, not depth); with 3+ mutually overlapping plates
-	# the outcome is insertion-order dependent. Rank by distance/alpha if it ever
-	# looks wrong in crowds — the per-frame relaxation hides most of it.
-	var target := Vector2.ZERO
-	for other_id in _plate_rects:
-		if other_id == id or id < other_id:
-			continue
-		var other: Rect2 = _plate_rects[other_id]
-		var candidate := Rect2(desired + target + Vector2(0, inset), col_size)
-		if not candidate.intersects(other):
-			continue
-		# Keep extra distance from plates that are fading out.
-		var other_alpha: float = _plate_alphas.get(other_id, 1.0)
-		var pad := STACK_PAD + (1.0 - other_alpha) * STACK_FADE_PAD
-		var overlap_x: float = (
-			minf(candidate.end.x, other.end.x) - maxf(candidate.position.x, other.position.x)
-		)
-		var overlap_y: float = (
-			minf(candidate.end.y, other.end.y) - maxf(candidate.position.y, other.position.y)
-		)
-		if overlap_x < overlap_y:
-			# Sideways: push to the side this plate is already leaning toward.
-			if desired.x + col_size.x * 0.5 >= other.get_center().x:
-				target.x = other.end.x + pad - desired.x
-			else:
-				target.x = other.position.x - pad - col_size.x - desired.x
-		else:
-			target.y = other.position.y - pad - (desired.y + inset) - col_size.y
-	# Spring toward the target: exponential approach, smooth both ways. Fading
-	# plates get a weaker spring so they drift instead of snapping.
-	var relax: float = STACK_RELAX * lerpf(STACK_FADE_MIN_RELAX, 1.0, alpha)
-	offset = offset.lerp(target, relax)
-	var pos: Vector2 = desired + offset
-	pos.y = maxf(pos.y, 0.0)
-	pos.x = clampf(pos.x, 0.0, maxf(view_size.x - screen_size.x, 0.0))
-	_plate_offsets[id] = pos - desired
-	_plate_rects[id] = Rect2(pos + Vector2(0, inset), col_size)
-	_plate_alphas[id] = alpha
-	return pos
-
-
-## Drop a plate from the de-overlap solver (hidden/occluded/off-screen tags reserve
-## no space).
+## Drop a plate from tracking (hidden/occluded/off-screen tags).
 static func _untrack_plate(ui: Control) -> void:
 	var id := ui.get_instance_id()
-	_plate_rects.erase(id)
-	_plate_offsets.erase(id)
-	_plate_alphas.erase(id)
 	_plate_ray_targets.erase(id)
+	_plate_dists.erase(id)
+	_plate_tiers.erase(id)
 
 
 ## 3D point the nameplate floats at: head anchor horizontally (follows the
@@ -384,9 +418,7 @@ static func _occluded(avatar, from: Vector3, to: Vector3) -> bool:
 		if parent is CollisionObject3D:
 			exclude.append(parent.get_rid())
 
-	# Query A: solid bodies — world geometry + TriggerDetector/player bodies. A hit on
-	# a hidden avatar's collider (blocked / modifier-area hidden) doesn't count: the
-	# invisible avatar must not hide the tags behind it.
+	# Query A: solid bodies — world geometry + TriggerDetector/player bodies.
 	var body_query := PhysicsRayQueryParameters3D.create(from, to)
 	body_query.collision_mask = BODY_MASK
 	body_query.collide_with_areas = false
@@ -399,6 +431,11 @@ static func _occluded(avatar, from: Vector3, to: Vector3) -> bool:
 		if body_hit.is_empty():
 			break
 		var collider = body_hit.get("collider")
+		# Scene colliders generated for invisible meshes (`*_colgen`) are invisible nodes
+		# too, so the hidden-avatar escape below must only apply to CL_PLAYER bodies —
+		# otherwise walls stop occluding and every tag shows through them.
+		if collider is CollisionObject3D and (collider.collision_layer & CL_PHYSICS) != 0:
+			return true
 		if not (collider is Node3D) or collider.is_visible_in_tree():
 			return true
 		body_query.exclude = body_query.exclude + [body_hit.get("rid")]
