@@ -41,7 +41,9 @@ var _chat_reveal_epoch: int = 0
 @onready var _layout: BoxContainer = %BoxContainer_Layout
 @onready var _video_panel: Control = %Control_Video
 @onready var _texture_rect: TextureRect = %TextureRect_Video
+@onready var _safe_root: MarginContainer = %SafeMarginContainer_Root
 @onready var _chat_column: PanelContainer = %PanelContainer_Chat
+@onready var _chat_header: PanelContainer = %PanelContainer_Header
 @onready var _chat_slot: Control = %Control_ChatSlot
 @onready var _label_members: Label = %Label_Members
 @onready var _controls_margin: MarginContainer = %MarginContainer_Controls
@@ -141,6 +143,7 @@ func exit() -> void:
 	_video_player = null
 	_texture_rect.texture = null
 	_keyboard_margin.custom_minimum_size.y = 0
+	_chat_header.visible = true
 	# The world HUD is landscape-only on mobile, like the HUD chat on close.
 	if Global.is_orientation_portrait():
 		Global.set_orientation_landscape()
@@ -342,13 +345,18 @@ func _on_change_virtual_keyboard(virtual_keyboard_height: int) -> void:
 	if not visible:
 		return
 	# The overlay spans the whole window, so the reported height (which on iOS includes the
-	# bottom inset) is the right amount to lift the chat by. Scaled like chat_panel.gd.
+	# bottom inset) is the amount to lift the chat by, minus the bottom margin the safe-area
+	# root already keeps. Scaled like chat_panel.gd.
 	var window_size: Vector2i = DisplayServer.window_get_size()
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	var y_factor: float = viewport_size.y / max(float(window_size.y), 1.0)
+	var safe_bottom: float = float(_safe_root.get_theme_constant("margin_bottom"))
 	_keyboard_margin.custom_minimum_size.y = ceil(
-		max(float(virtual_keyboard_height) * y_factor, 0.0)
+		max(float(virtual_keyboard_height) * y_factor - safe_bottom, 0.0)
 	)
+	# Landscape leaves the chat column about a hundred pixels tall over the keyboard: the
+	# header would be drawn under the input, so it steps aside while typing.
+	_chat_header.visible = _layout.vertical or virtual_keyboard_height <= 0
 	if _chat == null:
 		return
 	if virtual_keyboard_height <= 0:
