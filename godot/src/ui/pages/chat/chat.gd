@@ -32,6 +32,12 @@ const WRITE_PADDING_LANDSCAPE := 10
 const WRITE_HEIGHT_PORTRAIT := 66
 const WRITE_PADDING_PORTRAIT := 16
 
+## Off for a secondary view (the video focus mode) that seeds itself from the HUD chat
+## with copy_messages_from instead, so the welcome message is not posted twice.
+@export var show_welcome_message: bool = true
+## Keeps the NEARBY header hidden when the host draws its own (the video focus mode).
+@export var hide_header: bool = false
+
 var scrolled: bool = false
 var new_messages_count: int = 0
 var _mention_item_scene: PackedScene
@@ -75,7 +81,9 @@ func _ready():
 		self._on_chat_scrollbar_scrolling
 	)
 
-	async_show_welcome_message.call_deferred()
+	if show_welcome_message:
+		async_show_welcome_message.call_deferred()
+	_header.visible = not hide_header
 	button_send.disabled = true
 	_setup_autocomplete()
 
@@ -188,7 +196,7 @@ func _close_write_mode() -> void:
 	_hide_autocomplete()
 	panel_line_edit.hide()
 	button_write.show()
-	_header.show()
+	_header.visible = not hide_header
 	if Global.is_mobile():
 		DisplayServer.virtual_keyboard_hide()
 	# Hand ui_root focus back (the LineEdit took it) so movement re-enables.
@@ -243,11 +251,7 @@ func _async_await_frames(count: int) -> bool:
 
 
 func _on_chat_message_arrived(address: String, message: String, timestamp: float):
-	var new_chat = Global.preload_assets.CHAT_MESSAGE.instantiate()
-	v_box_container_chat.add_child(new_chat)
-	new_chat.reduce_text = false
-	new_chat.set_portrait(Global.is_orientation_portrait())
-	new_chat.set_chat(address, message, timestamp)
+	_add_message(address, message, timestamp)
 
 	if !scrolled:
 		_scroll_to_bottom()
@@ -255,6 +259,22 @@ func _on_chat_message_arrived(address: String, message: String, timestamp: float
 		new_messages_count = new_messages_count + 1
 		panel_container_new_messages.show()
 		label_new_messages.text = str(new_messages_count)
+
+
+func _add_message(address: String, message: String, timestamp: float) -> void:
+	var new_chat = Global.preload_assets.CHAT_MESSAGE.instantiate()
+	v_box_container_chat.add_child(new_chat)
+	new_chat.reduce_text = false
+	new_chat.set_portrait(Global.is_orientation_portrait())
+	new_chat.set_chat(address, message, timestamp)
+
+
+## Replays `source`'s messages into this (empty) view, oldest first.
+func copy_messages_from(source: Control) -> void:
+	for node in source.v_box_container_chat.get_children():
+		if node.get_script() == ChatMessage:
+			_add_message(node.address, node.message, node.timestamp)
+	scroll_to_bottom_deferred()
 
 
 func is_at_bottom() -> bool:
