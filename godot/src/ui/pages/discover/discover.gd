@@ -4,6 +4,10 @@ extends Control
 # The name play_stream() registers the seasonal track under with MusicPlayer — not a
 # res://assets/sfx/ambient/ resource name, just a marker get_current_music() is compared against.
 const SEASONAL_MUSIC_NAME := "seasonal_discover"
+# places_featured.fetch_tag swaps between these — content ops tags places "season" instead of
+# "featured" for the duration, same carousel, no separate flag.
+const DEFAULT_FEATURED_TAG := "featured"
+const SEASONAL_FEATURED_TAG := "season"
 
 var search_text: String = ""
 var _generator_statuses: Dictionary = {}
@@ -54,6 +58,7 @@ func _ready():
 	event_details.hide()
 	search_bar.close_searchbar()
 	Global.seasonal_skin_manager.seasonal_assets_ready.connect(_apply_seasonal_skin)
+	Global.seasonal_skin_manager.seasonal_assets_ready.connect(_apply_seasonal_featured_tag)
 
 	jump_in.jump_in.connect(_on_jump_in_jump_in)
 	jump_in.jump_in_world.connect(_on_jump_in_world)
@@ -234,6 +239,7 @@ func _on_visibility_changed():
 		# Fire-and-forget, no-op after the first call — see async_request_assets().
 		Global.seasonal_skin_manager.async_request_assets()
 		_apply_seasonal_skin()
+		_apply_seasonal_featured_tag()
 	else:
 		# Only restore if the seasonal track is still playing (don't fight a later change), and
 		# stop() rather than play("") when nothing played before — the latter just no-ops.
@@ -268,6 +274,24 @@ func _apply_seasonal_skin() -> void:
 	):
 		_music_before_seasonal = Global.music_player.get_current_music()
 		Global.music_player.play_stream(audio_stream, SEASONAL_MUSIC_NAME)
+
+
+## Swaps the home-tab featured carousel's query tag between "featured" and "season" to match
+## SeasonalSkinManager (issue #3025) — content ops tags places "season" for the duration instead
+## of a separate flag. No-op once already on the right tag, so a re-show doesn't re-fetch for
+## nothing.
+func _apply_seasonal_featured_tag() -> void:
+	if not is_instance_valid(places_featured):
+		return
+	var tag := (
+		SEASONAL_FEATURED_TAG
+		if Global.seasonal_skin_manager.is_seasonal_skin_active()
+		else DEFAULT_FEATURED_TAG
+	)
+	if places_featured.fetch_tag == tag:
+		return
+	places_featured.fetch_tag = tag
+	places_featured.fetch()
 
 
 ## Android-only counterpart of the low-spec-iPhone warning below: shows the "device no longer
