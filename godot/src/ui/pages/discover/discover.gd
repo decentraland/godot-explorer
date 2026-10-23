@@ -28,7 +28,7 @@ var _showing_streak_modal: bool = false
 
 @onready var friends_online: VBoxContainer = %FriendsOnline
 @onready var last_visited: VBoxContainer = %LastVisited
-@onready var places_featured: Control = %PlacesFeatured
+@onready var places_featured: SnapCarousel = %PlacesFeatured
 @onready var places_most_active: VBoxContainer = %PlacesMostActive
 @onready var events: VBoxContainer = %Events
 @onready var places_favorites: VBoxContainer = %PlacesFavorites
@@ -286,9 +286,9 @@ func _apply_seasonal_featured_tag() -> void:
 		return
 	var season_active := Global.seasonal_skin_manager.is_seasonal_skin_active()
 	var tag := SEASONAL_FEATURED_TAG if season_active else DEFAULT_FEATURED_TAG
-	places_featured.fallback_fetch_tag = DEFAULT_FEATURED_TAG if season_active else ""
 	if places_featured.fetch_tag == tag:
 		return
+	places_featured.fallback_fetch_tag = DEFAULT_FEATURED_TAG if season_active else ""
 	places_featured.fetch_tag = tag
 	places_featured.fetch()
 
