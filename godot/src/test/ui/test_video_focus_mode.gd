@@ -66,8 +66,8 @@ func _test_lifecycle() -> void:
 	Global.orientation_changed.emit(true)
 	_expect(layout.vertical, "portrait stacks the chat under the video")
 	_expect(
-		button_exit.custom_minimum_size == Vector2(96, 96),
-		"portrait sizes the exit button like the HUD chat disc (96)"
+		button_exit.custom_minimum_size == Vector2(92, 92),
+		"portrait sizes the exit button 4 px under the HUD chat disc (92)"
 	)
 	collapse.pressed.emit()
 	_expect(

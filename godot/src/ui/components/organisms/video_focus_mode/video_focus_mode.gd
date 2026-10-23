@@ -23,6 +23,11 @@ const SCROLL_SETTLE_SECONDS := 0.25
 ## The NEARBY title and the member count, per the design.
 const HEADER_FONT_SIZE_LANDSCAPE := 24
 const HEADER_FONT_SIZE_PORTRAIT := 28
+## Side margin of the exit/rotate row: the HUD chat's 40 px in portrait (hud_margins.tres).
+const CONTROLS_SIDE_MARGIN_LANDSCAPE := 48
+const CONTROLS_SIDE_MARGIN_PORTRAIT := 40
+## The exit square is trimmed below the 96 px disc size in portrait, per design.
+const PORTRAIT_EXIT_TRIM := 4
 
 var _video_player: Node = null
 var _chat: Control = null
@@ -39,6 +44,7 @@ var _chat_reveal_epoch: int = 0
 @onready var _chat_column: PanelContainer = %PanelContainer_Chat
 @onready var _chat_slot: Control = %Control_ChatSlot
 @onready var _label_members: Label = %Label_Members
+@onready var _controls_margin: MarginContainer = %MarginContainer_Controls
 @onready var _button_exit: Button = %Button_Exit
 @onready var _label_exit: Label = %Label_Exit
 @onready var _button_rotate: HudButton = %Button_Rotate
@@ -192,9 +198,13 @@ func _apply_chat_layout() -> void:
 	var preset := HudButton.Size.LARGE if is_portrait else HudButton.Size.SMALL
 	_button_rotate.size_preset = preset
 	var spec: Vector2i = HudButton.SIZES[preset]
-	_button_exit.custom_minimum_size = Vector2(spec.x, spec.x)
+	var exit_px: int = spec.x - (PORTRAIT_EXIT_TRIM if is_portrait else 0)
+	_button_exit.custom_minimum_size = Vector2(exit_px, exit_px)
 	_button_exit.add_theme_constant_override("icon_max_width", spec.y)
-	_label_exit.custom_minimum_size = Vector2(0, spec.x)
+	_label_exit.custom_minimum_size = Vector2(0, exit_px)
+	var side: int = CONTROLS_SIDE_MARGIN_PORTRAIT if is_portrait else CONTROLS_SIDE_MARGIN_LANDSCAPE
+	_controls_margin.add_theme_constant_override("margin_left", side)
+	_controls_margin.add_theme_constant_override("margin_right", side)
 	# One LabelSettings is shared by the title and the member count.
 	_label_members.label_settings.font_size = (
 		HEADER_FONT_SIZE_PORTRAIT if is_portrait else HEADER_FONT_SIZE_LANDSCAPE
