@@ -26,6 +26,23 @@ pub struct AvatarIk {
     head: head::HeadIk,
 }
 
+/// Godot's Gram-Schmidt `orthonormalized`, but `None` for a degenerate basis. godot-rust's own
+/// `Basis::orthonormalized` asserts on any determinant under 1e-5, which a skeleton scaled to
+/// 0.01 (a valid avatar) already is, and a panic here unwinds out of `ik_process` before the rigs
+/// go back into `self.ik`: the next frame builds them again and the old ones stay in the tree.
+fn orthonormal(basis: Basis) -> Option<Basis> {
+    let x = basis.col_a().try_normalized()?;
+    let y = (basis.col_b() - x * x.dot(basis.col_b())).try_normalized()?;
+    let z =
+        (basis.col_c() - x * x.dot(basis.col_c()) - y * y.dot(basis.col_c())).try_normalized()?;
+    Some(Basis::from_cols(x, y, z))
+}
+
+/// A skeleton the IK can build its rig on: building adds nodes before it can fail.
+fn skeleton_usable(skeleton: &Gd<Skeleton3D>) -> bool {
+    orthonormal(skeleton.get_global_transform().basis).is_some()
+}
+
 /// Writes a bone's pose rotation from a wanted world basis: world -> skeleton -> parent bone.
 fn set_bone_world_rotation(
     skel: &mut Gd<Skeleton3D>,
@@ -92,5 +109,26 @@ impl DclAvatar {
                 .update_remote(self, &skeleton, delta, head_on, yaw, pitch);
         }
         self.ik = ik;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn orthonormal_keeps_a_skeleton_scaled_to_a_hundredth() {
+        // godot-rust's own orthonormalized() panics here (determinant 1e-6).
+        let tiny = Basis::from_diagonal(0.01, 0.01, 0.01);
+        let out = orthonormal(tiny).expect("a 0.01 scale is a valid skeleton");
+        assert!((out.col_a() - Vector3::RIGHT).length() < 1e-5);
+        assert!((out.col_b() - Vector3::UP).length() < 1e-5);
+        assert!((out.col_c() - Vector3::BACK).length() < 1e-5);
+    }
+
+    #[test]
+    fn orthonormal_rejects_a_zero_scale() {
+        assert!(orthonormal(Basis::from_diagonal(0.0, 1.0, 1.0)).is_none());
+        assert!(orthonormal(Basis::from_diagonal(0.0, 0.0, 0.0)).is_none());
     }
 }

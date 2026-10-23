@@ -51,7 +51,9 @@ impl ISkeletonModifier3D for HandAlignModifier3D {
         let Some(mut skel) = self.base().get_skeleton() else {
             return;
         };
-        let skel_basis = skel.get_global_transform().basis.orthonormalized();
+        let Some(skel_basis) = super::orthonormal(skel.get_global_transform().basis) else {
+            return;
+        };
         for side in SIDES {
             let (w, Some(frame)) = (self.weights[side], self.frames[side]) else {
                 continue;
@@ -72,8 +74,13 @@ impl ISkeletonModifier3D for HandAlignModifier3D {
             let want_world =
                 Basis::from_cols(into, knuckles, into.cross(knuckles)) * frame.inverse();
             let idx = self.bones[side];
-            let cur_world = (skel_basis * skel.get_bone_global_pose(idx).basis).orthonormalized();
-            let mixed = cur_world.slerp(&want_world.orthonormalized(), w);
+            let (Some(cur_world), Some(want_world)) = (
+                super::orthonormal(skel_basis * skel.get_bone_global_pose(idx).basis),
+                super::orthonormal(want_world),
+            ) else {
+                continue;
+            };
+            let mixed = cur_world.slerp(&want_world, w);
             set_bone_world_rotation(&mut skel, idx, skel_basis, mixed);
         }
     }
@@ -111,7 +118,7 @@ impl HandsIk {
         enabled: bool,
     ) {
         if self.rig.is_none() {
-            if !enabled {
+            if !enabled || !super::skeleton_usable(skeleton) {
                 return;
             }
             self.rig = Some(build(avatar, skeleton));
@@ -178,7 +185,7 @@ fn rest_origin_in(skeleton: &Gd<Skeleton3D>, ancestor: i32, bone: i32) -> Option
 }
 
 /// The bone's rest orientation in world space: the frame the rest-derived signs are read in.
-fn rest_world_basis(skeleton: &Gd<Skeleton3D>, bone: i32) -> Basis {
+fn rest_world_basis(skeleton: &Gd<Skeleton3D>, bone: i32) -> Option<Basis> {
     let mut chain = Vec::new();
     let mut i = bone;
     while i >= 0 {
@@ -188,7 +195,7 @@ fn rest_world_basis(skeleton: &Gd<Skeleton3D>, bone: i32) -> Basis {
     let rest = chain.iter().rev().fold(Basis::IDENTITY, |acc, b| {
         acc * skeleton.get_bone_rest(*b).basis
     });
-    (skeleton.get_global_transform().basis * rest).orthonormalized()
+    super::orthonormal(skeleton.get_global_transform().basis * rest)
 }
 
 /// The hand's rest frame in the hand bone's own space: X = palm normal (out of the palm), Y =
@@ -205,7 +212,7 @@ fn rest_palm_frame(skeleton: &Gd<Skeleton3D>, side: usize, hand: i32) -> Option<
     let knuckles = (to_knuckle - palm * to_knuckle.dot(palm)).try_normalized()?;
     // The cross product flips sense on the mirrored side, so pin the sign to the bind pose's
     // convention (both palms face down there) instead of to a side.
-    if (rest_world_basis(skeleton, hand) * palm).dot(Vector3::DOWN) < 0.0 {
+    if (rest_world_basis(skeleton, hand)? * palm).dot(Vector3::DOWN) < 0.0 {
         palm = -palm;
     }
     Some(Basis::from_cols(palm, knuckles, palm.cross(knuckles)))
