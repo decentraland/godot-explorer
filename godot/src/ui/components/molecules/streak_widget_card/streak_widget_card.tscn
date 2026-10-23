@@ -1,0 +1,28 @@
+[gd_scene format=3 uid="uid://cr5u4c5campwj"]
+
+[ext_resource type="Script" uid="uid://bjiyv35oerb2r" path="res://src/ui/components/molecules/streak_widget_card/streak_widget_card.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://bh2ah441y8m84" path="res://src/ui/components/molecules/streak_day_row/streak_day_row.tscn" id="2_row"]
+[ext_resource type="PackedScene" uid="uid://oyokdq67n0i3" path="res://src/ui/components/atoms/buttons/claim_button/claim_button.tscn" id="3_t5t6q"]
+
+[node name="StreakWidgetCard" type="MarginContainer" unique_id=39555180]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 256.0
+grow_horizontal = 2
+size_flags_vertical = 0
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_right = 48
+script = ExtResource("1_script")
+metadata/mobile_preview_orientation = "portrait"
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1703951090]
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="StreakDayRow" parent="VBoxContainer" unique_id=380550757 instance=ExtResource("2_row")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Button_Claim" parent="VBoxContainer" unique_id=1351134325 instance=ExtResource("3_t5t6q")]
+unique_name_in_owner = true
+layout_mode = 2

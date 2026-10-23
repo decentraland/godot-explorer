@@ -23,33 +23,47 @@ const ITALIC_SHEAR_X: f32 = 0.25;
 impl Font {
     fn get_font_path(self) -> &'static str {
         match self {
-            Font::FSansSerif => "res://assets/themes/fonts/noto/NotoSans-Regular.ttf",
-            Font::FSerif => "res://assets/themes/fonts/noto/NotoSerif-Regular.ttf",
-            Font::FMonospace => "res://assets/themes/fonts/noto/NotoSansMono-Regular.ttf",
+            Font::FSansSerif => {
+                "res://assets/themes/fonts/noto/NotoSans-Regular_emoji_fallback.tres"
+            }
+            Font::FSerif => "res://assets/themes/fonts/noto/NotoSerif-Regular_emoji_fallback.tres",
+            Font::FMonospace => {
+                "res://assets/themes/fonts/noto/NotoSansMono-Regular_emoji_fallback.tres"
+            }
         }
     }
 
     fn get_font_bold_path(self) -> &'static str {
         match self {
-            Font::FSansSerif => "res://assets/themes/fonts/noto/NotoSans-Bold.ttf",
-            Font::FSerif => "res://assets/themes/fonts/noto/NotoSans-Bold.ttf",
-            Font::FMonospace => "res://assets/themes/fonts/noto/NotoSans-Bold.ttf",
+            Font::FSansSerif => "res://assets/themes/fonts/noto/NotoSans-Bold_emoji_fallback.tres",
+            Font::FSerif => "res://assets/themes/fonts/noto/NotoSans-Bold_emoji_fallback.tres",
+            Font::FMonospace => "res://assets/themes/fonts/noto/NotoSans-Bold_emoji_fallback.tres",
         }
     }
 
     fn get_font_italic_path(self) -> &'static str {
         match self {
-            Font::FSansSerif => "res://assets/themes/fonts/noto/NotoSans-Italic.ttf",
-            Font::FSerif => "res://assets/themes/fonts/noto/NotoSans-Italic.ttf",
-            Font::FMonospace => "res://assets/themes/fonts/noto/NotoSans-Italic.ttf",
+            Font::FSansSerif => {
+                "res://assets/themes/fonts/noto/NotoSans-Italic_emoji_fallback.tres"
+            }
+            Font::FSerif => "res://assets/themes/fonts/noto/NotoSans-Italic_emoji_fallback.tres",
+            Font::FMonospace => {
+                "res://assets/themes/fonts/noto/NotoSans-Italic_emoji_fallback.tres"
+            }
         }
     }
 
     fn get_font_bold_italic_path(self) -> &'static str {
         match self {
-            Font::FSansSerif => "res://assets/themes/fonts/noto/NotoSans-BoldItalic.ttf",
-            Font::FSerif => "res://assets/themes/fonts/noto/NotoSans-BoldItalic.ttf",
-            Font::FMonospace => "res://assets/themes/fonts/noto/NotoSans-BoldItalic.ttf",
+            Font::FSansSerif => {
+                "res://assets/themes/fonts/noto/NotoSans-BoldItalic_emoji_fallback.tres"
+            }
+            Font::FSerif => {
+                "res://assets/themes/fonts/noto/NotoSans-BoldItalic_emoji_fallback.tres"
+            }
+            Font::FMonospace => {
+                "res://assets/themes/fonts/noto/NotoSans-BoldItalic_emoji_fallback.tres"
+            }
         }
     }
 
