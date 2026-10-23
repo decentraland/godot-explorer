@@ -152,3 +152,8 @@ dependencies {
 if (withGodot) {
     apply from: "godot.gradle"
 }
+
+// Copies the bundle's debug ID into the Hermes source map. CI uploads the maps itself
+// (android_builds.yml), so the plugin's own upload is off.
+apply from: "../../node_modules/@sentry/react-native/sentry.gradle"
+ext.shouldSentryAutoUploadGeneral = { false }

@@ -16,8 +16,9 @@ signature differs: `adb uninstall org.decentraland.godotexplorer`, which wipes d
 
 - Godot-exported app: `cargo run -- run --target android -- --perf-log` (the extras reach the launcher), or the
   deeplink path in `launch_devices.sh --param perf-log=true` is not wired: use the CLI form.
-- Android RN host: add `"--perf-log"` to `BOOT_ARGS` in `rn/android/app/src/godot/java/com/dclrn/MainActivity.kt`
-  for the measurement build (do not commit it).
+- Android RN host: debug Gradle builds (`cargo run -- run --target android`) pass `--perf-log` already; a release
+  build does not (`MainActivity.BOOT_ARGS`), so read fps and memory over the debug hub (`state`) and
+  `dumpsys meminfo` there.
 - iOS RN host: put `--perf-log` on its own line in the export's `godot_cmdline.txt`, or pass it as a launch argument.
 
 ## Android

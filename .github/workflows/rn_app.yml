@@ -56,6 +56,14 @@ jobs:
       - run: npx tsc --noEmit
       - run: npx eslint App.tsx src __tests__
       - run: npx jest
+      # High findings sit in build-time tooling (expo's config plugins, the RN CLI) with no fix
+      # upstream; a critical one anywhere in the production tree fails the PR.
+      - name: No critical advisory in the dependency tree
+        run: npm audit --omit=dev --audit-level=critical
+      - name: Production npm licences are on the allow-list
+        run: >-
+          npx --yes license-checker@25.0.1 --production --excludePrivatePackages --summary
+          --onlyAllow "MIT;ISC;BSD-3-Clause;BSD-2-Clause;Apache-2.0;BlueOak-1.0.0;FSL-1.1-MIT;MPL-2.0;Unlicense;CC0-1.0;CC-BY-4.0;Python-2.0;0BSD;(MIT OR CC0-1.0);(MIT OR Apache-2.0);(BSD-3-Clause OR GPL-2.0)"
       - name: Translations match godot/locale
         run: node scripts/i18n-from-csv.mjs --check
 

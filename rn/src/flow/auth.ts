@@ -12,6 +12,9 @@ export function authCode(error: unknown): string | undefined {
   return undefined;
 }
 
+/** The core refuses to begin a sign-in once one is done; callers move on instead of failing. */
+export const alreadySignedIn = () => core().state().tag === 'SignedIn';
+
 export const startGuest = () => core().signInGuest();
 
 export const sendEmailCode = (email: string) => core().signInEmailStart(email);

@@ -58,7 +58,7 @@
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Decentraland connects to servers on your local network to load custom scenes and realms.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>This app does not use the microphone, but a third-party library may require this permission.</string>
+	<string>Decentraland requires your microphone to communicate with other players.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Decentraland needs access to your photos so you can attach screenshots to a bug report.</string>
 	<key>RCTNewArchEnabled</key>

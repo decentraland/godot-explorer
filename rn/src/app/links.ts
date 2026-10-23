@@ -19,10 +19,17 @@ export type LinkTarget =
 
 type Handler = (target: LinkTarget) => void;
 const handlers = new Set<Handler>();
+/** A link that arrived before the shell subscribed (a cold start): the latest one waits for it. */
+let undelivered: LinkTarget | undefined;
 
 /** Subscribes the shell (it owns the navigator) to link navigation; returns the unsubscribe. */
 export function onLinkTarget(handler: Handler): () => void {
   handlers.add(handler);
+  if (undelivered) {
+    const waiting = undelivered;
+    undelivered = undefined;
+    handler(waiting);
+  }
   return () => {
     handlers.delete(handler);
   };
@@ -88,6 +95,9 @@ export function applyRouted(routed: Routed): void {
   routed.effects.forEach(applyEffect);
   if (routed.navigation) {
     const target = targetOf(routed.navigation);
+    if (handlers.size === 0) {
+      undelivered = target;
+    }
     handlers.forEach(handler => handler(target));
   }
 }

@@ -7,6 +7,7 @@ import { useApi } from '../discover/ApiContext';
 import { ftuePlaces } from '../discover/ftue';
 import {
   acceptTerms,
+  alreadySignedIn,
   authCode,
   cancelSignIn,
   sendEmailCode,
@@ -103,12 +104,23 @@ export function EntryFlow({
       step === 'auth_wait' &&
       (provider === 'google' || provider === 'apple' || provider === 'wallet')
     ) {
-      startBrowserSignIn(provider === 'wallet' ? undefined : provider);
+      try {
+        startBrowserSignIn(provider === 'wallet' ? undefined : provider);
+      } catch {
+        // A recovered session can land while the user taps: the core refuses to begin a sign-in
+        // when one is already done, and the flow simply moves on.
+        if (!alreadySignedIn()) {
+          failed();
+          return () => {
+            cancelled = true;
+          };
+        }
+      }
       whenSignedIn().then(succeeded, failed);
     } else if (step === 'guest_wait') {
       startGuest().then(
         () => !cancelled && dispatch({ type: 'guestReady' }),
-        failed,
+        () => (alreadySignedIn() ? succeeded() : failed()),
       );
     }
     return () => {

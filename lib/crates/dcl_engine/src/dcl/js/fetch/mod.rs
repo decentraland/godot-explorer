@@ -84,6 +84,17 @@ async fn op_fetch_custom(
     #[string] _redirect: String, // TODO: unimplemented
     timeout: u32,
 ) -> Result<FetchResponse, AnyError> {
+    let mut headers = headers
+        .into_iter()
+        .map(|(key, value)| {
+            let name = reqwest::header::HeaderName::from_bytes(key.as_bytes())
+                .map_err(|e| anyhow::anyhow!("invalid header name {key:?}: {e}"))?;
+            let value = HeaderValue::from_str(&value)
+                .map_err(|e| anyhow::anyhow!("invalid value for header {key:?}: {e}"))?;
+            Ok((name, value))
+        })
+        .collect::<Result<reqwest::header::HeaderMap, AnyError>>()?;
+
     let maybe_network_inspector_sender = op_state
         .borrow()
         .try_borrow::<NetworkInspectorSender>()
@@ -130,11 +141,6 @@ async fn op_fetch_custom(
         "TRACE" => http::Method::TRACE,
         _ => http::Method::GET,
     };
-
-    let mut headers = headers
-        .into_iter()
-        .map(|(key, value)| (key.parse().unwrap(), value.parse().unwrap()))
-        .collect::<reqwest::header::HeaderMap>();
 
     headers.append("User-Agent", HeaderValue::from_static("DCLExplorer/0.1"));
     headers.append(

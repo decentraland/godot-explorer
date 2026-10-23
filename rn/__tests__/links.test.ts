@@ -70,4 +70,17 @@ describe('deep link targets', () => {
     expect(tracked).toEqual(['Push Opened']);
     expect(seen).toEqual(['discover']);
   });
+
+  it('keeps a link that arrives before the shell subscribes and hands it over once', () => {
+    applyRouted({
+      navigation: new Navigation.OpenPlace({ id: 'p9' }),
+      effects: [],
+    });
+    const seen: string[] = [];
+    const off = onLinkTarget(target => seen.push(target.kind));
+    off();
+    const again = onLinkTarget(target => seen.push(target.kind));
+    again();
+    expect(seen).toEqual(['place']);
+  });
 });

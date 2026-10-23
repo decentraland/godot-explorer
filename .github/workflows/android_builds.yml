@@ -179,6 +179,9 @@ jobs:
           mkdir -p android-debug-symbols
           cp godot/android/build/build/outputs/native-debug-symbols/standardRelease/native-debug-symbols.zip android-debug-symbols/ || true
 
+      - name: Native libraries are 16 KB aligned
+        run: python3 .github/scripts/check-16kb-alignment.py exports/decentraland.godot.client.apk
+
       - name: Save Gradle cache (main/2.x only)
         if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/2.x') && steps.gradle-cache.outputs.cache-hit != 'true'
         uses: WarpBuilds/cache/save@v1.4.6
@@ -471,7 +474,16 @@ jobs:
             echo "⚠️  Godot AAR not found at $GODOT_AAR"
           fi
 
-          # 3. Register the release under the runtime's name, attach commits and mark it
+          # 3. The Hermes source map, matched to the bundle by the debug ID Metro stamped on it
+          #    (rn/metro.config.js), so a JS crash shows its TypeScript frames.
+          JS_MAPS=/tmp/js-sourcemaps && rm -rf "$JS_MAPS" && mkdir -p "$JS_MAPS"
+          cp rn/android/app/build/generated/assets/react/release/index.android.bundle \
+             rn/android/app/build/generated/sourcemaps/react/release/index.android.bundle.map "$JS_MAPS/" \
+            && sentry-cli sourcemaps upload --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" \
+                 --release "$SENTRY_RELEASE" "$JS_MAPS" \
+            || echo "⚠️  JS source maps not uploaded"
+
+          # 4. Register the release under the runtime's name, attach commits and mark it
           #    deployed to the environment this build targets, so issues get "first seen in",
           #    suspect commits and regression detection.
           case "${PROD_FLAG:-}" in

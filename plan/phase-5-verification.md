@@ -55,6 +55,17 @@ RN (phase 4 and earlier, still open)
 iOS: **never built.** Every iOS-affecting change in phases 3–5 is unverified and needs the user's hands
 (Xcode, Metal toolchain, Firebase iOS files, the `ios_host_release.a` template).
 
+## 5b device run (Moto G60, 19 Oct 2026, debug build of the working tree on `2.x`)
+
+- [x] Boot with the branch engine (`4.6.2.stable.gh-29.42086da39`): no panic; `DclGlobal` asserts one core per process in debug builds and did not fire (3.1).
+- [x] **Stale Android template trap:** the first install carried an older engine AAR in the ignored `godot/android/` (the engine lacked `RenderingServer::instance_geometry_is_draw_ready`, the extension panicked at init and entering a world hung at 0%). Deleting `godot/android/` and exporting again fixed it. Nothing in the export notices the mismatch.
+- [x] Fresh install → Terms → guest → avatar → Continue → Genesis Plaza → tutorial Skip, driven by `rn/.maestro/smoke.yaml` (passes). Discover → place sheet → enter works by hand.
+- [x] Cold-start `https://decentraland.org/jump/?position=10,10` enters the world at 10,10 (it opened Discover before the `App.tsx` / `links.ts` fix).
+- [x] `RUNNING_CRITICAL` trim-memory in the world: same pid, no crash.
+- [x] No panic, "call failed" or "freed" in logcat across these runs. fps was 2-4 in the debug template right after load.
+- [x] IME scene (2.8, `tests/ime-uiinput-scene`, preview over LAN via the deep link): keyboard shows on the bottom input, typed text reaches the scene, Enter submits, keyboard dismisses. Rotation and RN-`TextInput` rows and iOS not run.
+- Not run: ANR / app-hang report (5b.11), the Sentry readable-stack check (needs a CI build), warm-start and `decentraland://` links, the Godot-exported-app comparison (2.9), iOS.
+
 ## Fork API pin (5.0)
 
 - [x] `decentraland/godotengine` #29 (`spike/ios-host-embedding`, commit `333404e`): `process_templates.yml` dumps `extension_api.json` and `gdextension_interface.h` with the Linux editor and uploads them with the editors. Verified: the PR's CI run published `https://godot-engine-releases.dclexplorer.com/branches/spike-ios-host-embedding/editors/extension_api.json` (4.6.2.stable.gh, 6.7 MB), and it carries `Label3D::set_bbcode_enabled`, `set_bold_font`, `set_outline_size_float`.

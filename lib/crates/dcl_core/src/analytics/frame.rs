@@ -36,7 +36,7 @@ impl Frame {
 
         if self.dt_ms_vec.len() >= FRAME_AMOUNT_TO_MEASURE {
             // All the dt >= 0
-            self.dt_ms_vec.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            self.dt_ms_vec.sort_by(|a, b| a.total_cmp(b));
 
             let n_samples = self.dt_ms_vec.len();
             let median_frame_time = self.dt_ms_vec[n_samples / 2];
