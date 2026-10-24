@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+#
+# ⚠️ DUPLICATED FILE — keep in sync with the identical copy in the other repo.
+# The mobile build pipeline spans two repos, so this script lives in BOTH
+# decentraland/godot-explorer and decentraland/godot-asc-deploy. Edit both copies together.
+#
 """Report one mobile build-pipeline event to the board (mobile-board Cloudflare Worker).
 
 Replaces slack-root.py, slack-reply.sh and pr-card.py: the board stores the event, renders the Slack
@@ -24,7 +29,7 @@ Env (only NON-EMPTY values are sent):
 
 Writes slack_ts / slack_channel / run_id to $GITHUB_OUTPUT when the board returns them.
 """
-import hashlib, json, os, sys, time, urllib.error, urllib.request
+import hashlib, json, os, re, sys, time, urllib.error, urllib.request
 
 DEFAULT_URL = "https://mobile-board.mateo-a2b.workers.dev"
 CARD_FIELDS = ["status", "build_number", "build_version", "branch", "triggered_by", "pr_url", "commit",
@@ -54,6 +59,11 @@ if run_id:
 for key, name in (("sha", "SHA"), ("pr_number", "PR_NUMBER"), ("message", "MESSAGE"), ("log", "LOG")):
     if env(name):
         event[key] = env(name)
+# godot-asc-deploy may be dispatched with sha=latest; only a real commit can identify the pipeline.
+if "sha" in event and not re.fullmatch(r"[0-9a-fA-F]{40}", event["sha"]):
+    del event["sha"]
+if "run_id" not in event and "sha" not in event:
+    print("report-build-event: no run id and no commit sha — skipping"); sys.exit(0)
 if env("REF") or env("BRANCH"):
     event["ref"] = env("REF") or env("BRANCH")
 card = {k: env(k.upper()) for k in CARD_FIELDS if env(k.upper())}
