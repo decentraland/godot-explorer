@@ -72,6 +72,9 @@ in phase 3 and not run again here. Rows marked "not done" are the work left befo
 | Hide UI | RN `HideUi` control | Not run | The sub-toggles were dropped |
 | Controls overlay on first scene entry (main #3032) | RN `ftue/ControlsOverlay` + `dcl_core::ftue` | Not run (jest, gallery) | `ftue-overlay-tap-through` not honoured; device run |
 | Guided tutorial for new players (main #3041) | RN `ftue/TutorialLayer` + `dcl_core::ftue` | Not run (jest, gallery) | Reward card and claim (no rewards client on 2.x; guests need Add Email, 6.8); joystick resting-base redraw; device run of all 7 steps |
+| 7-day login streak (main #3067, #3018) | Not done | | Streak modal, claim and analytics (`LOGIN_STREAK_*`) not ported; 1.x users have it, so it is needed before 2.0.0 |
+| Dev intent card (main #3108) | CLI flags parsed in `DclCli`, stdout only | Not run | The on-screen card has no home in RN yet (desktop has no product UI, D-4) |
+| Own nametag setting, distance-tiered nametags (main #3023) | Engine `nameplate_tiers` + RN `GameplaySection` toggle | Not run | Device run in a crowd |
 | Avatar tap opens a profile | Not done | | Needs a player-profile screen |
 | Scene request (link, teleport, realm change, NFT) | `CoreModals` + `AnswerSceneRequest` | Not run | Needs a scene that asks; NFT card not ported |
 | Private world / place not found | Destination check + engine notice | Ran: not found (deep link) | Private and password not run |
