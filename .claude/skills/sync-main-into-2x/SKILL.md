@@ -56,7 +56,7 @@ touched system (`port-main-pr-to-2x` §2).
 
 | Verdict | When | What the sync does |
 |---|---|---|
-| **Taken** | CI, tooling, docs; Rust/shader/asset changes whose files exist on 2.x; version bumps | the merge carries it; check it is still *wired* (a Rust function whose only caller was GDScript is dead on 2.x until a port calls it) |
+| **Taken** | CI, tooling, docs; Rust/shader/asset changes whose files exist on 2.x; version bumps (**not** the version number: 2.x stays at 2.0.0) | the merge carries it; check it is still *wired* (a Rust function whose only caller was GDScript is dead on 2.x until a port calls it) |
 | **Ported** | behaviour written in GDScript that 2.x needs (engine side, logic, flags, notifications, settings, product UI features) | re-implemented in Rust (engine or core) or RN, one commit per upstream PR, same behaviour |
 | **Adapted** | the feature matters but its 1.x shape breaks a 2.x rule (a live avatar inside a modal, a plugin, GDScript modal ordering) | re-implemented the 2.x way; the PR row says what differs and why |
 | **Already covered** | 2.x already has it (an RN screen built from Figma, a core rule) | nothing, or the small gaps closed; the row names the 2.x file |
@@ -74,8 +74,9 @@ Defaults that hold most of the time:
 - **A Rust change → Taken**, translated to 2.x idioms where it conflicts.
 - **Locale CSVs → Taken**: they are the source of RN's es/pt_BR (D-26) even when the GDScript using
   a key is gone.
-- **A version bump → Taken** into `[workspace.package]` in `lib/Cargo.toml` (2.x follows main's
-  marketing version until the 2.0.0 switch, D-27).
+- **A version bump → Discarded.** 2.x is 2.0.0 and a sync never changes it: keep `version = "2.0.0"`
+  in `[workspace.package]` (`lib/Cargo.toml`) and the 2.0.0 lines in `godot/export_presets.cfg`, whatever
+  main's bump says (the build string, TestFlight and Firebase all read it).
 
 ## 4. Merge: resolution only
 
@@ -114,8 +115,8 @@ By hand, understanding both sides (`git show "${MB}:<old path>"` against each si
   `extension_api.json`. If main pins another engine branch, merge that branch into the 2.x pin in
   the engine repo (and retarget the pinned PR onto it), reinstall, and call the new methods typed.
   Only when that cannot happen in the sync, use a guarded probe (`port-main-pr-to-2x` §4) and flag it.
-- **`lib/Cargo.toml`** → 2.x's `[workspace]` layout, main's version in `[workspace.package]`; let
-  cargo rewrite `Cargo.lock`. **`godot/export_presets.cfg`** → main's version lines, 2.x's rest.
+- **`lib/Cargo.toml`** → 2.x's `[workspace]` layout, `version = "2.0.0"` in `[workspace.package]` (never main's); let
+  cargo rewrite `Cargo.lock`. **`godot/export_presets.cfg`** → 2.x's rest, version lines stay 2.0.0.
 - **zsh**: `$MB:lib/...` applies the `:l` (lowercase) modifier; write `"${MB}:lib/..."`.
 
 The merge commit builds and passes §6's checks on its own. Its message lists the upstream PRs it
