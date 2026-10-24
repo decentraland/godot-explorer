@@ -20,6 +20,7 @@ import {
   whenSignedIn,
 } from './auth';
 import { core } from '../core';
+import { takePreviewLaunch, whenInitialLinkRouted } from './launchLink';
 import { initialFlow, reduceFlow } from './flowMachine';
 import { FtueStep } from './FtueStep';
 import {
@@ -174,6 +175,8 @@ export function EntryFlow({
   }, []);
 
   const booted = useCallback(async () => {
+    await whenInitialLinkRouted();
+    const preview = takePreviewLaunch();
     if (core().state().tag === 'SignedIn') {
       try {
         dispatch({ type: 'recovered', ...(await welcome()) });
@@ -181,6 +184,10 @@ export function EntryFlow({
       } catch {
         // The profile could not be read: fall through to the normal start.
       }
+    }
+    if (preview) {
+      dispatch({ type: 'previewGuest' });
+      return;
     }
     dispatch({ type: 'booted', next: termsAccepted() ? 'account' : 'terms' });
   }, []);

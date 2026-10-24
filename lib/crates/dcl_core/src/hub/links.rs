@@ -103,8 +103,12 @@ impl Hub {
                 Effect::Config {
                     param: ConfigParam::FtueTutorialStart,
                 } => crate::ftue::force_tutorial(),
+                // The shell also hears it: a preview launch signs in silently.
                 Effect::SetPreviewUrl { url } => {
-                    self.with_app(|app| app.control(crate::app::Control::SetPreviewUrl { url }))
+                    self.with_app(|app| {
+                        app.control(crate::app::Control::SetPreviewUrl { url: url.clone() })
+                    });
+                    rest.push(Effect::SetPreviewUrl { url });
                 }
                 other => rest.push(other),
             }

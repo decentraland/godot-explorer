@@ -68,6 +68,34 @@ describe('entry flow', () => {
     expect(named.name).toBe('Mateo');
   });
 
+  it('a preview launch with no account signs in as a guest and skips the avatar', () => {
+    const waiting = run([{ type: 'previewGuest' }]);
+    expect(waiting).toMatchObject({
+      step: 'guest_wait',
+      guest: true,
+      preview: true,
+    });
+    expect(run([{ type: 'guestReady' }], waiting).step).toBe('done');
+  });
+
+  it('a preview guest login that fails falls back to the normal flow', () => {
+    const waiting = run([{ type: 'previewGuest' }]);
+    const failed = run([{ type: 'authFailed', message: 'x' }], waiting);
+    expect(failed).toMatchObject({
+      step: 'account',
+      guest: false,
+      preview: false,
+    });
+    expect(
+      run([{ type: 'playAsGuest' }, { type: 'guestReady' }], failed).step,
+    ).toBe('avatar_create');
+  });
+
+  it('previewGuest only applies from the splash', () => {
+    const state = run([{ type: 'booted', next: 'account' }]);
+    expect(reduceFlow(state, { type: 'previewGuest' })).toBe(state);
+  });
+
   it('returning account sees welcome back with its name', () => {
     const state = run([
       { type: 'chooseSignIn' },

@@ -715,7 +715,7 @@ impl crate::app::EngineSink for Sink {
 }
 
 #[test]
-fn a_preview_link_points_the_engine_at_the_preview_server_and_is_not_left_to_the_shell() {
+fn a_preview_link_points_the_engine_at_the_preview_server_and_tells_the_shell() {
     use crate::app::{Control, EngineCommand};
     use crate::deep_link_route::{Effect, StartKind};
     let s = setup();
@@ -729,7 +729,7 @@ fn a_preview_link_points_the_engine_at_the_preview_server_and_is_not_left_to_the
         crate::Platform::Android,
     );
 
-    assert!(!outcome
+    assert!(outcome
         .routed
         .effects
         .iter()

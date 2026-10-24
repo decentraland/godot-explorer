@@ -20,6 +20,8 @@ export type Provider = 'google' | 'apple' | 'email' | 'wallet';
 export type FlowState = {
   step: Step;
   guest: boolean;
+  /** Launched by a preview link with no account: the guest login runs silently and skips the avatar. */
+  preview: boolean;
   provider: Provider | null;
   email: string;
   name: string;
@@ -31,6 +33,7 @@ export type FlowAction =
   | { type: 'recovered'; hasProfile: boolean; name: string }
   | { type: 'acceptTerms' }
   | { type: 'playAsGuest' }
+  | { type: 'previewGuest' }
   | { type: 'guestReady' }
   | { type: 'chooseSignIn' }
   | { type: 'chooseProvider'; provider: Provider }
@@ -46,6 +49,7 @@ export type FlowAction =
 export const initialFlow: FlowState = {
   step: 'splash',
   guest: false,
+  preview: false,
   provider: null,
   email: '',
   name: '',
@@ -81,8 +85,15 @@ export function reduceFlow(state: FlowState, action: FlowAction): FlowState {
       return go(state, 'account');
     case 'playAsGuest':
       return go(state, 'guest_wait', { guest: true, provider: null });
+    case 'previewGuest':
+      return state.step === 'splash'
+        ? go(state, 'guest_wait', { guest: true, preview: true })
+        : state;
     case 'guestReady':
-      return state.step === 'guest_wait' ? go(state, 'avatar_create') : state;
+      if (state.step !== 'guest_wait') {
+        return state;
+      }
+      return go(state, state.preview ? 'done' : 'avatar_create');
     case 'chooseSignIn':
       return go(state, 'sign_in', { guest: false });
     case 'chooseProvider':
@@ -101,6 +112,10 @@ export function reduceFlow(state: FlowState, action: FlowAction): FlowState {
         ? go(state, 'welcome_back', { name: action.name })
         : go(state, 'avatar_create');
     case 'authFailed':
+      if (state.step === 'guest_wait' && state.preview) {
+        // A preview that could not sign in is no longer honoured: the normal flow, with avatar creation.
+        return go(state, 'account', { guest: false, preview: false });
+      }
       return state.step === 'auth_wait' || state.step === 'email_entry'
         ? go(state, 'sign_in', { error: action.message })
         : state;
@@ -130,7 +145,7 @@ function back(state: FlowState): FlowState {
     case 'email_code':
       return go(state, 'email_entry');
     case 'guest_wait':
-      return go(state, 'account', { guest: false });
+      return go(state, 'account', { guest: false, preview: false });
     case 'avatar_create':
       return go(state, state.guest ? 'account' : 'sign_in', { guest: false });
     case 'avatar_customize':
