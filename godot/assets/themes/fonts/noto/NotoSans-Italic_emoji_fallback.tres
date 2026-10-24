@@ -1,0 +1,8 @@
+[gd_resource type="FontVariation" load_steps=3 format=3 uid="uid://32dksg4314p2"]
+
+[ext_resource type="FontFile" uid="uid://c67dk4nbdkd68" path="res://assets/themes/fonts/noto/NotoSans-Italic.ttf" id="1_base"]
+[ext_resource type="FontFile" uid="uid://ivxdopbqg6xx" path="res://assets/themes/fonts/noto/NotoColorEmoji-Regular.ttf" id="2_emoji"]
+
+[resource]
+fallbacks = Array[Font]([ExtResource("2_emoji")])
+base_font = ExtResource("1_base")
