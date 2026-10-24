@@ -200,20 +200,23 @@ bypasses that check for local debugging only. The baked files live in
    APKs are served at `https://mobile-artifacts.dclregenesislabs.xyz/android/<branch>/<sha>/decentraland.godot.client.apk`.
 
    `mobile_distribute.yml` builds & ships iOS → TestFlight and, once the commit's APK is
-   in R2, posts a Slack "🤖 Android Build Ready" notification (uses the existing
-   `SLACK_WEBHOOK_URL`). It does not rebuild Android and does not push to any store. For
-   **`main`/`release`** builds it additionally surfaces the **AAB** (Play Store artifact)
-   and posts a "📦 Android AAB Ready" Slack notification — the AAB is only uploaded for
-   `main`/`release` builds.
+   in R2, surfaces the APK (and, for **`main`/`release`** builds, the **AAB** — only uploaded
+   for those). It does not rebuild Android and does not push to any store.
 
-   Status is mirrored in a Slack root card (`.github/scripts/slack-root.py`, merge-on-read
-   via message metadata; byte-duplicated in `decentraland/godot-asc-deploy` — edit both
-   copies together) and ONE sticky **📱 Mobile build pipeline** PR comment
-   (`.github/scripts/pr-card.py`, same model — state lives in a hidden HTML comment; each leg
-   merges only its own fields; `SHA` + `RUN_ID` guard against a superseded run). `pr-card.py`
-   lives only here: asc-deploy has no token for this repo, so the `ios-wait` job watches the
-   asc-deploy run (matched by its `run-name` `🍏 <branch> @ <sha>`, via
-   `ASC_DEPLOY_DISPATCH_TOKEN`) and mirrors the TestFlight result onto the card.
+   Status reporting lives in the mobile board (`dcl-regenesislabs/mobile-board`, a Cloudflare
+   Worker): every leg POSTs one event with `.github/scripts/report-build-event.py` (secret
+   `BUILD_REPORTER_TOKEN`; env-var interface: `STATUS`, `IOS_LINE`, `ANDROID_LINE`, `APK_URL`…,
+   plus `MESSAGE` for a Slack thread reply and `LOG` for a PR-card timeline entry). The board
+   stores the state, renders the Slack root card + thread replies and keeps ONE sticky
+   **📱 Mobile build pipeline** PR comment (hidden `mobile-build-card:state` JSON) — CI holds no
+   Slack token and writes no PR comments. The board merges only the non-empty fields each leg
+   sends, never lets `status` regress from failed/cancelled to success, and ignores legs of a
+   superseded run. `prepare` sends `RESET=1`; its `slack_ts` output is only forwarded to
+   godot-asc-deploy, which still updates the Slack card itself until it reports to the board too.
+   The `ios-wait` job runs for every distribution: it watches the asc-deploy run (matched by its
+   `run-name` `🍏 <branch> @ <sha>`, via `ASC_DEPLOY_DISPATCH_TOKEN`) and reports the TestFlight
+   result. The script never fails the build; CI reaches the board through its `workers.dev` host
+   because the custom domain's Bot Fight Mode blocks GitHub runners.
 
    It is triggered by:
    - **Every push to `release`** → full distribution.
