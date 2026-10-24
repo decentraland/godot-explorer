@@ -15,6 +15,8 @@ export const flow = {
   FLOW_SIGN_IN_TITLE: 'Sign in',
   FLOW_SIGN_IN_BODY: 'Choose how you want to continue.',
   FLOW_SIGN_IN_FAILED: 'Could not sign in. Try again.',
+  AUTH_SIGN_IN_OTHER_REQUEST:
+    'This sign-in was started from another session. Please try again.',
   FLOW_PROVIDER_GOOGLE: 'Continue with Google',
   FLOW_PROVIDER_APPLE: 'Continue with Apple',
   FLOW_PROVIDER_EMAIL: 'Continue with email',

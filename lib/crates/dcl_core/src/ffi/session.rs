@@ -60,7 +60,7 @@ pub fn sign_in_browser(provider: Option<String>) -> Result<(), CoreError> {
 #[uniffi::export]
 pub async fn complete_browser(identity_id: String) -> Result<(), CoreError> {
     let hub = hub()?;
-    on_core(async move { hub.complete_browser(identity_id).await }).await
+    on_core(async move { hub.complete_browser(identity_id, String::new()).await }).await
 }
 
 /// The user closed the browser or the wallet before finishing.

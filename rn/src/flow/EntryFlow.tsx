@@ -97,9 +97,15 @@ export function EntryFlow({
     let cancelled = false;
     const succeeded = async () =>
       !cancelled && dispatch({ type: 'authSucceeded', ...(await welcome()) });
-    const failed = () =>
+    const failed = (error?: unknown) =>
       !cancelled &&
-      dispatch({ type: 'authFailed', message: t('FLOW_SIGN_IN_FAILED') });
+      dispatch({
+        type: 'authFailed',
+        message:
+          error instanceof Error && error.message === 'sign_in_other_request'
+            ? t('AUTH_SIGN_IN_OTHER_REQUEST')
+            : t('FLOW_SIGN_IN_FAILED'),
+      });
     if (
       step === 'auth_wait' &&
       (provider === 'google' || provider === 'apple' || provider === 'wallet')

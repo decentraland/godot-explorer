@@ -81,6 +81,8 @@ pub struct RouteContext {
     pub dclenv_explicit: bool,
     pub marketplace_awaiting_return: bool,
     pub auth: AuthSnapshot,
+    /// The `authRequestId`s of the browser sign-ins this install started and has not settled.
+    pub pending_auth_requests: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -180,7 +182,7 @@ pub enum Effect {
     CompleteMobileSignIn {
         identity_id: String,
     },
-    /// Cold start: the token is parked for [`DeepLinkRouter::take_pending_signin_identity_id`].
+    /// Cold start: the token is parked for [`DeepLinkRouter::take_pending_signin`].
     SignInParked,
 }
 
@@ -231,8 +233,15 @@ pub struct Routed {
 }
 
 struct Parked {
-    identity_id: String,
+    token: PendingSignIn,
     at_ms: u64,
+}
+
+/// A `?signin=` token and the `authRequestId` it came with (empty from an older auth site).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PendingSignIn {
+    pub identity_id: String,
+    pub auth_request_id: String,
 }
 
 pub struct DeepLinkRouter {
@@ -284,10 +293,10 @@ impl DeepLinkRouter {
 
     /// Consume a parked sign-in token. Single-shot; `None` when absent or older than
     /// [`PENDING_SIGNIN_MAX_AGE_MS`].
-    pub fn take_pending_signin_identity_id(&mut self) -> Option<String> {
+    pub fn take_pending_signin(&mut self) -> Option<PendingSignIn> {
         let parked = self.parked.take()?;
         let age = self.clock.now_ms().saturating_sub(parked.at_ms);
-        (age <= PENDING_SIGNIN_MAX_AGE_MS).then_some(parked.identity_id)
+        (age <= PENDING_SIGNIN_MAX_AGE_MS).then_some(parked.token)
     }
 
     fn signin(
@@ -300,16 +309,28 @@ impl DeepLinkRouter {
             return false;
         }
         let id = link.signin_identity_id.clone();
+        let auth_request_id = param(link, "authRequestId");
         let auth = ctx.auth;
         if auth.sign_in_cancelled {
             // The user cancelled; a late token must not sign them in.
+        } else if !auth_request_id.is_empty()
+            && !ctx
+                .pending_auth_requests
+                .iter()
+                .any(|pending| pending.eq_ignore_ascii_case(auth_request_id))
+        {
+            // Bound to a sign-in this install didn't start (or already settled): the server
+            // would reject it without the matching verifier anyway.
         } else if auth.pending_mobile_auth {
             effects.push(Effect::CompleteMobileSignIn { identity_id: id });
         } else if auth.wallet_connected {
             // Parking would sign the user back in as the link's owner after a sign-out.
         } else {
             self.parked = Some(Parked {
-                identity_id: id,
+                token: PendingSignIn {
+                    identity_id: id,
+                    auth_request_id: auth_request_id.to_string(),
+                },
                 at_ms: self.clock.now_ms(),
             });
             effects.push(Effect::SignInParked);
@@ -1065,6 +1086,78 @@ mod tests {
         RouteContext { auth, ..mobile() }
     }
 
+    fn pending_id(r: &mut DeepLinkRouter) -> Option<String> {
+        r.take_pending_signin().map(|p| p.identity_id)
+    }
+
+    fn ctx_with_requests(auth: AuthSnapshot, ids: &[&str]) -> RouteContext {
+        RouteContext {
+            pending_auth_requests: ids.iter().map(|id| id.to_string()).collect(),
+            ..signin_ctx(auth)
+        }
+    }
+
+    const REQUEST: &str = "13d31e96-1a1a-48ec-af16-b10c4c982e08";
+
+    #[test]
+    fn a_signin_bound_to_another_request_is_dropped_in_every_state() {
+        let link = format!("decentraland://open?signin=id1&authRequestId={REQUEST}");
+        let states = [
+            AuthSnapshot::default(),
+            AuthSnapshot {
+                pending_mobile_auth: true,
+                ..Default::default()
+            },
+        ];
+        for auth in states {
+            for start in [StartKind::Warm, StartKind::Cold] {
+                let (mut r, _) = router();
+                let ctx = ctx_with_requests(auth, &["11111111-1111-4111-8111-111111111111"]);
+                let routed = r.handle(&link, start, &ctx);
+                assert!(
+                    !routed.effects.iter().any(|e| matches!(
+                        e,
+                        Effect::CompleteMobileSignIn { .. } | Effect::SignInParked
+                    )),
+                    "{auth:?} {start:?}"
+                );
+                assert_eq!(pending_id(&mut r), None);
+            }
+        }
+    }
+
+    #[test]
+    fn a_signin_with_nothing_pending_is_foreign_when_it_names_a_request() {
+        let (mut r, _) = router();
+        let link = format!("decentraland://open?signin=id1&authRequestId={REQUEST}");
+        r.handle(&link, StartKind::Cold, &signin_ctx(AuthSnapshot::default()));
+        assert_eq!(pending_id(&mut r), None);
+    }
+
+    #[test]
+    fn a_signin_bound_to_a_pending_request_is_routed_and_keeps_its_id() {
+        let ctx = ctx_with_requests(AuthSnapshot::default(), &[&REQUEST.to_uppercase()]);
+        let link = format!("decentraland://open?signin=id1&authRequestId={REQUEST}");
+        let (mut r, _) = router();
+        let routed = r.handle(&link, StartKind::Cold, &ctx);
+        assert!(routed.effects.contains(&Effect::SignInParked));
+        assert_eq!(
+            r.take_pending_signin(),
+            Some(PendingSignIn {
+                identity_id: "id1".into(),
+                auth_request_id: REQUEST.into()
+            })
+        );
+    }
+
+    #[test]
+    fn a_signin_without_a_request_id_is_never_foreign() {
+        let (mut r, _) = router();
+        let ctx = ctx_with_requests(AuthSnapshot::default(), &[REQUEST]);
+        r.handle("decentraland://open?signin=id1", StartKind::Cold, &ctx);
+        assert_eq!(pending_id(&mut r), Some("id1".into()));
+    }
+
     #[test]
     fn signin_with_pending_auth_completes_right_away() {
         let (mut r, _) = router();
@@ -1077,7 +1170,7 @@ mod tests {
         assert!(routed.effects.contains(&Effect::CompleteMobileSignIn {
             identity_id: "id1".into()
         }));
-        assert_eq!(r.take_pending_signin_identity_id(), None);
+        assert_eq!(pending_id(&mut r), None);
     }
 
     #[test]
@@ -1093,7 +1186,7 @@ mod tests {
             e,
             Effect::CompleteMobileSignIn { .. } | Effect::SignInParked
         )));
-        assert_eq!(r.take_pending_signin_identity_id(), None);
+        assert_eq!(pending_id(&mut r), None);
     }
 
     #[test]
@@ -1105,7 +1198,7 @@ mod tests {
         });
         let routed = r.handle("decentraland://open?signin=id1", StartKind::Warm, &ctx);
         assert!(!routed.effects.contains(&Effect::SignInParked));
-        assert_eq!(r.take_pending_signin_identity_id(), None);
+        assert_eq!(pending_id(&mut r), None);
     }
 
     #[test]
@@ -1118,15 +1211,15 @@ mod tests {
         );
         assert_eq!(routed.navigation, None);
         assert!(routed.effects.contains(&Effect::SignInParked));
-        assert_eq!(r.take_pending_signin_identity_id(), Some("id1".into()));
+        assert_eq!(pending_id(&mut r), Some("id1".into()));
     }
 
     #[test]
     fn parked_token_is_single_shot() {
         let (mut r, _) = router();
         r.handle("decentraland://open?signin=id1", StartKind::Cold, &mobile());
-        assert_eq!(r.take_pending_signin_identity_id(), Some("id1".into()));
-        assert_eq!(r.take_pending_signin_identity_id(), None);
+        assert_eq!(pending_id(&mut r), Some("id1".into()));
+        assert_eq!(pending_id(&mut r), None);
     }
 
     #[test]
@@ -1142,7 +1235,7 @@ mod tests {
             r.handle("decentraland://open?signin=id1", StartKind::Cold, &mobile());
             clock.0.fetch_add(age, Ordering::SeqCst);
             let expected = redeemable.then(|| "id1".to_string());
-            assert_eq!(r.take_pending_signin_identity_id(), expected, "age {age}");
+            assert_eq!(pending_id(&mut r), expected, "age {age}");
         }
     }
 
@@ -1153,9 +1246,9 @@ mod tests {
         clock
             .0
             .fetch_add(PENDING_SIGNIN_MAX_AGE_MS + 1, Ordering::SeqCst);
-        assert_eq!(r.take_pending_signin_identity_id(), None);
+        assert_eq!(pending_id(&mut r), None);
         clock.0.store(1_000, Ordering::SeqCst);
-        assert_eq!(r.take_pending_signin_identity_id(), None);
+        assert_eq!(pending_id(&mut r), None);
     }
 
     #[test]
@@ -1167,7 +1260,7 @@ mod tests {
             .fetch_add(PENDING_SIGNIN_MAX_AGE_MS, Ordering::SeqCst);
         r.handle("decentraland://open?signin=new", StartKind::Cold, &mobile());
         clock.0.fetch_add(10, Ordering::SeqCst);
-        assert_eq!(r.take_pending_signin_identity_id(), Some("new".into()));
+        assert_eq!(pending_id(&mut r), Some("new".into()));
     }
 
     #[test]

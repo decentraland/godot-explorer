@@ -9,8 +9,9 @@ use super::*;
 use crate::{
     app::{AppEvents, SignInMethod, SignInStep, State},
     session::{
-        auth_identity::create_local_ephemeral, ephemeral_auth_chain::EphemeralAuthChain,
-        store::SessionStore, thirdweb_flows::GuestLoginOutcome, thirdweb_guest::GuestLoginError,
+        auth_identity::create_local_ephemeral, decentraland_auth_server::IdentityStatusError,
+        ephemeral_auth_chain::EphemeralAuthChain, store::SessionStore,
+        thirdweb_flows::GuestLoginOutcome, thirdweb_guest::GuestLoginError,
     },
     OpenUrlRequest,
 };
@@ -30,6 +31,10 @@ pub(super) struct Fake {
     fail_email_send: Mutex<bool>,
     good_code: Mutex<String>,
     browser_fails: Mutex<bool>,
+    /// Makes `browser_identity` answer with this HTTP status.
+    browser_status: Mutex<Option<u16>>,
+    /// The verifier of each `browser_identity` call, in order.
+    pub(super) browser_verifiers: Mutex<Vec<Option<String>>>,
     /// Holds `browser_identity` until released, to cancel while it is in flight.
     browser_gate: Mutex<Option<Arc<tokio::sync::Notify>>>,
     browser_entered: Arc<tokio::sync::Notify>,
@@ -75,11 +80,16 @@ impl SignInBackend for Fake {
     async fn browser_identity(
         &self,
         _identity_id: String,
+        verifier: Option<String>,
     ) -> Result<(EphemeralAuthChain, u64), anyhow::Error> {
+        self.browser_verifiers.lock().unwrap().push(verifier);
         self.browser_entered.notify_one();
         let gate = self.browser_gate.lock().unwrap().clone();
         if let Some(gate) = gate {
             gate.notified().await;
+        }
+        if let Some(status) = *self.browser_status.lock().unwrap() {
+            return Err(IdentityStatusError(status).into());
         }
         if *self.browser_fails.lock().unwrap() {
             anyhow::bail!("expired");
@@ -302,7 +312,10 @@ async fn browser_sign_in_asks_the_shell_to_open_the_page_then_completes_from_the
     );
     assert!(s.hub.with_session(|x| x.has_pending_mobile_auth()));
 
-    s.hub.complete_browser("identity-id".into()).await.unwrap();
+    s.hub
+        .complete_browser("identity-id".into(), String::new())
+        .await
+        .unwrap();
     assert_eq!(state(&s), State::SignedIn);
     assert!(!s.hub.with_session(|x| x.has_pending_mobile_auth()));
 }
@@ -311,7 +324,10 @@ async fn browser_sign_in_asks_the_shell_to_open_the_page_then_completes_from_the
 async fn the_deep_link_can_finish_a_sign_in_on_a_cold_start() {
     let s = setup();
     signed_out(&s);
-    s.hub.complete_browser("identity-id".into()).await.unwrap();
+    s.hub
+        .complete_browser("identity-id".into(), String::new())
+        .await
+        .unwrap();
     assert_eq!(state(&s), State::SignedIn);
 }
 
@@ -325,7 +341,7 @@ async fn a_cancelled_browser_sign_in_discards_a_late_completion() {
 
     let running = {
         let s = s.clone();
-        tokio::spawn(async move { s.hub.complete_browser("late".into()).await })
+        tokio::spawn(async move { s.hub.complete_browser("late".into(), String::new()).await })
     };
     s.backend.browser_entered.notified().await;
     s.hub.cancel_sign_in();
@@ -344,9 +360,132 @@ async fn a_failed_browser_completion_returns_to_signed_out() {
     signed_out(&s);
     s.hub.sign_in_browser(None, None, None).unwrap();
     *s.backend.browser_fails.lock().unwrap() = true;
-    let error = s.hub.complete_browser("x".into()).await.unwrap_err();
+    let error = s
+        .hub
+        .complete_browser("x".into(), String::new())
+        .await
+        .unwrap_err();
     assert_eq!(error.code, "browser_completion_failed");
     assert_eq!(state(&s), State::SignedOut);
+}
+
+fn request_id_of(s: &Setup) -> String {
+    let url = s.heard.urls.lock().unwrap().last().unwrap().clone();
+    url.split("authRequestId=")
+        .nth(1)
+        .expect("the page url carries authRequestId")
+        .split('&')
+        .next()
+        .unwrap()
+        .to_string()
+}
+
+fn pending_requests(s: &Setup) -> Vec<String> {
+    crate::session::signin_verifier::VerifierStore::new(s.dir.path()).pending_ids()
+}
+
+#[tokio::test]
+async fn a_browser_sign_in_presents_the_verifier_its_page_was_bound_to() {
+    use crate::session::signin_verifier::derive_auth_request_id;
+    let s = setup();
+    signed_out(&s);
+    s.hub.sign_in_browser(None, None, None).unwrap();
+    let id = request_id_of(&s);
+    assert_eq!(pending_requests(&s), vec![id.clone()]);
+
+    s.hub
+        .complete_browser("identity-id".into(), id.clone())
+        .await
+        .unwrap();
+    let sent = s.backend.browser_verifiers.lock().unwrap()[0]
+        .clone()
+        .unwrap();
+    assert_eq!(derive_auth_request_id(&sent), id);
+    assert!(pending_requests(&s).is_empty(), "removed on success");
+}
+
+#[tokio::test]
+async fn a_link_without_a_request_id_uses_the_latest_verifier_or_none() {
+    let s = setup();
+    signed_out(&s);
+    s.hub
+        .complete_browser("a".into(), String::new())
+        .await
+        .unwrap();
+    assert_eq!(s.backend.browser_verifiers.lock().unwrap()[0], None);
+
+    let s = setup();
+    signed_out(&s);
+    s.hub.sign_in_browser(None, None, None).unwrap();
+    s.hub
+        .complete_browser("a".into(), String::new())
+        .await
+        .unwrap();
+    assert!(s.backend.browser_verifiers.lock().unwrap()[0].is_some());
+}
+
+#[tokio::test]
+async fn the_verifier_is_kept_on_transport_and_server_errors_and_dropped_on_terminal_ones() {
+    for (status, kept) in [
+        (None, true),
+        (Some(500), true),
+        (Some(503), true),
+        (Some(401), false),
+        (Some(404), false),
+        (Some(410), false),
+    ] {
+        let s = setup();
+        signed_out(&s);
+        s.hub.sign_in_browser(None, None, None).unwrap();
+        let id = request_id_of(&s);
+        match status {
+            Some(code) => *s.backend.browser_status.lock().unwrap() = Some(code),
+            None => *s.backend.browser_fails.lock().unwrap() = true,
+        }
+        let error = s.hub.complete_browser("x".into(), id).await.unwrap_err();
+        let code = if status == Some(401) {
+            "sign_in_other_request"
+        } else {
+            "browser_completion_failed"
+        };
+        assert_eq!(error.code, code, "{status:?}");
+        assert_eq!(pending_requests(&s).len() == 1, kept, "{status:?}");
+        assert_eq!(state(&s), State::SignedOut);
+    }
+}
+
+#[test]
+fn cancelling_drops_the_verifier_of_the_attempt() {
+    let s = setup();
+    signed_out(&s);
+    s.hub.sign_in_browser(None, None, None).unwrap();
+    assert_eq!(pending_requests(&s).len(), 1);
+    s.hub.cancel_sign_in();
+    assert!(pending_requests(&s).is_empty());
+}
+
+#[tokio::test]
+async fn a_warm_link_for_another_request_is_dropped_before_any_fetch() {
+    use crate::deep_link_route::StartKind;
+    let s = setup();
+    signed_out(&s);
+    s.hub.sign_in_browser(None, None, None).unwrap();
+    let outcome = s.hub.route_deep_link(
+        "decentraland://open?signin=abc&authRequestId=11111111-1111-4111-8111-111111111111",
+        StartKind::Warm,
+        crate::Platform::Android,
+    );
+    assert!(outcome.complete_sign_in.is_none());
+
+    let own = format!(
+        "decentraland://open?signin=abc&authRequestId={}",
+        request_id_of(&s)
+    );
+    let outcome = s
+        .hub
+        .route_deep_link(&own, StartKind::Warm, crate::Platform::Android);
+    let token = outcome.complete_sign_in.expect("its own request completes");
+    assert_eq!(token.auth_request_id, request_id_of(&s));
 }
 
 #[tokio::test]
@@ -354,7 +493,11 @@ async fn completing_a_browser_sign_in_while_signed_in_is_rejected() {
     let s = setup();
     signed_out(&s);
     s.hub.sign_in_guest().await.unwrap();
-    let error = s.hub.complete_browser("x".into()).await.unwrap_err();
+    let error = s
+        .hub
+        .complete_browser("x".into(), String::new())
+        .await
+        .unwrap_err();
     assert_eq!(error.code, "invalid_state");
 }
 
@@ -480,14 +623,21 @@ async fn a_warm_link_finishes_the_browser_sign_in_that_this_process_started() {
         StartKind::Warm,
         crate::Platform::Android,
     );
-    assert_eq!(outcome.complete_sign_in.as_deref(), Some("abc123"));
+    assert_eq!(
+        outcome
+            .complete_sign_in
+            .as_ref()
+            .map(|t| t.identity_id.as_str()),
+        Some("abc123")
+    );
     assert!(!outcome
         .routed
         .effects
         .iter()
         .any(|e| matches!(e, Effect::CompleteMobileSignIn { .. })));
+    let token = outcome.complete_sign_in.unwrap();
     s.hub
-        .complete_browser(outcome.complete_sign_in.unwrap())
+        .complete_browser(token.identity_id, token.auth_request_id)
         .await
         .unwrap();
     assert_eq!(state(&s), State::SignedIn);
@@ -503,7 +653,13 @@ fn a_cold_link_signs_in_a_signed_out_user_and_is_dropped_for_a_signed_in_one() {
         StartKind::Cold,
         crate::Platform::Android,
     );
-    assert_eq!(outcome.complete_sign_in.as_deref(), Some("cold1"));
+    assert_eq!(
+        outcome
+            .complete_sign_in
+            .as_ref()
+            .map(|t| t.identity_id.as_str()),
+        Some("cold1")
+    );
     assert!(s.hub.resume_parked_sign_in().is_none(), "single shot");
 
     let booting = setup();
@@ -518,7 +674,11 @@ fn a_cold_link_signs_in_a_signed_out_user_and_is_dropped_for_a_signed_in_one() {
     );
     booting.hub.boot();
     assert_eq!(
-        booting.hub.resume_parked_sign_in().as_deref(),
+        booting
+            .hub
+            .resume_parked_sign_in()
+            .map(|t| t.identity_id)
+            .as_deref(),
         Some("early")
     );
 }

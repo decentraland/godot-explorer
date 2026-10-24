@@ -7,8 +7,9 @@ use crate::{
     app::{AppEvents, SignInMethod, SignInStep, State},
     session::{
         auth_identity::{create_ephemeral_from_external_signature, generate_ephemeral_for_signing},
-        decentraland_auth_server::mobile_auth_url,
+        decentraland_auth_server::{mobile_auth_url, IdentityStatusError},
         identity::SessionEvent,
+        signin_verifier::{create_verifier, is_terminal_status, Selection},
         thirdweb_guest::GuestLoginError,
     },
     OpenUrlRequest,
@@ -169,18 +170,33 @@ impl Hub {
             s.begin_mobile_auth();
             s.set_pending_mobile_auth();
         });
+        let auth_request_id = self.verifiers.add_pending(create_verifier());
+        if auth_request_id.is_none() {
+            tracing::warn!(
+                "signin_verifier: could not persist the verifier, opening /auth/mobile without authRequestId"
+            );
+        }
+        *self
+            .browser_request
+            .lock()
+            .unwrap_or_else(|e| e.into_inner()) = auth_request_id.clone();
         self.events.open_url(&OpenUrlRequest {
-            url: mobile_auth_url(provider, user_id, session_id),
+            url: mobile_auth_url(provider, user_id, session_id, auth_request_id),
             description: String::new(),
             use_webview: true,
         });
         Ok(())
     }
 
-    /// Finishes a browser sign-in with the identity id from `decentraland://open?signin=<id>`.
+    /// Finishes a browser sign-in with the identity id from `decentraland://open?signin=<id>` and
+    /// the link's `authRequestId` (empty from an older auth site), which picks the verifier.
     /// Not gated on a pending attempt: the OS may have killed the process during the browser hop,
     /// and the deep link then arrives on a cold start.
-    pub async fn complete_browser(&self, identity_id: String) -> Result<(), SignInError> {
+    pub async fn complete_browser(
+        &self,
+        identity_id: String,
+        auth_request_id: String,
+    ) -> Result<(), SignInError> {
         let state = self.with_app(|app| app.state().clone());
         if matches!(state, State::SignedOut) {
             self.begin(SignInMethod::Browser)?;
@@ -197,7 +213,27 @@ impl Hub {
             s.take_pending_mobile_auth();
             s.mobile_auth_attempt()
         });
-        let result = self.backend.browser_identity(identity_id).await;
+        // A foreign id never gets here (the router drops it); one cancelled since is fetched
+        // without the header and the server decides.
+        let pending = match self.verifiers.select_pending(&auth_request_id) {
+            Selection::Use(pending) => Some(pending),
+            Selection::NoVerifier | Selection::Foreign => None,
+        };
+        let used_request_id = pending.as_ref().map(|p| p.auth_request_id.clone());
+        let result = self
+            .backend
+            .browser_identity(identity_id, pending.map(|p| p.verifier))
+            .await;
+        let status = result
+            .as_ref()
+            .err()
+            .and_then(|e| e.downcast_ref::<IdentityStatusError>())
+            .map(|e| e.0);
+        // Transport errors and 5xx keep the verifier: the identity may still be waiting, and the
+        // auth page can send the same deep link again.
+        if let Some(id) = used_request_id.filter(|_| result.is_ok() || is_terminal_status(status)) {
+            self.verifiers.remove_pending(&id);
+        }
         if !self.with_session(|s| s.is_current_mobile_attempt(attempt)) {
             return Err(SignInError::new("cancelled", "the sign-in was cancelled"));
         }
@@ -208,6 +244,7 @@ impl Hub {
                 self.succeed(event);
                 Ok(())
             }
+            Err(e) if status == Some(401) => Err(self.fail("sign_in_other_request", e)),
             Err(e) => Err(self.fail("browser_completion_failed", e)),
         }
     }
@@ -215,6 +252,14 @@ impl Hub {
     /// The user closed the browser or the wallet before finishing.
     pub fn cancel_sign_in(&self) {
         self.with_session(|s| s.abort_connect());
+        let request = self
+            .browser_request
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .take();
+        if let Some(id) = request {
+            self.verifiers.remove_pending(&id);
+        }
         *self
             .wallet_pending
             .lock()

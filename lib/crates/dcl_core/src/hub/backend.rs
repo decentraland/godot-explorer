@@ -23,9 +23,11 @@ pub trait SignInBackend: Send + Sync {
         code: &str,
     ) -> Result<(H160, EphemeralAuthChain), anyhow::Error>;
     /// The identity the auth server minted for a browser sign-in, from the id in the deep link.
+    /// `verifier` binds the fetch to the sign-in this install started.
     async fn browser_identity(
         &self,
         identity_id: String,
+        verifier: Option<String>,
     ) -> Result<(EphemeralAuthChain, u64), anyhow::Error>;
     /// Whether the guest of this device has linked an email or social login.
     async fn guest_upgraded(&self, device_anchor: String) -> Result<bool, anyhow::Error>;
@@ -68,8 +70,9 @@ impl SignInBackend for LiveBackend {
     async fn browser_identity(
         &self,
         identity_id: String,
+        verifier: Option<String>,
     ) -> Result<(EphemeralAuthChain, u64), anyhow::Error> {
-        complete_mobile_auth(identity_id).await
+        complete_mobile_auth(identity_id, verifier).await
     }
 
     async fn guest_upgraded(&self, device_anchor: String) -> Result<bool, anyhow::Error> {
