@@ -133,6 +133,10 @@ jobs:
       - name: Install dependencies
         uses: ./.github/actions/install-deps
 
+      # `export --target ios` stages the React Native app (rn/) into exports/rn and needs Node 22 + CocoaPods.
+      - name: Set up Node + npm ci (React Native app)
+        uses: ./.github/actions/rn-npm-ci
+
       - name: Cargo install
         timeout-minutes: 15
         run: cargo run -- install --targets ios
