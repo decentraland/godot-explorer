@@ -216,7 +216,9 @@ impl DclAvatar {
         // otherwise Pulse would broadcast EmoteStop for a walking emote.
         let emoting = self.emote.is_playing() && (idle || self.emote.playing_masked);
         if self.is_local_player {
-            globals::comms().bind_mut().set_emoting(emoting);
+            globals::comms()
+                .bind_mut()
+                .set_emoting(emoting, self.emote.playing_loop);
         }
         let (grounded, stunned) = self.locomotion_process(delta);
         self.update_glider_prop();

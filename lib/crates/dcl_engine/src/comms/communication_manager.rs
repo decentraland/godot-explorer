@@ -276,6 +276,9 @@ pub struct CommunicationManager {
     last_position_broadcast_index: u64,
     last_emote_incremental_id: u32,
     is_emoting: bool,
+    /// Whether the emote behind `is_emoting` loops; gates the rfc4 stop (see
+    /// `send_emote_stop_over_livekit`).
+    is_emoting_loop: bool,
     /// head sync: the local head turn, pushed every frame by avatar.gd
     /// (Unity HeadSync). Degrees in the local avatar's own frame, plus whether
     /// the sender is aiming at all. The movement packet carries it to peers.
@@ -430,6 +433,7 @@ impl INode for CommunicationManager {
             last_position_broadcast_index: 0,
             last_emote_incremental_id: 0,
             is_emoting: false,
+            is_emoting_loop: false,
             head_ik_enabled: false,
             head_ik_yaw: 0.0,
             head_ik_pitch: 0.0,
@@ -2075,16 +2079,7 @@ impl CommunicationManager {
     /// full body, 1 = upper body), matching Unity.
     #[func]
     pub fn send_emote(&mut self, emote_urn: GString, mask: i64) -> bool {
-        // Same gate as movement (see `avatar_sync_over_livekit`) for the rfc4 PlayerEmote.
-        #[cfg(feature = "use_pulse")]
-        let emote_over_livekit = avatar_sync_over_livekit(
-            self.is_livekit_movement_dual_channel(),
-            self.pulse_room
-                .as_ref()
-                .is_some_and(|pulse| pulse.is_established()),
-        );
-        #[cfg(not(feature = "use_pulse"))]
-        let emote_over_livekit = true;
+        let emote_over_livekit = self.emote_over_livekit();
 
         // Incremented unconditionally: the counter is this peer's emote sequence, and skipping
         // values while Pulse carries the emote would break receiver-side dedup if LiveKit
@@ -2136,6 +2131,50 @@ impl CommunicationManager {
         sent
     }
 
+    /// Same gate as movement (see `avatar_sync_over_livekit`).
+    fn emote_over_livekit(&self) -> bool {
+        #[cfg(feature = "use_pulse")]
+        {
+            avatar_sync_over_livekit(
+                self.is_livekit_movement_dual_channel(),
+                self.pulse_room
+                    .as_ref()
+                    .is_some_and(|pulse| pulse.is_established()),
+            )
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        true
+    }
+
+    /// rfc4 counterpart of Pulse's EmoteStop: without it, viewers that only get this peer's
+    /// emotes over LiveKit keep a looping emote running after it ended here. Receivers handle
+    /// a stop before id dedup, so it reuses the current id instead of advancing the sequence.
+    ///
+    /// Loops only. The rfc4 start goes out at press time, before the emote has loaded, so a
+    /// one-shot finishing during the next emote's download would cancel that next emote on
+    /// every remote; one-shots end on their own there anyway.
+    fn send_emote_stop_over_livekit(&mut self) {
+        if !self.emote_over_livekit() {
+            return;
+        }
+        let packet = rfc4::Packet {
+            message: Some(rfc4::packet::Message::PlayerEmote(rfc4::PlayerEmote {
+                incremental_id: self.last_emote_incremental_id,
+                timestamp: self.start_time.elapsed().as_secs_f32(),
+                is_stopping: Some(true),
+                ..Default::default()
+            })),
+            protocol_version: DEFAULT_PROTOCOL_VERSION,
+        };
+        if let Some(main_room) = &mut self.main_room {
+            main_room.send_rfc4(packet.clone(), false);
+        }
+        #[cfg(feature = "use_livekit")]
+        if let Some(scene_room) = &mut self.scene_room {
+            scene_room.send_rfc4(packet, false);
+        }
+    }
+
     #[func]
     pub fn set_head_ik(&mut self, enabled: bool, yaw_deg: f32, pitch_deg: f32) {
         // Called every frame by the local avatar with its head-turn state. The
@@ -2148,8 +2187,12 @@ impl CommunicationManager {
     }
 
     #[func]
-    pub fn set_emoting(&mut self, emoting: bool) {
+    pub fn set_emoting(&mut self, emoting: bool, looping: bool) {
         // Called every frame by the local avatar with its actual animation state.
+        if self.is_emoting && !emoting && self.is_emoting_loop {
+            self.send_emote_stop_over_livekit();
+        }
+        self.is_emoting_loop = emoting && looping;
         #[cfg(feature = "use_pulse")]
         {
             if emoting {
