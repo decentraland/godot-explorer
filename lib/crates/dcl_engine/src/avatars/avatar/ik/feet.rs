@@ -171,6 +171,9 @@ impl FeetIk {
             return;
         }
         if self.rig.is_none() {
+            if !super::skeleton_usable(skeleton) {
+                return;
+            }
             self.rig = Some(build(avatar, skeleton));
         }
         for side in SIDES {

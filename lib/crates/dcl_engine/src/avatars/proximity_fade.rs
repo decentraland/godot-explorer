@@ -33,6 +33,8 @@ pub struct AvatarProximityFade {
     last_fade: Option<f32>,
     /// Floor for the fade, set by the GPU-ready gate while the renderer warms the pipelines.
     hold: f32,
+    /// A deferred recollect is already queued: every child added in the same frame shares it.
+    recollect_pending: bool,
     base: Base<Node>,
 }
 
@@ -69,19 +71,35 @@ impl INode for AvatarProximityFade {
 impl AvatarProximityFade {
     #[func]
     fn recollect_deferred(&mut self) {
-        self.run_deferred(|this| this.collect_meshes());
-    }
-
-    #[func]
-    fn recollect_on_child(&mut self, _child: Gd<Node>) {
-        self.run_deferred(|this| this.collect_meshes());
+        if self.recollect_pending {
+            return;
+        }
+        self.recollect_pending = true;
+        self.run_deferred(|this| {
+            this.recollect_pending = false;
+            this.collect_meshes();
+        });
     }
 
     #[func]
     fn collect_meshes(&mut self) {
         self.meshes.clear();
         if let Some(avatar) = self.base().get_parent() {
-            self.walk(&avatar);
+            // One engine call finds the meshes; a recursive try_cast per node costs a class-name
+            // lookup under a global lock each, which dominated the frame.
+            let found = avatar
+                .find_children_ex("*")
+                .type_("MeshInstance3D")
+                .recursive(true)
+                .owned(false)
+                .done();
+            for node in found.iter_shared() {
+                if let Ok(mesh) = node.try_cast::<MeshInstance3D>() {
+                    if supports_own_fade(&mesh) {
+                        self.meshes.push(mesh);
+                    }
+                }
+            }
         }
         // New meshes start at own_fade 0: anything else must be written again.
         if self.last_fade != Some(0.0) {
@@ -171,17 +189,6 @@ impl AvatarProximityFade {
             .timeout()
             .connect_other(&me, |this: &mut Self| this.base_mut().set_process(true));
     }
-
-    fn walk(&mut self, node: &Gd<Node>) {
-        for child in node.get_children().iter_shared() {
-            if let Ok(mesh) = child.clone().try_cast::<MeshInstance3D>() {
-                if supports_own_fade(&mesh) {
-                    self.meshes.push(mesh);
-                }
-            }
-            self.walk(&child);
-        }
-    }
 }
 
 fn material_supports_own_fade(material: Option<Gd<godot::classes::Material>>) -> bool {
@@ -191,9 +198,21 @@ fn material_supports_own_fade(material: Option<Gd<godot::classes::Material>>) ->
     let Ok(shader_material) = material.try_cast::<godot::classes::ShaderMaterial>() else {
         return false;
     };
-    shader_material
-        .get_shader()
-        .is_some_and(|shader| shader.get_code().to_string().contains("own_fade"))
+    let Some(shader) = shader_material.get_shader() else {
+        return false;
+    };
+    // The toon and mask shaders are shared by every avatar: read each source once.
+    let id = shader.instance_id().to_i64();
+    SHADER_FADE.with(|cache| {
+        *cache
+            .borrow_mut()
+            .entry(id)
+            .or_insert_with(|| shader.get_code().to_string().contains("own_fade"))
+    })
+}
+
+thread_local! {
+    static SHADER_FADE: std::cell::RefCell<std::collections::HashMap<i64, bool>> = Default::default();
 }
 
 /// Only meshes whose shaders declare the `own_fade` uniform (the toon and mask shaders) can fade

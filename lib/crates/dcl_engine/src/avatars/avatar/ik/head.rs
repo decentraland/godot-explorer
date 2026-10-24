@@ -51,14 +51,23 @@ impl ISkeletonModifier3D for HeadTurnModifier3D {
         if self.bone < 0 || self.weight <= 0.0 || !skel.is_inside_tree() {
             return;
         }
-        let skel_basis = skel.get_global_transform().basis.orthonormalized();
+        let Some(skel_basis) = super::orthonormal(skel.get_global_transform().basis) else {
+            return;
+        };
         // Yaw about the body's up, then pitch about the body's right, the order Unity composes
         // (horizontalTargetRotation * AxisAngle(right, ..)).
         let delta_local = Basis::from_axis_angle(Vector3::UP, -self.yaw)
             * Basis::from_axis_angle(Vector3::RIGHT, self.pitch);
         let delta = self.frame * delta_local * self.frame.inverse();
-        let cur_world = (skel_basis * skel.get_bone_global_pose(self.bone).basis).orthonormalized();
-        let mixed = cur_world.slerp(&(delta * cur_world).orthonormalized(), self.weight);
+        let Some(cur_world) =
+            super::orthonormal(skel_basis * skel.get_bone_global_pose(self.bone).basis)
+        else {
+            return;
+        };
+        let Some(want_world) = super::orthonormal(delta * cur_world) else {
+            return;
+        };
+        let mixed = cur_world.slerp(&want_world, self.weight);
         set_bone_world_rotation(&mut skel, self.bone, skel_basis, mixed);
     }
 }
@@ -101,7 +110,7 @@ impl HeadIk {
         enabled: bool,
     ) -> Option<Gd<HeadTurnModifier3D>> {
         if self.modifier.is_none() {
-            if !enabled {
+            if !enabled || !super::skeleton_usable(skeleton) {
                 return None;
             }
             let mut modifier = HeadTurnModifier3D::new_alloc();
@@ -135,7 +144,9 @@ impl HeadIk {
         if m.weight <= 0.0 || !enabled {
             return;
         }
-        let basis = avatar.base().get_global_transform().basis.orthonormalized();
+        let Some(basis) = super::orthonormal(avatar.base().get_global_transform().basis) else {
+            return;
+        };
         m.frame = basis;
         let dir = (basis.inverse() * look_dir).normalized_or_zero();
         let horizontal = (dir.x * dir.x + dir.z * dir.z).sqrt();
@@ -176,7 +187,10 @@ impl HeadIk {
         if m.weight <= 0.0 || !enabled {
             return;
         }
-        m.frame = avatar.base().get_global_transform().basis.orthonormalized();
+        let Some(frame) = super::orthonormal(avatar.base().get_global_transform().basis) else {
+            return;
+        };
+        m.frame = frame;
         let (yaw, pitch, speed) = clamp_aim(yaw_deg, pitch_deg);
         let step = speed.to_radians() * delta;
         m.yaw = move_toward(m.yaw, yaw.to_radians(), step);
