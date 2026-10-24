@@ -160,6 +160,9 @@ pub struct DclCli {
     pub dcl_env: GString,
     #[var(no_set, pub)]
     pub saved_profile: GString,
+    /// `--dev-intent` / `--dev-intent-file`: what the agent that launched this client expects the
+    /// human to test (docs/dev-intent.md). Empty when neither flag was passed.
+    pub dev_intent: DevIntent,
 
     // Pulse transport (see comms/pulse/). `pulse` = not locally disabled (--no-pulse).
     // `pulse_explicit` = --pulse, an explicit endpoint (--pulse-server / PULSE_SERVER) or an
@@ -188,6 +191,177 @@ pub struct DclCli {
     // Dev/testing switch; deeplink `livekit=false` is the runtime equivalent.
     #[var(no_set, pub)]
     pub no_livekit: bool,
+}
+
+/// Parsed `--dev-intent` payload: the title the agent wrote plus the steps the human is
+/// expected to tick off while testing.
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct DevIntent {
+    pub title: String,
+    pub steps: Vec<String>,
+}
+
+impl DevIntent {
+    /// Prints the intent where a log can be grepped: the file it came from, the title, one line
+    /// per step.
+    fn echo(&self, file: &str) {
+        if !file.is_empty() {
+            println!("[DEV-INTENT] source: --dev-intent-file {file}");
+        }
+        if !self.title.is_empty() {
+            println!("[DEV-INTENT] {}", self.title);
+        }
+        for (i, step) in self.steps.iter().enumerate() {
+            println!("[DEV-INTENT] {}. {step}", i + 1);
+        }
+    }
+
+    /// One-line form: `Title | step 1 | step 2`. Without a `|` the whole text is the title.
+    fn from_inline(text: &str) -> Self {
+        let mut fields = text.split('|').map(str::trim).filter(|f| !f.is_empty());
+        let Some(title) = fields.next() else {
+            return Self::default();
+        };
+        Self {
+            title: title.to_string(),
+            steps: fields.map(str::to_string).collect(),
+        }
+    }
+
+    /// File form: the first non-empty line is the title and every line starting with `- ` is a
+    /// step, matching what docs/dev-intent.md and `--dcl-help` document. Other lines are
+    /// ignored, so prose can sit next to the checklist — and a `---` rule or a `-word` line
+    /// stays prose instead of becoming a step.
+    fn from_file_contents(contents: &str) -> Self {
+        let mut intent = Self::default();
+        for line in contents.lines().map(str::trim) {
+            if line.is_empty() {
+                continue;
+            }
+            if let Some(step) = line.strip_prefix("- ") {
+                let step = step.trim();
+                if !step.is_empty() {
+                    intent.steps.push(step.to_string());
+                }
+            } else if intent.title.is_empty() {
+                intent.title = line.to_string();
+            }
+        }
+        intent
+    }
+}
+
+/// Resolve the dev-intent flags into (file path, parsed intent).
+/// `--dev-intent-file` wins over `--dev-intent`; an unreadable file only warns, because the
+/// client is about to be handed to a human and must not abort over a bad intent file.
+fn resolve_dev_intent(args_map: &HashMap<String, Option<String>>) -> (String, DevIntent) {
+    let file = args_map
+        .get("--dev-intent-file")
+        .and_then(|v| v.as_ref())
+        .cloned()
+        .unwrap_or_default();
+    let text = if file.is_empty() {
+        args_map
+            .get("--dev-intent")
+            .and_then(|v| v.as_ref())
+            .cloned()
+            .unwrap_or_default()
+    } else {
+        std::fs::read_to_string(&file).unwrap_or_else(|e| {
+            godot_warn!("[DEV-INTENT] cannot read --dev-intent-file {file}: {e}");
+            String::new()
+        })
+    };
+    let text = text.trim().to_string();
+    let intent = if file.is_empty() {
+        DevIntent::from_inline(&text)
+    } else {
+        DevIntent::from_file_contents(&text)
+    };
+    (file, intent)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn args(pairs: &[(&str, &str)]) -> HashMap<String, Option<String>> {
+        pairs
+            .iter()
+            .map(|(k, v)| (k.to_string(), Some(v.to_string())))
+            .collect()
+    }
+
+    #[test]
+    fn no_flag_means_no_intent() {
+        let (file, intent) = resolve_dev_intent(&HashMap::new());
+        assert!(file.is_empty());
+        assert_eq!(intent, DevIntent::default());
+    }
+
+    #[test]
+    fn inline_flag_splits_title_from_steps() {
+        let (_, intent) = resolve_dev_intent(&args(&[("--dev-intent", "A | b | c")]));
+        assert_eq!(intent.title, "A");
+        assert_eq!(intent.steps, vec!["b", "c"]);
+    }
+
+    #[test]
+    fn inline_flag_without_pipes_is_all_title() {
+        let (_, intent) = resolve_dev_intent(&args(&[("--dev-intent", "only a title")]));
+        assert_eq!(intent.title, "only a title");
+        assert!(intent.steps.is_empty());
+    }
+
+    #[test]
+    fn file_flag_reads_title_and_dash_lines() {
+        let path = std::env::temp_dir().join("dcl_dev_intent_test.txt");
+        std::fs::write(
+            &path,
+            "Head IK check\nprose to ignore\n- Look at the floor\n\n- Neck follows\n",
+        )
+        .unwrap();
+        let (file, intent) =
+            resolve_dev_intent(&args(&[("--dev-intent-file", path.to_str().unwrap())]));
+        std::fs::remove_file(&path).unwrap();
+
+        assert_eq!(file, path.to_str().unwrap());
+        assert_eq!(intent.title, "Head IK check");
+        assert_eq!(intent.steps, vec!["Look at the floor", "Neck follows"]);
+    }
+
+    #[test]
+    fn missing_intent_file_is_empty_not_panic() {
+        let (file, intent) = resolve_dev_intent(&args(&[(
+            "--dev-intent-file",
+            "/nonexistent/dcl-dev-intent.txt",
+        )]));
+        assert_eq!(file, "/nonexistent/dcl-dev-intent.txt");
+        assert_eq!(intent, DevIntent::default());
+    }
+
+    #[test]
+    fn bare_dash_lines_are_prose_not_steps() {
+        let intent =
+            DevIntent::from_file_contents("Head IK check\n---\n-dashword is prose\n- real step\n");
+
+        assert_eq!(intent.title, "Head IK check");
+        assert_eq!(intent.steps, vec!["real step"]);
+    }
+
+    #[test]
+    fn file_flag_wins_over_inline_flag() {
+        let path = std::env::temp_dir().join("dcl_dev_intent_wins.txt");
+        std::fs::write(&path, "From file\n- step\n").unwrap();
+        let (_, intent) = resolve_dev_intent(&args(&[
+            ("--dev-intent", "From flag | nope"),
+            ("--dev-intent-file", path.to_str().unwrap()),
+        ]));
+        std::fs::remove_file(&path).unwrap();
+
+        assert_eq!(intent.title, "From file");
+        assert_eq!(intent.steps, vec!["step"]);
+    }
 }
 
 impl DclCli {
@@ -346,6 +520,22 @@ impl DclCli {
                 name: "--debug-panel".to_string(),
                 description: "Show the debug panel UI".to_string(),
                 arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
+                name: "--dev-intent".to_string(),
+                description: "What the agent that launched this client expects the human to \
+                              test: 'Title | step 1 | step 2'. Shown as an in-game card"
+                    .to_string(),
+                arg_type: ArgType::Value("<text>".to_string()),
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
+                name: "--dev-intent-file".to_string(),
+                description: "Read the dev intent from a UTF-8 file (first line is the title, \
+                              '- ' lines are the steps). Wins over --dev-intent"
+                    .to_string(),
+                arg_type: ArgType::Value("<path>".to_string()),
                 category: "Debugging".to_string(),
             },
             // Performance
@@ -620,6 +810,12 @@ impl DclCli {
         println!();
         println!("  # Simulate a deep link (for testing mobile deep links on desktop)");
         println!("  godot-explorer --fake-deeplink \"decentraland:///?location=52,-52&realm=https://my-realm.com\"");
+        println!();
+        println!("  # Tell the human what this client was opened for (docs/dev-intent.md)");
+        println!(
+            "  godot-explorer --dev-intent \"Check head IK | Look at the floor | Neck follows\""
+        );
+        println!("  godot-explorer --dev-intent-file /tmp/pi-intent.txt");
     }
 }
 
@@ -687,6 +883,8 @@ impl INode for DclCli {
         let network_debugger = args_map.contains_key("--network-debugger");
         let debug_minimap = args_map.contains_key("--debug-minimap");
         let debug_panel = args_map.contains_key("--debug-panel") || preview_mode;
+        let (dev_intent_file, dev_intent) = resolve_dev_intent(&args_map);
+        dev_intent.echo(&dev_intent_file);
         let use_test_input = args_map.contains_key("--use-test-input");
         let test_camera_tune = args_map.contains_key("--test-camera-tune");
         let measure_perf = args_map.contains_key("--measure-perf");
@@ -893,6 +1091,7 @@ impl INode for DclCli {
             fake_deeplink,
             dcl_env,
             saved_profile,
+            dev_intent,
             pulse,
             pulse_explicit,
             pulse_server,
