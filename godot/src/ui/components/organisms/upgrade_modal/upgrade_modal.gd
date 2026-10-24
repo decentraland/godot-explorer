@@ -29,7 +29,7 @@ func _on_add_email_pressed() -> void:
 	# Close this nudge and open the same "Add Email" input-modal flow the Discover upgrade
 	# notice uses — one shared experience that ends in the reward (issues #2377 / #2372).
 	Global.modal_manager.close_upgrade_modal()
-	Global.modal_manager.async_start_add_email_flow()
+	Global.add_email_flow.async_start_add_email_flow()
 
 
 func _on_maybe_later_pressed() -> void:

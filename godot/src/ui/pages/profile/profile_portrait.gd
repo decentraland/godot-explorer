@@ -75,6 +75,10 @@ func _show_avatar() -> void:
 	_avatar_preview.can_drag = false
 	_avatar_preview.preview_margin_top = 64
 	_avatar_preview.preview_margin_bottom = 46
+	_avatar_preview.input_blockers = [
+		draggable_bottom_sheet.panel_container_card,
+		draggable_bottom_sheet.panel_container_header,
+	]
 	avatar_container.add_child(_avatar_preview)
 	var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
 	if profile != null:

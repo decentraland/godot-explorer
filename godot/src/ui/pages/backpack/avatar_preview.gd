@@ -26,6 +26,9 @@ const AVATAR_ROTATION_SMOOTH = 15.0
 @export var top_node_margin: Control = null
 ## Optional Control whose top edge defines the bottom margin boundary.
 @export var bottom_node_margin: Control = null
+## Controls drawn over the preview: a press inside a visible one does not start
+## rotation or zoom. Unlike the margin nodes, they do not affect framing.
+@export var input_blockers: Array[Control] = []
 @export var show_aabb_debug: bool = false
 @export var fit_avatar: bool = true
 ## When true, grow this SubViewportContainer upward so its top edge sits at
@@ -84,6 +87,9 @@ var _last_snapped_parent_y: float = NAN
 var _baseline_offset_top: float = 0.0
 
 var _aabb_debug_nodes: Array[MeshInstance3D] = []
+# Set by fit_to_aabb(): the camera keeps framing this box instead of the standing body.
+var _fixed_fit_aabb: AABB = AABB()
+var _fixed_fit_view: Basis = Basis.IDENTITY
 
 @onready var avatar = %Avatar
 @onready var camera_center: Node3D = %CameraCenter
@@ -116,6 +122,8 @@ func _ready():
 	_target_avatar_rotation_y = avatar.rotation.y
 
 	avatar.avatar_loaded.connect(async_on_avatar_loaded)
+	# This preview shows our own profile, which never spawned: no hologram.
+	avatar.spawn_reveal_enabled = false
 	resized.connect(_on_resized)
 	if top_node_margin:
 		top_node_margin.resized.connect(_on_resized)
@@ -238,7 +246,7 @@ func _input(event: InputEvent):
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
-				if not iinner.has_point(event.position):
+				if not iinner.has_point(event.position) or _is_press_blocked(event.position):
 					return
 				dirty_is_dragging = true
 				start_dragging_position = get_global_mouse_position()
@@ -247,7 +255,12 @@ func _input(event: InputEvent):
 			else:
 				dirty_is_dragging = false
 
-		if not event.pressed and can_drag and iinner.has_point(event.position):
+		if (
+			not event.pressed
+			and can_drag
+			and iinner.has_point(event.position)
+			and not _is_press_blocked(event.position)
+		):
 			var dir: float = 0.0
 			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 				dir = -0.2
@@ -266,7 +279,7 @@ func _input(event: InputEvent):
 
 	if event is InputEventScreenTouch:
 		if event.pressed:
-			if not iinner.has_point(event.position):
+			if not iinner.has_point(event.position) or _is_press_blocked(event.position):
 				return
 			_touch_points[event.index] = event.position
 			if _touch_points.size() == 2 and can_drag:
@@ -290,6 +303,18 @@ func _input(event: InputEvent):
 	if event is InputEventMouseMotion:
 		if dirty_is_dragging and _touch_points.size() < 2:
 			_apply_drag(get_global_mouse_position())
+
+
+# Read on every press, not cached: blockers like a bottom sheet move.
+func _is_press_blocked(pos: Vector2) -> bool:
+	for blocker in input_blockers:
+		if (
+			is_instance_valid(blocker)
+			and blocker.is_visible_in_tree()
+			and blocker.get_global_rect().has_point(pos)
+		):
+			return true
+	return false
 
 
 func _pan_limits() -> Vector2:
@@ -381,6 +406,9 @@ func _apply_snap_top_to_viewport() -> void:
 func _on_resized() -> void:
 	if size.x <= 0.0 or size.y <= 0.0:
 		return
+	if _fixed_fit_aabb.has_volume():
+		_apply_fixed_fit()
+		return
 	if (
 		"overall" in _cached_aabbs
 		and (
@@ -418,6 +446,8 @@ func async_on_avatar_loaded():
 	var first_load: bool = _cached_aabbs.is_empty()
 	_cached_aabbs = _compute_avatar_aabbs()
 	_update_aabb_debug_box(_cached_aabbs)
+	if _fixed_fit_aabb.has_volume():
+		return
 	var aabb_key: String = _camera_focus if _camera_focus in _cached_aabbs else "overall"
 	if aabb_key in _cached_aabbs:
 		if first_load:
@@ -554,11 +584,14 @@ func _symmetrize_aabb_x(aabb: AABB) -> AABB:
 	)
 
 
-func _compute_avatar_aabbs() -> Dictionary:
+# `view` measures in a turned frame (a camera's axes) instead of the avatar's, unmirrored.
+func _compute_avatar_aabbs(view := Basis.IDENTITY) -> Dictionary:
 	var skeleton: Skeleton3D = avatar.body_shape_skeleton_3d
 	if skeleton == null:
 		return {}
-	var avatar_xform_inv: Transform3D = (avatar.global_transform as Transform3D).affine_inverse()
+	var avatar_xform_inv: Transform3D = (
+		Transform3D(view.inverse()) * (avatar.global_transform as Transform3D).affine_inverse()
+	)
 	var results: Dictionary = {}
 	var firsts: Dictionary = {
 		"overall": true,
@@ -673,6 +706,8 @@ func _compute_avatar_aabbs() -> Dictionary:
 		if key in results:
 			var a: AABB = results[key]
 			results[key] = AABB(a.position + Vector3(0.0, -0.05, 0.0), a.size)
+	if view != Basis.IDENTITY:
+		return results
 	for key in results:
 		results[key] = _symmetrize_aabb_x(results[key])
 	return results
@@ -821,6 +856,35 @@ func _fit_to_overall() -> void:
 	_target_camera_size = cam_size
 
 
+## Frames `aabb` at once, and keeps framing it on resize instead of the standing body. The
+## camera looks along `view` (its axes, e.g. Basis.from_euler of a pitch and yaw) at the box
+## centre; `aabb` is measured along those axes: compute_current_fit_aabb(view).
+func fit_to_aabb(aabb: AABB, view := Basis.IDENTITY) -> void:
+	_fixed_fit_aabb = aabb
+	_fixed_fit_view = view
+	_apply_fixed_fit()
+
+
+func _apply_fixed_fit() -> void:
+	if not is_inside_tree() or size.x <= 0.0 or size.y <= 0.0:
+		return
+	var aabb := _fixed_fit_aabb
+	camera_center.basis = _fixed_fit_view
+	var vp_h: float = size.y
+	var eff_top: float = _effective_margin_top()
+	var eff_bottom: float = _effective_margin_bottom()
+	var inner_h: float = maxf(1.0, vp_h - eff_top - eff_bottom)
+	var inner_w: float = maxf(1.0, size.x - preview_margin_left - preview_margin_right)
+	var cam_size: float = maxf(aabb.size.y * vp_h / inner_h, aabb.size.x * vp_h / inner_w)
+	# Unequal top and bottom margins move the box off the middle of the view.
+	var center := aabb.get_center() + Vector3.UP * (eff_top - eff_bottom) * cam_size / (2.0 * vp_h)
+	var pivot := _fixed_fit_view * center
+	_target_camera_size = cam_size
+	_target_camera_center_y = pivot.y
+	camera_3d.size = cam_size
+	camera_center.position = pivot
+
+
 func _fit_camera_to_aabb(aabb: AABB, extra_margin: int = 0, instant: bool = false) -> void:
 	if not is_inside_tree():
 		return
@@ -960,9 +1024,10 @@ func async_capture_current_view(dest_size: Vector2i, ssaa: int = 1) -> Image:
 
 ## Overall AABB of the currently visible meshes in avatar-local space, skinned
 ## against the CURRENT bone poses — so a frozen emote pose or a lone wearable
-## (show_only_wearables) is measured as displayed. 2m fallback when empty.
-func compute_current_fit_aabb() -> AABB:
-	var aabbs := _compute_avatar_aabbs()
+## (show_only_wearables) is measured as displayed. 2m fallback when empty. With `view`, the box
+## is measured along those axes instead (see fit_to_aabb()).
+func compute_current_fit_aabb(view := Basis.IDENTITY) -> AABB:
+	var aabbs := _compute_avatar_aabbs(view)
 	var overall: AABB = aabbs.get("overall", AABB(Vector3(-1.0, 0.0, -1.0), Vector3(2.0, 2.0, 2.0)))
 	return overall
 

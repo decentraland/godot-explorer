@@ -126,6 +126,11 @@ var locations: Node
 var modal_manager: ModalManager
 var upgrade_nudge_coordinator: UpgradeNudgeCoordinator
 var review_prompt_coordinator: ReviewPromptCoordinator
+var streak_manager: StreakManager
+var streak_modal_controller: StreakModalController
+var add_email_flow: AddEmailFlow
+var controls_ftue_coordinator: ControlsFtueCoordinator
+var ftue_tutorial_coordinator: FtueTutorialCoordinator
 
 var standalone = false
 
@@ -690,6 +695,23 @@ func _ready():
 	self.review_prompt_coordinator = load("res://src/review_prompt_coordinator.gd").new()
 	self.review_prompt_coordinator.set_name("review_prompt_coordinator")
 
+	self.streak_manager = load("res://src/logic/streak_manager.gd").new()
+	self.streak_manager.set_name("streak_manager")
+
+	self.streak_modal_controller = (
+		load("res://src/ui/components/organisms/streak_modal/streak_modal_controller.gd").new()
+	)
+	self.streak_modal_controller.set_name("streak_modal_controller")
+
+	self.add_email_flow = load("res://src/ui/components/organisms/modal/add_email_flow.gd").new()
+	self.add_email_flow.set_name("add_email_flow")
+
+	self.controls_ftue_coordinator = load("res://src/controls_ftue_coordinator.gd").new()
+	self.controls_ftue_coordinator.set_name("controls_ftue_coordinator")
+
+	self.ftue_tutorial_coordinator = load("res://src/ftue_tutorial_coordinator.gd").new()
+	self.ftue_tutorial_coordinator.set_name("ftue_tutorial_coordinator")
+
 	get_tree().root.add_child.call_deferred(self.cli)
 	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
@@ -698,6 +720,11 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.modal_manager)
 	get_tree().root.add_child.call_deferred(self.upgrade_nudge_coordinator)
 	get_tree().root.add_child.call_deferred(self.review_prompt_coordinator)
+	get_tree().root.add_child.call_deferred(self.streak_manager)
+	get_tree().root.add_child.call_deferred(self.streak_modal_controller)
+	get_tree().root.add_child.call_deferred(self.add_email_flow)
+	get_tree().root.add_child.call_deferred(self.controls_ftue_coordinator)
+	get_tree().root.add_child.call_deferred(self.ftue_tutorial_coordinator)
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)

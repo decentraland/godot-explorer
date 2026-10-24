@@ -4,7 +4,7 @@
 
 [resource]
 shader = ExtResource("1_shader")
-shader_parameter/corner_radius_px = 24.0
+shader_parameter/corner_radius_px = 16.0
 shader_parameter/round_top_left = true
 shader_parameter/round_top_right = true
 shader_parameter/round_bottom_left = true

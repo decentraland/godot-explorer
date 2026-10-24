@@ -1,0 +1,71 @@
+[gd_scene format=3 uid="uid://oyokdq67n0i3"]
+
+[ext_resource type="Script" uid="uid://fi2qxkr2tw7d" path="res://src/ui/components/atoms/buttons/claim_button/claim_button.gd" id="1_script"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="2_theme"]
+[ext_resource type="Texture2D" uid="uid://ctk53fjldfod1" path="res://src/ui/components/atoms/buttons/claim_button/gradient-cerise.tres" id="3_gjoj3"]
+[ext_resource type="Texture2D" uid="uid://cwuo58dyo87gl" path="res://src/ui/components/atoms/buttons/claim_button/gradient-cerise-dark.tres" id="3_olwp6"]
+[ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="4_olwp6"]
+[ext_resource type="Material" uid="uid://bv7vw2bdrp1mm" path="res://src/ui/components/molecules/button_profile/texture_rect_rounded_px_material.tres" id="5_fmr2p"]
+
+[sub_resource type="Gradient" id="Gradient_olwp6"]
+colors = PackedColorArray(0.8745098, 0.6117647, 1, 1, 0.8745098, 0.6117647, 1, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_fmr2p"]
+gradient = SubResource("Gradient_olwp6")
+
+[sub_resource type="LabelSettings" id="LabelSettings_fmr2p"]
+font = ExtResource("4_olwp6")
+font_size = 24
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[node name="ClaimButton" type="Button" unique_id=1351134325]
+clip_children = 2
+clip_contents = true
+custom_minimum_size = Vector2(0, 74)
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 16.0
+grow_horizontal = 2
+size_flags_horizontal = 3
+theme = ExtResource("2_theme")
+theme_override_font_sizes/font_size = 24
+flat = true
+script = ExtResource("1_script")
+texture_normal = ExtResource("3_gjoj3")
+texture_tapped = ExtResource("3_olwp6")
+texture_waiting = ExtResource("3_olwp6")
+texture_done = SubResource("GradientTexture1D_fmr2p")
+
+[node name="DotTimer" type="Timer" parent="." unique_id=880528116]
+unique_name_in_owner = true
+wait_time = 0.4
+
+[node name="Background" type="TextureRect" parent="." unique_id=236404797]
+unique_name_in_owner = true
+material = ExtResource("5_fmr2p")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("3_gjoj3")
+expand_mode = 1
+
+[node name="Label_Text" type="Label" parent="." unique_id=272942076]
+unique_name_in_owner = true
+auto_translate_mode = 2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 24
+text = "CLAIM"
+label_settings = SubResource("LabelSettings_fmr2p")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[connection signal="timeout" from="DotTimer" to="." method="_on_dot_timer_timeout"]

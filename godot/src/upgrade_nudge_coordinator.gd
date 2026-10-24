@@ -33,10 +33,11 @@ const HOUR_SECONDS := 3600
 const MAX_SHOWS := 3
 
 var _evaluated_this_session: bool = false
-# Set by discover.gd while a device-support modal (#2936 / #2935) is showing — those outrank
-# this nudge. _try_evaluate() checks this without consuming _evaluated_this_session, so the
-# real evaluation still runs once discover.gd calls resume_after_device_support().
-var _suppressed_by_device_support: bool = false
+# Tags of callers currently outranking this nudge (e.g. a device-support modal #2936/#2935, or a
+# pending login-streak modal #3018) — set via suppress_until_cleared(tag), cleared via
+# resume(tag). _try_evaluate() checks this without consuming _evaluated_this_session, so the real
+# evaluation still runs once the last suppressor calls resume().
+var _suppressors: Dictionary = {}
 
 
 func _ready() -> void:
@@ -61,19 +62,23 @@ func _on_loading_finished() -> void:
 	_try_evaluate()
 
 
-## Called synchronously by discover.gd right before it shows a device-support modal, so the
-## suppression is in place before that same call stack's Global.set_orientation_portrait() can
-## fire this coordinator's own orientation-triggered evaluation.
-func suppress_until_cleared() -> void:
-	_suppressed_by_device_support = true
+## Called synchronously by a caller right before it shows a modal that should outrank this nudge
+## (e.g. discover.gd before a device-support or login-streak modal), so the suppression is in
+## place before that same call stack's Global.set_orientation_portrait() can fire this
+## coordinator's own orientation-triggered evaluation. `tag` identifies the caller so concurrent
+## suppressors don't clear each other's hold early.
+func suppress_until_cleared(tag: String) -> void:
+	_suppressors[tag] = true
 
 
-## Called once the device-support modal that outranked this nudge has been dismissed —
-## re-attempts the evaluation now that it's safe to show. A no-op if nothing was actually
-## suppressed (e.g. this session's evaluation already happened some other way).
-func resume_after_device_support() -> void:
-	_suppressed_by_device_support = false
-	_try_evaluate()
+## Called once the modal that outranked this nudge (identified by the same `tag` passed to
+## suppress_until_cleared) has been dismissed — re-attempts the evaluation once no suppressor
+## remains. A no-op if `tag` wasn't actually suppressing (e.g. this session's evaluation already
+## happened some other way).
+func resume(tag: String) -> void:
+	_suppressors.erase(tag)
+	if _suppressors.is_empty():
+		_try_evaluate()
 
 
 func _try_evaluate() -> void:
@@ -84,9 +89,9 @@ func _try_evaluate() -> void:
 		return
 	if not Global.is_orientation_portrait():
 		return
-	# A device-support modal (#2936 / #2935) takes priority — don't consume this session's
-	# evaluation slot; discover.gd calls resume_after_device_support() once it's dismissed.
-	if _suppressed_by_device_support:
+	# A higher-priority modal (device-support #2936/#2935, login-streak #3018) is showing — don't
+	# consume this session's evaluation slot; the suppressor calls resume() once it's dismissed.
+	if not _suppressors.is_empty():
 		return
 	_evaluated_this_session = true
 	_async_evaluate()

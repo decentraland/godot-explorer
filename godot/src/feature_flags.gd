@@ -12,8 +12,8 @@ extends Node
 ##
 ## Fail-open: on timeout, network error or malformed payload every flag keeps
 ## its default and the feature stays enabled. Exceptions: `pulse`,
-## `sentry-error-events` and `async-shader-compilation` are fail-closed — they
-## activate only when the payload explicitly enables them (see _apply_flags).
+## `sentry-error-events`, `async-shader-compilation` and `tester-wallets` are
+## fail-closed — they activate only when the payload explicitly enables them.
 
 signal flags_loaded
 
@@ -43,6 +43,15 @@ const ASYNC_SHADERS_METHOD := &"enable_async_shader_compilation"
 # The Day 1 welcome local notification. Fail-open kill switch: off stops scheduling it and
 # disarms it if already armed. Event reminders and the OS permission prompt are not gated.
 const FLAG_DAY1_NOTIFICATION := "day1-notification"
+# Foundation parity, the same flag name Unity reads: scene glTF materials render with
+# backfaces culled, which is what an inverted-hull outline (a `doubleSided` shell with
+# flipped normals) expects. Read at material-fix time — see GltfContainer.fix_material.
+# CLI `--force-backface-culling` / `--no-force-backface-culling` and the deeplink
+# `force-backface-culling=true/false` win over the flag, so QA can see it without the
+# bff serving it.
+const FLAG_FORCE_BACKFACE_CULLING := "alfa-force-backface-culling"
+# Comma-separated wallet addresses that get Settings → Dev Tools on production builds.
+const FLAG_TESTER_WALLETS := "tester-wallets"
 
 var _flags: Dictionary = {}
 var _loaded := false
@@ -73,6 +82,54 @@ func get_number(flag_name: String, default_value: float) -> float:
 	if value is float or value is int:
 		return float(value)
 	return default_value
+
+
+# Text flags. `default_value` is returned while the flags aren't loaded yet, when the flag is
+# absent, or when it isn't a string.
+func get_text(flag_name: String, default_value: String) -> String:
+	var value = _flags.get(flag_name)
+	if value is String:
+		return value
+	return default_value
+
+
+# "true" / "false" when the run sets it locally, "" otherwise. The CLI wins over the
+# deeplink, and both win over the remote flag they override.
+func _local_override(arg_on: String, arg_off: String, param: String) -> String:
+	if Global.cli.has_arg(arg_off):
+		return "false"
+	if Global.cli.has_arg(arg_on):
+		return "true"
+	if Global.deep_link_obj != null:
+		var value := str(Global.deep_link_obj.params.get(param, "")).to_lower()
+		if not value.is_empty():
+			return "true" if value in ["true", "1", "yes"] else "false"
+	return ""
+
+
+# Foundation-parity cull mode for scene glTF materials: the remote flag, with the local
+# opt-in on top (see FLAG_FORCE_BACKFACE_CULLING).
+func is_force_backface_culling_enabled() -> bool:
+	var local_override := _local_override(
+		"--force-backface-culling", "--no-force-backface-culling", "force-backface-culling"
+	)
+	if not local_override.is_empty():
+		return local_override == "true"
+	return is_enabled(FLAG_FORCE_BACKFACE_CULLING, false)
+
+
+# Dev Tools are always on outside production. On production only for a signed-in wallet listed
+# in FLAG_TESTER_WALLETS; an unloaded or missing flag keeps them off.
+func dev_tools_enabled() -> bool:
+	if not Global.is_production():
+		return true
+	var address := String(Global.player_identity.get_address_str()).to_lower()
+	if address.is_empty():
+		return false
+	for wallet in get_text(FLAG_TESTER_WALLETS, "").split(",", false):
+		if wallet.strip_edges().to_lower() == address:
+			return true
+	return false
 
 
 # Extracts the flags dictionary from the mobile-bff response:
@@ -160,7 +217,7 @@ func _apply_flags() -> void:
 func _update_async_shader_compilation() -> void:
 	if _async_shaders_enabled:
 		return
-	var local_override := _async_shaders_local_override()
+	var local_override := _local_override("--async-shaders", "--no-async-shaders", "async-shaders")
 	var enabled: bool
 	if not local_override.is_empty():
 		enabled = local_override == "true"
@@ -174,19 +231,6 @@ func _update_async_shader_compilation() -> void:
 		print("[FeatureFlags] async shader compilation: disabled")
 	if SentrySDK.is_enabled():
 		SentrySDK.set_tag("async_shader_compilation", "on" if enabled else "off")
-
-
-# "true" / "false" when the run sets it locally, "" otherwise.
-func _async_shaders_local_override() -> String:
-	if Global.cli.has_arg("--no-async-shaders"):
-		return "false"
-	if Global.cli.has_arg("--async-shaders"):
-		return "true"
-	if Global.deep_link_obj != null:
-		var value := str(Global.deep_link_obj.params.get("async-shaders", "")).to_lower()
-		if not value.is_empty():
-			return "true" if value in ["true", "1", "yes"] else "false"
-	return ""
 
 
 func _enable_async_shader_compilation() -> bool:

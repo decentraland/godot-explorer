@@ -31,6 +31,9 @@ const SOURCE_EXIT_REASON := "exit_reason"
 # The diagnostics event behind a user-filed bug report (sentry_user_feedback.gd),
 # marked with a `category` tag. One per report, so exempt from the remote rate too.
 const SOURCE_FEEDBACK := "feedback"
+# A failed reward claim (reward_claimer.gd), marked with `event_kind`. Capped at one per
+# campaign + reason per session, so exempt from the remote rate too.
+const SOURCE_REWARD_CLAIM := "reward_claim"
 # A GDScript access to a freed object, as printed by the engine. Upstream's
 # release template does not validate method calls, casts, typed returns or `for`
 # on a freed object and dies with SIGSEGV; our fork keeps those checks in release
@@ -51,6 +54,7 @@ const SOURCE_KEEP_RATE := {
 	SOURCE_SCENE_CRASH: 1.0,
 	SOURCE_EXIT_REASON: 1.0,
 	SOURCE_FEEDBACK: 1.0,
+	SOURCE_REWARD_CLAIM: 1.0,
 	SOURCE_FREED_INSTANCE: 1.0,
 	SOURCE_RUST_APP: 1.0,
 	SOURCE_RUST_DEP: 0.05,
@@ -73,6 +77,7 @@ const REMOTE_RATE_EXEMPT := [
 	SOURCE_SCENE_CRASH,
 	SOURCE_EXIT_REASON,
 	SOURCE_FEEDBACK,
+	SOURCE_REWARD_CLAIM,
 	SOURCE_FREED_INSTANCE,
 ]
 
@@ -236,6 +241,8 @@ func _before_send(event: SentryEvent) -> SentryEvent:
 		return _keep(event, SOURCE_SCENE_CRASH)
 	if event_kind == "exit_reason":
 		return _keep(event, SOURCE_EXIT_REASON)
+	if event_kind == "reward_claim":
+		return _keep(event, SOURCE_REWARD_CLAIM)
 	# User-initiated bug reports carry a link to this event in their Intercom
 	# ticket, so sampling one away would leave support with a dead URL — and it
 	# would fail silently, because a dropped event still returns a valid-looking

@@ -269,7 +269,7 @@ func _ready():
 		Global.scene_inspector_dispatcher.set_file_logging(true)
 
 	# Clear deep link after initial setup to prevent re-teleporting on first app resume
-	Global.deep_link_router._clear_deep_link()
+	Global.deep_link_router.consume_navigation_target()
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()
@@ -448,10 +448,12 @@ func _push_scene_interactable_area() -> void:
 
 
 ## Dev-only translucent overlay to verify the computed interactable area on device.
-## Never shows in production; within dev, gated by `show_interactable_area`.
+## Gated by `show_interactable_area` and, on production, by the Dev Tools tester wallets.
 func _update_interactable_area_debug(area: Rect2) -> void:
 	# The label is a child of the ColorRect, so toggling the rect toggles both.
-	interactable_area_debug.visible = not Global.is_production() and show_interactable_area
+	interactable_area_debug.visible = (
+		show_interactable_area and Global.feature_flags.dev_tools_enabled()
+	)
 	if not interactable_area_debug.visible:
 		return
 	interactable_area_debug.position = area.position
@@ -1059,6 +1061,9 @@ func _update_preview_hud() -> void:
 	if active:
 		preview_hud_panel.set_scene(_preview_scene_id())
 	Global.set_scene_log_enabled(active)
+	# Frame-sync warnings (slow onUpdate / missed frames) follow the scene-stats
+	# overlay: preview realm or scene-stats deep link only, never the settings toggle.
+	Global.set_scene_perf_warnings_enabled(_scene_stats_available())
 	_restore_bottom_left_hud()
 
 

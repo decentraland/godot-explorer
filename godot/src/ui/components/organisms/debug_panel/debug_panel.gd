@@ -42,6 +42,16 @@ func _ready():
 		for tab_idx in range(1, tab_container_debug_panel.get_tab_count()):
 			tab_container_debug_panel.set_tab_hidden(tab_idx, true)
 
+	# The Dev Intent tab only exists when this client was launched with one (docs/dev-intent.md);
+	# outside dev builds it is still the one extra tab worth showing the tab bar for.
+	var dev_intent := Global.cli.dev_intent
+	var dev_intent_tab := tab_container_debug_panel.get_tab_idx_from_control(%DevIntent)
+	tab_container_debug_panel.set_tab_title(dev_intent_tab, "Dev Intent")
+	%TextEdit_DevIntent.text = dev_intent
+	tab_container_debug_panel.set_tab_hidden(dev_intent_tab, dev_intent.is_empty())
+	if not dev_intent.is_empty() and not DclGlobal.is_dev():
+		tab_container_debug_panel.tabs_visible = true
+
 	clear_console()
 	# The console starts collapsed; the preview HUD toolbar's Console button drives its
 	# visibility via set_console_visible (this panel no longer has its own header).
