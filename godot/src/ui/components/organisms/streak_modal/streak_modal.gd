@@ -99,6 +99,8 @@ func async_setup(state: State, progress_day: int, is_guest: bool, pending_day: i
 	_is_guest = is_guest
 	_pending_day = pending_day
 	_render()
+	if _is_guest:
+		_async_confirm_guest()
 	await _async_apply_reward_thumbnails()
 	if not is_instance_valid(self):
 		return
@@ -142,6 +144,16 @@ func _notification(what: int) -> void:
 ## moment a guest upgrades mid-claim (see _show_claim_button's claim_action), and the footer needs
 ## to drop its guest-specific caption right then, without re-running _render()'s full state
 ## machine.
+## is_guest comes from a cached flag that reads "guest" for an upgraded guest until thirdweb is
+## asked; drop the "finish setting up your account" caption once it confirms.
+func _async_confirm_guest() -> void:
+	var still_guest := await RewardClaimer.async_is_unlinked_guest()
+	if not is_instance_valid(self) or still_guest:
+		return
+	_is_guest = false
+	_update_footer()
+
+
 func _update_footer() -> void:
 	var footer_key := "STREAK_FOOTER_CAPTION_GUEST" if _is_guest else "STREAK_FOOTER_CAPTION"
 	label_footer.text = TranslationKey.new(footer_key).text()
@@ -301,10 +313,16 @@ func _show_claim_button(text_key: String) -> void:
 		claim_button.finish_claiming()
 		_set_tap_to_continue_visible(true)
 		return
-	var is_guest := _is_guest
 	claim_button.claim_action = func() -> bool:
 		_claiming_reward = true
-		if is_guest:
+		# Re-checked on every tap: _is_guest was read when the modal opened, before thirdweb
+		# could confirm an upgraded guest, and a retry after upgrading must not re-run Add Email.
+		if _is_guest:
+			_is_guest = await RewardClaimer.async_is_unlinked_guest()
+			if not is_instance_valid(self):
+				return false
+			_update_footer()
+		if _is_guest:
 			# Hide for the upgrade step — its own email/code/reward modals are the only thing on
 			# screen, and nothing here claims (or even shows CLAIMING…) until the account is
 			# actually upgraded. Reappearing already mid-claim, rather than staying up stuck
@@ -351,11 +369,13 @@ func _set_claim_failed_visible(show_failed: bool) -> void:
 		_async_slide_in_claim_failed()
 
 
-## Appends the raw rewards-server error code (e.g. "already_claimed") on non-production builds
-## only — QA needs this to tell apart WHY a claim failed without pulling device logs; a real
-## player only ever sees the plain STREAK_CLAIM_FAILED copy a raw code would just confuse.
+## Adds the plain-language reason under the headline, and on non-production builds the raw
+## rewards-server code too, so QA can tell failures apart without device logs.
 func _update_claim_failed_label() -> void:
 	label_claim_failed.text = TranslationKey.new("STREAK_CLAIM_FAILED").text()
+	var reason := Global.streak_modal_controller.last_claim_error_message
+	if _claim_failed_shown and not reason.is_empty():
+		label_claim_failed.text += "\n" + reason
 	var error_code := Global.streak_modal_controller.last_claim_error_code
 	if _claim_failed_shown and not Global.is_production() and not error_code.is_empty():
 		label_claim_failed.text += (

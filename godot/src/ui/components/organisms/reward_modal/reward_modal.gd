@@ -18,8 +18,7 @@ const ALREADY_CLAIMED_WINDOW_SEC := 120.0
 @export var managed_by_modal_manager := true
 @export var guests_must_upgrade := false
 
-var _campaign_id: String = ""
-var _campaign_key: String = ""
+var _campaign: Dictionary = {}
 var _claiming: bool = false
 var _claimed: bool = false
 
@@ -33,10 +32,9 @@ var animation_player: AnimationPlayer = $VBoxContainer/PanelContainer/MarginCont
 
 
 ## Configures the modal for a campaign and reveals it.
-## @param campaign: { campaign_id, campaign_key } — see RewardCampaigns.CAMPAIGNS.
+## @param campaign: a RewardCampaigns.CAMPAIGNS entry, passed whole to the claim.
 func async_setup(campaign: Dictionary) -> void:
-	_campaign_id = str(campaign.get("campaign_id", ""))
-	_campaign_key = str(campaign.get("campaign_key", ""))
+	_campaign = campaign
 	_claiming = false
 	_claimed = false
 	# The reward art is a FIXED baked asset (dog-reward.png in the scene) — intentionally NOT
@@ -69,15 +67,20 @@ func _on_gui_input(event: InputEvent) -> void:
 				dismissed.emit()
 
 
+# gdlint:ignore = async-function-name
 func _on_button_claim_pressed() -> void:
-	var identity := Global.player_identity
-	if (
-		guests_must_upgrade
-		and identity.is_thirdweb_guest()
-		and not identity.is_thirdweb_guest_upgraded()
-	):
-		upgrade_required.emit()
+	if _claiming or _claimed:
 		return
+	if guests_must_upgrade:
+		# Spinner while thirdweb is asked: an upgraded guest's cached flag can still read "guest".
+		_start_processing()
+		var must_upgrade := await RewardClaimer.async_is_unlinked_guest()
+		if not is_instance_valid(self):
+			return
+		_stop_processing()
+		if must_upgrade:
+			upgrade_required.emit()
+			return
 	_async_claim()
 
 
@@ -88,9 +91,7 @@ func _async_claim() -> void:
 		return
 
 	_start_processing()
-	var result := await RewardClaimer.async_claim(
-		{"campaign_id": _campaign_id, "campaign_key": _campaign_key}
-	)
+	var result := await RewardClaimer.async_claim(_campaign)
 	# The modal can be force-closed (close_reward_modal) while the request is in flight; bail out
 	# before touching any node so we never operate on a freed instance.
 	if not is_instance_valid(self):
@@ -149,7 +150,12 @@ func _reveal_claimed() -> void:
 
 
 func _show_error(message: String) -> void:
-	# Roll back the processing visual so the reward art is visible again and the user can retry.
+	_stop_processing()
+	label_text.text = message
+
+
+# Rolls back the processing visual so the reward art is visible again and the user can retry.
+func _stop_processing() -> void:
 	_claiming = false
 	if is_instance_valid(loading_spinner):
 		loading_spinner.visible = false
@@ -157,4 +163,3 @@ func _show_error(message: String) -> void:
 		texture_rect_reward.visible = true
 	button_claim.disabled = false
 	button_claim.text = tr("REWARD_MODAL_CLAIM_REWARD")
-	label_text.text = message
