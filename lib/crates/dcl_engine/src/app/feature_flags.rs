@@ -11,9 +11,11 @@
 use godot::classes::{INode, Node};
 use godot::prelude::*;
 
+use super::deep_link::truthy;
 use crate::engine::local_task::{await_promise, spawn_local};
 use crate::fetcher::globals;
 use crate::godot_classes::dcl_feature_flags::DclFeatureFlags;
+use crate::godot_classes::dcl_global::DclGlobal;
 use crate::godot_classes::promise::PromiseError;
 
 /// Flag names exactly as the mobile-bff payload serves them.
@@ -23,6 +25,12 @@ pub const FLAG_DUAL_CHANNEL: &str = "dual-channel";
 /// Collects FCM push tokens and maps them in Segment. Turning it off stops new tokens from being
 /// registered; it does not stop delivery to tokens already collected, a server-side decision.
 pub const FLAG_PUSH_ENABLED: &str = "push-enabled";
+/// Foundation parity, the name Unity reads: scene glTF materials render with back faces culled,
+/// which an inverted-hull outline (a `doubleSided` shell with flipped normals) expects. Off by
+/// default: it also drops the back faces of genuinely double-sided content. CLI
+/// `--force-backface-culling` / `--no-force-backface-culling` and the deeplink
+/// `force-backface-culling=true|false` win over the flag.
+pub const FLAG_FORCE_BACKFACE_CULLING: &str = "alfa-force-backface-culling";
 
 #[derive(GodotClass)]
 #[class(base=Node, init)]
@@ -72,6 +80,39 @@ impl FeatureFlags {
         let me = self.to_gd();
         spawn_local(load(me));
     }
+}
+
+/// The run's local choice for a flag: the CLI (off wins over on), then the deeplink param.
+pub(super) fn local_override(arg_on: &str, arg_off: &str, param: &str) -> Option<bool> {
+    {
+        let cli = globals::cli();
+        let cli = cli.bind();
+        if cli.has_arg(arg_off.into()) {
+            return Some(false);
+        }
+        if cli.has_arg(arg_on.into()) {
+            return Some(true);
+        }
+    }
+    let link = DclGlobal::try_singleton()?.bind().deep_link_obj.clone();
+    let value = link
+        .bind()
+        .get_params()
+        .get(param)
+        .map(|v| v.stringify().to_string())
+        .unwrap_or_default();
+    (!value.is_empty()).then(|| truthy(&value))
+}
+
+/// Whether scene glTF materials are force-culled. Read when a material is fixed, so a material
+/// fixed before the flags resolve keeps its authored cull mode until the next start.
+pub fn force_backface_culling() -> bool {
+    local_override(
+        "--force-backface-culling",
+        "--no-force-backface-culling",
+        "force-backface-culling",
+    )
+    .unwrap_or_else(|| dcl_core::flags::is_enabled(FLAG_FORCE_BACKFACE_CULLING, false))
 }
 
 async fn load(node: Gd<FeatureFlags>) {
