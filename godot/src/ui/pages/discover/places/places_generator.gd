@@ -10,6 +10,11 @@ const DISCOVER_CARROUSEL_ITEM = preload(
 	"res://src/ui/pages/discover/carrousel/place_discover_card.tscn"
 )
 
+const JUMP_BACK_IN_MAX_ITEMS: int = 6
+const NEW_IN_DECENTRALAND_MAX_ITEMS: int = 6
+const NEW_IN_DECENTRALAND_CANDIDATE_POOL: int = 100
+const NEW_IN_DECENTRALAND_MAX_AGE_SECONDS: int = 7 * 24 * 60 * 60
+
 @export var order_by: OrderBy = OrderBy.NONE
 @export var categories: String = "all"
 @export var only_favorites: bool = false
@@ -18,6 +23,7 @@ const DISCOVER_CARROUSEL_ITEM = preload(
 @export var only_my_places: bool = false
 @export var only_worlds: bool = false
 @export var last_places_logic: bool = false
+@export var new_in_decentraland_logic: bool = false
 
 var _loaded_elements: int = 0
 var _no_more_elements: bool = false
@@ -40,6 +46,8 @@ func on_request(offset: int, limit: int) -> void:
 
 	if last_places_logic:
 		async_request_last_places(offset, limit)
+	elif new_in_decentraland_logic:
+		async_request_new_in_decentraland(offset, limit)
 	else:
 		async_request_from_api(offset, limit)
 
@@ -65,6 +73,7 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 	_loading = true
 
 	var last_places: Array[Dictionary] = Global.get_config().get_last_places()
+	last_places = last_places.slice(0, JUMP_BACK_IN_MAX_ITEMS)
 	var seen: Dictionary = {}
 	var index = 0
 	for place in last_places:
@@ -124,6 +133,76 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 	else:
 		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS)
 	_loading = false
+
+
+## No `order_by` value exists server-side for "new or recently updated" (only most_active /
+## like_score), so this fetches one large most_active page and filters/sorts client-side on
+## `deployed_at` / `user_count` / `like_score`, fields the API already returns but no other
+## carousel reads. A scene that's brand-new but not yet in the most_active page won't surface —
+## acceptable for v1, see issue #2981.
+func async_request_new_in_decentraland(_offset: int, _limit: int) -> void:
+	_no_more_elements = true
+	if _loading:
+		return
+
+	_loading = true
+
+	var query := (
+		"?offset=0&limit=%d&order_by=most_active&sdk=7" % NEW_IN_DECENTRALAND_CANDIDATE_POOL
+	)
+	if Global.is_ios_or_emulating():
+		query += "&tag=allowed_ios"
+
+	var url := PlacesHelper.get_api_url() + query
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
+
+	if not can_populate():
+		return
+
+	if response is PromiseError:
+		printerr("Error request places ", url, " ", response.get_error())
+		report_loading_status.emit(CarrouselGenerator.LoadingStatus.ERROR)
+		_loading = false
+		return
+
+	var json: Dictionary = response.get_string_response_as_json()
+	var now := int(Time.get_unix_time_from_system())
+	var candidates: Array = []
+	for item_data in json.data:
+		var deployed_at: String = item_data.get("deployed_at", "")
+		if deployed_at.is_empty():
+			continue
+		var deployed_unix := Time.get_unix_time_from_datetime_string(deployed_at.substr(0, 19))
+		if now - deployed_unix > NEW_IN_DECENTRALAND_MAX_AGE_SECONDS:
+			continue
+		candidates.append(item_data)
+
+	candidates.sort_custom(_sort_by_active_users_then_rating)
+	candidates = candidates.slice(0, NEW_IN_DECENTRALAND_MAX_ITEMS)
+
+	for item_data in candidates:
+		var item := DISCOVER_CARROUSEL_ITEM.instantiate()
+		item_container.add_child(item)
+		item.set_data(item_data)
+		item.item_pressed.connect(item_pressed.emit)
+		if is_instance_valid(discover):
+			item.item_pressed.connect(discover.on_item_pressed)
+
+	if candidates.size() > 0:
+		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS)
+	else:
+		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS)
+	_loading = false
+
+
+func _sort_by_active_users_then_rating(a: Dictionary, b: Dictionary) -> bool:
+	var a_users: int = a.get("user_count", 0)
+	var b_users: int = b.get("user_count", 0)
+	if a_users != b_users:
+		return a_users > b_users
+	var a_rating = a.get("like_score")
+	var b_rating = b.get("like_score")
+	return (a_rating if a_rating != null else 0.0) > (b_rating if b_rating != null else 0.0)
 
 
 func async_request_from_api(offset: int, limit: int) -> void:

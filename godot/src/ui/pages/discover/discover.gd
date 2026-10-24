@@ -30,6 +30,7 @@ var _showing_streak_modal: bool = false
 @onready var last_visited: VBoxContainer = %LastVisited
 @onready var places_featured: SnapCarousel = %PlacesFeatured
 @onready var places_most_active: VBoxContainer = %PlacesMostActive
+@onready var new_in_decentraland: VBoxContainer = %NewInDecentraland
 @onready var events: VBoxContainer = %Events
 @onready var places_favorites: VBoxContainer = %PlacesFavorites
 @onready var places_my_places: VBoxContainer = %PlacesMyPlaces
@@ -88,6 +89,9 @@ func _ready():
 	)
 	places_most_active.generator.report_loading_status.connect(
 		_on_report_loading_status.bind(places_most_active)
+	)
+	new_in_decentraland.generator.report_loading_status.connect(
+		_on_report_loading_status.bind(new_in_decentraland)
 	)
 	events.generator.report_loading_status.connect(_on_report_loading_status.bind(events))
 	places_favorites.generator.report_loading_status.connect(
@@ -194,6 +198,7 @@ func _carousel_keys() -> Dictionary:
 		friends_online: "friends",
 		last_visited: "last_visited",
 		places_most_active: "search" if searching else "most_active",
+		new_in_decentraland: "new_in_decentraland",
 		events: "events",
 		places_favorites: "favorites",
 		places_my_places: "my_places",
@@ -488,7 +493,8 @@ func set_search_filter_text(new_text: String) -> void:
 		places_featured.show()
 		places_favorites.visible = places_favorites.has_items()
 		places_my_places.visible = places_my_places.has_items()
-		places_most_active.title = "DISCOVER_MOST_ACTIVES"
+		new_in_decentraland.visible = new_in_decentraland.has_items()
+		places_most_active.title = "DISCOVER_POPULAR"
 		if guest_upgrade_card:
 			# Don't force it visible — let the card re-evaluate its own upgrade state
 			# so already-upgraded users never see it flash (#2483).
@@ -501,6 +507,7 @@ func set_search_filter_text(new_text: String) -> void:
 		places_featured.hide()
 		places_favorites.hide()
 		places_my_places.hide()
+		new_in_decentraland.hide()
 		places_most_active.title = "DISCOVER_SCENES"
 		if guest_upgrade_card:
 			guest_upgrade_card.hide()
@@ -519,6 +526,7 @@ func _scroll_all_carousels_to_start() -> void:
 		events,
 		last_visited,
 		places_most_active,
+		new_in_decentraland,
 		places_favorites,
 		places_my_places
 	]:
@@ -604,7 +612,14 @@ func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus, contain
 
 func _get_active_carousels() -> Array:
 	if search_text.is_empty():
-		return [friends_online, last_visited, places_most_active, events, places_favorites]
+		return [
+			friends_online,
+			last_visited,
+			places_most_active,
+			new_in_decentraland,
+			events,
+			places_favorites,
+		]
 	return [places_most_active, events]
 
 
