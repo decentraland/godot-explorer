@@ -4,7 +4,7 @@ members = ["crates/*"]
 default-members = ["crates/dcl_engine"]
 
 [workspace.package]
-version = "1.16.0"
+version = "2.0.0"
 edition = "2021"
 
 [profile.release]
