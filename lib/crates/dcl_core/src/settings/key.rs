@@ -21,6 +21,8 @@ pub enum SettingKey {
     AudioMusicVolume,
     AudioAvatarAndEmotesVolume,
     AudioMicAmplification,
+    /// Whether the local player's own nametag shows above their head.
+    ShowOwnNametag,
     // Engine-owned: the shell does not list them, the engine reads and writes them.
     WindowMode,
     UiZoom,
@@ -53,7 +55,7 @@ pub enum SettingKey {
 }
 
 impl SettingKey {
-    pub const ALL: [SettingKey; 44] = [
+    pub const ALL: [SettingKey; 45] = [
         Self::SubmitMessageClosesChat,
         Self::Locale,
         Self::GraphicProfile,
@@ -71,6 +73,7 @@ impl SettingKey {
         Self::AudioMusicVolume,
         Self::AudioAvatarAndEmotesVolume,
         Self::AudioMicAmplification,
+        Self::ShowOwnNametag,
         Self::WindowMode,
         Self::UiZoom,
         Self::Resolution3dScale,
@@ -120,6 +123,7 @@ impl SettingKey {
             Self::AudioMusicVolume => "audio_music_volume",
             Self::AudioAvatarAndEmotesVolume => "audio_avatar_and_emotes_volume",
             Self::AudioMicAmplification => "audio_mic_amplification",
+            Self::ShowOwnNametag => "show_own_nametag",
             Self::WindowMode => "window_mode",
             Self::UiZoom => "ui_zoom",
             Self::Resolution3dScale => "resolution_3d_scale",
@@ -157,6 +161,7 @@ impl SettingKey {
     pub fn kind(self) -> SettingKind {
         match self {
             Self::SubmitMessageClosesChat
+            | Self::ShowOwnNametag
             | Self::DynamicGraphicsEnabled
             | Self::DynamicSkybox
             | Self::ShowFps
@@ -206,7 +211,7 @@ impl SettingKey {
     /// The `ConfigData` defaults. The locale is empty: follow the device until the player picks one.
     pub fn default_value(self) -> SettingValue {
         match self {
-            Self::SubmitMessageClosesChat => SettingValue::Bool(false),
+            Self::SubmitMessageClosesChat | Self::ShowOwnNametag => SettingValue::Bool(false),
             Self::DynamicGraphicsEnabled | Self::DynamicSkybox => SettingValue::Bool(true),
             Self::Locale => SettingValue::Text(String::new()),
             Self::GraphicProfile | Self::ParticleQuality => SettingValue::Int(3),
@@ -263,7 +268,7 @@ impl SettingKey {
 
     /// The keys the shell lists; the rest are the engine's own state.
     pub fn shell_visible(self) -> bool {
-        Self::ALL[..17].contains(&self)
+        Self::ALL[..18].contains(&self)
     }
 }
 

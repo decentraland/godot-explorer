@@ -13,6 +13,7 @@ export const SETTING_DEFAULTS = {
   audio_voice_chat_volume: 100,
   audio_mic_amplification: 100,
   submit_message_closes_chat: false,
+  show_own_nametag: false,
   locale: 'en',
   /** Index into CACHE_SIZES_GB; legacy default is 2 GB. */
   max_cache_size: 1,

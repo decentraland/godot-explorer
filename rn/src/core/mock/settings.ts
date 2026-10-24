@@ -21,6 +21,7 @@ const NAMES: Partial<Record<SettingKey, string>> = {
   [SettingKey.AudioMusicVolume]: 'audio_music_volume',
   [SettingKey.AudioAvatarAndEmotesVolume]: 'audio_avatar_and_emotes_volume',
   [SettingKey.AudioMicAmplification]: 'audio_mic_amplification',
+  [SettingKey.ShowOwnNametag]: 'show_own_nametag',
 };
 
 const KEYS = (Object.keys(NAMES) as unknown as string[]).map(
@@ -33,6 +34,7 @@ const volume = () => new SettingValue.Float(100);
 function defaultValue(key: SettingKey): SettingValue {
   switch (key) {
     case SettingKey.SubmitMessageClosesChat:
+    case SettingKey.ShowOwnNametag:
       return new SettingValue.Bool(false);
     case SettingKey.DynamicGraphicsEnabled:
     case SettingKey.DynamicSkybox:

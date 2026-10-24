@@ -37,6 +37,7 @@ export const settings: Partial<Record<keyof typeof en, string>> = {
   SETTINGS_MUSIC_AMBIENT: 'Música/ambiente',
   SETTINGS_CHAT_SOCIAL: 'CHAT E SOCIAL',
   SETTINGS_CLOSE_CHAT_AFTER_SENDING: 'Fechar chat após o envio',
+  SETTINGS_SHOW_OWN_NAMETAG: 'Mostrar meu nametag',
   SETTINGS_CAMERA: 'CÂMERA',
   SETTINGS_CAMERA_FIRST_PERSON: 'Em 1ª pessoa',
   SETTINGS_CAMERA_THIRD_PERSON: 'Em 3ª pessoa',

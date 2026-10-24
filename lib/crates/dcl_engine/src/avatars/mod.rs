@@ -15,6 +15,7 @@ pub mod mesh_assembler;
 pub mod modifier_detector;
 pub mod nameplate;
 pub mod nameplate_occlusion;
+pub mod nameplate_tiers;
 pub mod preview;
 pub mod proximity_fade;
 pub mod scene_emote;

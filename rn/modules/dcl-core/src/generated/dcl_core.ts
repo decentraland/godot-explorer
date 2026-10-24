@@ -8455,6 +8455,10 @@ export enum SettingKey {
   AudioMusicVolume,
   AudioAvatarAndEmotesVolume,
   AudioMicAmplification,
+  /**
+   * Whether the local player's own nametag shows above their head.
+   */
+  ShowOwnNametag,
   WindowMode,
   UiZoom,
   Resolution3dScale,
@@ -8527,58 +8531,60 @@ const FfiConverterTypeSettingKey = (() => {
         case 17:
           return SettingKey.AudioMicAmplification;
         case 18:
-          return SettingKey.WindowMode;
+          return SettingKey.ShowOwnNametag;
         case 19:
-          return SettingKey.UiZoom;
+          return SettingKey.WindowMode;
         case 20:
-          return SettingKey.Resolution3dScale;
+          return SettingKey.UiZoom;
         case 21:
-          return SettingKey.ProcessTickQuotaMs;
+          return SettingKey.Resolution3dScale;
         case 22:
-          return SettingKey.ShowFps;
+          return SettingKey.ProcessTickQuotaMs;
         case 23:
-          return SettingKey.Skybox;
+          return SettingKey.ShowFps;
         case 24:
-          return SettingKey.ShadowQuality;
+          return SettingKey.Skybox;
         case 25:
-          return SettingKey.BloomQuality;
+          return SettingKey.ShadowQuality;
         case 26:
-          return SettingKey.AntiAliasing;
+          return SettingKey.BloomQuality;
         case 27:
-          return SettingKey.TextureQuality;
+          return SettingKey.AntiAliasing;
         case 28:
-          return SettingKey.AvatarImpostorsEnabled;
+          return SettingKey.TextureQuality;
         case 29:
-          return SettingKey.FirstLaunchCompleted;
+          return SettingKey.AvatarImpostorsEnabled;
         case 30:
-          return SettingKey.BenchmarkGpuScore;
+          return SettingKey.FirstLaunchCompleted;
         case 31:
-          return SettingKey.BenchmarkRamGb;
+          return SettingKey.BenchmarkGpuScore;
         case 32:
-          return SettingKey.LastRealmJoined;
+          return SettingKey.BenchmarkRamGb;
         case 33:
-          return SettingKey.LastParcelX;
+          return SettingKey.LastRealmJoined;
         case 34:
-          return SettingKey.LastParcelY;
+          return SettingKey.LastParcelX;
         case 35:
-          return SettingKey.FirstMoveInWorldSent;
+          return SettingKey.LastParcelY;
         case 36:
-          return SettingKey.InstallReferrerSent;
+          return SettingKey.FirstMoveInWorldSent;
         case 37:
-          return SettingKey.DebugRotateGuestAnchor;
+          return SettingKey.InstallReferrerSent;
         case 38:
-          return SettingKey.LocalAssetsCacheVersion;
+          return SettingKey.DebugRotateGuestAnchor;
         case 39:
-          return SettingKey.Day1NotificationScheduled;
+          return SettingKey.LocalAssetsCacheVersion;
         case 40:
-          return SettingKey.Day1NotificationAt;
+          return SettingKey.Day1NotificationScheduled;
         case 41:
-          return SettingKey.ControlsFtueShown;
+          return SettingKey.Day1NotificationAt;
         case 42:
-          return SettingKey.FtueTutorialOffered;
+          return SettingKey.ControlsFtueShown;
         case 43:
-          return SettingKey.FtueTutorialCompleted;
+          return SettingKey.FtueTutorialOffered;
         case 44:
+          return SettingKey.FtueTutorialCompleted;
+        case 45:
           return SettingKey.FtueNewPlayerWallet;
         default:
           throw new UniffiInternalError.UnexpectedEnumCase();
@@ -8620,60 +8626,62 @@ const FfiConverterTypeSettingKey = (() => {
           return c.writeI32(16);
         case SettingKey.AudioMicAmplification:
           return c.writeI32(17);
-        case SettingKey.WindowMode:
+        case SettingKey.ShowOwnNametag:
           return c.writeI32(18);
-        case SettingKey.UiZoom:
+        case SettingKey.WindowMode:
           return c.writeI32(19);
-        case SettingKey.Resolution3dScale:
+        case SettingKey.UiZoom:
           return c.writeI32(20);
-        case SettingKey.ProcessTickQuotaMs:
+        case SettingKey.Resolution3dScale:
           return c.writeI32(21);
-        case SettingKey.ShowFps:
+        case SettingKey.ProcessTickQuotaMs:
           return c.writeI32(22);
-        case SettingKey.Skybox:
+        case SettingKey.ShowFps:
           return c.writeI32(23);
-        case SettingKey.ShadowQuality:
+        case SettingKey.Skybox:
           return c.writeI32(24);
-        case SettingKey.BloomQuality:
+        case SettingKey.ShadowQuality:
           return c.writeI32(25);
-        case SettingKey.AntiAliasing:
+        case SettingKey.BloomQuality:
           return c.writeI32(26);
-        case SettingKey.TextureQuality:
+        case SettingKey.AntiAliasing:
           return c.writeI32(27);
-        case SettingKey.AvatarImpostorsEnabled:
+        case SettingKey.TextureQuality:
           return c.writeI32(28);
-        case SettingKey.FirstLaunchCompleted:
+        case SettingKey.AvatarImpostorsEnabled:
           return c.writeI32(29);
-        case SettingKey.BenchmarkGpuScore:
+        case SettingKey.FirstLaunchCompleted:
           return c.writeI32(30);
-        case SettingKey.BenchmarkRamGb:
+        case SettingKey.BenchmarkGpuScore:
           return c.writeI32(31);
-        case SettingKey.LastRealmJoined:
+        case SettingKey.BenchmarkRamGb:
           return c.writeI32(32);
-        case SettingKey.LastParcelX:
+        case SettingKey.LastRealmJoined:
           return c.writeI32(33);
-        case SettingKey.LastParcelY:
+        case SettingKey.LastParcelX:
           return c.writeI32(34);
-        case SettingKey.FirstMoveInWorldSent:
+        case SettingKey.LastParcelY:
           return c.writeI32(35);
-        case SettingKey.InstallReferrerSent:
+        case SettingKey.FirstMoveInWorldSent:
           return c.writeI32(36);
-        case SettingKey.DebugRotateGuestAnchor:
+        case SettingKey.InstallReferrerSent:
           return c.writeI32(37);
-        case SettingKey.LocalAssetsCacheVersion:
+        case SettingKey.DebugRotateGuestAnchor:
           return c.writeI32(38);
-        case SettingKey.Day1NotificationScheduled:
+        case SettingKey.LocalAssetsCacheVersion:
           return c.writeI32(39);
-        case SettingKey.Day1NotificationAt:
+        case SettingKey.Day1NotificationScheduled:
           return c.writeI32(40);
-        case SettingKey.ControlsFtueShown:
+        case SettingKey.Day1NotificationAt:
           return c.writeI32(41);
-        case SettingKey.FtueTutorialOffered:
+        case SettingKey.ControlsFtueShown:
           return c.writeI32(42);
-        case SettingKey.FtueTutorialCompleted:
+        case SettingKey.FtueTutorialOffered:
           return c.writeI32(43);
-        case SettingKey.FtueNewPlayerWallet:
+        case SettingKey.FtueTutorialCompleted:
           return c.writeI32(44);
+        case SettingKey.FtueNewPlayerWallet:
+          return c.writeI32(45);
       }
     }
     allocationSize(value: TypeName): number {

@@ -53,7 +53,7 @@ fn reopen(dir: &tempfile::TempDir) -> Settings {
 fn starts_with_every_default() {
     let (_dir, settings, _) = open();
     let entries = settings.entries();
-    assert_eq!(entries.len(), 17, "the shell lists its 17 keys only");
+    assert_eq!(entries.len(), 18, "the shell lists its 18 keys only");
     assert!(entries.iter().all(|entry| entry.key.shell_visible()));
     for key in SettingKey::ALL {
         assert_eq!(settings.get(key), key.default_value(), "{}", key.name());
