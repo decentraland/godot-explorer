@@ -1147,10 +1147,11 @@ impl Metrics {
     }
 
     /// Fire the `first_social_action` Firebase event (Android only). `action` is one of `emote`,
-    /// `friend_request`, `friend_accept`, `chat`. Once per wallet is the caller's job: persist its
-    /// per-wallet flag ONLY on `true`, same contract as `track_first_move_in_world`.
+    /// `friend_request`, `friend_accept`, `chat`. Once per install is the caller's job: persist
+    /// its flag ONLY on `true`, same contract as `track_first_move_in_world`. `is_guest` comes
+    /// from the caller because `common.dcl_is_guest` is false for thirdweb (Play-as-Guest) guests.
     #[func]
-    pub fn track_first_social_action(&mut self, action: String) -> bool {
+    pub fn track_first_social_action(&mut self, action: String, is_guest: bool) -> bool {
         if !self.eula_accepted {
             return false;
         }
@@ -1159,7 +1160,7 @@ impl Metrics {
         }
         let params = serde_json::json!({
             "action": action,
-            "is_guest": self.common.dcl_is_guest,
+            "is_guest": is_guest,
             "dcl_eth_address": self.common.dcl_eth_address,
         });
         let params_str = params.to_string();

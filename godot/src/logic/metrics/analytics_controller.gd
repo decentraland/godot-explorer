@@ -12,7 +12,7 @@ extends RefCounted
 ##   • EULA consent gate (returning users in setup(), fresh accept via on_eula_accepted_locally).
 ##   • Firebase `login_success` on wallet_connected, suppressed for session recoveries.
 ##   • Firebase one-shot `first_move_in_world` after the player's first real movement.
-##   • Firebase per-wallet one-shot `first_social_action` (emote, friend request/accept, chat).
+##   • Firebase one-shot `first_social_action` (emote, friend request/accept, chat).
 
 # Horizontal velocity (m/s) above which we consider the player has "really moved" — filters
 # physics drift and small camera corrections from triggering first_move_in_world.
@@ -99,20 +99,22 @@ func _on_guest_login_outcome(
 	)
 
 
-## Fires `first_social_action` the first time the current wallet performs `action` (`emote`,
+## Fires `first_social_action` the first time this install performs `action` (`emote`,
 ## `friend_request`, `friend_accept` or `chat`). Safe to call on every such action.
 func track_first_social_action(action: String) -> void:
-	if Global.metrics == null or Global.player_identity == null:
-		return
-	var wallet := Global.player_identity.get_address_str().to_lower()
-	if wallet.is_empty():
+	if Global.metrics == null:
 		return
 	var config := Global.get_config()
-	if config.first_social_action_wallets.has(wallet):
+	if config.first_social_action_sent:
 		return
-	# Burn the wallet's one-shot only when the event was logged (Android + EULA accepted).
-	if Global.metrics.track_first_social_action(action):
-		config.first_social_action_wallets.append(wallet)
+	var identity := Global.player_identity
+	var is_guest: bool = (
+		identity.is_guest
+		or (identity.is_thirdweb_guest() and not identity.is_thirdweb_guest_upgraded())
+	)
+	# Burn the one-shot only when the event was logged (Android + EULA accepted).
+	if Global.metrics.track_first_social_action(action, is_guest):
+		config.first_social_action_sent = true
 		config.save_to_settings_file()
 
 
