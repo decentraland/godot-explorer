@@ -107,11 +107,13 @@ func _async_show_streak_current_reminder_if_pending() -> void:
 	var pending_day := Global.streak_manager.take_current_reminder()
 	if pending_day == 0:
 		return
-	await _async_show_streak_modal_and_wait(
+	var shown := await _async_show_streak_modal_and_wait(
 		Global.streak_manager.compute_modal_state(pending_day),
 		Global.streak_manager.get_effective_progress_day(),
 		pending_day
 	)
+	if not shown:
+		Global.streak_manager.untake_current_reminder(pending_day)
 
 
 func _async_show_streak_modal_and_wait(
