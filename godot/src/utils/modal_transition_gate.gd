@@ -18,8 +18,12 @@ extends RefCounted
 ##   the mechanism.
 ##
 ## Does not wait for the controls FTUE overlay (`ControlsFtueCoordinator.async_wait_until_clear`,
-## uncapped) — both modals are Discover-only and the overlay is an in-world HUD concern, so the
-## two should not currently overlap; call it too if that stops being true.
+## uncapped) — not because either modal is confined to Discover (the streak modal is; the upgrade
+## nudge is evaluated in any portrait context: menu.gd, chatbar.gd, profile.gd and others all call
+## `Global.set_orientation_portrait()`), but because the overlay itself is landscape-only and
+## cancels on `_on_orientation_changed(true)` (controls_ftue_coordinator.gd), while both modals
+## only ever show in portrait — so the two can never be on screen at the same time. Call it too if
+## that invariant changes.
 ##
 ## Only covers the explorer's own loading screen: `Global.get_explorer()` is null in the lobby,
 ## and also goes null/freed mid-teardown during `Global.return_to_discover()` — which itself calls

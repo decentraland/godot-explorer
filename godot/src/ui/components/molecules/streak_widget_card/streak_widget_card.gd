@@ -132,11 +132,11 @@ func _on_button_claim_pressed() -> void:
 func _async_show_streak_modal_and_wait(
 	state: int, progress_day: int, pending_day: int = -1
 ) -> void:
-	Global.upgrade_nudge_coordinator.suppress_until_cleared("streak")
+	Global.upgrade_nudge_coordinator.suppress_until_cleared("streak", self)
 	var shown := await Global.streak_modal_controller.async_show_streak_modal(
 		state, progress_day, StreakManager.is_unlinked_guest(), pending_day
 	)
 	if shown and is_instance_valid(Global.streak_modal_controller.current_streak_modal):
 		await Global.streak_modal_controller.current_streak_modal.tree_exited
 	refresh_visibility()
-	Global.upgrade_nudge_coordinator.resume("streak")
+	Global.upgrade_nudge_coordinator.resume("streak", self)

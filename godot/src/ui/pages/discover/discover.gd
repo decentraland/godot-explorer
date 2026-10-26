@@ -116,7 +116,7 @@ func _async_show_streak_modal_and_wait(
 	state: int, progress_day: int, pending_day: int = -1
 ) -> void:
 	var is_guest := StreakManager.is_unlinked_guest()
-	Global.upgrade_nudge_coordinator.suppress_until_cleared("streak")
+	Global.upgrade_nudge_coordinator.suppress_until_cleared("streak", self)
 	var shown := await Global.streak_modal_controller.async_show_streak_modal(
 		state, progress_day, is_guest, pending_day
 	)
@@ -124,7 +124,7 @@ func _async_show_streak_modal_and_wait(
 		await Global.streak_modal_controller.current_streak_modal.tree_exited
 	if streak_widget_card:
 		streak_widget_card.refresh_visibility()
-	Global.upgrade_nudge_coordinator.resume("streak")
+	Global.upgrade_nudge_coordinator.resume("streak", self)
 
 
 func _on_featured_card_tapped(index: int) -> void:
@@ -277,7 +277,7 @@ func _show_device_support_modal_if_needed() -> void:
 ## happen here, after the modal is confirmed on screen — not in the caller before this even runs —
 ## so a creation failure can't silently burn below-minspec's only-ever chance to show.
 func _async_show_then_resume_nudge(is_end_of_support: bool, forced: bool) -> void:
-	Global.upgrade_nudge_coordinator.suppress_until_cleared("device_support")
+	Global.upgrade_nudge_coordinator.suppress_until_cleared("device_support", self)
 	if is_end_of_support:
 		await Global.modal_manager.async_show_end_of_device_support_modal()
 	else:
@@ -300,7 +300,7 @@ func _async_show_then_resume_nudge(is_end_of_support: bool, forced: bool) -> voi
 				config.below_minspec_modal_shown = true
 			config.save_to_settings_file()
 		await modal.tree_exited
-	Global.upgrade_nudge_coordinator.resume("device_support")
+	Global.upgrade_nudge_coordinator.resume("device_support", self)
 
 
 func _show_low_spec_warning_if_needed():

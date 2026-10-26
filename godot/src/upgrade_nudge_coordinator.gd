@@ -33,13 +33,17 @@ const HOUR_SECONDS := 3600
 const MAX_SHOWS := 3
 
 var _evaluated_this_session: bool = false
-# Tag -> number of callers currently outranking this nudge under that tag (e.g. a device-support
-# modal #2936/#2935, or a pending login-streak modal #3018) — incremented via
-# suppress_until_cleared(tag), decremented via resume(tag). A count, not a bool: two overlapping
-# callers can share a tag (discover.gd and streak_widget_card.gd both suppress "streak"), and a
-# bool would let either one's resume() clear the other's still-active hold (#2867 review).
+# Tag -> Array of the Nodes currently outranking this nudge under that tag (e.g. a device-support
+# modal #2936/#2935, or a pending login-streak modal #3018) — appended in suppress_until_cleared,
+# removed by identity in resume. An array of owners, not a bool or a count: two callers can share
+# a tag (discover.gd and streak_widget_card.gd both suppress "streak"), and either a bool or a
+# plain count lets one caller's resume() clear or outlive the other's still-active hold (#2867
+# review). Tracking owners also self-heals a leaked hold — a caller that suppressed and was freed
+# before its own resume (e.g. torn down mid-wait by Global.return_to_discover()/sign-out) would
+# otherwise block the nudge for the rest of the session; _prune_stale_suppressors() drops any
+# owner that is no longer is_instance_valid() before every check.
 # _try_evaluate() checks this without consuming _evaluated_this_session, so the real evaluation
-# still runs once the last suppressor calls resume().
+# still runs once the last suppressor calls resume() (or is pruned).
 var _suppressors: Dictionary = {}
 
 
@@ -70,23 +74,40 @@ func _on_loading_finished() -> void:
 ## place before that same call stack's Global.set_orientation_portrait() can fire this
 ## coordinator's own orientation-triggered evaluation. `tag` identifies the caller so concurrent
 ## suppressors don't clear each other's hold early — including two concurrent callers sharing the
-## same tag, which is why this counts rather than sets a flag.
-func suppress_until_cleared(tag: String) -> void:
-	_suppressors[tag] = int(_suppressors.get(tag, 0)) + 1
+## same tag. `owner` is whoever is responsible for the matching resume() call (normally the
+## caller's own `self`), so a caller freed before it gets there doesn't hold this open forever.
+func suppress_until_cleared(tag: String, owner: Node) -> void:
+	var owners: Array = _suppressors.get(tag, [])
+	owners.append(owner)
+	_suppressors[tag] = owners
 
 
-## Called once the modal that outranked this nudge (identified by the same `tag` passed to
-## suppress_until_cleared) has been dismissed — re-attempts the evaluation once no suppressor
-## remains. A no-op if `tag` wasn't actually suppressing (e.g. this session's evaluation already
-## happened some other way).
-func resume(tag: String) -> void:
-	var remaining: int = int(_suppressors.get(tag, 0)) - 1
-	if remaining > 0:
-		_suppressors[tag] = remaining
-	else:
+## Called once the modal that outranked this nudge (identified by the same `tag` and `owner`
+## passed to suppress_until_cleared) has been dismissed — re-attempts the evaluation once no
+## suppressor remains. A no-op if `tag`/`owner` wasn't actually suppressing (e.g. this session's
+## evaluation already happened some other way).
+func resume(tag: String, owner: Node) -> void:
+	var owners: Array = _suppressors.get(tag, [])
+	owners.erase(owner)
+	if owners.is_empty():
 		_suppressors.erase(tag)
+	else:
+		_suppressors[tag] = owners
+	_prune_stale_suppressors()
 	if _suppressors.is_empty():
 		_try_evaluate()
+
+
+## Drops any suppressor whose owner is no longer alive, so a caller freed mid-wait (teardown from
+## Global.return_to_discover() or sign-out) cannot block the nudge for the rest of the session.
+func _prune_stale_suppressors() -> void:
+	for tag in _suppressors.keys():
+		var owners: Array = _suppressors[tag]
+		owners = owners.filter(func(owner): return is_instance_valid(owner))
+		if owners.is_empty():
+			_suppressors.erase(tag)
+		else:
+			_suppressors[tag] = owners
 
 
 func _try_evaluate() -> void:
@@ -97,6 +118,7 @@ func _try_evaluate() -> void:
 		return
 	if not Global.is_orientation_portrait():
 		return
+	_prune_stale_suppressors()
 	# A higher-priority modal (device-support #2936/#2935, login-streak #3018) is showing — don't
 	# consume this session's evaluation slot; the suppressor calls resume() once it's dismissed.
 	if not _suppressors.is_empty():
