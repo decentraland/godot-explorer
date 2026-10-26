@@ -41,8 +41,8 @@ use super::{
     cache_file_name::{cache_file_name, cache_file_path},
     crash_context,
     font::{
-        admit_font_source, font_cache_key, font_family_cache_key, fontsource_id, load_font,
-        load_font_family, scene_font_path, warn_font_fallback,
+        font_cache_key, font_family_cache_key, fontsource_id, load_font, load_font_family,
+        scene_font_path, warn_font_fallback,
     },
     gltf::{
         build_dcl_emote_gltf, get_last_16_alphanumeric, load_and_save_emote_gltf,
@@ -1732,7 +1732,7 @@ impl ContentProvider {
             Ok(source) => source,
             Err(reason) => {
                 warn_font_fallback(&font_src, reason);
-                return Promise::from_rejected(reason.to_string());
+                return self.cached_rejection(format!("font_rejected_{reason}"), reason);
             }
         };
 
@@ -1740,20 +1740,18 @@ impl ContentProvider {
             Source::File(file_hash) => font_cache_key(file_hash, msdf),
             Source::Family(id) => font_family_cache_key(id, msdf),
         };
-        if let Some(promise) = self.get_cached_promise(&cache_key) {
-            // A rejected load (e.g. offline) is retried on the next request.
-            if !promise.bind().is_rejected() {
+        let cached = self.get_cached_promise(&cache_key);
+        // A rejected load (e.g. offline) is retried on a later request, within the budget.
+        if let Some(promise) = cached.as_ref().filter(|p| !p.bind().is_rejected()) {
+            return promise.clone();
+        }
+        if !content_mapping.admit_font_load(&cache_key) {
+            if let Some(promise) = cached {
                 return promise;
             }
-        }
-        let source_key = match &source {
-            Source::File(file_hash) => file_hash.clone(),
-            Source::Family(id) => format!("family_{id}"),
-        };
-        if !admit_font_source(&source_key) {
-            let reason = "too many custom fonts in this session";
+            let reason = "too many custom fonts in this scene";
             warn_font_fallback(&font_src, reason);
-            return Promise::from_rejected(reason.to_string());
+            return self.cached_rejection(cache_key, reason);
         }
 
         let (promise, get_promise) = Promise::make_to_async();
@@ -2929,6 +2927,16 @@ impl ContentProvider {
     fn get_cached_promise(&self, key: &str) -> Option<Gd<Promise>> {
         let instance_id = self.promises.get(key)?;
         Gd::<Promise>::try_from_instance_id(*instance_id).ok()
+    }
+
+    /// A rejected promise shared by every request for `key`, so repeats don't allocate.
+    fn cached_rejection(&mut self, key: String, reason: &str) -> Gd<Promise> {
+        if let Some(promise) = self.get_cached_promise(&key) {
+            return promise;
+        }
+        let promise = Promise::from_rejected(reason.to_string());
+        self.cache_promise(key, &promise);
+        promise
     }
 
     /// Insert a promise into the cache using its InstanceId

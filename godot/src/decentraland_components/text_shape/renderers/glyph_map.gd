@@ -31,6 +31,7 @@ static func styled_font(base: Font, bold: bool, italic: bool, glyph_spacing: int
 	if base.has_meta(TextLayout.CUSTOM_FONT_META):
 		source = (base as FontVariation).base_font
 		# The cached variation holds `source`, so its instance id stays unique while cached.
+		# Never evicted: bounded by each scene's custom font budget (content/font.rs).
 		face_id = "%d_%s" % [source.get_instance_id(), base.fallbacks[0].resource_path]
 	var key := "%s_%d_%d_%d" % [face_id, int(bold), int(italic), glyph_spacing]
 	if _styled_cache.has(key):

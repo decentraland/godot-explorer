@@ -42,46 +42,56 @@ pub fn scene_font_path(font_src: &str) -> Result<&str, &'static str> {
     if src.is_empty() {
         return Err("empty");
     }
+    if src.len() > MAX_FONT_SRC_BYTES {
+        return Err("longer than 256 bytes");
+    }
     if src.contains("://") || src.starts_with("//") {
         return Err("external URLs are not supported");
     }
     Ok(src)
 }
 
-/// Distinct custom fonts a session loads; later sources use the built-in font.
-const MAX_CUSTOM_FONTS: usize = 32;
+const MAX_FONT_SRC_BYTES: usize = 256;
+/// Font cache keys one scene loads: 8 sources, each as raster (UI) and MSDF (TextShape).
+/// A Fontsource load holds up to 4 FontFiles, so a scene keeps at most 64.
+const MAX_SCENE_FONT_LOADS: usize = 16;
+/// Loads of one cache key per scene, retries after a failure included.
+const MAX_FONT_LOAD_ATTEMPTS: u8 = 3;
 /// Distinct `font_src` values that warn; later ones log at debug.
 const MAX_FONT_WARNINGS: usize = 64;
+/// `font_src` prefix kept for warnings and their dedupe.
+const FONT_SRC_LOG_CHARS: usize = 64;
 
-/// None when `set` is full and lacks `key`; else whether `key` was new.
-fn insert_capped(set: &mut HashSet<String>, key: &str, cap: usize) -> Option<bool> {
-    if set.contains(key) {
-        return Some(false);
+/// Counts a load of `cache_key` in a scene's `loads`; false once the scene is over budget.
+pub fn admit_font_load(loads: &mut HashMap<String, u8>, cache_key: &str) -> bool {
+    if let Some(attempts) = loads.get_mut(cache_key) {
+        if *attempts >= MAX_FONT_LOAD_ATTEMPTS {
+            return false;
+        }
+        *attempts += 1;
+        return true;
     }
-    if set.len() >= cap {
-        return None;
+    if loads.len() >= MAX_SCENE_FONT_LOADS {
+        return false;
     }
-    set.insert(key.to_owned());
-    Some(true)
+    loads.insert(cache_key.to_owned(), 1);
+    true
 }
 
 /// Every component using a `font_src` requests it, so each failing source warns once.
 pub fn warn_font_fallback(font_src: &str, reason: &str) {
     static WARNED: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+    let src: String = font_src.chars().take(FONT_SRC_LOG_CHARS).collect();
     let mut warned = WARNED.get_or_init(Default::default).lock().unwrap();
-    match insert_capped(&mut warned, font_src, MAX_FONT_WARNINGS) {
-        Some(true) => tracing::warn!("font_src '{font_src}': {reason}; using the built-in font"),
-        Some(false) => {}
-        None => tracing::debug!("font_src '{font_src}': {reason}; using the built-in font"),
+    if warned.contains(&src) {
+        return;
     }
-}
-
-/// Whether a font source (file hash or family id) may load, within the session cap.
-/// Failed sources count too, so a scene can't trigger unbounded downloads.
-pub fn admit_font_source(source_key: &str) -> bool {
-    static ADMITTED: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
-    let mut admitted = ADMITTED.get_or_init(Default::default).lock().unwrap();
-    insert_capped(&mut admitted, source_key, MAX_CUSTOM_FONTS).is_some()
+    if warned.len() >= MAX_FONT_WARNINGS {
+        tracing::debug!("font_src '{src}': {reason}; using the built-in font");
+        return;
+    }
+    tracing::warn!("font_src '{src}': {reason}; using the built-in font");
+    warned.insert(src);
 }
 
 pub fn font_cache_key(file_hash: &str, msdf: bool) -> String {
@@ -371,6 +381,8 @@ mod tests {
         assert!(scene_font_path("   ").is_err());
         assert!(scene_font_path("https://example.com/a.ttf").is_err());
         assert!(scene_font_path("//example.com/a.ttf").is_err());
+        assert!(scene_font_path(&"a".repeat(MAX_FONT_SRC_BYTES)).is_ok());
+        assert!(scene_font_path(&"a".repeat(MAX_FONT_SRC_BYTES + 1)).is_err());
     }
 
     #[test]
@@ -466,13 +478,18 @@ mod tests {
     }
 
     #[test]
-    fn capped_set_stops_at_cap() {
-        let mut set = HashSet::new();
-        assert_eq!(insert_capped(&mut set, "a", 2), Some(true));
-        assert_eq!(insert_capped(&mut set, "a", 2), Some(false));
-        assert_eq!(insert_capped(&mut set, "b", 2), Some(true));
-        assert_eq!(insert_capped(&mut set, "c", 2), None);
-        assert_eq!(insert_capped(&mut set, "b", 2), Some(false));
+    fn scene_font_budget_limits_attempts_and_loads() {
+        let mut loads = HashMap::new();
+        for _ in 0..MAX_FONT_LOAD_ATTEMPTS {
+            assert!(admit_font_load(&mut loads, "a"));
+        }
+        assert!(!admit_font_load(&mut loads, "a"));
+        for i in 1..MAX_SCENE_FONT_LOADS {
+            assert!(admit_font_load(&mut loads, &format!("k{i}")));
+        }
+        assert!(!admit_font_load(&mut loads, "one_too_many"));
+        assert!(admit_font_load(&mut loads, "k1"));
+        assert!(admit_font_load(&mut HashMap::new(), "one_too_many"));
     }
 
     #[test]
