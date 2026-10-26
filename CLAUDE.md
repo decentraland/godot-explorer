@@ -232,7 +232,7 @@ bypasses that check for local debugging only. The baked files live in
    - **The `build` label** (or legacy alias `build-ios`) on a PR.
    - **Manual `workflow_dispatch`** on `main`/`release`.
    ```bash
-   # On a PR: add the build label (iOS TestFlight + Android Slack notification)
+   # On a PR: add the build label (iOS TestFlight + Android APK on the build card)
    gh pr edit --add-label "build"
 
    # Manual trigger on main/release (GitHub Actions UI or gh CLI)
