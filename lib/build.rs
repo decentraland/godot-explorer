@@ -405,8 +405,8 @@ fn main() -> io::Result<()> {
                     .find(|(file, _, _)| Some(*file) == file_name.as_deref());
                 if file_name.as_deref() == Some("avatar_emote_command.proto") {
                     proto_files.push(patched_avatar_emote_command_proto());
-                } else if let Some((file, message, field)) = font_src_patch {
-                    proto_files.push(patched_font_src_proto(file, message, field));
+                } else if let Some((_, message, field)) = font_src_patch {
+                    proto_files.push(patched_font_src_proto(&entry.path(), message, field));
                 } else {
                     proto_files.push(entry.path());
                 }
@@ -661,9 +661,12 @@ const FONT_SRC_PATCHES: &[(&str, &str, &str)] = &[
     ),
 ];
 
-fn patched_font_src_proto(file: &str, message: &str, field: &str) -> std::path::PathBuf {
-    let rel = format!("decentraland/sdk/components/{file}");
-    let mut source = fs::read_to_string(format!("{PROTO_FILES_BASE_DIR}{rel}"))
+fn patched_font_src_proto(path: &Path, message: &str, field: &str) -> std::path::PathBuf {
+    let rel = path
+        .strip_prefix(PROTO_FILES_BASE_DIR)
+        .expect("proto under PROTO_FILES_BASE_DIR");
+    let file = rel.display();
+    let mut source = fs::read_to_string(path)
         .unwrap_or_else(|_| panic!("read {file} (run `cargo run -- install` to fetch protos)"));
 
     if !source.contains("font_src") {

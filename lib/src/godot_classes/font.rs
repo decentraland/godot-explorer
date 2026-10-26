@@ -180,6 +180,11 @@ impl SceneFont {
         true
     }
 
+    /// Whether the custom font loaded (false while loading, after a rejection or when unset).
+    pub fn is_loaded(&self) -> bool {
+        self.promise.as_ref().and_then(faces_from_promise).is_some()
+    }
+
     /// Calls `callable` once the custom font finishes loading, if it is still loading.
     pub fn on_loaded(&self, callable: &Callable) {
         let Some(mut promise) = self.promise.clone() else {

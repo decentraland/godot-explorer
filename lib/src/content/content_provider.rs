@@ -41,8 +41,8 @@ use super::{
     cache_file_name::{cache_file_name, cache_file_path},
     crash_context,
     font::{
-        font_cache_key, font_family_cache_key, fontsource_id, load_font, load_font_family,
-        scene_font_path, warn_font_fallback,
+        admit_font_source, font_cache_key, font_family_cache_key, fontsource_id, load_font,
+        load_font_family, scene_font_path, warn_font_fallback,
     },
     gltf::{
         build_dcl_emote_gltf, get_last_16_alphanumeric, load_and_save_emote_gltf,
@@ -1745,6 +1745,15 @@ impl ContentProvider {
             if !promise.bind().is_rejected() {
                 return promise;
             }
+        }
+        let source_key = match &source {
+            Source::File(file_hash) => file_hash.clone(),
+            Source::Family(id) => format!("family_{id}"),
+        };
+        if !admit_font_source(&source_key) {
+            let reason = "too many custom fonts in this session";
+            warn_font_fallback(&font_src, reason);
+            return Promise::from_rejected(reason.to_string());
         }
 
         let (promise, get_promise) = Promise::make_to_async();

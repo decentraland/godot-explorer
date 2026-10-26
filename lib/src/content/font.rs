@@ -48,13 +48,40 @@ pub fn scene_font_path(font_src: &str) -> Result<&str, &'static str> {
     Ok(src)
 }
 
+/// Distinct custom fonts a session loads; later sources use the built-in font.
+const MAX_CUSTOM_FONTS: usize = 32;
+/// Distinct `font_src` values that warn; later ones log at debug.
+const MAX_FONT_WARNINGS: usize = 64;
+
+/// None when `set` is full and lacks `key`; else whether `key` was new.
+fn insert_capped(set: &mut HashSet<String>, key: &str, cap: usize) -> Option<bool> {
+    if set.contains(key) {
+        return Some(false);
+    }
+    if set.len() >= cap {
+        return None;
+    }
+    set.insert(key.to_owned());
+    Some(true)
+}
+
 /// Every component using a `font_src` requests it, so each failing source warns once.
 pub fn warn_font_fallback(font_src: &str, reason: &str) {
     static WARNED: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
     let mut warned = WARNED.get_or_init(Default::default).lock().unwrap();
-    if warned.insert(format!("{font_src}\n{reason}")) {
-        tracing::warn!("font_src '{font_src}': {reason}; using the built-in font");
+    match insert_capped(&mut warned, font_src, MAX_FONT_WARNINGS) {
+        Some(true) => tracing::warn!("font_src '{font_src}': {reason}; using the built-in font"),
+        Some(false) => {}
+        None => tracing::debug!("font_src '{font_src}': {reason}; using the built-in font"),
     }
+}
+
+/// Whether a font source (file hash or family id) may load, within the session cap.
+/// Failed sources count too, so a scene can't trigger unbounded downloads.
+pub fn admit_font_source(source_key: &str) -> bool {
+    static ADMITTED: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+    let mut admitted = ADMITTED.get_or_init(Default::default).lock().unwrap();
+    insert_capped(&mut admitted, source_key, MAX_CUSTOM_FONTS).is_some()
 }
 
 pub fn font_cache_key(file_hash: &str, msdf: bool) -> String {
@@ -104,6 +131,13 @@ impl FontsourceFamily {
     /// TTF of the latin subset (or the family's first subset), pinned to the record's
     /// package version so the disk cache follows font updates.
     fn ttf(&self, weight: &str, style: &str) -> Option<String> {
+        let version_ok = self
+            .npm_version
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-');
+        if !version_ok {
+            return None;
+        }
         let subsets = self.variants.get(weight)?.get(style)?;
         let subset = subsets
             .get("latin")
@@ -176,7 +210,10 @@ pub async fn load_font(
         .await
         .map_err(anyhow::Error::msg)?;
 
-    validate_ttf(&bytes)?;
+    if let Err(error) = validate_ttf(&bytes) {
+        ctx.resource_provider.delete_file(&absolute_file_path).await;
+        return Err(error);
+    }
 
     let _thread_safe_check =
         GodotSingleThreadSafety::acquire_owned(&ctx)
@@ -231,8 +268,17 @@ pub async fn load_font_family(
             let bytes = resource_provider
                 .fetch_resource_with_data(&url, &cache_name, &path)
                 .await
-                .map_err(anyhow::Error::msg)
-                .and_then(|bytes| validate_ttf(&bytes).map(|_| bytes));
+                .map_err(anyhow::Error::msg);
+            let bytes = match bytes {
+                Ok(bytes) => match validate_ttf(&bytes) {
+                    Ok(()) => Ok(bytes),
+                    Err(error) => {
+                        resource_provider.delete_file(&path).await;
+                        Err(error)
+                    }
+                },
+                Err(error) => Err(error),
+            };
             (style, bytes)
         }
     });
@@ -243,7 +289,7 @@ pub async fn load_font_family(
             Err(error) if style == FontStyle::Regular => {
                 anyhow::bail!("font family download failed: {error}")
             }
-            Err(error) => tracing::warn!("font family '{id}' style {}: {error}", style.key()),
+            Err(error) => tracing::debug!("font family '{id}' style {}: {error}", style.key()),
         }
     }
     if files.iter().all(|(style, _)| *style != FontStyle::Regular) {
@@ -406,6 +452,27 @@ mod tests {
         }))
         .faces();
         assert!(faces.is_empty());
+    }
+
+    #[test]
+    fn rejects_unsafe_npm_version() {
+        let faces = family(serde_json::json!({
+            "subsets": ["latin"],
+            "npmVersion": "1.0/../x",
+            "variants": { "400": { "normal": variant("latin", "400.ttf") } }
+        }))
+        .faces();
+        assert!(faces.is_empty());
+    }
+
+    #[test]
+    fn capped_set_stops_at_cap() {
+        let mut set = HashSet::new();
+        assert_eq!(insert_capped(&mut set, "a", 2), Some(true));
+        assert_eq!(insert_capped(&mut set, "a", 2), Some(false));
+        assert_eq!(insert_capped(&mut set, "b", 2), Some(true));
+        assert_eq!(insert_capped(&mut set, "c", 2), None);
+        assert_eq!(insert_capped(&mut set, "b", 2), Some(false));
     }
 
     #[test]

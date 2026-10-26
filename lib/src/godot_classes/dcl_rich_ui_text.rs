@@ -68,6 +68,9 @@ impl IRichTextLabel for DclRichUiText {
 impl DclRichUiText {
     #[func]
     fn _on_font_loaded(&mut self) {
+        if !self.scene_font.is_loaded() {
+            return;
+        }
         self.apply_font();
         if let Some(ui_result) = self.ui_result.as_ref() {
             ui_result.borrow_mut().relayout_requested = true;

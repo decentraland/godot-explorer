@@ -159,6 +159,7 @@ impl DclUiDropdown {
             content_mapping,
         ) {
             self.apply_font();
+            // No relayout: the size comes from UiTransform, not the text.
             self.scene_font
                 .on_loaded(&self.base().callable("apply_font"));
         }
