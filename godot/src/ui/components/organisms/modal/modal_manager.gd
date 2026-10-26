@@ -1676,6 +1676,23 @@ func _async_create_upgrade_modal() -> UpgradeModal:
 		push_error("ModalManager: Upgrade modal scene is not loaded")
 		return null
 
+	await ModalTransitionGate.async_wait_until_settled()
+
+	# The trigger that queued this can go stale during the wait above: a sign-out/return-to-
+	# discover teardown started, the guest finished upgrading through another path (e.g. the
+	# Settings/Discover upgrade card), or the player jumped into a world — this modal is a
+	# portrait-only design and should never land over the in-world landscape view.
+	var guest_already_upgraded := (
+		Global.player_identity != null and Global.player_identity.is_thirdweb_guest_upgraded()
+	)
+	if (
+		Global._signing_out
+		or Global._returning_to_discover
+		or guest_already_upgraded
+		or not Global.is_orientation_portrait()
+	):
+		return null
+
 	var modal = upgrade_modal_scene.instantiate() as UpgradeModal
 	if not modal:
 		push_error("ModalManager: Could not instantiate upgrade modal")

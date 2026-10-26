@@ -8,6 +8,10 @@ extends Node
 
 const STREAK_MODAL_SCENE_PATH = "res://src/ui/components/organisms/streak_modal/streak_modal.tscn"
 
+## ~0.2s at 60fps: long enough to cover a caller's own same-frame show() call, short enough to
+## never visibly delay the modal if the caller really did navigate away.
+const CALLER_VISIBLE_WAIT_FRAMES := 12
+
 var current_streak_modal: StreakModal = null
 var streak_modal_scene: PackedScene = null
 # Raw rewards-server error code (e.g. "campaign_disabled") from the most recent failed claim —
@@ -16,6 +20,9 @@ var last_claim_error_code: String = ""
 # RewardClaimer's reason for the most recent failed claim; "network" gets its own copy.
 var last_claim_error_reason: String = ""
 var _streak_canvas_layer: CanvasLayer = null
+## Set for the whole creation, including the ModalTransitionGate wait, so a second trigger
+## firing mid-wait is dropped instead of racing it for current_streak_modal.
+var _creating_streak_modal: bool = false
 
 
 func _ready() -> void:
@@ -39,10 +46,12 @@ func is_open() -> bool:
 ## @param pending_day: -1 ("not specified") falls back to progress_day; any other value (0
 ## included) renders exactly that day as the row's "today" pill — see StreakModal's own doc
 ## comment on _pending_day for why 0 can't share the -1 default.
+## @param caller: Discover or its streak widget card — bails if it is gone or hidden once the
+## ModalTransitionGate wait below settles.
 func async_show_streak_modal(
-	state: int, progress_day: int, is_guest: bool, pending_day: int = -1
+	state: int, progress_day: int, is_guest: bool, caller: Node, pending_day: int = -1
 ) -> bool:
-	var modal = await _async_create_streak_modal()
+	var modal = await _async_create_streak_modal(caller)
 	if not is_instance_valid(modal):
 		return false
 	await modal.async_setup(state, progress_day, is_guest, pending_day)
@@ -55,17 +64,47 @@ func close_streak_modal() -> void:
 		_remove_streak_modal()
 
 
-func _async_create_streak_modal() -> StreakModal:
+func _async_create_streak_modal(caller: Node) -> StreakModal:
+	# Without this, a second trigger firing mid-wait would also pass the is_instance_valid()
+	# check below (current_streak_modal isn't set yet) and race this call for it.
+	if _creating_streak_modal:
+		return null
+	_creating_streak_modal = true
+
 	if is_instance_valid(current_streak_modal):
 		close_streak_modal()
 
 	if not streak_modal_scene:
 		push_error("StreakModalController: Streak modal scene is not loaded")
+		_creating_streak_modal = false
+		return null
+
+	await ModalTransitionGate.async_wait_until_settled()
+
+	if Global._signing_out or Global._returning_to_discover or not is_instance_valid(caller):
+		_creating_streak_modal = false
+		return null
+
+	# The gate above can resolve without yielding a single frame (nothing to wait for), which
+	# lands here before caller's own _ready() finishes showing it (e.g. Discover's first-ever
+	# landing: its _ready() calls this before menu.gd selects/shows it a few lines later). Give
+	# the caller a short chance to actually appear before treating it as gone rather than
+	# "not on screen yet".
+	var visible_wait_frames := 0
+	while not caller.is_visible_in_tree() and visible_wait_frames < CALLER_VISIBLE_WAIT_FRAMES:
+		await get_tree().process_frame
+		if not is_instance_valid(caller):
+			_creating_streak_modal = false
+			return null
+		visible_wait_frames += 1
+	if not caller.is_visible_in_tree():
+		_creating_streak_modal = false
 		return null
 
 	var modal = streak_modal_scene.instantiate() as StreakModal
 	if not modal:
 		push_error("StreakModalController: Could not instantiate streak modal")
+		_creating_streak_modal = false
 		return null
 	# Stays hidden through the NodeGuard frames below and async_setup()'s own render/thumbnail
 	# work — otherwise the scene's last-saved look flashes on screen for a couple of frames
@@ -82,6 +121,7 @@ func _async_create_streak_modal() -> StreakModal:
 	var root = get_tree().root
 	if not root:
 		push_error("StreakModalController: Could not get scene tree root")
+		_creating_streak_modal = false
 		return null
 
 	root.add_child(_streak_canvas_layer)
@@ -92,6 +132,8 @@ func _async_create_streak_modal() -> StreakModal:
 
 	await get_tree().process_frame
 	await get_tree().process_frame
+
+	_creating_streak_modal = false
 
 	# Those two frames are a window in which the modal can be freed — see NodeGuard.
 	if not NodeGuard.is_alive(modal, "StreakModalController._async_create_streak_modal"):
