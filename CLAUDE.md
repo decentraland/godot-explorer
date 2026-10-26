@@ -211,8 +211,11 @@ bypasses that check for local debugging only. The baked files live in
    **📱 Mobile build pipeline** PR comment (hidden `mobile-build-card:state` JSON) — CI holds no
    Slack token and writes no PR comments. The board merges only the non-empty fields each leg
    sends, never lets `status` regress from failed/cancelled to success, and ignores legs of a
-   superseded run. `prepare` sends `RESET=1`; its `slack_ts` output is only forwarded to
-   godot-asc-deploy, which still updates the Slack card itself until it reports to the board too.
+   superseded run. `prepare` sends `RESET=1`; its `slack_ts` output is forwarded to godot-asc-deploy
+   only because that workflow still declares the input — asc-deploy reports to the board itself,
+   with events keyed by commit SHA (the board attaches them to the distribution run and rejects a
+   `run_id` from that source); `ios-wait` is the fallback for outcomes it cannot send. The board
+   URL is the `BOARD_EVENTS_URL` repository variable.
    The `ios-wait` job runs for every distribution: it watches the asc-deploy run (matched by its
    `run-name` `🍏 <branch> @ <sha>`, via `ASC_DEPLOY_DISPATCH_TOKEN`) and reports the TestFlight
    result. The script never fails the build; CI reaches the board through its `workers.dev` host

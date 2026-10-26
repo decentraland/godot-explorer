@@ -68,8 +68,8 @@ jobs:
       # Defaults to 'true' for every event except the cron, where the change-detection
       # step below may set it to 'false' when main is unchanged since the last build.
       should_build: ${{ steps.changes.outputs.should_build || 'true' }}
-      # Slack thread ts of the root card the BOARD created for this run. Only forwarded to
-      # godot-asc-deploy, which still updates that card itself until it reports to the board too.
+      # Slack thread ts of the root card the BOARD created for this run. Forwarded to godot-asc-deploy
+      # only because its workflow_dispatch still declares the input; the board owns the card.
       slack_ts: ${{ steps.report.outputs.slack_ts }}
       triggered_by: ${{ steps.ctx.outputs.triggered_by }}
       pr_url: ${{ steps.ctx.outputs.pr_url }}
@@ -193,6 +193,7 @@ jobs:
         if: steps.changes.outputs.should_build != 'false'
         env:
           BUILD_REPORTER_TOKEN: ${{ secrets.BUILD_REPORTER_TOKEN }}
+          BOARD_EVENTS_URL: ${{ vars.BOARD_EVENTS_URL }}
           JOB: prepare
           RESET: '1'
           STATUS: building
@@ -263,6 +264,7 @@ jobs:
       AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
       AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
       BUILD_REPORTER_TOKEN: ${{ secrets.BUILD_REPORTER_TOKEN }}
+      BOARD_EVENTS_URL: ${{ vars.BOARD_EVENTS_URL }}
       JOB:         ios-resolve
       REF:         ${{ needs.prepare.outputs.ref }}
       SHA:         ${{ needs.prepare.outputs.sha }}
@@ -385,6 +387,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BUILD_REPORTER_TOKEN: ${{ secrets.BUILD_REPORTER_TOKEN }}
+      BOARD_EVENTS_URL: ${{ vars.BOARD_EVENTS_URL }}
       JOB:             ios-dispatch
       PR_NUMBER:       ${{ needs.prepare.outputs.pr_number }}
       SHA:             ${{ needs.prepare.outputs.sha }}
@@ -424,13 +427,14 @@ jobs:
         run: |
           python3 .github/scripts/report-build-event.py
 
-  # iOS leg, step 3: the sign & upload runs in godot-asc-deploy, which by design holds no token for
-  # this public repo and (until it reports to the board itself) no board credential either. So we
-  # WATCH its run from here: ASC_DEPLOY_DISPATCH_TOKEN (Actions: write ⊇ read) can list that repo's
-  # runs, and deploy_testflight.yml names each run "🍏 <branch> @ <sha>" so the one we dispatched is
-  # matchable. The outcome is reported to the board, which flips the Slack root card and the PR card.
-  # Runs for EVERY distribution (cron / release / dispatch too), so the board always learns the iOS
-  # result. Best effort: never fails the distribution.
+  # iOS leg, step 3: the sign & upload runs in godot-asc-deploy, which reports its own progress to the
+  # board (events keyed by commit SHA) but holds no token for this public repo. A run that never
+  # starts, gets cancelled or times out sends nothing final, so we also WATCH it from here:
+  # ASC_DEPLOY_DISPATCH_TOKEN (Actions: write ⊇ read) can list that repo's runs, and
+  # deploy_testflight.yml names each run "🍏 <branch> @ <sha>" so the one we dispatched is matchable.
+  # The outcome goes to the board as a fallback (status + line only; asc-deploy owns the timeline and
+  # thread entries it can send itself). Runs for EVERY distribution (cron / release / dispatch too),
+  # so the board always learns the iOS result. Best effort: never fails the distribution.
   ios-wait:
     name: 🍏 iOS — wait for TestFlight
     needs: [prepare, ios-build, ios-dispatch]
@@ -441,6 +445,7 @@ jobs:
     timeout-minutes: 55
     env:
       BUILD_REPORTER_TOKEN: ${{ secrets.BUILD_REPORTER_TOKEN }}
+      BOARD_EVENTS_URL: ${{ vars.BOARD_EVENTS_URL }}
       JOB:          ios-wait
       PR_NUMBER:    ${{ needs.prepare.outputs.pr_number }}
       SHA:          ${{ needs.prepare.outputs.sha }}
@@ -474,8 +479,7 @@ jobs:
               STATUS=$(echo "$RUN" | jq -r .status); URL=$(echo "$RUN" | jq -r .url)
               if [ "$SEEN" = "0" ]; then
                 echo "▶️  found run ${URL} (${STATUS})"; SEEN=1
-                IOS_LINE="🔏 signing & uploading to TestFlight…" \
-                  LOG="🍏 iOS — pulling export from R2, signing & uploading… (${URL})" python3 .github/scripts/report-build-event.py
+                IOS_LINE="🔏 signing & uploading to TestFlight…" python3 .github/scripts/report-build-event.py
               fi
               if [ "$STATUS" = "completed" ]; then
                 CONCLUSION=$(echo "$RUN" | jq -r '.conclusion // "unknown"'); break
@@ -492,10 +496,11 @@ jobs:
             echo "url=$URL"
           } >> "$GITHUB_OUTPUT"
 
-      # Same lines asc-deploy writes to the Slack root card; STATUS flips the header exactly like Slack.
-      # No MESSAGE here: asc-deploy still posts the iOS thread replies itself during the transition.
-      # always(): if `watch` itself errors (bad jq parse, job timeout) the card is already at
-      # "signing…" — skipping this step would strand it there for good.
+      # Fallback for the outcome asc-deploy reports itself: the same STATUS / IOS_LINE (idempotent on
+      # the board) but no MESSAGE and no LOG for started / success / failure — asc-deploy posts those
+      # and the board would show them twice. Cancelled / unknown outcomes are logged here because
+      # asc-deploy cannot report them. always(): if `watch` itself errors (bad jq parse, job timeout)
+      # the card is already at "signing…" — skipping this step would strand it there for good.
       - name: Report → TestFlight result
         if: always()
         env:
@@ -505,10 +510,9 @@ jobs:
           case "$CONCLUSION" in
             success)
               export STATUS=success IOS_LINE="✅ TestFlight build ${BUILD_NUMBER:-?}" \
-                     TESTFLIGHT_URL="https://appstoreconnect.apple.com/apps" \
-                     LOG="✅ iOS → TestFlight uploaded — build ${BUILD_NUMBER:-?}" ;;
+                     TESTFLIGHT_URL="https://appstoreconnect.apple.com/apps" ;;
             failure|timed_out)
-              export STATUS=failed IOS_LINE="❌ sign/upload failed" LOG="❌ iOS deploy failed — ${URL}" ;;
+              export STATUS=failed IOS_LINE="❌ sign/upload failed" ;;
             cancelled)
               export STATUS=cancelled IOS_LINE="⚠️ signing cancelled" LOG="⚠️ iOS — signing run cancelled — ${URL}" ;;
             *)
@@ -535,6 +539,7 @@ jobs:
       - name: Report → failed/cancelled
         env:
           BUILD_REPORTER_TOKEN: ${{ secrets.BUILD_REPORTER_TOKEN }}
+          BOARD_EVENTS_URL: ${{ vars.BOARD_EVENTS_URL }}
           JOB: root-failed
           PR_NUMBER: ${{ needs.prepare.outputs.pr_number }}
           SHA: ${{ needs.prepare.outputs.sha }}
@@ -571,6 +576,7 @@ jobs:
       AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
       AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
       BUILD_REPORTER_TOKEN: ${{ secrets.BUILD_REPORTER_TOKEN }}
+      BOARD_EVENTS_URL: ${{ vars.BOARD_EVENTS_URL }}
       JOB:         android-resolve
       REF:         ${{ needs.prepare.outputs.ref }}
       SHA:         ${{ needs.prepare.outputs.sha }}
@@ -700,6 +706,7 @@ jobs:
       # Public R2 domain mapped to the mobile-artifacts bucket root.
       R2_PUBLIC_BASE_URL: "https://mobile-artifacts.dclregenesislabs.xyz"
       BUILD_REPORTER_TOKEN: ${{ secrets.BUILD_REPORTER_TOKEN }}
+      BOARD_EVENTS_URL: ${{ vars.BOARD_EVENTS_URL }}
       JOB: android-notify
       REF: ${{ needs.prepare.outputs.ref }}
       SHA: ${{ needs.prepare.outputs.sha }}

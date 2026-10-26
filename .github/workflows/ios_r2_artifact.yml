@@ -96,6 +96,7 @@ jobs:
       # replies and the PR status card. Steps are gated on inputs.report_to_board so a manual
       # iteration run of this workflow stays silent. A called workflow shares the caller's run id.
       BUILD_REPORTER_TOKEN: ${{ secrets.BUILD_REPORTER_TOKEN }}
+      BOARD_EVENTS_URL: ${{ vars.BOARD_EVENTS_URL }}
       JOB:             ios-build
       REF:             ${{ inputs.ref }}
       PR_NUMBER:       ${{ inputs.pr_number }}
