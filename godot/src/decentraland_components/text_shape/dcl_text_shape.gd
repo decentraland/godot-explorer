@@ -43,6 +43,11 @@ func _resolve_font() -> void:
 	var fi: int = _params.get("font", 0) if _params.get("has_font", false) else 0
 	var src: String = _params.get("font_src", "")
 	if fi == _font_index and src == _font_src and _font != null:
+		if not src.is_empty() and _custom_faces.is_empty():
+			# Retry a failed load (within the scene's font budget).
+			_request_custom_font(src)
+			if not _custom_faces.is_empty():
+				_apply_fonts()
 		return
 	_font_index = fi
 	if src != _font_src:

@@ -162,21 +162,23 @@ impl SceneFont {
             .filter(|src| !src.is_empty())
             .map(str::to_owned);
         if font == self.font && src == self.src {
-            return false;
+            // Retry a failed load; fetch_font returns the same promise once out of budget.
+            let Some(failed) = self.promise.as_ref().filter(|p| p.bind().is_rejected()) else {
+                return false;
+            };
+            let retry = fetch_font(src.as_deref().unwrap_or_default(), content_mapping);
+            if retry == *failed {
+                return false;
+            }
+            self.promise = Some(retry);
+            return true;
         }
         self.font = font;
         self.src = src;
-        self.promise = self.src.as_ref().map(|src| {
-            DclGlobal::singleton()
-                .bind()
-                .get_content_provider()
-                .bind_mut()
-                .fetch_font(
-                    src.to_godot(),
-                    DclContentMappingAndUrl::from_ref(content_mapping.clone()),
-                    false,
-                )
-        });
+        self.promise = self
+            .src
+            .as_deref()
+            .map(|src| fetch_font(src, content_mapping));
         true
     }
 
@@ -205,6 +207,18 @@ impl SceneFont {
         };
         custom_font_variation(custom, faux, builtin).upcast()
     }
+}
+
+fn fetch_font(src: &str, content_mapping: &ContentMappingAndUrlRef) -> Gd<Promise> {
+    DclGlobal::singleton()
+        .bind()
+        .get_content_provider()
+        .bind_mut()
+        .fetch_font(
+            src.to_godot(),
+            DclContentMappingAndUrl::from_ref(content_mapping.clone()),
+            false,
+        )
 }
 
 /// The closest face the font has for `style`, and the faux style still to apply to it.

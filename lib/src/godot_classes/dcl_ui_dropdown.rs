@@ -138,8 +138,9 @@ impl DclUiDropdown {
         let font_size = new_value.font_size.unwrap_or(10);
         self.base_mut()
             .add_theme_font_size_override("font_size", font_size);
-        if let Some(mut popup) = self.base().get_popup() {
-            popup.add_theme_font_size_override("font_size", font_size);
+        // The options list keeps the theme size unless the scene sets one.
+        if let (Some(mut popup), Some(size)) = (self.base().get_popup(), new_value.font_size) {
+            popup.add_theme_font_size_override("font_size", size);
         }
 
         self.base_mut().set_disabled(new_value.disabled);

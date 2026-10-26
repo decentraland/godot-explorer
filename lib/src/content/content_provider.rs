@@ -40,10 +40,7 @@ use super::{
     audio::load_audio,
     cache_file_name::{cache_file_name, cache_file_path},
     crash_context,
-    font::{
-        font_cache_key, font_family_cache_key, fontsource_id, load_font, load_font_family,
-        scene_font_path, warn_font_fallback,
-    },
+    font::fetch_font,
     gltf::{
         build_dcl_emote_gltf, get_last_16_alphanumeric, load_and_save_emote_gltf,
         load_and_save_scene_gltf, load_and_save_wearable_gltf, process_emote_animations,
@@ -164,8 +161,8 @@ pub struct ContentProvider {
     download_speed_mbs: f64,
     network_speed_peak_mbs: f64,
     network_download_history_mb: VecDeque<f64>, // Last 60 seconds of download sizes in MB
-    loading_resources: Arc<AtomicU64>,
-    loaded_resources: Arc<AtomicU64>,
+    pub(crate) loading_resources: Arc<AtomicU64>,
+    pub(crate) loaded_resources: Arc<AtomicU64>,
     optimized_scene_count: Arc<AtomicU64>,
     runtime_scene_count: Arc<AtomicU64>,
     optimized_wearable_count: Arc<AtomicU64>,
@@ -1704,8 +1701,8 @@ impl ContentProvider {
         promise
     }
 
-    /// Loads the TTF a scene's `font_src` names. Rejects (with a warning) anything that
-    /// is not a valid TrueType file in the scene content, so callers keep the built-in font.
+    /// Loads the scene TTF or font family a scene's `font_src` names; rejects (with a
+    /// warning) anything else, so callers keep the built-in font.
     #[func]
     pub fn fetch_font(
         &mut self,
@@ -1713,70 +1710,8 @@ impl ContentProvider {
         content_mapping: Gd<DclContentMappingAndUrl>,
         msdf: bool,
     ) -> Gd<Promise> {
-        enum Source {
-            File(String),
-            Family(String),
-        }
-        let font_src = font_src.to_string();
         let content_mapping = content_mapping.bind().get_content_mapping();
-        let source = scene_font_path(&font_src).and_then(|path| {
-            if let Some(file_hash) = content_mapping.get_hash(path) {
-                Ok(Source::File(file_hash.clone()))
-            } else {
-                fontsource_id(path)
-                    .map(Source::Family)
-                    .ok_or("not a scene file or a font family name")
-            }
-        });
-        let source = match source {
-            Ok(source) => source,
-            Err(reason) => {
-                warn_font_fallback(&font_src, reason);
-                return self.cached_rejection(format!("font_rejected_{reason}"), reason);
-            }
-        };
-
-        let cache_key = match &source {
-            Source::File(file_hash) => font_cache_key(file_hash, msdf),
-            Source::Family(id) => font_family_cache_key(id, msdf),
-        };
-        let cached = self.get_cached_promise(&cache_key);
-        // A rejected load (e.g. offline) is retried on a later request, within the budget.
-        if let Some(promise) = cached.as_ref().filter(|p| !p.bind().is_rejected()) {
-            return promise.clone();
-        }
-        if !content_mapping.admit_font_load(&cache_key) {
-            if let Some(promise) = cached {
-                return promise;
-            }
-            let reason = "too many custom fonts in this scene";
-            warn_font_fallback(&font_src, reason);
-            return self.cached_rejection(cache_key, reason);
-        }
-
-        let (promise, get_promise) = Promise::make_to_async();
-        let base_url = content_mapping.base_url.clone();
-        let ctx = self.get_context();
-        let loading_resources = self.loading_resources.clone();
-        let loaded_resources = self.loaded_resources.clone();
-        TokioRuntime::spawn(async move {
-            loading_resources.fetch_add(1, Ordering::Relaxed);
-            let result = match source {
-                Source::File(file_hash) => {
-                    let url = format!("{base_url}{file_hash}");
-                    load_font(url, file_hash, msdf, ctx).await
-                }
-                Source::Family(id) => load_font_family(id, msdf, ctx).await,
-            };
-            if let Err(error) = &result {
-                warn_font_fallback(&font_src, &error.to_string());
-            }
-            then_promise(get_promise, result);
-            loaded_resources.fetch_add(1, Ordering::Relaxed);
-        });
-
-        self.cache_promise(cache_key, &promise);
-        promise
+        fetch_font(self, font_src.to_string(), &content_mapping, msdf)
     }
 
     #[func]
@@ -2913,7 +2848,7 @@ impl ContentProvider {
 }
 
 impl ContentProvider {
-    fn get_context(&self) -> ContentProviderContext {
+    pub(crate) fn get_context(&self) -> ContentProviderContext {
         ContentProviderContext {
             content_folder: self.content_folder.clone(),
             http_queue_requester: self.http_queue_requester.clone(),
@@ -2924,19 +2859,9 @@ impl ContentProvider {
     }
 
     /// Get a promise from the cache if it still exists (InstanceId is valid)
-    fn get_cached_promise(&self, key: &str) -> Option<Gd<Promise>> {
+    pub(crate) fn get_cached_promise(&self, key: &str) -> Option<Gd<Promise>> {
         let instance_id = self.promises.get(key)?;
         Gd::<Promise>::try_from_instance_id(*instance_id).ok()
-    }
-
-    /// A rejected promise shared by every request for `key`, so repeats don't allocate.
-    fn cached_rejection(&mut self, key: String, reason: &str) -> Gd<Promise> {
-        if let Some(promise) = self.get_cached_promise(&key) {
-            return promise;
-        }
-        let promise = Promise::from_rejected(reason.to_string());
-        self.cache_promise(key, &promise);
-        promise
     }
 
     /// Insert a promise into the cache using its InstanceId

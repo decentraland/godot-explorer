@@ -1,6 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
-    sync::{Mutex, OnceLock},
+    sync::{atomic::Ordering, Mutex, OnceLock},
     time::Duration,
 };
 
@@ -16,11 +16,16 @@ use serde::Deserialize;
 use crate::{
     godot_classes::{font::FontStyle, promise::Promise},
     http_request::request_response::{RequestOption, ResponseEnum, ResponseType},
+    scene_runner::tokio_runtime::TokioRuntime,
 };
 
 use super::{
-    cache_file_name::cache_file_path, content_provider::ContentProviderContext,
-    packed_array::PackedByteArrayFromVec, thread_safety::GodotSingleThreadSafety,
+    cache_file_name::cache_file_path,
+    content_mapping::ContentMappingAndUrl,
+    content_provider::{ContentProvider, ContentProviderContext},
+    packed_array::PackedByteArrayFromVec,
+    resource_provider::ResourceProvider,
+    thread_safety::{then_promise, GodotSingleThreadSafety},
 };
 
 /// Same cap as Unity's runtime TTF loader.
@@ -207,23 +212,121 @@ pub fn validate_ttf(bytes: &[u8]) -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-pub async fn load_font(
+/// Downloads a font file (or reads it from the disk cache) and checks it. A file that
+/// fails the check is removed from the disk cache.
+async fn fetch_ttf(
+    resource_provider: &ResourceProvider,
+    url: &str,
+    cache_name: &String,
+    path: &String,
+) -> Result<Vec<u8>, anyhow::Error> {
+    let bytes = resource_provider
+        .fetch_resource_with_data(url, cache_name, path)
+        .await
+        .map_err(anyhow::Error::msg)?;
+    if let Err(error) = validate_ttf(&bytes) {
+        resource_provider.delete_file(path).await;
+        return Err(error);
+    }
+    Ok(bytes)
+}
+
+enum FontSource {
+    File(String),
+    Family(String),
+}
+
+/// `ContentProvider::fetch_font`: one promise per font and variant, shared by every
+/// component. A rejected load is retried on a later request, within the scene's budget.
+pub fn fetch_font(
+    provider: &mut ContentProvider,
+    font_src: String,
+    content_mapping: &ContentMappingAndUrl,
+    msdf: bool,
+) -> Gd<Promise> {
+    let source = scene_font_path(&font_src).and_then(|path| {
+        if let Some(file_hash) = content_mapping.get_hash(path) {
+            Ok(FontSource::File(file_hash.clone()))
+        } else {
+            fontsource_id(path)
+                .map(FontSource::Family)
+                .ok_or("not a scene file or a font family name")
+        }
+    });
+    let source = match source {
+        Ok(source) => source,
+        Err(reason) => {
+            warn_font_fallback(&font_src, reason);
+            return cached_rejection(provider, format!("font_rejected_{reason}"), reason);
+        }
+    };
+
+    let cache_key = match &source {
+        FontSource::File(file_hash) => font_cache_key(file_hash, msdf),
+        FontSource::Family(id) => font_family_cache_key(id, msdf),
+    };
+    let cached = provider.get_cached_promise(&cache_key);
+    if let Some(promise) = cached.as_ref().filter(|p| !p.bind().is_rejected()) {
+        return promise.clone();
+    }
+    if !content_mapping.admit_font_load(&cache_key) {
+        if let Some(promise) = cached {
+            return promise;
+        }
+        let reason = "too many custom fonts in this scene";
+        warn_font_fallback(&font_src, reason);
+        return cached_rejection(provider, cache_key, reason);
+    }
+
+    let (promise, get_promise) = Promise::make_to_async();
+    let base_url = content_mapping.base_url.clone();
+    let ctx = provider.get_context();
+    let loading_resources = provider.loading_resources.clone();
+    let loaded_resources = provider.loaded_resources.clone();
+    TokioRuntime::spawn(async move {
+        loading_resources.fetch_add(1, Ordering::Relaxed);
+        let result = match source {
+            FontSource::File(file_hash) => {
+                let url = format!("{base_url}{file_hash}");
+                load_font(url, file_hash, msdf, ctx).await
+            }
+            FontSource::Family(id) => load_font_family(id, msdf, ctx).await,
+        };
+        if let Err(error) = &result {
+            warn_font_fallback(&font_src, &error.to_string());
+        }
+        then_promise(get_promise, result);
+        loaded_resources.fetch_add(1, Ordering::Relaxed);
+    });
+
+    provider.cache_promise(cache_key, &promise);
+    promise
+}
+
+/// A rejected promise shared by every request for `key`, so repeats don't allocate.
+fn cached_rejection(provider: &mut ContentProvider, key: String, reason: &str) -> Gd<Promise> {
+    if let Some(promise) = provider.get_cached_promise(&key) {
+        return promise;
+    }
+    let promise = Promise::from_rejected(reason.to_string());
+    provider.cache_promise(key, &promise);
+    promise
+}
+
+async fn load_font(
     url: String,
     file_hash: String,
     msdf: bool,
     ctx: ContentProviderContext,
 ) -> Result<Option<Variant>, anyhow::Error> {
     let absolute_file_path = cache_file_path(&ctx.content_folder, &file_hash);
-    let bytes = ctx
-        .resource_provider
-        .fetch_resource_with_data(&url, &file_hash, &absolute_file_path)
-        .await
-        .map_err(anyhow::Error::msg)?;
-
-    if let Err(error) = validate_ttf(&bytes) {
-        ctx.resource_provider.delete_file(&absolute_file_path).await;
-        return Err(error);
-    }
+    let bytes = fetch_ttf(
+        &ctx.resource_provider,
+        &url,
+        &file_hash,
+        &absolute_file_path,
+    )
+    .await?;
 
     let _thread_safe_check =
         GodotSingleThreadSafety::acquire_owned(&ctx)
@@ -240,7 +343,7 @@ pub async fn load_font(
 
 /// Resolves a Google Fonts family through Fontsource, like Bevy. Only the latin subset is
 /// loaded; other glyphs come from the built-in fallback font.
-pub async fn load_font_family(
+async fn load_font_family(
     id: String,
     msdf: bool,
     ctx: ContentProviderContext,
@@ -275,20 +378,7 @@ pub async fn load_font_family(
         let cache_name = fontsource_cache_name(&url);
         let path = cache_file_path(&ctx.content_folder, &cache_name);
         async move {
-            let bytes = resource_provider
-                .fetch_resource_with_data(&url, &cache_name, &path)
-                .await
-                .map_err(anyhow::Error::msg);
-            let bytes = match bytes {
-                Ok(bytes) => match validate_ttf(&bytes) {
-                    Ok(()) => Ok(bytes),
-                    Err(error) => {
-                        resource_provider.delete_file(&path).await;
-                        Err(error)
-                    }
-                },
-                Err(error) => Err(error),
-            };
+            let bytes = fetch_ttf(&resource_provider, &url, &cache_name, &path).await;
             (style, bytes)
         }
     });
