@@ -64,6 +64,8 @@ func _async_create_streak_modal() -> StreakModal:
 		push_error("StreakModalController: Streak modal scene is not loaded")
 		return null
 
+	await ModalTransitionGate.async_wait_until_settled()
+
 	var modal = streak_modal_scene.instantiate() as StreakModal
 	if not modal:
 		push_error("StreakModalController: Could not instantiate streak modal")

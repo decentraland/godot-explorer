@@ -1676,6 +1676,8 @@ func _async_create_upgrade_modal() -> UpgradeModal:
 		push_error("ModalManager: Upgrade modal scene is not loaded")
 		return null
 
+	await ModalTransitionGate.async_wait_until_settled()
+
 	var modal = upgrade_modal_scene.instantiate() as UpgradeModal
 	if not modal:
 		push_error("ModalManager: Could not instantiate upgrade modal")
