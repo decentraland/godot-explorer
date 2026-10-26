@@ -92,9 +92,11 @@ func _show_streak_modal_if_pending() -> void:
 	_showing_streak_modal = true
 	var pending := Global.streak_manager.take_pending_modal()
 	if not pending.is_empty():
-		await _async_show_streak_modal_and_wait(
+		var shown := await _async_show_streak_modal_and_wait(
 			StreakModal.state_from_pending(pending), Global.streak_manager.get_progress_day()
 		)
+		if not shown:
+			Global.streak_manager.requeue_pending_modal(pending)
 	else:
 		await _async_show_streak_current_reminder_if_pending()
 	_showing_streak_modal = false
@@ -114,17 +116,18 @@ func _async_show_streak_current_reminder_if_pending() -> void:
 
 func _async_show_streak_modal_and_wait(
 	state: int, progress_day: int, pending_day: int = -1
-) -> void:
+) -> bool:
 	var is_guest := StreakManager.is_unlinked_guest()
 	Global.upgrade_nudge_coordinator.suppress_until_cleared("streak", self)
 	var shown := await Global.streak_modal_controller.async_show_streak_modal(
-		state, progress_day, is_guest, pending_day, self
+		state, progress_day, is_guest, self, pending_day
 	)
 	if shown and is_instance_valid(Global.streak_modal_controller.current_streak_modal):
 		await Global.streak_modal_controller.current_streak_modal.tree_exited
 	if streak_widget_card:
 		streak_widget_card.refresh_visibility()
 	Global.upgrade_nudge_coordinator.resume("streak", self)
+	return shown
 
 
 func _on_featured_card_tapped(index: int) -> void:

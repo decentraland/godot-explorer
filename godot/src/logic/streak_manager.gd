@@ -153,6 +153,16 @@ func take_pending_modal() -> String:
 	return pending
 
 
+## Restores a value take_pending_modal() returned when the caller never actually got it on
+## screen (e.g. Discover wasn't visible yet), so the next landing gets another chance at it
+## instead of the celebration being silently dropped.
+func requeue_pending_modal(pending: String) -> void:
+	if pending.is_empty():
+		return
+	Global.config.streak_state_for_current_wallet().pending_modal = pending
+	Global.config.save_to_settings_file()
+
+
 func get_progress_day() -> int:
 	return Global.config.streak_state_for_current_wallet().progress_day
 

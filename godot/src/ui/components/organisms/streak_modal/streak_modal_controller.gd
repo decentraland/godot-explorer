@@ -17,8 +17,8 @@ var last_claim_error_code: String = ""
 # shown to the player under "Reward claim failed".
 var last_claim_error_message: String = ""
 var _streak_canvas_layer: CanvasLayer = null
-## Set for the whole creation (including the ModalTransitionGate wait), so a second trigger
-## firing while the first is still settling is dropped instead of racing it (#2867 review).
+## Set for the whole creation, including the ModalTransitionGate wait, so a second trigger
+## firing mid-wait is dropped instead of racing it for current_streak_modal.
 var _creating_streak_modal: bool = false
 
 
@@ -43,13 +43,12 @@ func is_open() -> bool:
 ## @param pending_day: -1 ("not specified") falls back to progress_day; any other value (0
 ## included) renders exactly that day as the row's "today" pill — see StreakModal's own doc
 ## comment on _pending_day for why 0 can't share the -1 default.
-## @param owner: the caller (Discover or its streak widget card) — effectively required despite
-## the default: _async_create_streak_modal() bails if it is gone or no longer on screen by the
-## time the ModalTransitionGate wait settles, so every real caller must pass its own `self`.
+## @param caller: Discover or its streak widget card — bails if it is gone or hidden once the
+## ModalTransitionGate wait below settles.
 func async_show_streak_modal(
-	state: int, progress_day: int, is_guest: bool, pending_day: int = -1, owner: Node = null
+	state: int, progress_day: int, is_guest: bool, caller: Node, pending_day: int = -1
 ) -> bool:
-	var modal = await _async_create_streak_modal(owner)
+	var modal = await _async_create_streak_modal(caller)
 	if not is_instance_valid(modal):
 		return false
 	await modal.async_setup(state, progress_day, is_guest, pending_day)
@@ -62,10 +61,9 @@ func close_streak_modal() -> void:
 		_remove_streak_modal()
 
 
-func _async_create_streak_modal(owner: Node) -> StreakModal:
-	# The ModalTransitionGate wait below stretches this function to ~2s: without this guard a
-	# second trigger firing mid-wait would pass the is_instance_valid(current_streak_modal)
-	# check below too (it isn't set yet) and race this call for current_streak_modal.
+func _async_create_streak_modal(caller: Node) -> StreakModal:
+	# Without this, a second trigger firing mid-wait would also pass the is_instance_valid()
+	# check below (current_streak_modal isn't set yet) and race this call for it.
 	if _creating_streak_modal:
 		return null
 	_creating_streak_modal = true
@@ -80,16 +78,14 @@ func _async_create_streak_modal(owner: Node) -> StreakModal:
 
 	await ModalTransitionGate.async_wait_until_settled()
 
-	# The trigger that queued this can go stale during the wait above: a sign-out/return-to-
-	# discover teardown started, or the caller (Discover or its streak widget card) is no longer
-	# the active screen. Global.get_explorer() can't tell that apart from in-game Discover, which
-	# runs inside the same live explorer (menu.tscn as a child of explorer.tscn) — checking the
-	# caller itself is the only thing that actually distinguishes the two (#2867 review, round 5).
+	# A sign-out/return-to-discover teardown, or caller no longer the active screen (it moved
+	# away, or hasn't been shown yet at all — Global.get_explorer() can't tell those apart from
+	# in-game Discover, which runs inside the same live explorer).
 	if (
 		Global._signing_out
 		or Global._returning_to_discover
-		or not is_instance_valid(owner)
-		or not owner.is_visible_in_tree()
+		or not is_instance_valid(caller)
+		or not caller.is_visible_in_tree()
 	):
 		_creating_streak_modal = false
 		return null

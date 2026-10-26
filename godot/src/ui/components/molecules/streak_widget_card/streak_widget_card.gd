@@ -134,7 +134,7 @@ func _async_show_streak_modal_and_wait(
 ) -> void:
 	Global.upgrade_nudge_coordinator.suppress_until_cleared("streak", self)
 	var shown := await Global.streak_modal_controller.async_show_streak_modal(
-		state, progress_day, StreakManager.is_unlinked_guest(), pending_day, self
+		state, progress_day, StreakManager.is_unlinked_guest(), self, pending_day
 	)
 	if shown and is_instance_valid(Global.streak_modal_controller.current_streak_modal):
 		await Global.streak_modal_controller.current_streak_modal.tree_exited

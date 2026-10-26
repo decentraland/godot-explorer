@@ -47,9 +47,6 @@ var _bug_report_canvas_layer: CanvasLayer = null
 var _code_canvas_layer: CanvasLayer = null
 var _reward_canvas_layer: CanvasLayer = null
 var _upgrade_canvas_layer: CanvasLayer = null
-## Set for the whole creation (including the ModalTransitionGate wait), so a second trigger
-## firing while the first is still settling is dropped instead of racing it (#2867 review).
-var _creating_upgrade_modal: bool = false
 
 # Modal text constants
 static var external_link_title := TranslationKey.new("MODAL_EXTERNAL_LINK_TITLE")
@@ -1672,37 +1669,27 @@ func close_upgrade_modal() -> void:
 
 
 func _async_create_upgrade_modal() -> UpgradeModal:
-	# The ModalTransitionGate wait below stretches this function to ~2s: without this guard a
-	# second trigger firing mid-wait would pass the is_instance_valid(current_upgrade_modal)
-	# check below too (it isn't set yet) and race this call for current_upgrade_modal.
-	if _creating_upgrade_modal:
-		return null
-	_creating_upgrade_modal = true
-
 	if is_instance_valid(current_upgrade_modal):
 		close_upgrade_modal()
 
 	if not upgrade_modal_scene:
 		push_error("ModalManager: Upgrade modal scene is not loaded")
-		_creating_upgrade_modal = false
 		return null
 
 	await ModalTransitionGate.async_wait_until_settled()
 
 	# The trigger that queued this can go stale during the wait above: a sign-out/return-to-
-	# discover teardown started, or the guest finished upgrading through some other path (e.g.
-	# the Settings/Discover upgrade card). Showing the modal anyway would be wrong either way.
+	# discover teardown started, or the guest finished upgrading through another path (e.g. the
+	# Settings/Discover upgrade card).
 	var guest_already_upgraded := (
 		Global.player_identity != null and Global.player_identity.is_thirdweb_guest_upgraded()
 	)
 	if Global._signing_out or Global._returning_to_discover or guest_already_upgraded:
-		_creating_upgrade_modal = false
 		return null
 
 	var modal = upgrade_modal_scene.instantiate() as UpgradeModal
 	if not modal:
 		push_error("ModalManager: Could not instantiate upgrade modal")
-		_creating_upgrade_modal = false
 		return null
 
 	if is_instance_valid(_upgrade_canvas_layer):
@@ -1715,7 +1702,6 @@ func _async_create_upgrade_modal() -> UpgradeModal:
 	var root = get_tree().root
 	if not root:
 		push_error("ModalManager: Could not get scene tree root")
-		_creating_upgrade_modal = false
 		return null
 
 	root.add_child(_upgrade_canvas_layer)
@@ -1726,8 +1712,6 @@ func _async_create_upgrade_modal() -> UpgradeModal:
 
 	await get_tree().process_frame
 	await get_tree().process_frame
-
-	_creating_upgrade_modal = false
 
 	# Those two frames are a window in which the modal can be freed — see NodeGuard.
 	if not NodeGuard.is_alive(modal, "ModalManager._async_create_upgrade_modal"):
