@@ -158,6 +158,7 @@ func _upgrade_trigger_is_stale() -> bool:
 	return (
 		Global._signing_out
 		or Global._returning_to_discover
+		or not Global.is_orientation_portrait()
 		or (Global.player_identity != null and Global.player_identity.is_thirdweb_guest_upgraded())
 	)
 
