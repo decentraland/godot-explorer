@@ -317,7 +317,7 @@ func _async_on_upgrade_required() -> void:
 	while not Global.is_orientation_portrait() and frames < 30:
 		await get_tree().process_frame
 		frames += 1
-	Global.modal_manager.async_start_add_email_flow()
+	Global.add_email_flow.async_start_add_email_flow()
 
 
 func _on_guest_upgrade_state_refreshed(is_upgraded: bool) -> void:
