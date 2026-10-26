@@ -66,6 +66,7 @@ import com.google.android.play.core.integrity.IntegrityTokenRequest
 private const val EXIT_REASONS_PREFS = "dcl_exit_reasons"
 private const val EXIT_REASONS_ACK_KEY = "acked_timestamp_ms"
 private const val EXIT_REASONS_MAX = 16
+private const val GRAPHICS_SAMPLE_INTERVAL_MS = 30_000L
 
 class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
@@ -150,6 +151,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             // Application-scoped so it survives activity recreation; emitSignal marshals
             // the UI-thread callback onto Godot's render thread.
             it.applicationContext.registerComponentCallbacks(trimMemoryCallbacks)
+            startGraphicsMemorySampler()
         }
         // Kick off Firebase Analytics initialization early so getAppInstanceId() can be ready
         // by the time the first Segment batch is sent.
@@ -395,6 +397,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
     override fun onMainPause() {
         super.onMainPause()
+        mainResumed = false
         Log.d(pluginName, "onMainPause: pausing all playing ExoPlayers")
 
         // Log WalletConnect state on pause for debugging
@@ -419,6 +422,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
     override fun onMainResume() {
         super.onMainResume()
+        mainResumed = true
 
         // Backstop for the image picker guard. `pickImageInFlight` is normally cleared in
         // onMainActivityResult, but that callback never lands if our activity is recreated
@@ -2650,6 +2654,37 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
         override fun onConfigurationChanged(newConfig: Configuration) {}
     }
+
+    // GPU memory (`summary.graphics`) is invisible to RssAnon/VmSwap. Debug.getMemoryInfo
+    // takes tens of ms, so it runs on its own thread every 30 s and Godot only reads the cache.
+    @Volatile private var graphicsMemoryMb: Int = -1
+    @Volatile private var mainResumed: Boolean = true
+
+    private fun startGraphicsMemorySampler() {
+        Thread {
+            val info = android.os.Debug.MemoryInfo()
+            while (true) {
+                if (mainResumed) {
+                    try {
+                        android.os.Debug.getMemoryInfo(info)
+                        info.getMemoryStat("summary.graphics")?.toIntOrNull()?.let {
+                            graphicsMemoryMb = it / 1024
+                        }
+                    } catch (e: Exception) {
+                        Log.w(pluginName, "graphics memory sample failed: ${e.message}")
+                    }
+                }
+                Thread.sleep(GRAPHICS_SAMPLE_INTERVAL_MS)
+            }
+        }.apply {
+            isDaemon = true
+            name = "dcl-graphics-mem"
+        }.start()
+    }
+
+    /** Last sampled GPU memory of this process in MB (`summary.graphics`), -1 before the first sample. */
+    @UsedByGodot
+    fun getGraphicsMemoryMb(): Int = graphicsMemoryMb
 
     /**
      * Exits of this app's main process that are newer than the last [ackExitReasons] watermark,

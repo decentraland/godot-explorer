@@ -35,9 +35,10 @@ use super::{
         SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
         SegmentEventFirebaseInit, SegmentEventGuestWalletCreation,
         SegmentEventIosStoreKitEnvironment, SegmentEventLoading, SegmentEventLoginStreakClaim,
-        SegmentEventLoginStreakDayCounted, SegmentEventPushOpened, SegmentEventRequestFriend,
-        SegmentEventRequestResult, SegmentEventReviewPrompted, SegmentEventSceneLocaleRequested,
-        SegmentEventScreenViewed, SegmentEventSystemInfoReport, SegmentEventUnfriend,
+        SegmentEventLoginStreakDayCounted, SegmentEventMemorySessionReport, SegmentEventPushOpened,
+        SegmentEventRequestFriend, SegmentEventRequestResult, SegmentEventReviewPrompted,
+        SegmentEventSceneLocaleRequested, SegmentEventScreenViewed, SegmentEventSystemInfoReport,
+        SegmentEventUnfriend,
     },
     frame::Frame,
     install_attribution::InstallAttribution,
@@ -726,6 +727,47 @@ impl Metrics {
             trigger_id,
         });
         self.queue_event("review_prompted", event);
+    }
+
+    /// Footprint of the previous session (#3150). `record_json` is the content of
+    /// `user://memory_footprint.json` as the memory monitor wrote it; `exit_reason` is that
+    /// session's ApplicationExitInfo reason, or empty. Called from MemorySessionReport.
+    #[func]
+    pub fn track_memory_session_report(&mut self, record_json: String, exit_reason: String) {
+        let Ok(record) = serde_json::from_str::<serde_json::Value>(&record_json) else {
+            return;
+        };
+        let int = |key: &str| {
+            record
+                .get(key)
+                .and_then(serde_json::Value::as_i64)
+                .filter(|v| *v > 0)
+                .map(|v| v as i32)
+        };
+        let event = SegmentEvent::MemorySessionReport(SegmentEventMemorySessionReport {
+            previous_session_id: record
+                .get("session_id")
+                .and_then(serde_json::Value::as_str)
+                .filter(|s| !s.is_empty())
+                .map(str::to_string),
+            total_ram_mb: int("total_ram_mb"),
+            peak_footprint_mb: int("peak_footprint_mb"),
+            footprint_mb: int("footprint_mb"),
+            rss_anon_mb: int("rss_anon_mb"),
+            swap_mb: record
+                .get("swap_mb")
+                .and_then(serde_json::Value::as_i64)
+                .filter(|v| *v >= 0)
+                .map(|v| v as i32),
+            graphics_mb: int("graphics_mb"),
+            budget_mb: int("budget_mb"),
+            level: record
+                .get("level")
+                .and_then(serde_json::Value::as_i64)
+                .map(|v| v as i32),
+            exit_reason: (!exit_reason.is_empty()).then_some(exit_reason),
+        });
+        self.queue_event("MEMORY_SESSION_REPORT", event);
     }
 
     /// A day was credited to the 7-day login streak (issue #3018). Called from
