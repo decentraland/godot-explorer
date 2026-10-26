@@ -17,6 +17,9 @@ var last_claim_error_code: String = ""
 # shown to the player under "Reward claim failed".
 var last_claim_error_message: String = ""
 var _streak_canvas_layer: CanvasLayer = null
+## Set for the whole creation (including the ModalTransitionGate wait), so a second trigger
+## firing while the first is still settling is dropped instead of racing it (#2867 review).
+var _creating_streak_modal: bool = false
 
 
 func _ready() -> void:
@@ -57,11 +60,19 @@ func close_streak_modal() -> void:
 
 
 func _async_create_streak_modal() -> StreakModal:
+	# The ModalTransitionGate wait below stretches this function to ~2s: without this guard a
+	# second trigger firing mid-wait would pass the is_instance_valid(current_streak_modal)
+	# check below too (it isn't set yet) and race this call for current_streak_modal.
+	if _creating_streak_modal:
+		return null
+	_creating_streak_modal = true
+
 	if is_instance_valid(current_streak_modal):
 		close_streak_modal()
 
 	if not streak_modal_scene:
 		push_error("StreakModalController: Streak modal scene is not loaded")
+		_creating_streak_modal = false
 		return null
 
 	await ModalTransitionGate.async_wait_until_settled()
@@ -69,6 +80,7 @@ func _async_create_streak_modal() -> StreakModal:
 	var modal = streak_modal_scene.instantiate() as StreakModal
 	if not modal:
 		push_error("StreakModalController: Could not instantiate streak modal")
+		_creating_streak_modal = false
 		return null
 	# Stays hidden through the NodeGuard frames below and async_setup()'s own render/thumbnail
 	# work — otherwise the scene's last-saved look flashes on screen for a couple of frames
@@ -85,6 +97,7 @@ func _async_create_streak_modal() -> StreakModal:
 	var root = get_tree().root
 	if not root:
 		push_error("StreakModalController: Could not get scene tree root")
+		_creating_streak_modal = false
 		return null
 
 	root.add_child(_streak_canvas_layer)
@@ -95,6 +108,8 @@ func _async_create_streak_modal() -> StreakModal:
 
 	await get_tree().process_frame
 	await get_tree().process_frame
+
+	_creating_streak_modal = false
 
 	# Those two frames are a window in which the modal can be freed — see NodeGuard.
 	if not NodeGuard.is_alive(modal, "StreakModalController._async_create_streak_modal"):

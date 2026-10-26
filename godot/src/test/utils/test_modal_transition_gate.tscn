@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://cqxg2k8vftmg1"]
+
+[ext_resource type="Script" path="res://src/test/utils/test_modal_transition_gate.gd" id="1_gate"]
+
+[node name="TestModalTransitionGate" type="Node"]
+script = ExtResource("1_gate")
