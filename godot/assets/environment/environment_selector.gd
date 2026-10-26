@@ -3,6 +3,11 @@ extends Node
 
 var sky: SkyBase = null
 
+# The engine's current directional soft shadow filter, which starts at the project setting.
+static var _shadow_filter_quality: int = ProjectSettings.get_setting_with_override(
+	"rendering/lights_and_shadows/directional_shadow/soft_shadow_filter_quality"
+)
+
 
 func _ready():
 	set_skybox_and_shadow(Global.get_config().skybox)
@@ -117,7 +122,11 @@ func set_shadow(shadow_quality: int):
 			sky.main_light.directional_shadow_max_distance
 		)
 
-	RenderingServer.directional_soft_shadow_filter_set_quality(quality)
+	# The engine drops every compiled scene pipeline on this call even when the quality is
+	# unchanged, so every mesh in view goes undrawn until they recompile.
+	if quality != _shadow_filter_quality:
+		_shadow_filter_quality = quality
+		RenderingServer.directional_soft_shadow_filter_set_quality(quality)
 	RenderingServer.directional_shadow_atlas_set_size(atlas_size, atlas_16_bits)
 
 
