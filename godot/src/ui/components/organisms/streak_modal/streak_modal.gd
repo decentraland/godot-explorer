@@ -369,13 +369,13 @@ func _set_claim_failed_visible(show_failed: bool) -> void:
 		_async_slide_in_claim_failed()
 
 
-## Adds the plain-language reason under the headline, and on non-production builds the raw
-## rewards-server code too, so QA can tell failures apart without device logs.
+## On non-production builds the raw rewards-server code goes under the copy, so QA can tell
+## failures apart without device logs.
 func _update_claim_failed_label() -> void:
-	label_claim_failed.text = TranslationKey.new("STREAK_CLAIM_FAILED").text()
-	var reason := Global.streak_modal_controller.last_claim_error_message
-	if _claim_failed_shown and not reason.is_empty():
-		label_claim_failed.text += "\n" + reason
+	var key := "STREAK_CLAIM_FAILED"
+	if _claim_failed_shown and Global.streak_modal_controller.last_claim_error_reason == "network":
+		key = "STREAK_CLAIM_FAILED_CONNECTION"
+	label_claim_failed.text = TranslationKey.new(key).text()
 	var error_code := Global.streak_modal_controller.last_claim_error_code
 	if _claim_failed_shown and not Global.is_production() and not error_code.is_empty():
 		label_claim_failed.text += (

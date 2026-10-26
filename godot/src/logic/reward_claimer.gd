@@ -9,21 +9,6 @@ extends RefCounted
 ## wallet already owned, mirroring Genesis' claim.ts `assigned_at` check.
 const ALREADY_CLAIMED_WINDOW_SEC := 120.0
 
-## Why a claim failed, as the `reason` of async_claim's result, mapped to the plain-language copy
-## the player sees. Also the reason reported to metrics and Sentry.
-const REASON_MESSAGE_KEYS := {
-	"wallet_required": "REWARD_ERROR_WALLET_REQUIRED",
-	"not_available": "REWARD_NOT_AVAILABLE",
-	"already_claimed": "REWARD_ALREADY_OWNED",
-	"out_of_stock": "REWARD_OUT_OF_STOCK",
-	"nothing_granted": "REWARD_NOTHING_GRANTED",
-	"session_unverified": "REWARD_SESSION_UNVERIFIED",
-	"network": "REWARD_ERROR_SERVER_UNREACHABLE",
-	"server_error": "REWARD_ERROR_INVALID_RESPONSE",
-	"rejected": "REWARD_ERROR_REJECTED",
-	"unknown": "REWARD_CLAIM_FAILED",
-}
-
 ## One Sentry event per campaign + reason per session; every attempt still goes to metrics.
 static var _sentry_reported := {}
 
@@ -32,7 +17,9 @@ static var _sentry_reported := {}
 ## RewardCampaigns.CAMPAIGNS.
 ## @return { ok: bool, already_owned: bool, reason: String, error_message: String, code: String }
 ## — reason/error_message/code are only set when ok is false; already_owned only matters when ok
-## is true. `reason` is a REASON_MESSAGE_KEYS key and error_message its translated copy; `code` is
+## is true. `reason` (wallet_required, not_available, out_of_stock, nothing_granted,
+## session_unverified, network, server_error, rejected, unknown) goes to metrics and Sentry; the
+## player's error_message only tells a connection problem apart from the rest (design). `code` is
 ## the raw rewards-server detail behind it, for QA and logs only.
 static func async_claim(campaign: Dictionary) -> Dictionary:
 	var started_ms := Time.get_ticks_msec()
@@ -145,6 +132,9 @@ static func _handle_claim_json(json: Dictionary) -> Dictionary:
 	var code := str(json.get("code", ""))
 
 	if ok == false:
+		# Not a failure for the player: same claimed state as an old assigned_at below.
+		if code == "already_claimed" or code == "user_already_claimed":
+			return {"ok": true, "already_owned": true, "error_message": "", "code": ""}
 		# A 400 is the server refusing the request itself (e.g. "Missing parameters"): a setup
 		# problem on our side, not something the player can change.
 		if code == "bad_request" or (code.is_empty() and json.has("error")):
@@ -153,7 +143,7 @@ static func _handle_claim_json(json: Dictionary) -> Dictionary:
 
 	var data = json.get("data", [])
 	# ok but nothing granted: the key's per-wallet limit was already used or the stock ran out —
-	# the server doesn't say which, so the copy covers both.
+	# the server doesn't say which.
 	if not (data is Array) or data.is_empty():
 		return _error("nothing_granted", "empty_data:" + str(json))
 
@@ -172,16 +162,13 @@ static func _handle_claim_json(json: Dictionary) -> Dictionary:
 	return {"ok": true, "already_owned": false, "error_message": "", "code": ""}
 
 
-## Maps a rewards-server error code to a REASON_MESSAGE_KEYS reason, so a raw code (e.g.
-## "catalyst_unreachable") never reaches the UI.
+## Maps a rewards-server error code to a failure reason (see async_claim) for metrics and Sentry.
 static func _reason_for_code(code: String) -> String:
 	match code:
 		"campaign_key_uninitiated", "campaign_disabled", "campaign_finished":
 			return "not_available"
 		"campaign_not_found", "campaign_key_not_found", "campaign_not_owner":
 			return "not_available"
-		"already_claimed", "user_already_claimed":
-			return "already_claimed"
 		"supply_reached", "out_of_stock":
 			return "out_of_stock"
 		"catalyst_invalid", "catalyst_unreachable", "user_address_not_connected", "user_address_position":
@@ -190,7 +177,9 @@ static func _reason_for_code(code: String) -> String:
 
 
 static func _error(reason: String, code: String = "") -> Dictionary:
-	var message_key: String = REASON_MESSAGE_KEYS.get(reason, "REWARD_CLAIM_FAILED")
+	var message_key := (
+		"REWARD_ERROR_SERVER_UNREACHABLE" if reason == "network" else "REWARD_CLAIM_FAILED"
+	)
 	return {
 		"ok": false,
 		"already_owned": false,
@@ -238,7 +227,7 @@ static func _track(campaign: Dictionary, result: Dictionary, duration_ms: int) -
 		return
 	printerr("[RewardClaimer] claim failed: ", campaign_name, " reason=", reason, " ", result.code)
 	var report_key := campaign_name + ":" + reason
-	if reason == "already_claimed" or _sentry_reported.has(report_key):
+	if _sentry_reported.has(report_key):
 		return
 	if not SentrySDK.is_enabled():
 		return
