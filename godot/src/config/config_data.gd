@@ -257,6 +257,10 @@ var debug_rotate_guest_anchor: bool = false
 # horizontal movement has been detected post-loading_finished, persisted across sessions).
 var first_move_in_world_sent: bool = false
 
+# Lowercased wallet addresses that already fired the Firebase `first_social_action` event. Local
+# only: a reinstall or a second device can fire it again for the same wallet.
+var first_social_action_wallets: Array = []
+
 var local_assets_cache_version: int = 0
 
 var local_notifications_version: int = 0
@@ -689,6 +693,9 @@ func load_from_settings_file():
 	self.first_move_in_world_sent = settings_file.get_value(
 		"user", "first_move_in_world_sent", data_default.first_move_in_world_sent
 	)
+	self.first_social_action_wallets = settings_file.get_value(
+		"user", "first_social_action_wallets", data_default.first_social_action_wallets
+	)
 
 	self.local_assets_cache_version = settings_file.get_value(
 		"user", "local_assets_cache_version", data_default.local_assets_cache_version
@@ -818,6 +825,9 @@ func save_to_settings_file():
 	new_settings_file.set_value("user", "campaign_consumed", self.campaign_consumed)
 	new_settings_file.set_value("user", "debug_rotate_guest_anchor", self.debug_rotate_guest_anchor)
 	new_settings_file.set_value("user", "first_move_in_world_sent", self.first_move_in_world_sent)
+	new_settings_file.set_value(
+		"user", "first_social_action_wallets", self.first_social_action_wallets
+	)
 	new_settings_file.set_value(
 		"user", "local_assets_cache_version", self.local_assets_cache_version
 	)

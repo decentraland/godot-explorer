@@ -1146,6 +1146,35 @@ impl Metrics {
         )
     }
 
+    /// Fire the `first_social_action` Firebase event (Android only). `action` is one of `emote`,
+    /// `friend_request`, `friend_accept`, `chat`. Once per wallet is the caller's job: persist its
+    /// per-wallet flag ONLY on `true`, same contract as `track_first_move_in_world`.
+    #[func]
+    pub fn track_first_social_action(&mut self, action: String) -> bool {
+        if !self.eula_accepted {
+            return false;
+        }
+        if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
+            return false;
+        }
+        let params = serde_json::json!({
+            "action": action,
+            "is_guest": self.common.dcl_is_guest,
+            "dcl_eth_address": self.common.dcl_eth_address,
+        });
+        let params_str = params.to_string();
+        if self.debug_level > 0 {
+            tracing::debug!(
+                "[Metrics] Firebase event 'first_social_action': {}",
+                params_str
+            );
+        }
+        DclAndroidPlugin::log_firebase_event(
+            GString::from("first_social_action"),
+            GString::from(&params_str),
+        )
+    }
+
     #[func]
     pub fn set_debug_level(&mut self, level: u8) {
         self.debug_level = level.min(1); // Clamp to 0-1
