@@ -10,12 +10,11 @@ const STREAK_MODAL_SCENE_PATH = "res://src/ui/components/organisms/streak_modal/
 
 var current_streak_modal: StreakModal = null
 var streak_modal_scene: PackedScene = null
-# Raw rewards-server error code (e.g. "already_claimed") from the most recent failed claim —
+# Raw rewards-server error code (e.g. "campaign_disabled") from the most recent failed claim —
 # "" after a successful one or before any claim has run. Shown on non-production builds only.
 var last_claim_error_code: String = ""
-# The plain-language reason for the most recent failed claim (RewardClaimer's error_message),
-# shown to the player under "Reward claim failed".
-var last_claim_error_message: String = ""
+# RewardClaimer's reason for the most recent failed claim; "network" gets its own copy.
+var last_claim_error_reason: String = ""
 var _streak_canvas_layer: CanvasLayer = null
 ## Set for the whole creation (including the ModalTransitionGate wait), so a second trigger
 ## firing while the first is still settling is dropped instead of racing it (#2867 review).
@@ -171,7 +170,7 @@ func async_claim_rewards(days: Array[int]) -> bool:
 func _async_claim_direct(day: int) -> bool:
 	var key := "LoginStreakD3" if day == 3 else "LoginStreakD7"
 	var result := await RewardClaimer.async_claim(RewardCampaigns.CAMPAIGNS[key])
-	last_claim_error_message = "" if result.ok else str(result.error_message)
+	last_claim_error_reason = "" if result.ok else str(result.reason)
 	_on_streak_claim_resolved(result.ok, day, str(result.get("code", "")))
 	return result.ok
 

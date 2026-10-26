@@ -52,6 +52,8 @@ const FLAG_DAY1_NOTIFICATION := "day1-notification"
 const FLAG_FORCE_BACKFACE_CULLING := "alfa-force-backface-culling"
 # Comma-separated wallet addresses that get Settings → Dev Tools on production builds.
 const FLAG_TESTER_WALLETS := "tester-wallets"
+# The RENDER_READY metric (render_ready_probe.gd). Fail-open kill switch for its Segment volume.
+const FLAG_RENDER_READY_PROBE := "render-ready-probe"
 
 var _flags: Dictionary = {}
 var _loaded := false
@@ -67,6 +69,10 @@ func _ready() -> void:
 
 func is_loaded() -> bool:
 	return _loaded
+
+
+func is_async_shader_compilation_enabled() -> bool:
+	return _async_shaders_enabled
 
 
 # `default_value` is returned while the flags aren't loaded yet or when the
