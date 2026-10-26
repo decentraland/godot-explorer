@@ -33,10 +33,13 @@ const HOUR_SECONDS := 3600
 const MAX_SHOWS := 3
 
 var _evaluated_this_session: bool = false
-# Tags of callers currently outranking this nudge (e.g. a device-support modal #2936/#2935, or a
-# pending login-streak modal #3018) — set via suppress_until_cleared(tag), cleared via
-# resume(tag). _try_evaluate() checks this without consuming _evaluated_this_session, so the real
-# evaluation still runs once the last suppressor calls resume().
+# Tag -> number of callers currently outranking this nudge under that tag (e.g. a device-support
+# modal #2936/#2935, or a pending login-streak modal #3018) — incremented via
+# suppress_until_cleared(tag), decremented via resume(tag). A count, not a bool: two overlapping
+# callers can share a tag (discover.gd and streak_widget_card.gd both suppress "streak"), and a
+# bool would let either one's resume() clear the other's still-active hold (#2867 review).
+# _try_evaluate() checks this without consuming _evaluated_this_session, so the real evaluation
+# still runs once the last suppressor calls resume().
 var _suppressors: Dictionary = {}
 
 
@@ -66,9 +69,10 @@ func _on_loading_finished() -> void:
 ## (e.g. discover.gd before a device-support or login-streak modal), so the suppression is in
 ## place before that same call stack's Global.set_orientation_portrait() can fire this
 ## coordinator's own orientation-triggered evaluation. `tag` identifies the caller so concurrent
-## suppressors don't clear each other's hold early.
+## suppressors don't clear each other's hold early — including two concurrent callers sharing the
+## same tag, which is why this counts rather than sets a flag.
 func suppress_until_cleared(tag: String) -> void:
-	_suppressors[tag] = true
+	_suppressors[tag] = int(_suppressors.get(tag, 0)) + 1
 
 
 ## Called once the modal that outranked this nudge (identified by the same `tag` passed to
@@ -76,7 +80,11 @@ func suppress_until_cleared(tag: String) -> void:
 ## remains. A no-op if `tag` wasn't actually suppressing (e.g. this session's evaluation already
 ## happened some other way).
 func resume(tag: String) -> void:
-	_suppressors.erase(tag)
+	var remaining: int = int(_suppressors.get(tag, 0)) - 1
+	if remaining > 0:
+		_suppressors[tag] = remaining
+	else:
+		_suppressors.erase(tag)
 	if _suppressors.is_empty():
 		_try_evaluate()
 

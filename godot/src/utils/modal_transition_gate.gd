@@ -21,9 +21,11 @@ extends RefCounted
 ## uncapped) — both modals are Discover-only and the overlay is an in-world HUD concern, so the
 ## two should not currently overlap; call it too if that stops being true.
 ##
-## Only covers the post-login surface: `Global.get_explorer()` is null in the lobby, where the
-## loading surface is `SplashOverlay` instead — not a gap today since both modals this guards are
-## Discover-only and cannot fire before the explorer exists.
+## Only covers the explorer's own loading screen: `Global.get_explorer()` is null in the lobby,
+## and also goes null/freed mid-teardown during `Global.return_to_discover()` — which itself calls
+## `set_orientation_portrait()`, so it can trigger the upgrade nudge's evaluation. Either way the
+## loading-screen wait below just no-ops; the actual surface then (`SplashOverlay`, also layer 100)
+## is not covered. A real, if narrow, gap — not something this guards against today.
 ##
 ## Not for modals that ARE the intended response to the thing in flight (a failed teleport, a
 ## scene crash) — those should interrupt immediately, which is what
