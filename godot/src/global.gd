@@ -177,6 +177,8 @@ var attestation: AttestationService = null
 # `Global.feature_flags.is_enabled("flag-name")`; comms-affecting flags are
 # applied automatically when the response arrives — see feature_flags.gd.
 var feature_flags: FeatureFlags = null
+# Seasonal Discover reskin (issue #3025) — see seasonal_skin_manager.gd.
+var seasonal_skin_manager: SeasonalSkinManager = null
 
 # Ad/referrer campaign map fetched from the mobile-bff at startup. Resolves the `?c=`
 # token captured at boot into a personalized FTUE or a direct boot into the target scene
@@ -765,6 +767,10 @@ func _ready():
 	self.feature_flags = FeatureFlags.new()
 	self.feature_flags.set_name("feature_flags")
 	add_child(self.feature_flags)
+	# Reads off the flags above once they arrive — see seasonal_skin_manager.gd.
+	self.seasonal_skin_manager = SeasonalSkinManager.new()
+	self.seasonal_skin_manager.set_name("seasonal_skin_manager")
+	add_child(self.seasonal_skin_manager)
 	# Campaign resolver. Unlike the flags above it does NOT fetch on _ready: the map is only
 	# requested once a token actually needs resolving, so an install with no campaign — the
 	# large majority — never touches the endpoint. What starts here is the watcher that
