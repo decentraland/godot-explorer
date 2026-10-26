@@ -8,6 +8,10 @@ extends Node
 
 const STREAK_MODAL_SCENE_PATH = "res://src/ui/components/organisms/streak_modal/streak_modal.tscn"
 
+## ~0.2s at 60fps: long enough to cover a caller's own same-frame show() call, short enough to
+## never visibly delay the modal if the caller really did navigate away.
+const CALLER_VISIBLE_WAIT_FRAMES := 12
+
 var current_streak_modal: StreakModal = null
 var streak_modal_scene: PackedScene = null
 # Raw rewards-server error code (e.g. "campaign_disabled") from the most recent failed claim —
@@ -77,15 +81,23 @@ func _async_create_streak_modal(caller: Node) -> StreakModal:
 
 	await ModalTransitionGate.async_wait_until_settled()
 
-	# A sign-out/return-to-discover teardown, or caller no longer the active screen (it moved
-	# away, or hasn't been shown yet at all — Global.get_explorer() can't tell those apart from
-	# in-game Discover, which runs inside the same live explorer).
-	if (
-		Global._signing_out
-		or Global._returning_to_discover
-		or not is_instance_valid(caller)
-		or not caller.is_visible_in_tree()
-	):
+	if Global._signing_out or Global._returning_to_discover or not is_instance_valid(caller):
+		_creating_streak_modal = false
+		return null
+
+	# The gate above can resolve without yielding a single frame (nothing to wait for), which
+	# lands here before caller's own _ready() finishes showing it (e.g. Discover's first-ever
+	# landing: its _ready() calls this before menu.gd selects/shows it a few lines later). Give
+	# the caller a short chance to actually appear before treating it as gone rather than
+	# "not on screen yet".
+	var visible_wait_frames := 0
+	while not caller.is_visible_in_tree() and visible_wait_frames < CALLER_VISIBLE_WAIT_FRAMES:
+		await get_tree().process_frame
+		if not is_instance_valid(caller):
+			_creating_streak_modal = false
+			return null
+		visible_wait_frames += 1
+	if not caller.is_visible_in_tree():
 		_creating_streak_modal = false
 		return null
 
