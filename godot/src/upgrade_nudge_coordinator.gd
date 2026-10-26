@@ -146,9 +146,12 @@ func _async_evaluate() -> void:
 
 	print("[UpgradeNudge] showing upgrade modal (shown=%d)" % config.upgrade_modal_shown_count)
 	# Only advance the cadence if the modal was actually shown — otherwise a failed reveal
-	# would burn a nudge slot and shift the next deadline.
+	# would burn a nudge slot and shift the next deadline. Also un-consume this session's
+	# evaluation slot: a stale trigger (the guest upgraded, a teardown started) shouldn't cost
+	# the only other chance this session has to show, which is the next portrait moment.
 	if not await Global.modal_manager.async_show_upgrade_modal():
 		print("[UpgradeNudge] modal failed to show; cadence not advanced")
+		_evaluated_this_session = false
 		return
 
 	config.upgrade_modal_shown_count += 1

@@ -43,10 +43,13 @@ func is_open() -> bool:
 ## @param pending_day: -1 ("not specified") falls back to progress_day; any other value (0
 ## included) renders exactly that day as the row's "today" pill — see StreakModal's own doc
 ## comment on _pending_day for why 0 can't share the -1 default.
+## @param owner: the caller (Discover or its streak widget card) — effectively required despite
+## the default: _async_create_streak_modal() bails if it is gone or no longer on screen by the
+## time the ModalTransitionGate wait settles, so every real caller must pass its own `self`.
 func async_show_streak_modal(
-	state: int, progress_day: int, is_guest: bool, pending_day: int = -1
+	state: int, progress_day: int, is_guest: bool, pending_day: int = -1, owner: Node = null
 ) -> bool:
-	var modal = await _async_create_streak_modal()
+	var modal = await _async_create_streak_modal(owner)
 	if not is_instance_valid(modal):
 		return false
 	await modal.async_setup(state, progress_day, is_guest, pending_day)
@@ -59,7 +62,7 @@ func close_streak_modal() -> void:
 		_remove_streak_modal()
 
 
-func _async_create_streak_modal() -> StreakModal:
+func _async_create_streak_modal(owner: Node) -> StreakModal:
 	# The ModalTransitionGate wait below stretches this function to ~2s: without this guard a
 	# second trigger firing mid-wait would pass the is_instance_valid(current_streak_modal)
 	# check below too (it isn't set yet) and race this call for current_streak_modal.
@@ -78,9 +81,16 @@ func _async_create_streak_modal() -> StreakModal:
 	await ModalTransitionGate.async_wait_until_settled()
 
 	# The trigger that queued this can go stale during the wait above: a sign-out/return-to-
-	# discover teardown started, or the player jumped into a world — this modal is Discover-only
-	# (see class doc), never in-world.
-	if Global._signing_out or Global._returning_to_discover or Global.get_explorer() != null:
+	# discover teardown started, or the caller (Discover or its streak widget card) is no longer
+	# the active screen. Global.get_explorer() can't tell that apart from in-game Discover, which
+	# runs inside the same live explorer (menu.tscn as a child of explorer.tscn) — checking the
+	# caller itself is the only thing that actually distinguishes the two (#2867 review, round 5).
+	if (
+		Global._signing_out
+		or Global._returning_to_discover
+		or not is_instance_valid(owner)
+		or not owner.is_visible_in_tree()
+	):
 		_creating_streak_modal = false
 		return null
 
