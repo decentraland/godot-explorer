@@ -44,8 +44,7 @@ func _initialize() -> void:
 	# Unity's decoder rebuilds the direction from the pair and compares it with
 	# the avatar's head forward: DCL +Z is Godot -Z, so the Godot direction
 	# (x, y, z) arrives as (x, y, -z) and the running peer turns the head by the
-	# delta. Facing +X and looking forward used to send 0 (body-relative) and
-	# Unity aimed 90 deg to the side.
+	# delta. A body-relative pair would aim a +X-facing avatar 90 deg aside.
 	_check_unity_agrees("unity sees east forward", BODY_EAST, Vector2(0.0, 0.0))
 	_check_unity_agrees("unity sees east right", BODY_EAST, Vector2(35.0, 20.0))
 	_check_unity_agrees("unity sees east steep", BODY_EAST, Vector2(37.0, 83.0))

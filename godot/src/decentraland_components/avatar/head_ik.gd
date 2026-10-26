@@ -20,9 +20,9 @@ const RESET_SPEED_SCALE := 0.3333333
 # speed that turns head IK off is its square root.
 const MAX_SPEED := 0.7071068
 # Unity spreads the turn over the rig with TwistChainConstraints: the neck sits
-# at curve(step 0.5) on both chains (~0.89 vertical, ~0.94 horizontal) and the
-# head holds the tip, i.e. the full aim. Rotating the head alone leaves the
-# whole angle at one joint and the neck snaps; this is that share.
+# at ~0.89 of the vertical chain and ~0.94 of the horizontal one, and the head
+# holds the tip, i.e. the full aim. Rotating the head alone leaves the whole
+# angle at one joint and the neck snaps; this is that share.
 const NECK_SHARE := 0.89
 
 
@@ -121,11 +121,9 @@ func update_ik(delta: float, enabled: bool, look_dir: Vector3) -> void:
 	_aim(delta, yaw, pitch)
 
 
-## The wire carries the sender's aim in world space, as Unity's Euler yaw/pitch
-## (HeadIKComponent.GetHeadYawAndPitch over Camera.transform.forward). Sending the
-## body-relative turn instead made a peer aim at a world heading: with the body
-## facing anywhere but DCL +Z the received head turned the wrong way, and past
-## the reset limit it did not turn at all.
+## The wire carries the sender's head aim in world space, as Unity's Euler
+## yaw/pitch (HeadIKComponent.GetHeadYawAndPitch over Camera.transform.forward),
+## which its remote IK compares against the avatar's own head forward.
 ##
 ## The heading comes from the body plus the aim the local path already froze, not
 ## from re-deriving it off the camera: first person clamps pitch at +-90, where
