@@ -77,6 +77,13 @@ func _async_create_streak_modal() -> StreakModal:
 
 	await ModalTransitionGate.async_wait_until_settled()
 
+	# The trigger that queued this can go stale during the wait above: a sign-out/return-to-
+	# discover teardown started, or the player jumped into a world — this modal is Discover-only
+	# (see class doc), never in-world.
+	if Global._signing_out or Global._returning_to_discover or Global.get_explorer() != null:
+		_creating_streak_modal = false
+		return null
+
 	var modal = streak_modal_scene.instantiate() as StreakModal
 	if not modal:
 		push_error("StreakModalController: Could not instantiate streak modal")
