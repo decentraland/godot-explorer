@@ -74,7 +74,7 @@ jobs:
     timeout-minutes: 35
     container:
       # image generated at: https://github.com/decentraland/godot-docker-builder
-      image: quay.io/decentraland/dcl-godot-android-builder:62ef6ebf357897ac382d7a52ac80de20883d9e15
+      image: quay.io/decentraland/dcl-godot-android-builder:394c180223d3e2ad410d191147e9e2ad39884c0b
       volumes:
         - /home/user/.cache/devgodot:/github/home/.cache/devgodot
       # WarpBuild's cache action authenticates via this token, which exists on the runner

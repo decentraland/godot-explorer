@@ -104,7 +104,9 @@ impl MultipleAnimationController {
                 self.base_mut().set(param, value);
             }
         } else {
-            tracing::error!("finished animation {} not found!", anim_name);
+            // The signal is deferred; the frame-sync apply after the animation tick may
+            // already have stopped this clip.
+            tracing::debug!("finished animation {} no longer playing", anim_name);
         }
     }
 }

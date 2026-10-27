@@ -1086,7 +1086,9 @@ fn build_draw_mesh(value: &PbParticleSystem, material: &Gd<StandardMaterial3D>) 
         let indices = [0i32, 1, 2, 2, 1, 3];
 
         let mut arrays = VarArray::new();
-        arrays.resize(13, &VarArray::new().to_variant());
+        // Unused slots must be nil: the renderer rejects any non-nil one (an empty
+        // Array in ARRAY_BONES fails the whole surface).
+        arrays.resize(13, &Variant::nil());
         arrays.set(
             0,
             &PackedVector3Array::from(vertices.as_slice()).to_variant(),
