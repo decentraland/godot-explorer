@@ -149,3 +149,5 @@ autostart = true
 
 [node name="LoadingSession" type="LoadingSession" parent="." unique_id=1234567890]
 unique_name_in_owner = true
+
+[node name="RenderReadyProbe" type="RenderReadyProbe" parent="." unique_id=1418390527]

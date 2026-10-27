@@ -20,6 +20,7 @@ pub mod music_player;
 pub mod phone_frame;
 pub mod position_broadcaster;
 pub mod raycast_debugger;
+pub mod render_ready_probe;
 pub mod safe_area_presets;
 pub mod scene_music;
 pub mod session;

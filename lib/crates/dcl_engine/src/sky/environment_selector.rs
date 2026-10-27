@@ -2,9 +2,13 @@
 //! environment: shadows, bloom, fog (the view distance) and anti-aliasing, which is here because it
 //! applies to the viewport the environment is rendered in.
 
+use std::cell::Cell;
+
 use godot::classes::environment::{BgMode, FogMode};
 use godot::classes::rendering_server::{ShadowQuality, ViewportMsaa};
-use godot::classes::{Environment, INode, PackedScene, RenderingServer, WorldEnvironment};
+use godot::classes::{
+    Environment, INode, PackedScene, ProjectSettings, RenderingServer, WorldEnvironment,
+};
 use godot::prelude::*;
 
 use super::sky_base::SkyBase;
@@ -13,6 +17,19 @@ use crate::fetcher::globals;
 const SKY_LOW: &str = "res://assets/environment/sky_low/sky_low.tscn";
 const SKY_MEDIUM: &str = "res://assets/environment/sky_medium/sky_medium.tscn";
 const SKY_HIGH: &str = "res://assets/environment/sky_high/sky_high.tscn";
+
+thread_local! {
+    /// The engine's directional soft shadow filter, which starts at the project setting. It
+    /// outlives the node, so a re-entered explorer does not clear the pipelines again.
+    static SHADOW_FILTER: Cell<ShadowQuality> = Cell::new(project_shadow_filter());
+}
+
+fn project_shadow_filter() -> ShadowQuality {
+    let setting = ProjectSettings::singleton().get_setting_with_override(
+        "rendering/lights_and_shadows/directional_shadow/soft_shadow_filter_quality",
+    );
+    ShadowQuality::try_from_ord(setting.try_to::<i32>().unwrap_or(0)).unwrap_or(ShadowQuality::HARD)
+}
 
 /// The scene of a skybox quality (0 low, 1 medium, 2 high); testing always uses the high one.
 pub fn sky_scene(skybox_index: i32, testing: bool) -> Option<&'static str> {
@@ -256,11 +273,17 @@ impl EnvironmentSelector {
             );
         }
         let mut rendering = RenderingServer::singleton();
-        rendering.directional_soft_shadow_filter_set_quality(if plan.soft {
+        // The engine drops every compiled scene pipeline on this call even when the quality is
+        // unchanged, so every mesh in view goes undrawn until they recompile.
+        let filter = if plan.soft {
             ShadowQuality::SOFT_MEDIUM
         } else {
             ShadowQuality::HARD
-        });
+        };
+        if SHADOW_FILTER.get() != filter {
+            SHADOW_FILTER.set(filter);
+            rendering.directional_soft_shadow_filter_set_quality(filter);
+        }
         rendering.directional_shadow_atlas_set_size(plan.atlas_size, plan.atlas_16_bits);
     }
 

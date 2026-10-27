@@ -16,6 +16,10 @@ thread_local! {
     static FLAGS_SETTLED: Cell<bool> = const { Cell::new(false) };
 }
 
+pub fn is_enabled() -> bool {
+    ENABLED.get()
+}
+
 pub fn on_flags_applied() {
     FLAGS_SETTLED.set(true);
     update();

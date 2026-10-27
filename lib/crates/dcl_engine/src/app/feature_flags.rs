@@ -31,6 +31,8 @@ pub const FLAG_PUSH_ENABLED: &str = "push-enabled";
 /// `--force-backface-culling` / `--no-force-backface-culling` and the deeplink
 /// `force-backface-culling=true|false` win over the flag.
 pub const FLAG_FORCE_BACKFACE_CULLING: &str = "alfa-force-backface-culling";
+/// The RENDER_READY metric (`render_ready_probe`). Fail-open kill switch for its Segment volume.
+pub const FLAG_RENDER_READY_PROBE: &str = "render-ready-probe";
 
 #[derive(GodotClass)]
 #[class(base=Node, init)]

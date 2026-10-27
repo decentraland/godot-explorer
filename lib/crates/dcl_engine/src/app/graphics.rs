@@ -49,7 +49,8 @@ pub struct Profile {
 /// Very Low, Low, Medium, High.
 ///
 /// Medium has AA off: on a Mali-G68 it cost about 8 ms of GPU in Genesis Plaza for no visible
-/// gain at typical mobile resolution. High keeps shadows at Low for the same reason: quality 2
+/// gain at typical mobile resolution. High has it off too: the ubershaders built at startup assume
+/// no MSAA, so with it every mesh stays undrawn until its own pipeline compiles. High keeps shadows at Low for the same reason: quality 2
 /// cost about 10 ms there (62% of the geometry goes through the shadow pass).
 pub const PROFILES: [Profile; 4] = [
     Profile {
@@ -101,7 +102,7 @@ pub const PROFILES: [Profile; 4] = [
         dcl_light_range_cap: 30.0,
     },
     Profile {
-        aa: 1,
+        aa: 0,
         shadow: 1,
         bloom: 2,
         skybox: 2,
