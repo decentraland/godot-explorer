@@ -9,8 +9,9 @@
 Replaces slack-root.py, slack-reply.sh and pr-card.py: the board stores the event, renders the Slack
 root card + thread replies and keeps the PR build-card comment current. Each leg only reports what it
 knows; the board merges non-empty fields (each leg owns its own) and never lets `status` regress from
-failed/cancelled to success. Best-effort: never fails the build (missing token / HTTP error → print,
-exit 0). Retries 429/5xx/connection errors; the event id makes retries idempotent.
+failed/cancelled to success. Best-effort: never fails the build — a rejected / unreported event or a
+board-side Slack / PR-card error surfaces as a `::warning` annotation on the run, then exit 0. Retries
+429/5xx/connection errors; the event id makes retries idempotent.
 
 Env (only NON-EMPTY values are sent):
   BUILD_REPORTER_TOKEN  required — no-op otherwise (secret; absent on fork PRs)
@@ -37,6 +38,8 @@ Writes slack_ts / slack_channel / run_id to $GITHUB_OUTPUT when the board return
 """
 import hashlib, json, os, re, sys, time, urllib.error, urllib.request
 
+# Contract with the board: this list must stay a SUBSET of mobile-board's server/build-card-state.js
+# CARD_FIELDS. The board rejects the WHOLE event (400) on an unknown field, so deploy the board first.
 CARD_FIELDS = ["status", "build_number", "build_version", "branch", "triggered_by", "pr_url", "commit",
                "commit_url", "ios_line", "android_line", "apk_url", "aab_url", "testflight_url", "run_url"]
 SHA_RE = re.compile(r"[0-9a-fA-F]{40}")
@@ -108,23 +111,24 @@ for attempt in range(1, 4):
         pipeline = data.get("pipeline") or {}
         slack = data.get("slack") or {}
         print(f"report-build-event: ok run={data.get('run_id')} v{data.get('version')} status={pipeline.get('status')}"
-              f"{' stale' if data.get('stale') else ''}{' duplicate' if data.get('duplicate') else ''}"
-              f"{' slack_error=' + pipeline['slack_error'] if pipeline.get('slack_error') else ''}"
-              f"{' card_error=' + pipeline['card_error'] if pipeline.get('card_error') else ''}")
+              f"{' stale' if data.get('stale') else ''}{' duplicate' if data.get('duplicate') else ''}")
+        for k in ("slack_error", "card_error"):  # stored, but the board's Slack / PR-card write failed (its cron retries)
+            if pipeline.get(k):
+                print(f"::warning title=report-build-event::board {k}: {pipeline[k]}")
         gho = os.environ.get("GITHUB_OUTPUT")
         if gho:
             with open(gho, "a") as f:
                 f.write(f"slack_ts={slack.get('ts', '')}\nslack_channel={slack.get('channel', '')}\nrun_id={data.get('run_id', '')}\n")
         sys.exit(0)
     except urllib.error.HTTPError as e:
-        body = e.read().decode(errors="replace")[:300]
+        body = " ".join(e.read().decode(errors="replace")[:300].split())
         if e.code in (429,) or e.code >= 500:
             print(f"report-build-event: attempt {attempt}/3 HTTP {e.code}: {body}", file=sys.stderr)
-        else:
-            print(f"report-build-event: HTTP {e.code} (not retried): {body}", file=sys.stderr); sys.exit(0)
+        else:  # 400 / 401 / 404: visible on the run, but never fails the build
+            print(f"::warning title=report-build-event::board rejected this event: HTTP {e.code} {body}"); sys.exit(0)
     except Exception as e:  # URLError, timeout, bad JSON
         print(f"report-build-event: attempt {attempt}/3 failed: {e}", file=sys.stderr)
     if attempt < 3:
         time.sleep(backoff); backoff *= 2
-print("report-build-event: giving up — the board did not record this event (build unaffected)", file=sys.stderr)
+print("::warning title=report-build-event::giving up — the board did not record this event (build unaffected)")
 sys.exit(0)

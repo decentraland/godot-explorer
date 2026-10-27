@@ -498,8 +498,9 @@ jobs:
 
       # Fallback for the outcome asc-deploy reports itself: the same STATUS / IOS_LINE (idempotent on
       # the board) but no MESSAGE and no LOG for started / success / failure — asc-deploy posts those
-      # and the board would show them twice. Cancelled / unknown outcomes are logged here because
-      # asc-deploy cannot report them. always(): if `watch` itself errors (bad jq parse, job timeout)
+      # and the board would show them twice. Cancelled / timed-out / unknown outcomes are logged here
+      # because asc-deploy cannot report them (GitHub kills the job before its report step runs).
+      # always(): if `watch` itself errors (bad jq parse, job timeout)
       # the card is already at "signing…" — skipping this step would strand it there for good.
       - name: Report → TestFlight result
         if: always()
@@ -511,7 +512,9 @@ jobs:
             success)
               export STATUS=success IOS_LINE="✅ TestFlight build ${BUILD_NUMBER:-?}" \
                      TESTFLIGHT_URL="https://appstoreconnect.apple.com/apps" ;;
-            failure|timed_out)
+            timed_out)
+              export STATUS=failed IOS_LINE="❌ sign/upload failed" LOG="❌ iOS deploy timed out — ${URL}" ;;
+            failure)
               export STATUS=failed IOS_LINE="❌ sign/upload failed" ;;
             cancelled)
               export STATUS=cancelled IOS_LINE="⚠️ signing cancelled" LOG="⚠️ iOS — signing run cancelled — ${URL}" ;;

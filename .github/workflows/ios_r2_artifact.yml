@@ -25,10 +25,6 @@ on:
         required: false
         type: string
         default: ''
-      slack_channel:
-        required: false
-        type: string
-        default: ''
       slack_ts:
         description: 'Slack root-card ts (forwarded to godot-asc-deploy only; the board owns the card)'
         required: false
