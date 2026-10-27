@@ -7,6 +7,7 @@ pub mod globals;
 pub mod http;
 pub mod layout;
 pub mod loading_session;
+pub mod low_memory;
 pub mod navigation;
 pub mod preview_ws;
 pub mod realm_flow;

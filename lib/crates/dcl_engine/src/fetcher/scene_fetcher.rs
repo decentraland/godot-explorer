@@ -11,6 +11,7 @@ use godot::prelude::*;
 use super::{
     base_floor::BaseFloorManager,
     layout::{island_layout, PADDING},
+    low_memory,
     preview_ws::{PreviewEvent, PreviewSocket},
     walls::FloatingIslandWalls,
 };
@@ -214,15 +215,7 @@ impl INode for SceneFetcher {
         // scene (issue #2002); Rust emits this once per pressure episode.
         scene_runner.signals().low_memory_warning().connect(
             |_scene_id, entity_id, footprint_mb, available_mb| {
-                godot_warn!(
-                    "[memory] critical pressure in {}: {} MB footprint, {} MB available",
-                    entity_id,
-                    footprint_mb,
-                    available_mb
-                );
-                globals::engine()
-                    .bind()
-                    .report_notice("low_memory".into(), "".into());
+                low_memory::on_warning(&entity_id.to_string(), footprint_mb, available_mb)
             },
         );
         let mut fetcher = this.clone();
