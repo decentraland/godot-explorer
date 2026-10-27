@@ -180,10 +180,11 @@ theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 40
 theme_override_constants/margin_bottom = 38
 
-[node name="VBoxContainer_EmotesAndSuggestions" type="VBoxContainer" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer/ScrollContainer_Grid/MarginContainer_Emotes"]
+[node name="VBoxContainer_EmotesAndSuggestions" type="VBoxContainer" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer/ScrollContainer_Grid/MarginContainer_Emotes" unique_id=1482138022]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 6
 size_flags_vertical = 3
+alignment = 1
 
 [node name="GridContainer_Emotes" type="GridContainer" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer/ScrollContainer_Grid/MarginContainer_Emotes/VBoxContainer_EmotesAndSuggestions" unique_id=614091418]
 unique_name_in_owner = true
@@ -197,7 +198,7 @@ unique_name_in_owner = true
 layout_mode = 2
 marketplace_section = "emotes"
 
-[node name="MarketplaceRecommendedSection" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer/ScrollContainer_Grid/MarginContainer_Emotes/VBoxContainer_EmotesAndSuggestions" instance=ExtResource("5_mktpl")]
+[node name="MarketplaceRecommendedSection" parent="ExternalMarginContainer/HBoxContainer/EmoteGridOutterMarginContainer/PanelContainer/MarginContainer/ScrollContainer_Grid/MarginContainer_Emotes/VBoxContainer_EmotesAndSuggestions" unique_id=400073146 instance=ExtResource("5_mktpl")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
