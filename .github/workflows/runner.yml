@@ -6,6 +6,9 @@ on:
       - release
   pull_request:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}-runner
   cancel-in-progress: true
@@ -30,29 +33,27 @@ jobs:
   #   needs: static-checks
   #   uses: ./.github/workflows/coverage.yml
 
+  # The build job inside holds no secrets. Signing, R2 and Sentry run in its environment-bound
+  # sign-publish job, which only exists on pushes (`mobile-release` admits main / release* only;
+  # a pull_request ref can never deploy to it). `secrets: inherit` is what lets that job read the
+  # environment's secrets; nothing sensitive lives at repository level.
   android-build:
     name: 🤖 Android
     needs: static-checks
     uses: ./.github/workflows/android_builds.yml
-    secrets:
-      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-      APK_ANDROID_KEYSTORE_BASE64: ${{ secrets.APK_ANDROID_KEYSTORE_BASE64 }}
-      APK_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.APK_ANDROID_KEYSTORE_PASSWORD }}
-      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-      MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
-      MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
-      MOBILE_ARTIFACTS_R2_ENDPOINT: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
-      MOBILE_ARTIFACTS_R2_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
-      BUILD_NUMBER_SECRET: ${{ secrets.BUILD_NUMBER_SECRET }}
+    permissions:
+      contents: read
+      pull-requests: write
+    with:
+      r2_segment: ${{ github.event_name == 'push' && github.ref_name || '' }}
+      publish_aab: ${{ github.event_name == 'push' }}
+    secrets: inherit
 
-  # Mobile distribution (iOS TestFlight + Android APK-ready Slack notification) is
-  # triggered separately via mobile_distribute.yml:
+  # PR CI attaches a throwaway-signed APK to the run. Distribution-signed APKs (R2 + Firebase)
+  # and iOS TestFlight builds come from mobile_distribute.yml:
   # - Label 'build' (alias 'build-ios') on PRs
   # - Manual workflow dispatch (ref: main/release)
-  # The signed Android APK is uploaded to R2 by android_builds.yml on every build.
+  # Pushes to main/release publish the signed APK (+ AAB) to R2 from android_builds.yml.
 
   linux-build:
     name: 🐧 Linux
@@ -74,6 +75,8 @@ jobs:
     name: 🐳 Docker builds and test
     needs: linux-build
     uses: ./.github/workflows/docker_build_test.yml
+    permissions:
+      contents: read
     with:
       publish_docker: ${{ contains(github.event.pull_request.labels.*.name, 'publish-docker') }}
     secrets:

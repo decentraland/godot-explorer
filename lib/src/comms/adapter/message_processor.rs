@@ -450,21 +450,32 @@ impl MessageProcessor {
         a.trim_end_matches('/') == b.trim_end_matches('/')
     }
 
-    /// Validates a peer-advertised `lambdasEndpoint` (untrusted LiveKit
-    /// metadata). Anything that isn't a plausible http(s) URL is discarded so
-    /// the profile fetch keeps using the realm's own lambda endpoint instead.
+    // Mirrors `DECENTRALAND_DOMAINS` in godot/src/utils/url_host.gd.
+    const DECENTRALAND_DOMAINS: [&'static str; 4] = [
+        "decentraland.org",
+        "decentraland.zone",
+        "decentraland.today",
+        "dclregenesislabs.xyz",
+    ];
+
+    /// Validates a peer-advertised `lambdasEndpoint` (LiveKit participant
+    /// metadata). The client GETs it on the peer's behalf, so only an https URL
+    /// on a Decentraland domain is accepted; anything else is discarded and the
+    /// profile fetch keeps using the realm's own lambda endpoint instead.
     fn sanitize_lambdas_endpoint(endpoint: &str) -> Option<&str> {
         let trimmed = endpoint.trim();
-        let host_and_path = trimmed
-            .strip_prefix("https://")
-            .or_else(|| trimmed.strip_prefix("http://"))?;
-        if host_and_path.is_empty()
-            || host_and_path.starts_with('/')
-            || trimmed.chars().any(char::is_whitespace)
-        {
+        if trimmed.chars().any(char::is_whitespace) {
             return None;
         }
-        Some(trimmed)
+        let url = url::Url::parse(trimmed).ok()?;
+        if url.scheme() != "https" || !url.username().is_empty() || url.password().is_some() {
+            return None;
+        }
+        let host = url.host_str()?;
+        Self::DECENTRALAND_DOMAINS
+            .iter()
+            .any(|domain| host == *domain || host.ends_with(&format!(".{domain}")))
+            .then_some(trimmed)
     }
 
     /// Returns true if the address looks like a real player (non-synthetic Ethereum address).
@@ -621,6 +632,16 @@ impl MessageProcessor {
                 update.address,
                 update.profile.version
             );
+
+            // The profile fetched for `profiles/{address}` must describe that address.
+            if update.profile.content.eth_address.parse::<H160>().ok() != Some(update.address) {
+                tracing::warn!(
+                    "comms > dropping fetched profile for {:#x}: payload names {}",
+                    update.address,
+                    update.profile.content.eth_address
+                );
+                continue;
+            }
 
             // Brief borrow scope for avatar update
             {
@@ -1906,15 +1927,18 @@ impl MessageProcessor {
                     }
                 };
 
-                tracing::debug!(
-                    "ProfileResponse from {:#x} contains profile for {:#x} (version {})",
-                    address,
-                    profile_address,
-                    incoming_version
-                );
+                // The profile applies to the sender the transport identified; a payload
+                // naming a different address is ignored.
+                if profile_address != address {
+                    tracing::warn!(
+                        "comms > dropping ProfileResponse from {:#x} claiming {:#x}",
+                        address,
+                        profile_address
+                    );
+                    return;
+                }
 
-                // Update the profile for the address specified IN the profile, not the sender
-                if let Some(peer) = self.peer_identities.get_mut(&profile_address) {
+                if let Some(peer) = self.peer_identities.get_mut(&address) {
                     let current_version = peer.profile.as_ref().map(|p| p.version).unwrap_or(0);
 
                     if incoming_version <= current_version {
@@ -2282,14 +2306,51 @@ mod tests {
     }
 
     #[test]
-    fn sanitize_lambdas_endpoint_accepts_only_plausible_http_urls() {
+    fn sanitize_lambdas_endpoint_accepts_only_decentraland_https_urls() {
         assert_eq!(
             MessageProcessor::sanitize_lambdas_endpoint(" https://peer.decentraland.org/lambdas "),
             Some("https://peer.decentraland.org/lambdas")
         );
         assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint(
+                "https://peer-ec2.decentraland.org/lambdas"
+            ),
+            Some("https://peer-ec2.decentraland.org/lambdas")
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint(
+                "https://worlds-content-server.decentraland.zone/lambdas/"
+            ),
+            Some("https://worlds-content-server.decentraland.zone/lambdas/")
+        );
+        // Any peer in the room could point every other client at these.
+        assert_eq!(
             MessageProcessor::sanitize_lambdas_endpoint("http://localhost:7070/lambdas/"),
-            Some("http://localhost:7070/lambdas/")
+            None
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("https://169.254.169.254/lambdas"),
+            None
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("https://other.example/lambdas"),
+            None
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint(
+                "https://decentraland.org.example.com/lambdas"
+            ),
+            None
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("http://peer.decentraland.org/lambdas"),
+            None
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint(
+                "https://user@peer.decentraland.org/lambdas"
+            ),
+            None
         );
         assert_eq!(MessageProcessor::sanitize_lambdas_endpoint(""), None);
         assert_eq!(

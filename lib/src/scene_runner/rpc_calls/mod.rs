@@ -17,8 +17,8 @@ use crate::{
 
 use self::{
     handle_restricted_actions::{
-        change_realm, move_player_to, open_external_url, open_nft_dialog, stop_emote, teleport_to,
-        trigger_emote, trigger_scene_emote,
+        change_realm, move_player_to, open_external_url, open_nft_dialog, player_is_inside_scene,
+        stop_emote, teleport_to, trigger_emote, trigger_scene_emote,
     },
     portables::{kill_portable, list_portables, spawn_portable},
 };
@@ -93,6 +93,12 @@ pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_ca
                 }
             }
             RpcCall::SendAsync { body, response } => {
+                // Wallet prompts are a restricted action: only the scene the player stands in
+                // may ask, like every other restricted action above.
+                if !player_is_inside_scene(scene, current_parcel_scene_id) {
+                    response.send(Err("Primary Player is outside the scene".to_string()));
+                    continue;
+                }
                 DclGlobal::singleton()
                     .bind()
                     .get_player_identity()

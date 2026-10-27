@@ -1,14 +1,17 @@
 name: 🤖 Android
+# Build and sign are separate jobs. `build` checks out and compiles the commit under test (PR head
+# or pushed sha) and holds NO secrets. `sign-publish` runs only outside pull_request events, under
+# the `mobile-release` environment (deployment branches main / release / release-*), executes no
+# project code, and only ever touches the bytes `build` handed over as an artifact.
 on:
   workflow_call:
     inputs:
-      # All three are optional so the push path (runner.yml) keeps calling this with no `with:` block
-      # and behaves exactly as before. mobile_distribute passes them to rebuild a specific commit
-      # on demand (the superseded / self-sufficient case).
+      # All optional so the push path (runner.yml) keeps calling this with no `with:` block.
+      # mobile_distribute passes them to rebuild a specific commit on demand.
       ref:
         description: >
-          Branch/ref to build (drives the prod flag + the R2 key branch segment). Empty → defaults
-          to the triggering event's branch.
+          Branch/ref to build (drives the prod flag). Empty → defaults to the triggering event's
+          branch.
         required: false
         type: string
         default: ''
@@ -27,38 +30,27 @@ on:
         required: false
         type: string
         default: ''
-    secrets:
-      ANDROID_KEYSTORE_BASE64:
-        required: true
-      ANDROID_KEYSTORE_PASSWORD:
-        required: true
-      APK_ANDROID_KEYSTORE_BASE64:
-        required: true
-      APK_ANDROID_KEYSTORE_PASSWORD:
-        required: true
-      SENTRY_AUTH_TOKEN:
-        required: true
-      SENTRY_ORG:
-        required: true
-      SENTRY_PROJECT:
-        required: true
-      # R2 mobile-artifacts bucket where the signed APK is published for download.
-      # Optional: when unset the APK upload step is skipped (e.g. fork PRs).
-      MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID:
+      r2_segment:
+        description: >
+          Trusted R2 key segment (main | release | release-x | pr-N), computed by the caller from
+          event data, never from a branch name. Empty on push → github.ref_name.
         required: false
-      MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY:
+        type: string
+        default: ''
+      build_number:
+        description: >
+          Pre-allocated store build number (mobile_distribute's prepare job). Empty → the
+          `allocate` job allocates one (push events only).
         required: false
-      MOBILE_ARTIFACTS_R2_ENDPOINT:
+        type: string
+        default: ''
+      publish_aab:
+        description: Export, sign and publish the Play Store AAB (main / release* only).
         required: false
-      MOBILE_ARTIFACTS_R2_BUCKET:
-        required: false
-      # API key (bearer) for the Cloudflare Worker build-number allocator. Optional: when unset
-      # (e.g. fork PRs) the build keeps the committed placeholder versionCode (never shipped).
-      BUILD_NUMBER_SECRET:
-        required: false
+        type: boolean
+        default: false
 
 permissions:
-  pull-requests: write
   contents: read
 
 concurrency:
@@ -68,10 +60,39 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The store build number is allocated under the environment so the allocator key never reaches
+  # the build job. Skipped on PRs (placeholder versionCode, never shipped) and when the caller
+  # already allocated one.
+  allocate:
+    name: Allocate build number
+    if: github.event_name != 'pull_request' && inputs.build_number == ''
+    runs-on: ubuntu-latest
+    environment: mobile-release
+    permissions:
+      contents: read
+    outputs:
+      build_number: ${{ steps.n.outputs.build-number }}
+    steps:
+      # Trusted ref (the pushed commit, or the base branch under pull_request_target): only the
+      # local composite action is run from it.
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - id: n
+        uses: ./.github/actions/compute-build-number
+        with:
+          sha: ${{ inputs.sha || github.sha }}
+          secret: ${{ secrets.BUILD_NUMBER_SECRET }}
+          allocated-by: android
+
   build:
     name: Build Android
+    needs: allocate
+    if: always() && (needs.allocate.result == 'success' || needs.allocate.result == 'skipped')
     runs-on: warp-ubuntu-latest-x64-4x
     timeout-minutes: 35
+    permissions:
+      contents: read
     container:
       # image generated at: https://github.com/decentraland/godot-docker-builder
       image: quay.io/decentraland/dcl-godot-android-builder:394c180223d3e2ad410d191147e9e2ad39884c0b
@@ -83,13 +104,38 @@ jobs:
       # https://github.com/WarpBuilds/cache#running-inside-a-container
       env:
         WARPBUILD_RUNNER_VERIFICATION_TOKEN: ${{ env.WARPBUILD_RUNNER_VERIFICATION_TOKEN }}
+    env:
+      # build.rs bakes this into the version string and `cargo run -- export` stamps it as the
+      # versionCode, so it must be in the environment before the lib build.
+      DCL_BUILD_NUMBER: ${{ inputs.build_number || needs.allocate.outputs.build_number }}
+      PUBLISH_AAB: ${{ inputs.publish_aab }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      # This job runs the commit under test; none of the release material may be reachable from
+      # it. Fails loudly if the workflow is ever edited to pass one of these in again.
+      - name: Assert build isolation (no release secrets in this job)
+        shell: bash
+        run: |
+          for v in APK_ANDROID_KEYSTORE_BASE64 APK_ANDROID_KEYSTORE_PASSWORD \
+                   ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD \
+                   ASC_DEPLOY_DISPATCH_TOKEN SENTRY_AUTH_TOKEN SLACK_BOT_TOKEN \
+                   AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY \
+                   MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY \
+                   BUILD_NUMBER_SECRET; do
+            if [ -n "${!v:-}" ]; then
+              echo "::error::$v must never be present in the build job"
+              exit 1
+            fi
+          done
+          echo "✅ build job holds no release secrets"
+
       - name: Add safe directory
         run: |
-          git config --global --add safe.directory $GITHUB_WORKSPACE
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
         with:
@@ -127,86 +173,33 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.head_ref }}
 
-      # Allocate the store build number (Cloudflare Worker, idempotent per commit SHA). MUST run
-      # BEFORE the lib build so build.rs bakes it into the version string (GODOT_EXPLORER_VERSION),
-      # and so the APK + AAB exports below stamp the same versionCode for this commit.
-      - name: Compute build number
-        uses: ./.github/actions/compute-build-number
-        with:
-          sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}
-          secret: ${{ secrets.BUILD_NUMBER_SECRET }}
-          allocated-by: android
-
+      # $PROD_FLAG is read from the process environment: this job can write $GITHUB_ENV, so its
+      # values are never templated back into script text.
       - name: Build Rust libraries
         run: |
-          cargo run -- build --release ${{ env.PROD_FLAG }}
-          cargo run -- build --release --target android ${{ env.PROD_FLAG }}
+          cargo run -- build --release ${PROD_FLAG:+"$PROD_FLAG"}
+          cargo run -- build --release --target android ${PROD_FLAG:+"$PROD_FLAG"}
           cargo run -- import-assets
 
-      # Persist the freshly built target/ — no-op off main (see save-warp-cache). Placed right
-      # after the build so a later export/sign failure can't lose a valid cache.
+      # Persist the freshly built target/ — no-op off a push to main (see save-warp-cache). Placed
+      # right after the build so a later export failure can't lose a valid cache.
       - name: Save build cache (main only)
         uses: ./.github/actions/save-warp-cache
         with:
           cargo-key: ${{ steps.cache.outputs.cargo-key }}
           rust-key: ${{ steps.cache.outputs.rust-key }}
 
+      # The export signs the APK with the throwaway keystore xtask generates; the distribution
+      # key is applied in sign-publish.
       - name: Export Android APK
         run: |
           cargo run -- export --target android --format apk --release
           mkdir -p android-debug-symbols
           cp godot/android/build/build/outputs/native-debug-symbols/standardRelease/native-debug-symbols.zip android-debug-symbols/ || true
 
-      # Re-sign the exported APK with the production distribution key so every published
-      # build shares one stable signing identity (Android requires the same key across
-      # upgrades). The export step above already signs the APK with an auto-generated
-      # keystore, so this is a re-sign — not the APK's only signature.
-      #
-      # Fork PRs don't receive repo secrets, so the keystore is unavailable there. In that
-      # case skip the re-sign and keep the export-signed APK — a valid, installable build
-      # for testing. Mirrors the graceful degradation of the R2-upload / build-number steps
-      # (an empty secret used to decode to a 0-byte keystore and hard-fail apksigner).
-      - name: Sign Android APK
-        env:
-          APK_ANDROID_KEYSTORE_BASE64: ${{ secrets.APK_ANDROID_KEYSTORE_BASE64 }}
-          APK_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.APK_ANDROID_KEYSTORE_PASSWORD }}
-        run: |
-          if [ -z "$APK_ANDROID_KEYSTORE_BASE64" ]; then
-            echo "⚠️  APK signing keystore unavailable (fork PR — repo secrets are not exposed to forks)."
-            echo "    Keeping the APK as signed by the Godot export step; production re-signing runs"
-            echo "    only on same-repo branches (main/release and internal PRs)."
-            exit 0
-          fi
-
-          # Decode the production release keystore from the secret.
-          echo "$APK_ANDROID_KEYSTORE_BASE64" | base64 -d > apk-release.keystore
-          ls -la apk-release.keystore
-
-          # Find Android build-tools
-          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/*/ | sort -V | tail -1)
-          echo "Using build-tools: $BUILD_TOOLS_DIR"
-
-          # Align the APK first (required for apksigner)
-          ${BUILD_TOOLS_DIR}zipalign -v -p 4 exports/decentraland.godot.client.apk exports/decentraland.godot.client-aligned.apk
-
-          # Sign the APK
-          ${BUILD_TOOLS_DIR}apksigner sign --ks apk-release.keystore \
-            --ks-pass pass:"$APK_ANDROID_KEYSTORE_PASSWORD" \
-            --out exports/decentraland.godot.client-signed.apk \
-            exports/decentraland.godot.client-aligned.apk
-
-          # Verify the signature
-          ${BUILD_TOOLS_DIR}apksigner verify --verbose exports/decentraland.godot.client-signed.apk
-
-          # Replace unsigned with signed
-          mv exports/decentraland.godot.client-signed.apk exports/decentraland.godot.client.apk
-          rm exports/decentraland.godot.client-aligned.apk
-
-      # The AAB is the Play Store artifact — only build/sign/upload it on main/release*.
-      # env.BRANCH_NAME (set-prod-flag) resolves inputs.ref → PR head branch → push branch,
-      # so these gates work on versioned release branches and on-demand rebuilds alike.
+      # The AAB is the Play Store artifact — only built for main/release* (trusted caller input).
       - name: Export Android AAB
-        if: success() && (env.BRANCH_NAME == 'main' || startsWith(env.BRANCH_NAME, 'release'))
+        if: env.PUBLISH_AAB == 'true'
         run: |
           cargo run -- export --target android --format aab --release
 
@@ -214,7 +207,7 @@ jobs:
       # (debugSymbolLevel FULL in the engine's gradle template). Warn, don't fail, if they are
       # missing: the bundle still ships, but the store's crash view would be unreadable.
       - name: Check AAB carries native debug symbols
-        if: success() && (env.BRANCH_NAME == 'main' || startsWith(env.BRANCH_NAME, 'release'))
+        if: env.PUBLISH_AAB == 'true'
         shell: bash
         run: |
           AAB=$(ls exports/*.aab | head -1)
@@ -224,174 +217,261 @@ jobs:
             echo "::warning title=AAB without native debug symbols::$AAB has no BUNDLE-METADATA/com.android.tools.build.debugsymbols entry - Play Console crash stacks will be unreadable."
           fi
 
-      # Decode and setup keystore for AAB signing
-      - name: Setup AAB Signing Keystore
-        if: success() && (env.BRANCH_NAME == 'main' || startsWith(env.BRANCH_NAME, 'release'))
+      # Everything sign-publish needs, so it never has to check out or run this commit: the
+      # throwaway-signed APK/AAB, the shipped native libs for Sentry (with a sources bundle, built
+      # here where the sources are), and the version strings build.rs wrote.
+      - name: Collect handoff artifact
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > dclgodot.upload.jks
-          ls -la dclgodot.upload.jks
+          set -eu
+          mkdir -p handoff/symbols handoff/meta
+          mv exports/decentraland.godot.client.apk handoff/
+          if [ "$PUBLISH_AAB" = "true" ]; then
+            mv exports/decentraland.godot.client.aab handoff/
+          fi
+          cp lib/target/libdclgodot_android/libdclgodot.so handoff/symbols/
+          # The engine library from the AAR. (build/outputs/native-debug-symbols is not usable:
+          # Godot's export runs `gradle clean` first, so the zip is gone by now.)
+          GODOT_AAR="godot/android/build/libs/release/godot-lib.template_release.aar"
+          if [ -f "$GODOT_AAR" ]; then
+            unzip -o -q "$GODOT_AAR" "jni/arm64-v8a/libgodot_android.so" -d /tmp/godot-aar
+            cp /tmp/godot-aar/jni/arm64-v8a/libgodot_android.so handoff/symbols/
+          else
+            echo "⚠️  Godot AAR not found at $GODOT_AAR"
+          fi
+          cp android-debug-symbols/native-debug-symbols.zip handoff/symbols/ 2>/dev/null || true
+          cp .build.version handoff/meta/explorer_version.txt
+          cp .build.sentry_release handoff/meta/sentry_release.txt
+          # Pinned through SENTRY_CLI_VERSION (the install script honors it). Best-effort: the
+          # upload still works without inline sources.
+          if curl -sL https://sentry.io/get-cli/ | SENTRY_CLI_VERSION=3.7.0 bash; then
+            sentry-cli debug-files bundle-sources handoff/symbols/libdclgodot.so || true
+          fi
+          ls -la handoff handoff/symbols handoff/meta
 
-      # Sign the AAB file
-      - name: Sign Android AAB
-        if: success() && (env.BRANCH_NAME == 'main' || startsWith(env.BRANCH_NAME, 'release'))
+      - name: Upload handoff artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-unsigned
+          path: handoff/
+          retention-days: 3
+          if-no-files-found: error
+
+  # Re-sign with the distribution key, sign the AAB with the Play upload key, publish to R2 and
+  # Sentry. Runs no project code: only apksigner/jarsigner/aws/sentry-cli on the artifact bytes,
+  # after validating every value that crossed over from the build job.
+  sign-publish:
+    name: Sign & publish Android
+    needs: [allocate, build]
+    if: always() && needs.build.result == 'success' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: mobile-release
+    permissions:
+      contents: read
+    env:
+      # Trusted values only: event data and caller inputs, never anything the build job produced.
+      EVENT_NAME: ${{ github.event_name }}
+      SHA: ${{ inputs.sha || github.sha }}
+      R2_SEGMENT: ${{ inputs.r2_segment || github.ref_name }}
+      PUBLISH_AAB: ${{ inputs.publish_aab }}
+      BUILD_NUMBER: ${{ inputs.build_number || needs.allocate.outputs.build_number }}
+      PROD_FLAG_REF: ${{ inputs.ref || github.ref_name }}
+      # Public R2 domain mapped to the mobile-artifacts bucket root.
+      R2_PUBLIC_BASE_URL: "https://mobile-artifacts.dclregenesislabs.xyz"
+      # SHA-256 digest of the distribution certificate (`apksigner verify --print-certs`). When
+      # set, a signature by any other key fails the job.
+      EXPECTED_CERT_SHA256: ${{ vars.APK_SIGNING_CERT_SHA256 }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-unsigned
+          path: handoff
+
+      - name: Validate segment and handoff metadata
         run: |
+          set -eu
+          case "$R2_SEGMENT" in
+            main|release|release-[A-Za-z0-9._-]*|pr-[0-9]*) ;;
+            *) echo "::error::refusing to publish under R2 segment '$R2_SEGMENT'"; exit 1 ;;
+          esac
+          if [ "$EVENT_NAME" = "pull_request_target" ]; then
+            case "$R2_SEGMENT" in
+              pr-*) ;;
+              *) echo "::error::PR distributions may only publish under pr-<N>"; exit 1 ;;
+            esac
+          fi
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::bad sha '$SHA'"; exit 1; }
+          [[ -z "$BUILD_NUMBER" || "$BUILD_NUMBER" =~ ^[0-9]+$ ]] || { echo "::error::bad build number '$BUILD_NUMBER'"; exit 1; }
+          EXPLORER_VERSION=$(tr -d '[:space:]' < handoff/meta/explorer_version.txt)
+          SENTRY_RELEASE=$(tr -d '[:space:]' < handoff/meta/sentry_release.txt)
+          [[ "$EXPLORER_VERSION" =~ ^[0-9A-Za-z.+_-]{1,80}$ ]] || { echo "::error::bad explorer version"; exit 1; }
+          [[ "$SENTRY_RELEASE" =~ ^[0-9A-Za-z.+_-]{1,80}$ ]] || { echo "::error::bad sentry release"; exit 1; }
+          [ -f handoff/decentraland.godot.client.apk ] || { echo "::error::APK missing from the handoff"; exit 1; }
+          if [ "$PUBLISH_AAB" = "true" ] && [ ! -f handoff/decentraland.godot.client.aab ]; then
+            echo "::error::AAB missing from the handoff"; exit 1
+          fi
+          {
+            echo "EXPLORER_VERSION=$EXPLORER_VERSION"
+            echo "SENTRY_RELEASE=$SENTRY_RELEASE"
+          } >> "$GITHUB_ENV"
+          echo "segment=$R2_SEGMENT sha=$SHA build=$BUILD_NUMBER version=$EXPLORER_VERSION"
+
+      # Re-sign the exported APK with the production distribution key so every published build
+      # shares one stable signing identity (Android requires the same key across upgrades). The
+      # export already signed it with a throwaway keystore, so this is a re-sign.
+      - name: Re-sign APK with the distribution key
+        env:
+          APK_ANDROID_KEYSTORE_BASE64: ${{ secrets.APK_ANDROID_KEYSTORE_BASE64 }}
+          APK_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.APK_ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -eu
+          if [ -z "$APK_ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::error::APK_ANDROID_KEYSTORE_BASE64 is not set in the mobile-release environment"
+            exit 1
+          fi
+          echo "$APK_ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/apk.keystore"
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)
+          echo "Using build-tools: $BT"
+          "${BT}zipalign" -p 4 handoff/decentraland.godot.client.apk "$RUNNER_TEMP/aligned.apk"
+          "${BT}apksigner" sign --ks "$RUNNER_TEMP/apk.keystore" \
+            --ks-pass env:APK_ANDROID_KEYSTORE_PASSWORD \
+            --out handoff/decentraland.godot.client.apk "$RUNNER_TEMP/aligned.apk"
+          "${BT}apksigner" verify --verbose handoff/decentraland.godot.client.apk
+          GOT=$("${BT}apksigner" verify --print-certs handoff/decentraland.godot.client.apk \
+            | sed -n 's/.*SHA-256 digest: //p' | head -1)
+          echo "signer cert SHA-256: $GOT"
+          if [ -n "$EXPECTED_CERT_SHA256" ] && [ "$GOT" != "$EXPECTED_CERT_SHA256" ]; then
+            echo "::error::APK signed with an unexpected certificate ($GOT)"
+            exit 1
+          fi
+          rm -f "$RUNNER_TEMP/apk.keystore" "$RUNNER_TEMP/aligned.apk"
+
+      - name: Sign AAB with the Play upload key
+        if: env.PUBLISH_AAB == 'true'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -eu
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not set in the mobile-release environment"
+            exit 1
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-            -keystore dclgodot.upload.jks \
-            -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
-            -signedjar exports/decentraland.godot.client-signed.aab \
-            exports/decentraland.godot.client.aab \
+            -keystore "$RUNNER_TEMP/upload.jks" \
+            -storepass:env ANDROID_KEYSTORE_PASSWORD \
+            -signedjar handoff/decentraland.godot.client-signed.aab \
+            handoff/decentraland.godot.client.aab \
             upload
+          jarsigner -verify -verbose handoff/decentraland.godot.client-signed.aab
+          mv handoff/decentraland.godot.client-signed.aab handoff/decentraland.godot.client.aab
+          rm -f "$RUNNER_TEMP/upload.jks"
 
-          # Verify the signature
-          jarsigner -verify -verbose exports/decentraland.godot.client-signed.aab
-
-          # Replace unsigned with signed
-          mv exports/decentraland.godot.client-signed.aab exports/decentraland.godot.client.aab
-
-      # Copy Android Artifacts
-      - name: Copy Android Artifacts
-        if: success() || failure()
-        run: |
-          pwd
-          ls -la
-          ls -la exports/
-          mkdir -p android-artifacts-apk
-          mkdir -p android-artifacts-aab
-          mv exports/decentraland.godot.client.apk android-artifacts-apk/ || true
-          mv exports/decentraland.godot.client.aab android-artifacts-aab/ || true
-
-      # Upload the signed artifacts to the R2 mobile-artifacts bucket so they can be
-      # downloaded directly (the PR build report and the Mobile Distribute Slack
-      # notification link here). Keyed by branch + commit SHA so a download can target
-      # an exact build. The APK is uploaded for every build; the AAB (Play Store
-      # artifact) only for main/release.
+      # Keyed by the trusted segment + commit SHA so a download can target an exact build. The
+      # mobile_distribute resolve jobs reuse objects under main/release*, which only this job can
+      # write.
       - name: Upload Android artifacts to R2
-        if: success()
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
           AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
           AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
-          # Public R2 domain mapped to the mobile-artifacts bucket root.
-          R2_PUBLIC_BASE_URL: "https://mobile-artifacts.dclregenesislabs.xyz"
         run: |
+          set -eu
           if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_S3_BUCKET" ] || [ -z "$AWS_ENDPOINT_URL" ]; then
-            echo "⚠️  R2 mobile-artifacts bucket not configured (MOBILE_ARTIFACTS_R2_* secrets), skipping APK upload"
-            exit 0
+            echo "::error::MOBILE_ARTIFACTS_R2_* secrets are not set in the mobile-release environment"
+            exit 1
           fi
 
-          APK_PATH="android-artifacts-apk/decentraland.godot.client.apk"
-          if [ ! -f "$APK_PATH" ]; then
-            echo "⚠️  APK not found at $APK_PATH, skipping R2 upload"
-            exit 0
-          fi
-
-          # The android builder image does not ship the AWS CLI; install v2 on demand.
-          if ! command -v aws >/dev/null 2>&1; then
-            echo "Installing AWS CLI v2..."
-            curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
-            unzip -q /tmp/awscliv2.zip -d /tmp
-            /tmp/aws/install -i /tmp/aws-cli -b /tmp/aws-bin
-            export PATH="/tmp/aws-bin:$PATH"
-          fi
-
-          SHA="${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}"
-          BRANCH="${{ inputs.ref || github.head_ref || github.ref_name }}"
-          SAFE_BRANCH=$(echo "$BRANCH" | tr '/' '-')
-          KEY="android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
-          LATEST_KEY="android/${SAFE_BRANCH}/latest/decentraland.godot.client.apk"
+          APK_PATH="handoff/decentraland.godot.client.apk"
+          KEY="android/${R2_SEGMENT}/${SHA}/decentraland.godot.client.apk"
+          LATEST_KEY="android/${R2_SEGMENT}/latest/decentraland.godot.client.apk"
 
           echo "📤 Uploading APK to s3://${AWS_S3_BUCKET}/${KEY}"
           aws s3 cp "$APK_PATH" "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
-          # Update the branch 'latest' pointer WITHOUT re-uploading. The managed `aws s3 cp s3:// s3://`
+          # Update the 'latest' pointer WITHOUT re-uploading. The managed `aws s3 cp s3:// s3://`
           # is unusable on R2 (tagging headers NotImplemented), so use low-level copy-object; fall
           # back to a plain re-upload if R2 rejects the copy.
           aws s3api copy-object --bucket "$AWS_S3_BUCKET" --key "$LATEST_KEY" \
             --copy-source "${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null \
             || aws s3 cp "$APK_PATH" "s3://${AWS_S3_BUCKET}/${LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+          echo "✅ APK uploaded to R2 (sha=${SHA}, segment=${R2_SEGMENT})"
+          echo "🔗 Public URL: ${R2_PUBLIC_BASE_URL}/${KEY}"
 
-          PUBLIC_URL="${R2_PUBLIC_BASE_URL}/${KEY}"
-          echo "✅ APK uploaded to R2 (sha=${SHA}, branch=${SAFE_BRANCH})"
-          echo "🔗 Public URL: ${PUBLIC_URL}"
-          # Surface the direct download link to later steps (build report comment).
-          echo "APK_PUBLIC_URL=${PUBLIC_URL}" >> "$GITHUB_ENV"
-
-          # Sidecar: record the build number this APK was BAKED with, right next to it. The deploy
-          # orchestrator (mobile_distribute android-resolve) compares it against the authoritative
-          # allocation before reusing this APK — if the allocator has since bumped the number
-          # (a store shipped past it), the APK is stale and must be rebuilt, not reused. Mirrors the
-          # iOS sidecar in ios_r2_artifact.yml.
-          if [ -n "${DCL_BUILD_NUMBER:-}" ]; then
-            BUILD_NUMBER_KEY="android/${SAFE_BRANCH}/${SHA}/build_number.txt"
-            LATEST_BUILD_NUMBER_KEY="android/${SAFE_BRANCH}/latest/build_number.txt"
-            printf '%s' "$DCL_BUILD_NUMBER" > build_number.txt
-            echo "🔢 Writing build_number sidecar ($DCL_BUILD_NUMBER) → s3://${AWS_S3_BUCKET}/${BUILD_NUMBER_KEY}"
+          # Sidecar: the build number this APK was BAKED with, next to it. The deploy orchestrator
+          # (mobile_distribute android-resolve) compares it against the authoritative allocation
+          # before reusing this APK — if the allocator has since bumped the number (a store shipped
+          # past it), the APK is stale and must be rebuilt. Mirrors the iOS sidecar.
+          if [ -n "$BUILD_NUMBER" ]; then
+            BUILD_NUMBER_KEY="android/${R2_SEGMENT}/${SHA}/build_number.txt"
+            LATEST_BUILD_NUMBER_KEY="android/${R2_SEGMENT}/latest/build_number.txt"
+            printf '%s' "$BUILD_NUMBER" > build_number.txt
+            echo "🔢 Writing build_number sidecar ($BUILD_NUMBER) → s3://${AWS_S3_BUCKET}/${BUILD_NUMBER_KEY}"
             aws s3 cp build_number.txt "s3://${AWS_S3_BUCKET}/${BUILD_NUMBER_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
             aws s3api copy-object --bucket "$AWS_S3_BUCKET" --key "$LATEST_BUILD_NUMBER_KEY" \
               --copy-source "${AWS_S3_BUCKET}/${BUILD_NUMBER_KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null \
               || aws s3 cp build_number.txt "s3://${AWS_S3_BUCKET}/${LATEST_BUILD_NUMBER_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
           else
-            echo "ℹ️  DCL_BUILD_NUMBER unset — no build_number sidecar (fork PR / allocator skipped)."
+            echo "ℹ️  no build number — no build_number sidecar."
           fi
 
-          # The AAB is the Play Store artifact — only publish it for main/release*.
-          case "$BRANCH" in main|release*) PUBLISH_AAB=true;; *) PUBLISH_AAB=false;; esac
           if [ "$PUBLISH_AAB" = "true" ]; then
-            AAB_PATH="android-artifacts-aab/decentraland.godot.client.aab"
-            if [ -f "$AAB_PATH" ]; then
-              AAB_KEY="android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.aab"
-              AAB_LATEST_KEY="android/${SAFE_BRANCH}/latest/decentraland.godot.client.aab"
-              echo "📤 Uploading AAB to s3://${AWS_S3_BUCKET}/${AAB_KEY}"
-              aws s3 cp "$AAB_PATH" "s3://${AWS_S3_BUCKET}/${AAB_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
-              # Update the branch 'latest' pointer WITHOUT re-uploading (low-level copy-object;
-              # R2 rejects the managed server-side copy). Fall back to a re-upload on failure.
-              aws s3api copy-object --bucket "$AWS_S3_BUCKET" --key "$AAB_LATEST_KEY" \
-                --copy-source "${AWS_S3_BUCKET}/${AAB_KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null \
-                || aws s3 cp "$AAB_PATH" "s3://${AWS_S3_BUCKET}/${AAB_LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
-              echo "✅ AAB uploaded to R2"
-              echo "🔗 Public URL: ${R2_PUBLIC_BASE_URL}/${AAB_KEY}"
-            else
-              echo "⚠️  AAB not found at $AAB_PATH, skipping AAB upload"
-            fi
-          else
-            echo "ℹ️  Branch '$BRANCH' is not main/release* — skipping AAB upload (APK only)"
+            AAB_PATH="handoff/decentraland.godot.client.aab"
+            AAB_KEY="android/${R2_SEGMENT}/${SHA}/decentraland.godot.client.aab"
+            AAB_LATEST_KEY="android/${R2_SEGMENT}/latest/decentraland.godot.client.aab"
+            echo "📤 Uploading AAB to s3://${AWS_S3_BUCKET}/${AAB_KEY}"
+            aws s3 cp "$AAB_PATH" "s3://${AWS_S3_BUCKET}/${AAB_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+            aws s3api copy-object --bucket "$AWS_S3_BUCKET" --key "$AAB_LATEST_KEY" \
+              --copy-source "${AWS_S3_BUCKET}/${AAB_KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null \
+              || aws s3 cp "$AAB_PATH" "s3://${AWS_S3_BUCKET}/${AAB_LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+            echo "✅ AAB uploaded to R2"
+            echo "🔗 Public URL: ${R2_PUBLIC_BASE_URL}/${AAB_KEY}"
           fi
 
       - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
-        if: success() || failure()
         with:
           name: AndroidAPK
-          path: android-artifacts-apk/
+          path: handoff/decentraland.godot.client.apk
           if-no-files-found: error
 
       - name: Upload AAB Artifacts
+        if: env.PUBLISH_AAB == 'true'
         uses: actions/upload-artifact@v4
-        if: (success() || failure()) && (env.BRANCH_NAME == 'main' || startsWith(env.BRANCH_NAME, 'release'))
         with:
           name: AndroidAAB
-          path: android-artifacts-aab/
+          path: handoff/decentraland.godot.client.aab
           if-no-files-found: error
 
       - name: Upload Android Debug Symbols
+        if: env.PUBLISH_AAB == 'true'
         uses: actions/upload-artifact@v4
-        if: (success() || failure()) && (env.BRANCH_NAME == 'main' || startsWith(env.BRANCH_NAME, 'release'))
         with:
           name: Android Native Debug Symbols
-          path: android-debug-symbols/
-          if-no-files-found: error
-        
+          path: handoff/symbols/native-debug-symbols.zip
+          if-no-files-found: warn
+
+      # `sentry-cli releases set-commits` and the sentry-godot symbols URL (src/consts.rs) need
+      # the built commit's git tree. It is only read, never executed, and only for main/release*
+      # (trusted pushes).
+      - name: Check out the built commit (read-only, for Sentry)
+        if: env.PUBLISH_AAB == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SHA }}
+          path: built-commit
+          persist-credentials: false
+
       # Upload debug symbols to Sentry and register the release, for production builds
       # (main/release* only). Only the libraries that actually ship: our Rust lib and the engine
-      # lib straight from the AAR Godot's gradle template packages (unstripped there, same build-id
-      # as the stripped copy inside the APK/AAB). The release must be exactly the string the
-      # runtime reports (`{version}+{build}`, lib/build.rs) or Sentry sees two different releases.
-      # continue-on-error: the APK/AAB are already built and uploaded by this point, so a
-      # Sentry hiccup (e.g. server-side "Reported checksum mismatch") must never fail the
-      # build — it only costs us symbolication. We notify instead.
+      # lib from the AAR (unstripped there, same build-id as the stripped copy inside the APK/AAB).
+      # The release must be exactly the string the runtime reports (`{version}+{build}`,
+      # lib/build.rs) or Sentry sees two different releases. continue-on-error: the APK/AAB are
+      # already published by this point, so a Sentry hiccup must never fail the build.
       - name: Upload debug symbols to Sentry
         id: sentry_symbols
-        if: success() && (env.BRANCH_NAME == 'main' || startsWith(env.BRANCH_NAME, 'release'))
+        if: env.PUBLISH_AAB == 'true'
         continue-on-error: true
         shell: bash
         env:
@@ -401,13 +481,12 @@ jobs:
           SENTRY_CLI_VERSION: "3.7.0"
         run: |
           set -euo pipefail
-          EXPLORER_VERSION=$(cargo run -- explorer-version)
           echo "Explorer version: $EXPLORER_VERSION"
           if [[ "$EXPLORER_VERSION" =~ -dev$ ]]; then
             echo "Development build detected (-dev suffix found), skipping Sentry upload"
             exit 0
           fi
-          SENTRY_RELEASE="org.decentraland.godotexplorer@$(cargo run -- explorer-version --sentry-release)"
+          SENTRY_RELEASE="org.decentraland.godotexplorer@${SENTRY_RELEASE}"
           echo "Sentry release: $SENTRY_RELEASE"
 
           # Pinned through SENTRY_CLI_VERSION (the install script honors it).
@@ -426,24 +505,18 @@ jobs:
             fi
           }
 
-          # 1. Our Rust library, with sources so Sentry shows the Rust code inline.
-          upload_dif "libdclgodot.so" "lib/target/libdclgodot_android/libdclgodot.so" --include-sources
+          # 1. Our Rust library; the sources bundle next to it (built in the build job) makes
+          #    Sentry show the Rust code inline.
+          upload_dif "libdclgodot.so" "handoff/symbols/libdclgodot.so"
+          upload_dif "libdclgodot.so sources" "handoff/symbols/libdclgodot.so.src.zip"
 
-          # 2. The engine library from the AAR. (build/outputs/native-debug-symbols is not
-          #    usable: Godot's export runs `gradle clean` first, so the zip is gone by now.)
-          GODOT_AAR="godot/android/build/libs/release/godot-lib.template_release.aar"
-          if [ -f "$GODOT_AAR" ]; then
-            rm -rf /tmp/godot-aar && mkdir -p /tmp/godot-aar
-            unzip -o -q "$GODOT_AAR" "jni/arm64-v8a/libgodot_android.so" -d /tmp/godot-aar
-            upload_dif "libgodot_android.so" "/tmp/godot-aar/jni/arm64-v8a/libgodot_android.so"
-          else
-            echo "⚠️  Godot AAR not found at $GODOT_AAR"
-          fi
+          # 2. The engine library from the AAR.
+          upload_dif "libgodot_android.so" "handoff/symbols/libgodot_android.so"
 
           # 3. sentry-godot's own native lib, so a crash inside the SDK is readable too. Its
           #    debug files are a separate asset of the pinned release (src/consts.rs); the
           #    server already has them after the first build of a given SDK version.
-          SENTRY_ADDON_URL=$(grep -o 'https://github.com/getsentry/sentry-godot/releases/download/[^"]*' src/consts.rs | head -1)
+          SENTRY_ADDON_URL=$(grep -o 'https://github.com/getsentry/sentry-godot/releases/download/[^"]*' built-commit/src/consts.rs | head -1)
           SENTRY_ADDON_SYMBOLS_URL="${SENTRY_ADDON_URL/sentry-godot-/sentry-godot-debug-symbols-}"
           if curl -sfL -o /tmp/sentry-godot-symbols.zip "$SENTRY_ADDON_SYMBOLS_URL"; then
             rm -rf /tmp/sentry-godot-symbols && mkdir -p /tmp/sentry-godot-symbols
@@ -456,14 +529,15 @@ jobs:
           # 4. Register the release under the runtime's name, attach commits and mark it
           #    deployed to the environment this build targets, so issues get "first seen in",
           #    suspect commits and regression detection.
-          case "${PROD_FLAG:-}" in
-            --prod) SENTRY_ENV=production ;;
+          case "$PROD_FLAG_REF" in
+            release*) SENTRY_ENV=production ;;
             *) SENTRY_ENV=staging ;;
           esac
           sentry-cli releases new "$SENTRY_RELEASE" --org "$SENTRY_ORG" --project "$SENTRY_PROJECT"
-          sentry-cli releases set-commits "$SENTRY_RELEASE" --org "$SENTRY_ORG" --auto --ignore-missing \
+          ( cd built-commit && \
+            sentry-cli releases set-commits "$SENTRY_RELEASE" --org "$SENTRY_ORG" --auto --ignore-missing \
             || sentry-cli releases set-commits "$SENTRY_RELEASE" --org "$SENTRY_ORG" --local --ignore-missing \
-            || echo "⚠️  could not associate commits with $SENTRY_RELEASE"
+            || echo "⚠️  could not associate commits with $SENTRY_RELEASE" )
           sentry-cli releases finalize "$SENTRY_RELEASE" --org "$SENTRY_ORG"
           sentry-cli releases deploys "$SENTRY_RELEASE" new --org "$SENTRY_ORG" -e "$SENTRY_ENV"
           echo "✅ Sentry release $SENTRY_RELEASE finalized ($SENTRY_ENV)"
@@ -473,23 +547,26 @@ jobs:
         if: always() && steps.sentry_symbols.outcome == 'failure'
         shell: bash
         run: |
-          echo "::warning title=Sentry symbol upload failed::Android native symbols for ${{ github.ref_name }} were not uploaded — crashes may be unsymbolicated. The APK/AAB themselves are unaffected."
+          echo "::warning title=Sentry symbol upload failed::Android native symbols for ${R2_SEGMENT} were not uploaded — crashes may be unsymbolicated. The APK/AAB themselves are unaffected."
 
-      # Build Report Comment
+  # PR CI only: the sticky Build Report. The APK is the throwaway-signed build attached to the
+  # run; prod-signed APKs, Firebase and TestFlight come from the `build` label.
+  report:
+    name: Build Report
+    needs: build
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    env:
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      BUILD_RESULT: ${{ needs.build.result }}
+    steps:
       - name: Prepare Build Report
-        if: github.event_name == 'pull_request' && always()
         run: |
-          ARTIFACTS_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
-          # Determine build status
-          if [ "${{ job.status }}" = "success" ]; then
+          if [ "$BUILD_RESULT" = "success" ]; then
             ANDROID_STATUS="✅ Success"
-            # Prefer the direct R2 download link when the APK was uploaded.
-            if [ -n "${APK_PUBLIC_URL:-}" ]; then
-              APK_LINK="[📱 Download APK](${APK_PUBLIC_URL})"
-            else
-              APK_LINK="[📱 Download APK](${ARTIFACTS_URL}/artifacts)"
-            fi
+            APK_LINK="[📱 Download APK (CI-signed artifact)](${RUN_URL}#artifacts)"
           else
             ANDROID_STATUS="❌ Failed"
             APK_LINK="Build failed"
@@ -514,11 +591,11 @@ jobs:
             echo ""
             echo "### 🍏 iOS"
             echo ""
-            echo "> The signed APK is uploaded to R2 on every build (link above). Add the \`build\` label (alias: \`build-ios\`) to build & ship iOS to TestFlight and post a Slack \"Android build ready\" notification."
+            echo "> PR CI builds are signed with a throwaway CI key and attached to the run. Add the \`build\` label (alias: \`build-ios\`) for a distribution-signed APK on Firebase App Distribution, an iOS TestFlight build and the Slack notifications."
             echo ""
             echo "---"
             echo ""
-            echo "🔗 **Workflow Run**: [View logs](${ARTIFACTS_URL})"
+            echo "🔗 **Workflow Run**: [View logs](${RUN_URL})"
             echo ""
             echo "🔄 **Updated**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
           } > build-report.md
@@ -528,7 +605,6 @@ jobs:
       # accessible by integration". Let it fail soft: the comment just won't appear on fork
       # PRs, but the Android build itself must not be marked failed because of it.
       - name: Comment PR with Build Report
-        if: github.event_name == 'pull_request' && always()
         continue-on-error: true
         uses: marocchino/sticky-pull-request-comment@v2
         with:
