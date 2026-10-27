@@ -1919,6 +1919,12 @@ impl ContentProvider {
         url: GString,
         quality: TextureQuality,
     ) -> Gd<Promise> {
+        let url = url.to_string();
+        // Local snapshots (`snapshot.gd`) are stored on disk under their bare hash.
+        let disk_file_hash = url
+            .strip_prefix("local:")
+            .filter(|hash| !hash.is_empty())
+            .map(str::to_string);
         let file_hash = format!("{}_q{}", file_hash, quality.to_i32());
         if let Some(promise) = self.get_cached_promise(&file_hash) {
             return promise;
@@ -1928,13 +1934,12 @@ impl ContentProvider {
             url,
             file_hash
         );
-        let url = url.to_string();
         let (promise, get_promise) = Promise::make_to_async();
 
         let mut content_provider_context = self.get_context();
         content_provider_context.texture_quality = quality;
 
-        let sent_file_hash = file_hash.clone();
+        let sent_file_hash = disk_file_hash.unwrap_or_else(|| file_hash.clone());
 
         let loading_resources = self.loading_resources.clone();
         let loaded_resources = self.loaded_resources.clone();

@@ -37,6 +37,13 @@ var bug_report_modal_scene: PackedScene = null
 var code_modal_scene: PackedScene = null
 var reward_modal_scene: PackedScene = null
 var upgrade_modal_scene: PackedScene = null
+## Set by _on_upgrade_modal_loading_started() when Global.loading_started fires while the upgrade
+## modal is being created or is already open — mirrors StreakModalController's
+## last_show_interrupted_by_loading (#2867: a loading screen that starts only after
+## ModalTransitionGate's wait already settled is otherwise invisible to it). Reset at the top of
+## every async_show_upgrade_modal call; UpgradeNudgeCoordinator reads it after awaiting the
+## modal's own tree_exited to decide whether to advance the nudge's cadence.
+var last_upgrade_show_interrupted_by_loading: bool = false
 var ban_pre_check_active: bool = false
 ## Suppresses a stale ban_kicked_modal triggered by comms after a pre-check was already handled.
 var _suppress_ban_kicked: bool = false
@@ -159,8 +166,6 @@ static var session_ended_sign_in_primary := TranslationKey.new(
 static var session_ended_retry_primary := TranslationKey.new("MODAL_SESSION_ENDED_RETRY_PRIMARY")
 static var session_ended_secondary := TranslationKey.new("MODAL_SESSION_ENDED_SECONDARY")
 
-static var _add_email_regex: RegEx = RegEx.create_from_string("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
-
 
 func _ready() -> void:
 	modal_scene = load(MODAL_SCENE_PATH)
@@ -190,6 +195,7 @@ func _ready() -> void:
 		)
 	Global.on_menu_close.connect(_on_menu_close_ban_recheck)
 	Global.loading_finished.connect(_on_loading_finished_clear_suppress)
+	Global.loading_started.connect(_on_upgrade_modal_loading_started)
 
 
 ## Shows an EXTERNAL_LINK type modal
@@ -233,7 +239,7 @@ func async_show_scene_timeout_modal() -> void:
 ## Shows a CONNECTION_LOST type modal
 ## @param hide_buttons: If true, hides all buttons (used on iOS after retry fails)
 func async_show_connection_lost_modal(hide_buttons: bool = false) -> void:
-	if not await _async_ensure_modal("ModalManager.async_show_connection_lost_modal"):
+	if not await _async_ensure_modal("ModalManager.async_show_connection_lost_modal", true):
 		return
 
 	current_modal.blocker = true
@@ -391,7 +397,7 @@ func async_show_realm_teleport_modal(realm_name: String) -> void:
 ## Shows a SCENE_CRASH type modal
 ## @param entity_id: The entity ID of the crashed scene
 func async_show_scene_crash_modal(entity_id: String) -> void:
-	if not await _async_ensure_modal("ModalManager.async_show_scene_crash_modal"):
+	if not await _async_ensure_modal("ModalManager.async_show_scene_crash_modal", true):
 		return
 
 	current_modal.blocker = true
@@ -415,10 +421,7 @@ func async_show_scene_crash_modal(entity_id: String) -> void:
 ## - "CONTINUE ANYWAY": keep the scene; enable verbose memory logging so we can
 ##   observe how far it gets before a possible OOM; stop nagging this session.
 ## - "BACK TO DISCOVER": leave the scene.
-## @param _entity_id: The entity ID of the current scene (unused for now)
-func async_show_low_memory_warning_modal(
-	entity_id: String, footprint_mb: int = -1, available_mb: int = -1
-) -> void:
+func async_show_low_memory_warning_modal() -> void:
 	if not await _async_ensure_modal("ModalManager.async_show_low_memory_warning_modal"):
 		return
 
@@ -435,23 +438,6 @@ func async_show_low_memory_warning_modal(
 	current_modal.button_primary.pressed.connect(_on_low_memory_continue)
 	current_modal.button_secondary.pressed.connect(_on_low_memory_back)
 
-	# Measure how often the low-memory warning surfaces, on which scene/device and at
-	# what memory level (issue #2002). Flush eagerly: the app may be jetsam-killed by the
-	# OS shortly after this warning, so we can't rely on the periodic flush to send it.
-	if Global.metrics != null:
-		Global.metrics.track_screen_viewed(
-			"LOW_MEMORY_WARNING",
-			JSON.stringify(
-				{
-					"entity_id": entity_id,
-					"footprint_mb": footprint_mb,
-					"available_mb": available_mb,
-					"platform": OS.get_name()
-				}
-			)
-		)
-		Global.metrics.flush.call_deferred()
-
 
 ## The shape most modals in this file already are: blocker, icon, title, body, one button
 ## that does something and closes. `title_values` formats the title instead of handing the
@@ -467,7 +453,7 @@ func _async_show_simple_modal(
 	primary_font_size: int = 0
 ) -> bool:
 	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
+		if not await _async_create_modal(icon == Modal.MODAL_BAN_ICON):
 			return false
 		if not NodeGuard.is_alive(current_modal, "ModalManager._async_show_simple_modal"):
 			return false
@@ -593,7 +579,7 @@ func _async_show_disconnect_modal(
 	primary_label: TranslationKey,
 	primary_handler: Callable
 ) -> void:
-	if not await _async_ensure_modal("ModalManager._async_show_disconnect_modal"):
+	if not await _async_ensure_modal("ModalManager._async_show_disconnect_modal", true):
 		return
 
 	current_modal.blocker = true
@@ -1007,19 +993,19 @@ func _dismiss_chat_input_for_modal() -> void:
 		chat_panel.chat.close_write_mode_if_active()
 
 
-## Shared guard at the top of every async_show_*_modal(): reuses current_modal if it's already
-## alive, otherwise creates it. Returns false (caller should return immediately) when creation
-## failed or the modal died before NodeGuard could confirm it — `site` names the caller, for the
-## stale-node telemetry NodeGuard reports.
-func _async_ensure_modal(site: String) -> bool:
+## Shared guard at the top of every async_show_*_modal(): reuses current_modal if alive, else
+## creates it (`urgent`: see _async_create_modal). False when creation failed or the modal died
+## before NodeGuard confirmed it: return at once. `site` names the caller for NodeGuard telemetry.
+func _async_ensure_modal(site: String, urgent := false) -> bool:
 	if is_instance_valid(current_modal):
 		return true
-	if not await _async_create_modal():
+	if not await _async_create_modal(urgent):
 		return false
 	return NodeGuard.is_alive(current_modal, site)
 
 
-func _async_create_modal() -> Modal:
+func _async_create_modal(urgent := false) -> Modal:
+	await Global.controls_ftue_coordinator.async_wait_until_clear(urgent)
 	_dismiss_chat_input_for_modal()
 	# If there's already a modal open, close it first
 	if is_instance_valid(current_modal):
@@ -1654,11 +1640,28 @@ func _remove_reward_modal() -> void:
 	_reward_canvas_layer = null
 
 
+## A loading screen starting while the upgrade modal is up always wins — the gate inside
+## _async_create_upgrade_modal only guards one that's already visible when its wait starts, not
+## one that begins afterwards (#2867).
+func _on_upgrade_modal_loading_started() -> void:
+	last_upgrade_show_interrupted_by_loading = true
+	if is_instance_valid(current_upgrade_modal) and current_upgrade_modal.visible:
+		close_upgrade_modal()
+
+
 ## Shows the aspirational guest-upgrade nudge modal (issue #2372). Returns true only if the
-## modal was actually created and opened, so the coordinator advances its cadence only then.
+## modal was actually created and opened, so the coordinator advances its cadence only then —
+## the coordinator still has to await current_upgrade_modal.tree_exited and check
+## last_upgrade_show_interrupted_by_loading afterwards, since a `true` here can still turn into
+## an involuntary close once a loading screen starts (open() itself never yields, so that can't
+## happen inside this call).
 func async_show_upgrade_modal() -> bool:
+	last_upgrade_show_interrupted_by_loading = false
 	var modal = await _async_create_upgrade_modal()
 	if not is_instance_valid(modal):
+		return false
+	if last_upgrade_show_interrupted_by_loading:
+		close_upgrade_modal()
 		return false
 	modal.open()
 	return true
@@ -1676,6 +1679,23 @@ func _async_create_upgrade_modal() -> UpgradeModal:
 
 	if not upgrade_modal_scene:
 		push_error("ModalManager: Upgrade modal scene is not loaded")
+		return null
+
+	await ModalTransitionGate.async_wait_until_settled()
+
+	# The trigger that queued this can go stale during the wait above: a sign-out/return-to-
+	# discover teardown started, the guest finished upgrading through another path (e.g. the
+	# Settings/Discover upgrade card), or the player jumped into a world — this modal is a
+	# portrait-only design and should never land over the in-world landscape view.
+	var guest_already_upgraded := (
+		Global.player_identity != null and Global.player_identity.is_thirdweb_guest_upgraded()
+	)
+	if (
+		Global._signing_out
+		or Global._returning_to_discover
+		or guest_already_upgraded
+		or not Global.is_orientation_portrait()
+	):
 		return null
 
 	var modal = upgrade_modal_scene.instantiate() as UpgradeModal
@@ -1725,176 +1745,3 @@ func _remove_upgrade_modal() -> void:
 	if is_instance_valid(_upgrade_canvas_layer):
 		_upgrade_canvas_layer.queue_free()
 	_upgrade_canvas_layer = null
-
-
-# --- Add Email (guest upgrade) OTP flow (issue #2377) --------------------------------------
-# Shared entry point that links an email to the active thirdweb guest wallet. Used by both the
-# Discover/Settings upgrade notice (guest_upgrade_card) and the aspirational upgrade modal, so
-# the "Add Email" experience is identical everywhere. On success it grants the reward wearable
-# (issue #2372) and notifies the app that the guest upgraded.
-
-
-static func is_valid_email(text: String) -> bool:
-	return _add_email_regex.search(text) != null
-
-
-## Opens the "Add Email" input modal and drives the full OTP link flow (email → code → verify →
-## reward). Callers fire their own entry CLICK_BUTTON metric before calling this.
-func async_start_add_email_flow() -> void:
-	var modal = await async_show_input_modal(
-		TranslationKey.new("MODAL_ADD_EMAIL_TITLE"),
-		TranslationKey.new("MODAL_ADD_EMAIL_SUBTITLE"),
-		TranslationKey.new("MODAL_ADD_EMAIL_PLACEHOLDER"),
-		TranslationKey.new("INPUT_MODAL_ADD"),
-		TranslationKey.new("COMMON_CANCEL"),
-		is_valid_email
-	)
-	if is_instance_valid(modal):
-		# Add Email modal shown — the OTP upgrade funnel has started (issue #2377).
-		Global.metrics.track_screen_viewed("UPGRADE_OTP_START", "")
-		modal.dismissable = false
-		modal.use_email_field()
-		modal.set_submit_handler(_async_add_email_submit)
-		modal.confirmed.connect(_async_add_email_code_sent)
-		modal.failed.connect(_async_add_email_send_failed)
-
-
-# gdlint:ignore = async-function-name
-func _async_add_email_submit(email: String) -> Dictionary:
-	Global.metrics.track_screen_viewed("UPGRADE_OTP_SUBMIT", "")
-	return await _async_add_email_send_code(email)
-
-
-# Shared "send verification code" routine used by both the initial submit and resend.
-# gdlint:ignore = async-function-name
-func _async_add_email_send_code(email: String) -> Dictionary:
-	var promise: Promise = Global.player_identity.async_link_email_start(email)
-	var result = await PromiseUtils.async_awaiter(promise)
-	if result is PromiseError:
-		var raw: String = result.get_error()
-		push_warning("Upgrade to OTP - send code failed: " + raw)
-		if _add_email_is_invalid_error(raw):
-			Global.metrics.track_screen_viewed("UPGRADE_OTP_EMAIL_INVALID", "")
-			return {"status": InputModal.SUBMIT_INVALID, "message": tr("MODAL_EMAIL_INVALID")}
-		return {"status": InputModal.SUBMIT_ERROR, "message": raw}
-	print("[UpgradeOTP] send_code OK for: ", email)
-	return {"status": InputModal.SUBMIT_OK}
-
-
-# Code was sent successfully (Add Email modal already closed): open the code step.
-# gdlint:ignore = async-function-name
-func _async_add_email_code_sent(email: String) -> void:
-	var code_modal = await async_show_code_modal(email)
-	if is_instance_valid(code_modal):
-		Global.metrics.track_screen_viewed("UPGRADE_OTP_ENTERCODE", "")
-		code_modal.set_verifier(_async_add_email_verify.bind(email))
-		code_modal.set_resend_handler(_async_add_email_resend.bind(email))
-		code_modal.confirmed.connect(_async_add_email_confirmed.bind(email))
-		code_modal.cancelled.connect(close_code_modal)
-
-
-# gdlint:ignore = async-function-name
-func _async_add_email_resend(email: String) -> Dictionary:
-	Global.metrics.track_click_button("RESEND_OTP", "UPGRADE_OTP_ENTERCODE", "")
-	return await _async_add_email_send_code(email)
-
-
-# gdlint:ignore = async-function-name
-func _async_add_email_send_failed(_message: String) -> void:
-	await _async_add_email_error_modal(
-		TranslationKey.new("MODAL_ADD_EMAIL_ERROR_TITLE"),
-		TranslationKey.new("MODAL_ADD_EMAIL_ERROR_BODY")
-	)
-
-
-func _add_email_is_invalid_error(raw: String) -> bool:
-	var lower := raw.to_lower()
-	if lower.contains("invalid email"):
-		return true
-	return (
-		lower.contains("email") and (lower.contains("zoderror") or lower.contains("invalid_string"))
-	)
-
-
-# Returns "" on success, or a friendly error string the code modal shows inline.
-# gdlint:ignore = async-function-name
-func _async_add_email_verify(code: String, email: String) -> String:
-	Global.metrics.track_screen_viewed("UPGRADE_OTP_VERIFY", "")
-	var anchor: String = Global.get_device_anchor_id()
-	var promise: Promise = Global.player_identity.async_link_email_verify(email, code, anchor)
-	var result = await PromiseUtils.async_awaiter(promise)
-	print("[UpgradeOTP] verify result: ", result)
-	if result is PromiseError:
-		var raw: String = result.get_error()
-		push_warning("[UpgradeOTP] verify FAILED: " + raw)
-		if _add_email_is_already_linked_error(raw):
-			Global.metrics.track_screen_viewed("UPGRADE_OTP_EMAIL_BUSY", "")
-			close_code_modal.call_deferred()
-			_async_add_email_in_use.call_deferred()
-			return " "
-		Global.metrics.track_screen_viewed("UPGRADE_OTP_CODE_INVALID", "")
-		return _add_email_friendly_error(raw)
-	print("[UpgradeOTP] verify OK")
-	return ""
-
-
-func _add_email_is_already_linked_error(raw: String) -> bool:
-	var lower := raw.to_lower()
-	return lower.contains("already") or lower.contains("linked") or lower.contains("conflict")
-
-
-func _async_add_email_in_use() -> void:
-	await _async_add_email_error_modal(
-		TranslationKey.new("MODAL_EMAIL_IN_USE_TITLE"),
-		TranslationKey.new("MODAL_EMAIL_IN_USE_BODY")
-	)
-
-
-# gdlint:ignore = async-function-name
-func _async_add_email_confirmed(_code: String, _email: String) -> void:
-	# Verification already succeeded inside the code modal before `confirmed` fired.
-	Global.metrics.track_screen_viewed("ACCOUNT_UPGRADE_SUCCESS", JSON.stringify({"method": "otp"}))
-	# Mirror the lobby's AUTH_SUCCESS so the funnel sees the upgraded user as registered.
-	Global.metrics.track_screen_viewed(
-		"AUTH_SUCCESS", JSON.stringify({"login_type": "fully_registered"})
-	)
-	close_code_modal()
-	# Grant the exclusive upgrade wearable via the reward modal (issue #2372). The reward
-	# modal IS the success screen ("Your email has been verified. Enjoy the free wearable!").
-	# Report the SCREEN_VIEW only once the modal has actually been revealed.
-	var reward_shown := await async_show_reward_modal(RewardCampaigns.CAMPAIGNS["MobilePet"])
-	if reward_shown:
-		Global.metrics.track_screen_viewed(
-			"ACCOUNT_UPGRADE_REWARD_SHOW", JSON.stringify({"method": "otp"})
-		)
-	# The guest is now upgraded (Rust set the cached flag on link) — notify the app so the
-	# Discover/Settings notice, badge, credits button, etc. update without a network call.
-	Global.guest_upgrade_state_refreshed.emit(true)
-
-
-# Maps raw thirdweb errors to friendly copy. The raw error is still logged.
-func _add_email_friendly_error(raw: String) -> String:
-	var lower := raw.to_lower()
-	if lower.contains("429") or lower.contains("rate"):
-		return tr("COMMON_TOO_MANY_ATTEMPTS")
-	if lower.contains("already") or lower.contains("linked") or lower.contains("conflict"):
-		return tr("COMMON_EMAIL_ALREADY_LINKED")
-	if lower.contains("invalid") or lower.contains("code") or lower.contains("400"):
-		return tr("MODAL_CODE_INVALID_OR_EXPIRED")
-	return tr("COMMON_SOMETHING_WENT_WRONG_RETRY")
-
-
-func _async_add_email_error_modal(title: TranslationKey, body: TranslationKey) -> void:
-	var modal = await _async_create_modal()
-	if not is_instance_valid(modal):
-		return
-	modal.set_title(title)
-	modal.set_body(body)
-	modal.set_primary_button_text(TranslationKey.new("MENU_OK"))
-	modal.show_icon(Modal.MODAL_ALERT_ICON)
-	modal.button_secondary.hide()
-	modal.hide_url()
-	modal.blocker = true
-	modal.show()
-	await modal.button_primary.pressed
-	close_current_modal()

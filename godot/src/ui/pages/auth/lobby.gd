@@ -76,6 +76,8 @@ var _discard_edit_confirmed = false
 # Monotonic token for the guest-login watchdog. Bumped on every attempt (and on
 # failure) so a stale watchdog can't clobber a newer attempt. See the watchdog.
 var _guest_login_attempt: int = 0
+# Screen the current guest-login attempt waits on; the watchdog fails it if still there.
+var _guest_login_screen: String = ""
 
 @onready var control_main = %Main
 @onready var dcl_line_edit: VBoxContainer = %DclLineEdit
@@ -306,7 +308,25 @@ func show_auth_email_screen():
 	show_panel(sign_in_with_email)
 
 
-func show_discover_ftue_screen(campaign_resolution: Dictionary = {}):
+## Shows the FTUE, or skips it when there is a single place to discover: a one-card carousel
+## would only ask the user to confirm the obvious, so the launch boots straight into it (#3022).
+## Decided on the list prefetched since Avatar Create and never awaited: a list still in
+## flight, or anything failing on the way, falls through to the screen.
+func _async_show_discover_ftue_screen(campaign_resolution: Dictionary) -> void:
+	var places: Array[Dictionary] = ftue_screen.get_prefetched_places()
+	if places.size() == 1:
+		var place: Dictionary = places[0]
+		var booted := await _async_boot_explorer_at(
+			PlacesHelper.get_position_and_realm(place), PlacesHelper.is_world(place)
+		)
+		var payload := {"place_id": place.get("id", ""), "booted": booted}
+		payload.merge(CampaignResolution.metrics_context(campaign_resolution))
+		Global.metrics.track_screen_viewed("DISCOVER_FTUE_BYPASS", JSON.stringify(payload))
+		# A declined boot may have changed scene on its way out (the pre-boot gate routes a
+		# private world to Discover), freeing this lobby before the await returns.
+		if booted or not is_inside_tree():
+			return
+
 	current_screen_name = "DISCOVER_FTUE"
 	button_back.hide()
 	# Carries only the metrics context — the screen itself is the unchanged default FTUE.
@@ -314,7 +334,7 @@ func show_discover_ftue_screen(campaign_resolution: Dictionary = {}):
 	if current_profile:
 		ftue_screen.set_username(current_profile.get_name())
 	show_panel(control_discover_ftue)
-	ftue_screen.load_places()
+	ftue_screen.show_places()
 
 
 ## Entry point to the first-time experience, after the profile deploy. An install attributed
@@ -343,15 +363,11 @@ func _async_start_ftue() -> void:
 		resolution["fallback_reason"] = boot_failure
 		resolution["campaign"] = {}
 
-	show_discover_ftue_screen(resolution)
+	await _async_show_discover_ftue_screen(resolution)
 
 
 ## Boots the explorer into the campaign target. Returns "" when committed, otherwise the
 ## fallback reason to report.
-##
-## Routes through the shared cold-start deeplink path on purpose: it applies the pre-boot
-## private-world gate (#2569) and explorer.gd already reads realm/location off deep_link_obj.
-## Reproducing either here would fork two behaviours that must stay identical.
 func _async_try_boot_into_campaign_target(campaign: Dictionary, resolution: Dictionary) -> String:
 	var position_and_realm := CampaignResolution.target_position_and_realm(campaign)
 	if position_and_realm.is_empty():
@@ -362,30 +378,44 @@ func _async_try_boot_into_campaign_target(campaign: Dictionary, resolution: Dict
 		"CAMPAIGN_BYPASS", JSON.stringify(CampaignResolution.metrics_context(resolution))
 	)
 
+	# Awaited because its answer decides the return: firing and assuming success would spend
+	# the token on a launch that never reached the target, leaving no FTUE and no campaign.
+	var is_world := CampaignResolution.is_world_target(campaign)
+	if await _async_boot_explorer_at(position_and_realm, is_world):
+		return ""
+	return CampaignResolution.FALLBACK_BOOT_DECLINED
+
+
+## Boots the explorer at a [position, realm] pair. Returns whether the boot committed.
+##
+## Routes through the shared cold-start deeplink path on purpose: it applies the pre-boot
+## private-world gate (#2569) and explorer.gd already reads realm/location off deep_link_obj.
+## Reproducing either here would fork two behaviours that must stay identical.
+func _async_boot_explorer_at(position_and_realm: Array, is_world: bool) -> bool:
 	# Snapshotted: the write below is on the shared deep_link_obj, so a redirect already in
-	# flight would read the campaign's destination instead of its own if this one declines.
+	# flight would read this destination instead of its own if this one declines.
 	var previous_realm: String = Global.deep_link_obj.realm
 	var previous_location: Vector2i = Global.deep_link_obj.location
 
-	if CampaignResolution.is_world_target(campaign):
+	if is_world:
 		Global.deep_link_obj.realm = position_and_realm[1]
 		Global.deep_link_obj.location = Vector2i.MAX
 	else:
 		Global.deep_link_obj.realm = ""
 		Global.deep_link_obj.location = position_and_realm[0]
 
-	# Awaited because its answer decides the return: firing and assuming success would spend
-	# the token on a launch that never reached the target, leaving no FTUE and no campaign.
 	if await _async_redirect_by_deep_link():
-		return ""
+		return true
 
 	Global.deep_link_obj.realm = previous_realm
 	Global.deep_link_obj.location = previous_location
-	return CampaignResolution.FALLBACK_BOOT_DECLINED
+	return false
 
 
 func async_show_avatar_create_screen():
 	track_lobby_screen("AVATAR_CREATE")
+	# Ahead of the FTUE gate, so deciding the single-place bypass never waits on the network.
+	ftue_screen.prefetch_places()
 	button_back.show()
 	show_panel(control_avatar_create)
 	avatar_preview.reparent(avatar_preview_container_avatar_create)
@@ -563,6 +593,7 @@ func _ready():
 	# Covers a signin deep link that lands *after* this point — Android can deliver the
 	# launch intent asynchronously, so the cold-start token doesn't always beat us here.
 	Global.deep_link_router.deep_link_signin_parked.connect(_on_deep_link_signin_parked)
+	Global.deep_link_router.deep_link_signin_completing.connect(_on_deep_link_signin_completing)
 
 	Global.scene_runner.set_pause(true)
 	# Parse and compile the explorer's script tree on a worker while the lobby/splash is up;
@@ -576,7 +607,9 @@ func _ready():
 	if Global.is_gp_benchmark():
 		_skip_lobby = true
 
-	# Preview deeplink: create guest and skip lobby for hot reload development
+	# Preview deeplink: skip the lobby for hot reload development. The signed-in account (or
+	# the persistent thirdweb guest) is kept: a disposable wallet would log the creator out
+	# and hide their avatar from other clients in the same preview (#2773).
 	if not Global.deep_link_obj.preview.is_empty():
 		_skip_lobby = true
 
@@ -591,11 +624,7 @@ func _ready():
 
 	var session_account: Dictionary = Global.get_config().session_account
 
-	if (
-		Global.cli.guest_profile
-		or Global.is_gp_benchmark()
-		or not Global.deep_link_obj.preview.is_empty()
-	):
+	if Global.cli.guest_profile or Global.is_gp_benchmark():
 		# Mark session as ephemeral so guest data is never persisted to disk,
 		# preserving any previously saved wallet session.
 		Global.get_config().session_is_ephemeral = true
@@ -619,7 +648,8 @@ func _ready():
 	# profile + credits, or they would load from the wrong backend. Block on the
 	# authoritative env resolution here (no-op on non-iOS / once resolved, which is
 	# the usual case after the version-gate round-trip). Only when there's a real
-	# session to restore — guest/preview cleared session_account above.
+	# session to restore — the guest/benchmark flags cleared session_account above; the
+	# preview guest login awaits it on its own.
 	if not session_account.is_empty():
 		_recovering_session = true
 		await Iap.async_await_env_resolved()
@@ -636,7 +666,10 @@ func _ready():
 		show_dcl_splash_screen()
 	elif _skip_lobby:
 		show_dcl_splash_screen()
-		go_to_explorer.call_deferred()
+		if not Global.deep_link_obj.preview.is_empty():
+			_async_preview_guest_login()
+		else:
+			go_to_explorer.call_deferred()
 	elif _skip_lobby_to_menu:
 		show_dcl_splash_screen()
 		get_tree().change_scene_to_file.call_deferred(
@@ -667,6 +700,12 @@ func _notification(what: int) -> void:
 		# silently leave the user on "Opening" forever.
 		if current_screen_name == "AUTH_BROWSER_OPEN" and _auth_target_keys.size() > 1:
 			label_step2_title.text = _auth_target_keys[1].raw()
+
+	# Back from the browser/wallet: the deep link and the session check follow, so show the
+	# loading title right away instead of leaving "Waiting for X" up.
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		if current_screen_name == "AUTH_BROWSER_OPEN" and _auth_target_keys.size() > 1:
+			_on_deep_link_signin_completing()
 
 
 func _process(delta: float) -> void:
@@ -955,6 +994,7 @@ func _on_button_lets_go_pressed():
 		current_profile.set_avatar(avatar)
 		Global.player_identity.set_profile(current_profile)
 
+	Global.ftue_tutorial_coordinator.mark_new_player()
 	await _async_start_ftue()
 
 
@@ -1070,6 +1110,7 @@ func _on_button_try_again_pressed():
 ## recovery it stands in for. Safe to call twice: the token is handed out only once.
 func _async_resume_signin_from_deep_link() -> bool:
 	var identity_id: String = Global.deep_link_router.take_pending_signin_identity_id()
+	var auth_request_id: String = Global.deep_link_router.take_pending_signin_auth_request_id()
 	if identity_id.is_empty():
 		return false
 
@@ -1086,8 +1127,14 @@ func _async_resume_signin_from_deep_link() -> bool:
 	# hybrid env has to be settled before the profile fetch this kicks off, or the profile
 	# loads from the wrong backend. No-op off iOS, and capped at 5s.
 	await Iap.async_await_env_resolved()
-	Global.player_identity.complete_mobile_connect_account(identity_id)
+	Global.player_identity.complete_mobile_connect_account(identity_id, auth_request_id)
 	return true
+
+
+func _on_deep_link_signin_completing() -> void:
+	if current_screen_name == "AUTH_BROWSER_OPEN":
+		_auth_target_keys = deeplink_target_keys
+		label_step2_title.text = deeplink_target_keys[0].raw()
 
 
 func _on_deep_link_signin_parked() -> void:
@@ -1110,10 +1157,10 @@ func _show_auth_error(error_message: String):
 	SplashOverlay.fade_out()
 	auth_spinner_container.hide()
 	label_step2_title.text = tr("AUTH_FAILED_TITLE")
-	# Errors come from player_identity (server/SDK text), so the node never
-	# auto-translates; an empty error still needs generic copy rather than a blank box.
+	# Errors come from player_identity: mostly server/SDK text, which tr() returns unchanged,
+	# plus a few translation keys. An empty error still needs generic copy, not a blank box.
 	auth_error_label_main.text = (
-		error_message if not error_message.is_empty() else tr("COMMON_SOMETHING_WENT_WRONG")
+		tr(error_message) if not error_message.is_empty() else tr("COMMON_SOMETHING_WENT_WRONG")
 	)
 	auth_error_label_code.text = ""
 	auth_error_container.show()
@@ -1221,6 +1268,7 @@ func _on_button_play_as_guest_pressed():
 	# A per-attempt token stops a stale watchdog from clobbering a fresh attempt.
 	_guest_login_attempt += 1
 	var attempt := _guest_login_attempt
+	_guest_login_screen = "ACCOUNT_GUEST_CREATE"
 	get_tree().create_timer(GUEST_LOGIN_TIMEOUT_SEC).timeout.connect(
 		func(): _on_guest_login_watchdog_timeout(attempt)
 	)
@@ -1245,7 +1293,7 @@ func _on_button_play_as_guest_pressed():
 func _on_guest_login_watchdog_timeout(attempt: int) -> void:
 	if attempt != _guest_login_attempt:
 		return  # superseded / already handled
-	if current_screen_name != "ACCOUNT_GUEST_CREATE":
+	if current_screen_name != _guest_login_screen:
 		return  # navigation succeeded — nothing to do
 	# Expected on flaky networks (that's why the watchdog exists) — the user gets
 	# a retry prompt, so warn instead of erroring into Sentry.
@@ -1262,10 +1310,13 @@ func _on_guest_login_watchdog_timeout(attempt: int) -> void:
 func _fail_guest_login(attempt: int, reason: String) -> void:
 	if attempt != _guest_login_attempt:
 		return
-	if current_screen_name != "ACCOUNT_GUEST_CREATE":
+	if current_screen_name != _guest_login_screen:
 		return
 	_guest_login_attempt += 1
 	waiting_for_new_wallet = false
+	# A preview deeplink that could not sign in is no longer honoured: back to the normal
+	# lobby flow, or the next "Play as guest" would skip avatar creation.
+	_skip_lobby = false
 	# Recoverable — just triggers the retry modal, so keep it out of Sentry.
 	push_warning("Guest login failed: " + reason)
 	show_account_home_screen()
@@ -1287,6 +1338,34 @@ func _async_show_guest_login_error() -> void:
 	modal.show()
 	await modal.button_primary.pressed
 	Global.modal_manager.close_current_modal()
+
+
+## Preview deeplink on an install with no session to recover: sign in silently as the
+## device-anchored thirdweb guest ("Play as guest" without the lobby), never a disposable
+## wallet. On success the profile_changed chain takes the _skip_lobby route into the
+## explorer; a failure or a stall shows account home with the guest-login retry prompt.
+func _async_preview_guest_login() -> void:
+	_guest_login_attempt += 1
+	var attempt := _guest_login_attempt
+	_guest_login_screen = "DCL_SPLASH"
+	get_tree().create_timer(GUEST_LOGIN_TIMEOUT_SEC).timeout.connect(
+		func(): _on_guest_login_watchdog_timeout(attempt)
+	)
+
+	# Same App Review env invariant as the session recovery in _ready: the guest profile
+	# must be fetched from the resolved backend. Bounded, and a no-op off iOS.
+	await Iap.async_await_env_resolved()
+	if attempt != _guest_login_attempt:
+		return
+
+	var guest_promise: Promise = Global.player_identity.async_create_guest_account(
+		_get_device_anchor_id()
+	)
+	var result = await PromiseUtils.async_awaiter(guest_promise)
+	if attempt != _guest_login_attempt:
+		return
+	if result is PromiseError:
+		await _fail_guest_login(attempt, result.get_error())
 
 
 func _set_avatar_preview_centered() -> void:
@@ -1369,13 +1448,16 @@ func _on_deep_link_received():
 func _deeplink_has_explorer_destination() -> bool:
 	if _should_go_to_explorer_from_deeplink():
 		return true
-	var path: String = String(Global.deep_link_obj.path).rstrip("/")
-	if path == "/events" or path == "/places":
+	# Matches on the section for the same reason DeepLinkRouter.route() does: the website
+	# serves /jump/events and /jump/places, which never equalled the bare paths this used
+	# to compare against, so a shared event link never got the lobby out of the way.
+	var section: String = Global.deep_link_obj.section
+	if section == "events" or section == "places":
 		return true
-	if path == "/jump" or path == "/open":
+	if section == "jump" or section == "open":
 		return Global.deep_link_obj.params.is_empty()
-	# Not matching an empty path on purpose: the parser returns that for every link it rejects
-	# (bad URL, unknown host, unknown scheme), so accepting it would redirect on garbage.
+	# Not matching an empty section on purpose: the parser returns that for every link it
+	# rejects (bad URL, unknown host, unknown scheme), so accepting it would redirect on garbage.
 	return false
 
 

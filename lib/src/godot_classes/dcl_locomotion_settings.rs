@@ -8,7 +8,9 @@ pub const DEFAULT_JOG_SPEED: f32 = 8.0;
 pub const DEFAULT_RUN_SPEED: f32 = 10.0;
 pub const DEFAULT_JUMP_HEIGHT: f32 = 1.0;
 pub const DEFAULT_RUN_JUMP_HEIGHT: f32 = 1.5;
-pub const DEFAULT_HARD_LANDING_COOLDOWN: f32 = 0.0;
+/// Unity CharacterControllerSettings.LongFallStunTime. A scene override of 0
+/// disables the stun, so this is the value used when the component omits it.
+pub const DEFAULT_HARD_LANDING_COOLDOWN: f32 = 0.75;
 
 #[derive(GodotClass)]
 #[class(base=RefCounted)]

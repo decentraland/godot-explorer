@@ -235,6 +235,12 @@ func fix_material(mat: BaseMaterial3D, _mesh_name: String = ""):
 	# To replicate foundation
 	mat.vertex_color_use_as_albedo = false
 
+	# Foundation parity, flag-gated: Unity force-culls every scene glTF material, which is
+	# what an inverted-hull outline (a `doubleSided` shell with flipped normals) expects.
+	# Off by default — it also drops the back faces of genuinely double-sided content.
+	if Global.feature_flags.is_force_backface_culling_enabled():
+		mat.cull_mode = BaseMaterial3D.CULL_BACK
+
 
 #endregion
 
@@ -303,7 +309,9 @@ func _ensure_lazy_collider(mesh_instance: MeshInstance3D) -> StaticBody3D:
 		return null
 	# The first instance to need the shape builds it and consumes `dcl_faces`;
 	# every later instance of the same mesh finds it under `dcl_shape`.
-	var shape: ConcavePolygonShape3D = mesh.get_meta("dcl_shape", null)
+	var shape: ConcavePolygonShape3D = (
+		mesh.get_meta("dcl_shape") if mesh.has_meta("dcl_shape") else null
+	)
 	if shape == null:
 		if not mesh.has_meta("dcl_faces"):
 			return null

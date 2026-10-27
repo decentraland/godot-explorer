@@ -10,6 +10,7 @@ use crate::comms::profile::UserProfile;
 use crate::dcl::scene_apis::RpcResultSender;
 use crate::godot_classes::dcl_global::DclGlobal;
 use crate::godot_classes::promise::Promise;
+use crate::godot_classes::promise::PromiseDeferred;
 use crate::http_request::request_response::RequestResponse;
 use crate::scene_runner::tokio_runtime::TokioRuntime;
 
@@ -17,11 +18,12 @@ use super::auth_identity::{
     complete_mobile_auth, create_ephemeral_from_external_signature, create_local_ephemeral,
     generate_ephemeral_for_signing, start_mobile_auth,
 };
-use super::decentraland_auth_server::{do_request, CreateRequest};
+use super::decentraland_auth_server::{do_request, CreateRequest, IdentityStatusError};
 use super::device_anchor;
 use super::ephemeral_auth_chain::EphemeralAuthChain;
 use super::remote_wallet::RemoteWallet;
 use super::review_login;
+use super::signin_verifier;
 use super::thirdweb_guest;
 use super::wallet::{AsH160, Wallet};
 
@@ -64,6 +66,10 @@ pub struct DclPlayerIdentity {
     /// synchronous, so the result is re-checked against this on the main thread instead.
     mobile_auth_attempt: u32,
 
+    /// `authRequestId` of the browser sign-in this process started, so a cancel can drop its
+    /// verifier.
+    mobile_auth_request_id: Option<String>,
+
     #[var]
     is_guest: bool,
 
@@ -104,6 +110,7 @@ impl INode for DclPlayerIdentity {
             mobile_auth_cancelled: false,
             mobile_auth_started: false,
             mobile_auth_attempt: 0,
+            mobile_auth_request_id: None,
         }
     }
 }
@@ -354,9 +361,7 @@ impl DclPlayerIdentity {
                         );
                     }
 
-                    promise
-                        .bind_mut()
-                        .resolve_with_data(address_str.to_variant());
+                    promise.resolve_with_data_deferred(address_str.to_variant());
                 }
                 Err(e) => {
                     tracing::error!("thirdweb guest_login failed: {:?}", e);
@@ -373,9 +378,7 @@ impl DclPlayerIdentity {
                             ],
                         );
                     }
-                    promise
-                        .bind_mut()
-                        .reject(GString::from(&format!("Guest login failed: {}", e)));
+                    promise.reject_deferred(GString::from(&format!("Guest login failed: {}", e)));
                 }
             }
         });
@@ -416,13 +419,11 @@ impl DclPlayerIdentity {
 
             match result {
                 Ok(()) => {
-                    promise.bind_mut().resolve_with_data(true.to_variant());
+                    promise.resolve_with_data_deferred(true.to_variant());
                 }
                 Err(e) => {
                     tracing::error!("thirdweb email_initiate failed: {:?}", e);
-                    promise
-                        .bind_mut()
-                        .reject(GString::from(&format!("Could not send code: {}", e)));
+                    promise.reject_deferred(GString::from(&format!("Could not send code: {}", e)));
                 }
             }
         });
@@ -488,15 +489,12 @@ impl DclPlayerIdentity {
                             &[true.to_variant()],
                         );
                     }
-                    promise
-                        .bind_mut()
-                        .resolve_with_data(format!("{:#x}", address).to_variant());
+                    promise.resolve_with_data_deferred(format!("{:#x}", address).to_variant());
                 }
                 Err(e) => {
                     tracing::error!("thirdweb link_email failed: {:?}", e);
                     promise
-                        .bind_mut()
-                        .reject(GString::from(&format!("Could not verify code: {}", e)));
+                        .reject_deferred(GString::from(&format!("Could not verify code: {}", e)));
                 }
             }
         });
@@ -556,15 +554,12 @@ impl DclPlayerIdentity {
                         );
                     }
 
-                    promise
-                        .bind_mut()
-                        .resolve_with_data(address_str.to_variant());
+                    promise.resolve_with_data_deferred(address_str.to_variant());
                 }
                 Err(e) => {
                     tracing::warn!("thirdweb email_login failed: {:?}", e);
                     promise
-                        .bind_mut()
-                        .reject(GString::from(&format!("Could not verify code: {}", e)));
+                        .reject_deferred(GString::from(&format!("Could not verify code: {}", e)));
                 }
             }
         });
@@ -616,11 +611,11 @@ impl DclPlayerIdentity {
                             &[upgraded.to_variant()],
                         );
                     }
-                    promise.bind_mut().resolve_with_data(upgraded.to_variant());
+                    promise.resolve_with_data_deferred(upgraded.to_variant());
                 }
                 Err(e) => {
                     tracing::warn!("thirdweb refresh upgrade state failed: {:?}", e);
-                    promise.bind_mut().reject(GString::from(&format!(
+                    promise.reject_deferred(GString::from(&format!(
                         "Could not check upgrade state: {}",
                         e
                     )));
@@ -668,12 +663,12 @@ impl DclPlayerIdentity {
             match result {
                 Ok(()) => {
                     tracing::info!("thirdweb delete_guest: guest account deleted");
-                    promise.bind_mut().resolve_with_data(true.to_variant());
+                    promise.resolve_with_data_deferred(true.to_variant());
                 }
                 Err(e) => {
                     // Non-fatal: the caller wipes local state + signs out anyway.
                     tracing::warn!("thirdweb delete_guest failed (non-fatal): {:?}", e);
-                    promise.bind_mut().resolve_with_data(false.to_variant());
+                    promise.resolve_with_data_deferred(false.to_variant());
                 }
             }
         });
@@ -716,12 +711,12 @@ impl DclPlayerIdentity {
             match result {
                 Ok(()) => {
                     tracing::info!("thirdweb delete_upgraded: upgraded account deleted");
-                    promise.bind_mut().resolve_with_data(true.to_variant());
+                    promise.resolve_with_data_deferred(true.to_variant());
                 }
                 Err(e) => {
                     // Non-fatal: the caller wipes local state + signs out anyway.
                     tracing::warn!("thirdweb delete_upgraded failed (non-fatal): {:?}", e);
-                    promise.bind_mut().resolve_with_data(false.to_variant());
+                    promise.resolve_with_data_deferred(false.to_variant());
                 }
             }
         });
@@ -785,6 +780,9 @@ impl DclPlayerIdentity {
         self.mobile_auth_cancelled = self.mobile_auth_started;
         // Retire any in-flight attempt; a completion past its await cannot be aborted.
         self.mobile_auth_attempt = self.mobile_auth_attempt.wrapping_add(1);
+        if let Some(auth_request_id) = self.mobile_auth_request_id.take() {
+            signin_verifier::remove_pending(&auth_request_id);
+        }
     }
 
     /// Starts mobile auth flow. Opens browser and returns immediately.
@@ -828,8 +826,17 @@ impl DclPlayerIdentity {
             Some(session_id.to_string())
         };
 
+        let auth_request_id = signin_verifier::add_pending(signin_verifier::create_verifier());
+        if auth_request_id.is_none() {
+            tracing::warn!(
+                "signin_verifier: could not persist the verifier, opening /auth/mobile without authRequestId"
+            );
+        }
+        self.mobile_auth_request_id = auth_request_id.clone();
+
         handle.spawn(async move {
-            let result = start_mobile_auth(sender, provider, user_id, session_id).await;
+            let result =
+                start_mobile_auth(sender, provider, user_id, session_id, auth_request_id).await;
             let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
             };
@@ -860,7 +867,7 @@ impl DclPlayerIdentity {
     /// everything needed is behind `complete_mobile_auth(identity_id)`, and an invalid or
     /// expired id already fails there with a real error.
     #[func]
-    fn complete_mobile_connect_account(&mut self, identity_id: GString) {
+    fn complete_mobile_connect_account(&mut self, identity_id: GString, auth_request_id: GString) {
         // Consume the flag when this process did start the flow; its absence is not an error.
         self.pending_mobile_auth.take();
 
@@ -871,9 +878,19 @@ impl DclPlayerIdentity {
         let instance_id = self.base().instance_id();
         let identity_id = identity_id.to_string();
         let attempt = self.mobile_auth_attempt;
+        // Foreign ids are dropped by the deep-link router before this; one cancelled since then
+        // is fetched without the header and the server decides.
+        let pending = match signin_verifier::select_pending(&auth_request_id.to_string()) {
+            signin_verifier::Selection::Use(pending) => Some(pending),
+            signin_verifier::Selection::NoVerifier | signin_verifier::Selection::Foreign => None,
+        };
+        let used_auth_request_id = pending
+            .as_ref()
+            .map(|p| p.auth_request_id.clone())
+            .unwrap_or_default();
 
         let complete_handle = handle.spawn(async move {
-            let result = complete_mobile_auth(identity_id).await;
+            let result = complete_mobile_auth(identity_id, pending.map(|p| p.verifier)).await;
             let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
             };
@@ -892,16 +909,32 @@ impl DclPlayerIdentity {
                             format!("{:#x}", address).to_variant(),
                             chain_id.to_variant(),
                             ephemeral_auth_chain_json_str.to_variant(),
+                            used_auth_request_id.to_variant(),
                         ],
                     );
                 }
                 Err(err) => {
                     tracing::error!("Error completing mobile auth: {:?}", err);
+                    let status = err.downcast_ref::<IdentityStatusError>().map(|e| e.0);
+                    // Transport errors and 5xx keep the verifier: the identity may still be
+                    // waiting, and the auth page can re-send the same deep link.
+                    let terminal = matches!(status, Some(401 | 404 | 410));
+                    let message = if status == Some(401) {
+                        "AUTH_SIGN_IN_OTHER_REQUEST".to_string()
+                    } else {
+                        format!("Mobile auth completion error: {}", err)
+                    };
+                    let clear_auth_request_id = if terminal {
+                        used_auth_request_id
+                    } else {
+                        String::new()
+                    };
                     this.call_deferred(
                         "_mobile_auth_failed",
                         &[
                             attempt.to_variant(),
-                            format!("Mobile auth completion error: {}", err).to_variant(),
+                            message.to_variant(),
+                            clear_auth_request_id.to_variant(),
                         ],
                     );
                 }
@@ -923,7 +956,11 @@ impl DclPlayerIdentity {
         address: GString,
         chain_id: u64,
         ephemeral_auth_chain: GString,
+        used_auth_request_id: GString,
     ) {
+        if !used_auth_request_id.is_empty() {
+            signin_verifier::remove_pending(&used_auth_request_id.to_string());
+        }
         if attempt != self.mobile_auth_attempt {
             tracing::info!("Discarding a completed mobile sign-in: attempt was retired");
             return;
@@ -934,13 +971,29 @@ impl DclPlayerIdentity {
     /// Same guard for the failure arm: a cancelled attempt must not surface an error over
     /// whatever screen the user moved on to.
     #[func]
-    fn _mobile_auth_failed(&mut self, attempt: u32, error_message: GString) {
+    fn _mobile_auth_failed(
+        &mut self,
+        attempt: u32,
+        error_message: GString,
+        clear_auth_request_id: GString,
+    ) {
+        if !clear_auth_request_id.is_empty() {
+            signin_verifier::remove_pending(&clear_auth_request_id.to_string());
+        }
         if attempt != self.mobile_auth_attempt {
             tracing::info!("Discarding a failed mobile sign-in: attempt was retired");
             return;
         }
         self.base_mut()
             .call_deferred("_error_getting_wallet", &[error_message.to_variant()]);
+    }
+
+    /// True when a `signin` deep link names an `authRequestId` this install never started (or
+    /// already settled), so the router can drop it without a server round trip.
+    #[func]
+    fn is_foreign_mobile_signin(&self, auth_request_id: GString) -> bool {
+        signin_verifier::select_pending(&auth_request_id.to_string())
+            == signin_verifier::Selection::Foreign
     }
 
     /// Returns true if there's a pending mobile auth waiting for deep link
@@ -1264,9 +1317,10 @@ impl DclPlayerIdentity {
                                 tracing::error!("error getting promise");
                                 return;
                             };
-                            promise
-                                .bind_mut()
-                                .reject(GString::from(&format!("Invalid metadata JSON: {}", e)));
+                            promise.reject_deferred(GString::from(&format!(
+                                "Invalid metadata JSON: {}",
+                                e
+                            )));
                             return;
                         }
                     }
@@ -1291,7 +1345,7 @@ impl DclPlayerIdentity {
                     return;
                 };
 
-                promise.bind_mut().resolve_with_data(dict.to_variant());
+                promise.resolve_with_data_deferred(dict.to_variant());
             });
         } else {
             let mut promise_clone = promise.clone();
@@ -1315,7 +1369,7 @@ impl DclPlayerIdentity {
         let request_response = response.bind();
 
         match UserProfile::from_lambda_response(&request_response, base_url.as_str()) {
-            Ok(profile) => {
+            Ok(mut profile) => {
                 // Never replace the local profile with an OLDER copy. Every realm change
                 // re-fetches the profile (PlayerIdentity._on_realm_changed) and the lambda
                 // can still serve the pre-deploy version right after the user saved an
@@ -1323,7 +1377,18 @@ impl DclPlayerIdentity {
                 // (#2489). Mirrors the peer-profile version guard in message_processor.
                 // Returns true: a stale response is handled, not a parse failure (false
                 // would make the GDScript caller reset to the default profile).
-                if let Some(current) = self.profile.as_ref() {
+                // Only the same account's profile counts: after "use another account" the
+                // previous account's profile is still in memory, and its higher version
+                // would swallow the new account's profile, so the lobby never advances.
+                let same_account = |current: &Gd<DclUserProfile>| {
+                    current
+                        .bind()
+                        .inner
+                        .content
+                        .eth_address
+                        .eq_ignore_ascii_case(&profile.content.eth_address)
+                };
+                if let Some(current) = self.profile.as_ref().filter(|c| same_account(c)) {
                     let current_version = current.bind().inner.version;
                     if profile.version < current_version {
                         tracing::warn!(
@@ -1332,6 +1397,23 @@ impl DclPlayerIdentity {
                             current_version
                         );
                         return true;
+                    }
+
+                    // Same version is our own deploy: keep the locally rendered face, which
+                    // profile-images may not have rendered yet (404 for about a minute).
+                    let current_bind = current.bind();
+                    let current_snapshots = &current_bind.inner.content.avatar.snapshots;
+                    let has_local_face = current_snapshots
+                        .as_ref()
+                        .and_then(|s| s.face_url.as_deref())
+                        .is_some_and(|url| url.starts_with("local:"));
+                    if profile.version == current_version && has_local_face {
+                        if let Some(new_snapshots) = profile.content.avatar.snapshots.as_mut() {
+                            new_snapshots.face_url =
+                                current_snapshots.as_ref().and_then(|s| s.face_url.clone());
+                        } else {
+                            profile.content.avatar.snapshots = current_snapshots.clone();
+                        }
                     }
                 }
 

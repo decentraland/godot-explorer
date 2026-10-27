@@ -1,6 +1,25 @@
-# Every change requires review from a human on the mobile team.
-# Combined with branch protection (require_code_owner_reviews on main and the
-# release ruleset), this ensures a bot approval (e.g. regenesis-claw, which is
-# not a team member) can never satisfy the required review on its own — relevant
-# because merges to main/release auto-sign and ship the iOS app to TestFlight.
-* @decentraland/rgl-mobile-team
+# Last matching pattern wins, and a line's owners are "any of", not "all of".
+# Branch protection (require_code_owner_reviews on main and the release ruleset)
+# keeps bot approvals (e.g. regenesis-claw, not a team member) from satisfying
+# the review alone — merges to main/release auto-sign and ship the iOS app.
+
+# Default: CI, tooling, docs, tests and other chores that don't touch production code.
+* @decentraland/rgl-mobile-devs
+
+# Productive code: also needs QA.
+/lib/src/ @decentraland/rgl-mobile-devs @decentraland/rgl-mobile-qa
+/godot/src/ @decentraland/rgl-mobile-devs @decentraland/rgl-mobile-qa
+/godot/shaders/ @decentraland/rgl-mobile-devs @decentraland/rgl-mobile-qa
+/godot/project.godot @decentraland/rgl-mobile-devs @decentraland/rgl-mobile-qa
+/godot/export_presets.cfg @decentraland/rgl-mobile-devs @decentraland/rgl-mobile-qa
+/plugins/ @decentraland/rgl-mobile-devs @decentraland/rgl-mobile-qa
+/godot/ios/ @decentraland/rgl-mobile-devs @decentraland/rgl-mobile-qa
+
+# UI: product reviews what players see.
+/godot/src/ui/ @decentraland/rgl-mobile-devs @decentraland/rgl-mobile-product
+/godot/assets/ @decentraland/rgl-mobile-devs @decentraland/rgl-mobile-product
+/godot/locale/ @decentraland/rgl-mobile-devs @decentraland/rgl-mobile-product
+
+# CI and build/release plumbing: devs only.
+/.github/ @decentraland/rgl-mobile-devs
+/src/ @decentraland/rgl-mobile-devs

@@ -131,16 +131,12 @@ func async_update_profile_picture(data: SocialItemData):
 	if data.profile_picture_url.is_empty():
 		return
 
-	# For local snapshots ("local:<hash>"), use the hash directly as the file key
-	# so the content provider finds the file already stored on disk.
-	# For remote URLs, use address-based key for caching.
+	# Keyed by URL, not by user: a new look is a new entity URL and must not hit the old image.
 	var texture_hash: String
 	if data.profile_picture_url.begins_with("local:"):
 		texture_hash = data.profile_picture_url.substr(6)
 	else:
-		texture_hash = (
-			data.address + "_face" if not data.address.is_empty() else data.avatar_name + "_face"
-		)
+		texture_hash = data.profile_picture_url.md5_text()
 	var promise = Global.content_provider.fetch_texture_by_url(
 		texture_hash, data.profile_picture_url
 	)

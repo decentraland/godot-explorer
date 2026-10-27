@@ -150,7 +150,8 @@ func _apply(fade: float) -> void:
 		return
 	_last_fade = fade
 	for mesh in _meshes:
-		mesh.set_instance_shader_parameter(&"own_fade", fade)
+		if is_instance_valid(mesh):
+			mesh.set_instance_shader_parameter(&"own_fade", fade)
 
 
 func _sleep(seconds: float) -> void:

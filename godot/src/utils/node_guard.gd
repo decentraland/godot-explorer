@@ -35,7 +35,11 @@ static var _hits: Dictionary = {}
 ## True when `node` is still a live instance. When it is not, records the site, reports it
 ## once per session, and returns false so the caller can bail out instead of crashing.
 ## `site` identifies the call site in the telemetry, e.g. "ModalManager.async_show_world_modal".
-static func is_alive(node: Object, site: String) -> bool:
+## `node` is untyped on purpose: a `node: Object` parameter makes GDScript verify a freed
+## instance's class before this function's body ever runs, raising "previously freed... not a
+## subclass of the expected argument class" instead of returning false — the exact crash this
+## guard exists to prevent. `is_instance_valid()` (below) takes Variant for the same reason.
+static func is_alive(node: Variant, site: String) -> bool:
 	if is_instance_valid(node):
 		return true
 	_report_stale(site)

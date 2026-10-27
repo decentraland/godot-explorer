@@ -185,13 +185,24 @@ func _on_scene_crashed(crashed_scene_id: int, entity_id: String) -> void:
 # the current scene (issue #2002). Instead of killing it, we warn and let the
 # user choose: "Continue anyway" (keep going, verbose logging) or "Back to
 # Discover". Rust emits this once per pressure episode for the current scene.
+# Android keeps playing without the modal (product decision); the metric still goes out.
 func _on_low_memory_warning(
 	_scene_id: int, entity_id: String, footprint_mb: int, available_mb: int
 ) -> void:
-	if Global.modal_manager != null:
-		Global.modal_manager.async_show_low_memory_warning_modal(
-			entity_id, footprint_mb, available_mb
-		)
+	var show_modal := not Global.is_android()
+	# Flush eagerly: the OS may kill the app shortly after this warning.
+	if Global.metrics != null:
+		var extra := {
+			"entity_id": entity_id,
+			"footprint_mb": footprint_mb,
+			"available_mb": available_mb,
+			"platform": OS.get_name(),
+			"modal_shown": show_modal,
+		}
+		Global.metrics.track_screen_viewed("LOW_MEMORY_WARNING", JSON.stringify(extra))
+		Global.metrics.flush.call_deferred()
+	if show_modal and Global.modal_manager != null:
+		Global.modal_manager.async_show_low_memory_warning_modal()
 
 
 func get_current_scene_data() -> SceneItem:

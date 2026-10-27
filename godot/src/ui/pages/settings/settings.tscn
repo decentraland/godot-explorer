@@ -25,7 +25,7 @@
 [ext_resource type="PackedScene" uid="uid://o5vt3nrlfw3j" path="res://src/ui/components/atoms/buttons/custom_button/custom_button.tscn" id="22_mwb5b"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="23_c03rv"]
 [ext_resource type="PackedScene" uid="uid://bij0xgcmb6ivs" path="res://src/ui/components/atoms/inputs/line_edit_custom/line_edit_custom.tscn" id="24_47ptg"]
-[ext_resource type="PackedScene" path="res://src/ui/components/molecules/settings_warning/settings_warning.tscn" id="24_hsnd0"]
+[ext_resource type="PackedScene" uid="uid://42hlc2a47tn2" path="res://src/ui/components/molecules/settings_warning/settings_warning.tscn" id="24_hsnd0"]
 [ext_resource type="Texture2D" uid="uid://c24qpurggpmfj" path="res://assets/ui/open-external-link.svg" id="24_jf4mt"]
 [ext_resource type="Script" uid="uid://c2g5q0fivu5hs" path="res://src/ui/layouts/orientation_spacer.gd" id="24_nqmh4"]
 [ext_resource type="StyleBox" uid="uid://dkykkgjyku6h1" path="res://assets/themes/secondary_outlined_normal.tres" id="26_30x8d"]
@@ -90,6 +90,8 @@ Label/font_sizes/font_size = 19
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ewc0a"]
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_hsnd0"]
+
 [sub_resource type="LabelSettings" id="LabelSettings_30x8d"]
 font = ExtResource("16_blskf")
 font_size = 36
@@ -112,6 +114,20 @@ font_color = Color(0.9098039, 0.7254902, 1, 1)
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_nqmh4"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_1mbv2"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_replay"]
+content_margin_left = 24.0
+content_margin_right = 24.0
+bg_color = Color(0, 0, 0, 0.4)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
 [sub_resource type="Environment" id="Environment_nqmh4"]
 background_mode = 3
@@ -359,6 +375,57 @@ layout_mode = 2
 size_flags_vertical = 0
 theme = ExtResource("12_sa1v7")
 
+[node name="Container_Tutorial" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_right = 0
+
+[node name="SectionTutorial" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Tutorial"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Tutorial/SectionTutorial"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="SectionTittle_Tutorial" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Tutorial/SectionTutorial/VBoxContainer" instance=ExtResource("15_h5vs5")]
+layout_mode = 2
+title = "SETTINGS_TUTORIAL"
+
+[node name="HSeparator" type="HSeparator" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Tutorial/SectionTutorial/VBoxContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 24
+theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
+
+[node name="ReplayTutorial" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Tutorial/SectionTutorial/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="Label_Title" type="Label" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Tutorial/SectionTutorial/VBoxContainer/ReplayTutorial"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("16_blskf")
+theme_override_font_sizes/font_size = 14
+text = "SETTINGS_REPLAY_TUTORIAL"
+label_settings = ExtResource("17_67hd5")
+script = ExtResource("99_orlbl")
+
+[node name="Button_ReplayTutorial" type="Button" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Tutorial/SectionTutorial/VBoxContainer/ReplayTutorial"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(288, 54)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+theme = ExtResource("12_sa1v7")
+theme_type_variation = &"SecondaryOutlinedButton"
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("StyleBoxFlat_replay")
+theme_override_styles/hover = SubResource("StyleBoxFlat_replay")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_replay")
+text = "SETTINGS_REPLAY"
+
 [node name="Container_Camera" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay" unique_id=1854347]
 unique_name_in_owner = true
 layout_mode = 2
@@ -454,6 +521,32 @@ title = "SETTINGS_INTERFACE_CAPS"
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 30
+theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
+
+[node name="ShowOwnNametag" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer" unique_id=271496971]
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="Label_Title" type="Label" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/ShowOwnNametag" unique_id=1960996548]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("16_blskf")
+theme_override_font_sizes/font_size = 14
+text = "SETTINGS_SHOW_OWN_NAMETAG"
+label_settings = ExtResource("17_67hd5")
+script = ExtResource("99_orlbl")
+
+[node name="CheckButton_ShowOwnNametag" type="CheckButton" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/ShowOwnNametag" unique_id=653683958]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+theme = ExtResource("12_sa1v7")
+
+[node name="HSeparator_ShowOwnNametag" type="HSeparator" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer" unique_id=804192713]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 44
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
 [node name="HidePlayerNames" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer" unique_id=1680389367]
@@ -1032,7 +1125,6 @@ is_percentage = true
 
 [node name="VBoxContainer_Advanced" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections" unique_id=2077198387]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 mouse_filter = 2
 theme = SubResource("Theme_3h20j")
@@ -1050,6 +1142,64 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
+
+[node name="StreakDayDebug" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=1988369848]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="HBoxContainer_StreakDayButtons" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug" unique_id=608744698]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label_StreakDayTitle" type="Label" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug/HBoxContainer_StreakDayButtons" unique_id=638726586]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("16_blskf")
+theme_override_font_sizes/font_size = 14
+text = "SETTINGS_STREAK_DAY_TITLE"
+label_settings = ExtResource("17_67hd5")
+
+[node name="VSeparator" type="VSeparator" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug/HBoxContainer_StreakDayButtons" unique_id=1073565131]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/separator = SubResource("StyleBoxEmpty_hsnd0")
+
+[node name="Button_StreakAdvanceDay" type="Button" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug/HBoxContainer_StreakDayButtons" unique_id=1797213665]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+tooltip_text = "SETTINGS_STREAK_ADVANCE_DAY"
+theme = ExtResource("12_sa1v7")
+theme_override_font_sizes/font_size = 39
+text = "+"
+
+[node name="Button_StreakRewindDay" type="Button" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug/HBoxContainer_StreakDayButtons" unique_id=848562720]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+tooltip_text = "SETTINGS_STREAK_REWIND_DAY"
+theme = ExtResource("12_sa1v7")
+theme_override_font_sizes/font_size = 39
+text = "-"
+
+[node name="Button_StreakResetDay" type="Button" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug/HBoxContainer_StreakDayButtons" unique_id=848562721]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+tooltip_text = "SETTINGS_STREAK_RESET_DAY"
+theme = ExtResource("12_sa1v7")
+theme_override_font_sizes/font_size = 24
+text = "R"
+
+[node name="Button_StreakJumpIn" type="Button" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug/HBoxContainer_StreakDayButtons" unique_id=848562722]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+tooltip_text = "SETTINGS_STREAK_SIMULATE_JUMP_IN"
+theme = ExtResource("12_sa1v7")
+theme_override_font_sizes/font_size = 24
+text = "J"
 
 [node name="HBoxContainer5" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=1392654186]
 layout_mode = 2
@@ -1387,6 +1537,7 @@ portrait_minimum_size = Vector2(0, 24)
 
 [node name="VBoxContainer_HelpSupport" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections" unique_id=1900000001]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 mouse_filter = 2
 theme = SubResource("Theme_5xlkc")
@@ -1628,6 +1779,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_47ptg")
 
 [node name="AvatarPreview_Account" parent="." unique_id=771001010 instance=ExtResource("29_avatar")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 mouse_filter = 0
 stretch = true
@@ -1641,6 +1793,7 @@ preview_margin_right = 20
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionChatAndSocial/VBoxContainer/CloseChatAfterSending/CheckButton_SubmitMessageClosesChat" to="." method="_on_check_button_submit_message_closes_chat_toggled"]
+[connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/ShowOwnNametag/CheckButton_ShowOwnNametag" to="." method="_on_check_button_show_own_nametag_toggled"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HidePlayerNames/CheckButton_HidePlayerNames" to="." method="_on_check_button_hide_player_names_toggled"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideExplorerUI/CheckButton_HideExplorerUI" to="." method="_on_check_button_hide_explorer_ui_toggled"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideViewProfile/CheckButton_HideViewProfile" to="." method="_on_check_button_hide_view_profile_toggled"]
@@ -1648,6 +1801,7 @@ preview_margin_right = 20
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideSceneUI/CheckButton_HideSceneUI" to="." method="_on_check_button_hide_scene_ui_toggled"]
 [connection signal="item_selected" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/Container_Language/VBoxContainer/DropdownList_Language" to="." method="_on_dropdown_list_language_item_selected"]
 [connection signal="visibility_changed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage" to="." method="_on_container_storage_visibility_changed"]
+[connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Tutorial/SectionTutorial/VBoxContainer/ReplayTutorial/Button_ReplayTutorial" to="." method="_on_button_replay_tutorial_pressed"]
 [connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage/Control/Button_ClearCache" to="." method="_on_button_clear_cache_pressed"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer/DynamicGraphics/CheckButton_DynamicGraphics" to="." method="_on_check_button_dynamic_graphics_toggled"]
 [connection signal="item_selected" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer/DropdownList_GraphicProfiles" to="." method="_on_dropdown_list_graphic_profiles_item_selected"]
@@ -1660,6 +1814,10 @@ preview_margin_right = 20
 [connection signal="value_changed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer/AvatarAndEmotesVolume" to="." method="_on_avatar_and_emotes_volume_value_changed"]
 [connection signal="value_changed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer/VoiceChatVolume" to="." method="_on_h_slider_voice_chat_volume_value_changed"]
 [connection signal="value_changed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer/MicAmplification" to="." method="_on_h_slider_mic_amplification_value_changed"]
+[connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug/HBoxContainer_StreakDayButtons/Button_StreakAdvanceDay" to="." method="_on_button_streak_advance_day_pressed"]
+[connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug/HBoxContainer_StreakDayButtons/Button_StreakRewindDay" to="." method="_on_button_streak_rewind_day_pressed"]
+[connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug/HBoxContainer_StreakDayButtons/Button_StreakResetDay" to="." method="_on_button_streak_reset_pressed"]
+[connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug/HBoxContainer_StreakDayButtons/Button_StreakJumpIn" to="." method="_on_button_streak_jump_in_pressed"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/SceneLogsEnabled/CheckButton_SceneLogsEnabled" to="." method="_on_check_button_scene_logs_enabled_toggled"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/RaycastDebugger/CheckButton_RaycastDebugger" to="." method="_on_check_button_raycast_debugger_toggled"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/ShowInteractableArea/CheckButton_ShowInteractableArea" to="." method="_on_check_button_show_interactable_area_toggled"]
