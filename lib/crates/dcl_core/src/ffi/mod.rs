@@ -21,6 +21,7 @@ mod profile;
 mod push;
 mod review;
 mod scene;
+mod seasonal_skin;
 mod session;
 mod session_tracker;
 mod settings;

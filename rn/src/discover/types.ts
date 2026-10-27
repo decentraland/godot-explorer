@@ -59,7 +59,8 @@ export type Suggestion = {
 
 /** Everything Discover reads or writes. The default is the public-API implementation; with the engine, a bridge one adds the signed calls. */
 export interface DiscoverApi {
-  banners(): Promise<Banner[]>;
+  /** `season`: the places tagged for the active season, falling back to the featured ones. */
+  banners(season?: boolean): Promise<Banner[]>;
   /** The places the first-run carousel offers, curated server-side with the `ftue` tag. */
   ftuePlaces(): Promise<Place[]>;
   friends(): Promise<Friend[]>;

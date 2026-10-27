@@ -200,6 +200,11 @@ pub fn jump_events() -> String {
     )
 }
 
+// Seasonal Discover assets: one folder per season key, the same on every environment.
+pub fn seasonal_assets() -> &'static str {
+    "https://mobile-ota.dclregenesislabs.xyz/seasons/"
+}
+
 // Mobile BFF
 pub fn mobile_bff() -> String {
     format!(

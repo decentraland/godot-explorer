@@ -62,30 +62,41 @@ export function createPublicApi(
     new: 'order_by=created_at&order=desc',
   };
 
+  const taggedPlaces = async (tag: string) => {
+    const ios = Platform.OS === 'ios' ? '&tag=allowed_ios' : '';
+    const payload = await get(
+      `${destinationsApi()}/?offset=0&tag=${tag}&sdk=7${ios}`,
+    );
+    const found = parsePlaces(
+      Array.isArray(payload) ? { data: payload } : payload,
+    );
+    remember({ places: found });
+    for (let i = found.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [found[i], found[j]] = [found[j], found[i]];
+    }
+    return found;
+  };
+  const toBanners = (found: Place[]) =>
+    found.map(place => ({
+      id: place.id,
+      image: place.image,
+      title: place.title,
+      place,
+      cta: 'arrow' as const,
+    }));
+
   return {
-    banners: async () =>
-      (await places(featuredUrl())).map(place => ({
-        id: place.id,
-        image: place.image,
-        title: place.title,
-        place,
-        cta: 'arrow' as const,
-      })),
-    ftuePlaces: async () => {
-      const ios = Platform.OS === 'ios' ? '&tag=allowed_ios' : '';
-      const payload = await get(
-        `${destinationsApi()}/?offset=0&tag=ftue&sdk=7${ios}`,
+    banners: async (season = false) => {
+      // Nothing tagged `season` yet, or the request failed: the regular featured places.
+      const seasonal = season
+        ? await taggedPlaces('season').catch(() => [])
+        : [];
+      return toBanners(
+        seasonal.length > 0 ? seasonal : await places(featuredUrl()),
       );
-      const found = parsePlaces(
-        Array.isArray(payload) ? { data: payload } : payload,
-      );
-      remember({ places: found });
-      for (let i = found.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [found[i], found[j]] = [found[j], found[i]];
-      }
-      return found;
     },
+    ftuePlaces: () => taggedPlaces('ftue'),
     friends: async () => [],
     events: async () => {
       const lists = await Promise.allSettled([

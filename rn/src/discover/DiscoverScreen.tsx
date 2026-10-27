@@ -10,6 +10,7 @@ import { DiscoverHome } from './DiscoverHome';
 import { usePlayed } from './history';
 import { MessageState } from './MessageState';
 import { SearchView } from './SearchView';
+import { SeasonalOverlay } from './SeasonalOverlay';
 import type { SearchState } from './search';
 import type { Category } from './types';
 import { useOpeners } from './useOpeners';
@@ -142,6 +143,7 @@ export function DiscoverScreen({
   return (
     <View style={styles.root}>
       <DiscoverBackground seasonal={seasonal} />
+      <SeasonalOverlay />
       <View style={styles.body}>{body()}</View>
       {keyboard ? null : footer}
     </View>

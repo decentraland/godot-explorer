@@ -347,6 +347,12 @@ protected:
                                                       const jsi::Value &thisVal,
                                                       const jsi::Value *args,
                                                       size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_seasonal_skin(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_seasonal_skin_take_fetch_attempt(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
   jsi::Value cpp_uniffi_dcl_core_fn_func_address(jsi::Runtime &rt,
                                                  const jsi::Value &thisVal,
                                                  const jsi::Value *args,
@@ -837,6 +843,12 @@ protected:
                                                      const jsi::Value *args,
                                                      size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_func_track_screen(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_seasonal_skin(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_seasonal_skin_take_fetch_attempt(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_func_address(

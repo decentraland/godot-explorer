@@ -10,6 +10,7 @@ import { FeatureBanners } from './FeatureBanners';
 import { CompactRow, FriendCard } from './MoreCards';
 import { Rail } from './Rail';
 import { isOffline, RailState, useRail } from './rails';
+import { useSeasonalSkin } from './seasonalSkin';
 import { u } from '../ds/scale';
 import { useOpeners } from './useOpeners';
 
@@ -43,9 +44,10 @@ export function DiscoverHome({
   const scroll = useRef<ScrollView>(null);
   const api = useApi();
   const open = useOpeners();
+  const season = useSeasonalSkin() !== undefined;
   const banners = useRail(
-    single(() => api.banners()),
-    [api],
+    single(() => api.banners(season)),
+    [api, season],
   );
   const friends = useRail(
     single(() => api.friends()),

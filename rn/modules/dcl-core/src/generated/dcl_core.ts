@@ -1962,6 +1962,41 @@ export function sceneLinkUrl(realm: string, x: number, y: number): string {
 }
 
 /**
+ * The active season, `None` when off or while the remote flags are not loaded.
+ */
+export function seasonalSkin(): SeasonalSkin | undefined {
+  const __rb: Uint8Array = uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_seasonal_skin(
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterOptionalTypeSeasonalSkin.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
+ * Spend one try at fetching the season's assets; `false` once the cap is reached.
+ */
+export function seasonalSkinTakeFetchAttempt(): boolean {
+  return FfiConverterBool.lift(
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_seasonal_skin_take_fetch_attempt(
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ),
+  );
+}
+
+/**
  * The app left the foreground.
  */
 export function sessionBackgrounded(): void /*throws*/ {
@@ -8187,7 +8222,7 @@ export const Effect = (() => {
     tag: Effect_Tags.SignInParked;
   };
   /**
-   * Cold start: the token is parked for [`DeepLinkRouter::take_pending_signin_identity_id`].
+   * Cold start: the token is parked for [`DeepLinkRouter::take_pending_signin`].
    */
   class SignInParked_ extends UniffiEnum implements SignInParked__interface {
     /**
@@ -8428,6 +8463,55 @@ const FfiConverterTypeRouted = (() => {
       return (
         FfiConverterOptionalTypeNavigation.allocationSize(value.navigation) +
         FfiConverterSequenceTypeEffect.allocationSize(value.effects)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type SeasonalSkin = {
+  key: string;
+  overlayUrl: string;
+  ambientUrl: string;
+};
+
+/**
+ * Generated factory for {@link SeasonalSkin} record objects.
+ */
+export const SeasonalSkin = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<SeasonalSkin, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<SeasonalSkin>,
+  });
+})();
+
+const FfiConverterTypeSeasonalSkin = (() => {
+  type TypeName = SeasonalSkin;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        key: FfiConverterString.readFromCursor(c),
+        overlayUrl: FfiConverterString.readFromCursor(c),
+        ambientUrl: FfiConverterString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.key, c);
+      FfiConverterString.writeIntoCursor(value.overlayUrl, c);
+      FfiConverterString.writeIntoCursor(value.ambientUrl, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.key) +
+        FfiConverterString.allocationSize(value.overlayUrl) +
+        FfiConverterString.allocationSize(value.ambientUrl)
       );
     }
   }
@@ -13245,6 +13329,11 @@ const FfiConverterSequenceTypeRail = new FfiConverterArray(
   FfiConverterTypeRail,
 );
 
+// FfiConverter for SeasonalSkin | undefined
+const FfiConverterOptionalTypeSeasonalSkin = new FfiConverterOptional(
+  FfiConverterTypeSeasonalSkin,
+);
+
 // FfiConverter for Array<SettingEntry>
 const FfiConverterSequenceTypeSettingEntry = new FfiConverterArray(
   FfiConverterTypeSettingEntry,
@@ -13735,6 +13824,21 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_scene_link_url',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_seasonal_skin() !== 752
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_seasonal_skin',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_seasonal_skin_take_fetch_attempt() !==
+    6087
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_seasonal_skin_take_fetch_attempt',
     );
   }
   if (
@@ -14231,6 +14335,7 @@ export default Object.freeze({
     FfiConverterTypeRouted,
     FfiConverterTypeSceneEntryFtue,
     FfiConverterTypeSceneRequest,
+    FfiConverterTypeSeasonalSkin,
     FfiConverterTypeSettingEntry,
     FfiConverterTypeSettingKey,
     FfiConverterTypeSettingValue,

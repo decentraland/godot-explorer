@@ -355,6 +355,10 @@ void uniffi_dcl_core_fn_func_track(RustBuffer event, RustBuffer props,
                                    RustCallStatus *uniffi_out_err);
 void uniffi_dcl_core_fn_func_track_screen(RustBuffer name, RustBuffer props,
                                           RustCallStatus *uniffi_out_err);
+RustBuffer
+uniffi_dcl_core_fn_func_seasonal_skin(RustCallStatus *uniffi_out_err);
+int8_t uniffi_dcl_core_fn_func_seasonal_skin_take_fetch_attempt(
+    RustCallStatus *uniffi_out_err);
 RustBuffer uniffi_dcl_core_fn_func_address(RustCallStatus *uniffi_out_err);
 void uniffi_dcl_core_fn_func_cancel_sign_in(RustCallStatus *uniffi_out_err);
 /*handle*/ uint64_t
@@ -588,6 +592,8 @@ uint16_t uniffi_dcl_core_checksum_func_set_analytics_consent();
 uint16_t uniffi_dcl_core_checksum_func_set_analytics_flush_interval();
 uint16_t uniffi_dcl_core_checksum_func_track();
 uint16_t uniffi_dcl_core_checksum_func_track_screen();
+uint16_t uniffi_dcl_core_checksum_func_seasonal_skin();
+uint16_t uniffi_dcl_core_checksum_func_seasonal_skin_take_fetch_attempt();
 uint16_t uniffi_dcl_core_checksum_func_address();
 uint16_t uniffi_dcl_core_checksum_func_cancel_sign_in();
 uint16_t uniffi_dcl_core_checksum_func_complete_browser();
@@ -5695,6 +5701,30 @@ NativeDclCore::NativeDclCore(
             return this->cpp_uniffi_dcl_core_fn_func_track_screen(rt, thisVal,
                                                                   args, count);
           });
+  props["ubrn_uniffi_dcl_core_fn_func_seasonal_skin"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_seasonal_skin"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_seasonal_skin(rt, thisVal,
+                                                                   args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_seasonal_skin_take_fetch_attempt"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt,
+              "ubrn_uniffi_dcl_core_fn_func_seasonal_skin_take_fetch_attempt"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this
+                ->cpp_uniffi_dcl_core_fn_func_seasonal_skin_take_fetch_attempt(
+                    rt, thisVal, args, count);
+          });
   props["ubrn_uniffi_dcl_core_fn_func_address"] =
       jsi::Function::createFromHostFunction(
           rt,
@@ -7338,6 +7368,29 @@ NativeDclCore::NativeDclCore(
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_dcl_core_checksum_func_track_screen(
                 rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_seasonal_skin"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_seasonal_skin"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_seasonal_skin(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_seasonal_skin_take_fetch_attempt"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(rt, "ubrn_uniffi_dcl_core_checksum_func_"
+                                        "seasonal_skin_take_fetch_attempt"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this
+                ->cpp_uniffi_dcl_core_checksum_func_seasonal_skin_take_fetch_attempt(
+                    rt, thisVal, args, count);
           });
   props["ubrn_uniffi_dcl_core_checksum_func_address"] =
       jsi::Function::createFromHostFunction(
@@ -9210,6 +9263,30 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_track_screen(
 
   return jsi::Value::undefined();
 }
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_seasonal_skin(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  auto value = uniffi_dcl_core_fn_func_seasonal_skin(&status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return uniffi::dcl_core::Bridging<RustBuffer>::toJs(rt, callInvoker, value);
+}
+jsi::Value
+NativeDclCore::cpp_uniffi_dcl_core_fn_func_seasonal_skin_take_fetch_attempt(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  auto value =
+      uniffi_dcl_core_fn_func_seasonal_skin_take_fetch_attempt(&status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return uniffi_jsi::Bridging<int8_t>::toJs(rt, callInvoker, value);
+}
 jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_address(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
@@ -10560,6 +10637,21 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_track_screen(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
   auto value = uniffi_dcl_core_checksum_func_track_screen();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_seasonal_skin(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_seasonal_skin();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::
+    cpp_uniffi_dcl_core_checksum_func_seasonal_skin_take_fetch_attempt(
+        jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+        size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_seasonal_skin_take_fetch_attempt();
 
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }
