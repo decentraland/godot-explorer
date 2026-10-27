@@ -111,6 +111,12 @@ impl Session {
         matches!(self.wallet, Some(CurrentWallet::Local { .. }))
     }
 
+    /// Whether analytics counts the player as a guest: a disposable wallet, or a thirdweb guest
+    /// that has not linked an email.
+    pub fn counts_as_guest(&self) -> bool {
+        self.is_disposable_guest() || (self.is_thirdweb_guest && !self.is_thirdweb_guest_upgraded)
+    }
+
     /// Restores a saved account. `None` when the saved chain has expired or the key is unusable.
     pub fn recover(&mut self, account: RecoverableAccount) -> Option<SessionEvent> {
         if account.ephemeral_auth_chain.expired() {
@@ -231,6 +237,23 @@ mod tests {
         let wallet = LocalWallet::new(&mut thread_rng());
         let chain = create_local_ephemeral(&wallet);
         (wallet, chain)
+    }
+
+    #[test]
+    fn guests_count_until_they_link_an_email() {
+        let mut session = Session::default();
+        assert!(!session.counts_as_guest());
+        session.is_thirdweb_guest = true;
+        assert!(session.counts_as_guest());
+        session.is_thirdweb_guest_upgraded = true;
+        assert!(!session.counts_as_guest());
+
+        let (wallet, chain) = local();
+        let mut local_session = Session::default();
+        local_session
+            .install_local(&wallet.signer().to_bytes(), chain)
+            .unwrap();
+        assert!(local_session.counts_as_guest());
     }
 
     #[test]

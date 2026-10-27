@@ -1095,6 +1095,36 @@ impl Metrics {
         )
     }
 
+    /// Fire the `first_social_action` Firebase event (Android only). `action` is one of `emote`,
+    /// `chat`, `friend_request`, `friend_accept`. Once per install is the caller's job: persist
+    /// its flag ONLY on `true`, same contract as `track_first_move_in_world`. `is_guest` comes
+    /// from the caller because `common.dcl_is_guest` is false for thirdweb (Play-as-Guest) guests.
+    #[func]
+    pub fn track_first_social_action(&mut self, action: String, is_guest: bool) -> bool {
+        if !self.eula_accepted {
+            return false;
+        }
+        if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
+            return false;
+        }
+        let params = serde_json::json!({
+            "action": action,
+            "is_guest": is_guest,
+            "dcl_eth_address": self.queue.common.dcl_eth_address,
+        });
+        let params_str = params.to_string();
+        if self.debug_level > 0 {
+            tracing::debug!(
+                "[Metrics] Firebase event 'first_social_action': {}",
+                params_str
+            );
+        }
+        DclAndroidPlugin::log_firebase_event(
+            GString::from("first_social_action"),
+            GString::from(&params_str),
+        )
+    }
+
     #[func]
     pub fn set_debug_level(&mut self, level: u8) {
         self.debug_level = level.min(1); // Clamp to 0-1

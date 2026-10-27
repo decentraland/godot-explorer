@@ -1,7 +1,9 @@
 //! The app's side of the analytics pipeline: the EULA consent gate for returning users, the
 //! Firebase `login_success` on a wallet connection, the guest wallet creation outcome, and the
-//! one-shot Firebase `first_move_in_world` after the player's first real movement.
+//! one-shot Firebase `first_move_in_world` after the player's first real movement and
+//! `first_social_action` on the first emote or chat message.
 
+use dcl_core::Core;
 use godot::classes::{RefCounted, Timer};
 use godot::prelude::*;
 
@@ -19,6 +21,31 @@ const POLL_INTERVAL: f64 = 0.1;
 /// Whether the horizontal speed counts as the player's first real movement.
 pub fn counts_as_movement(velocity_xz: f32) -> bool {
     velocity_xz >= MOVE_VELOCITY_THRESHOLD
+}
+
+/// Fires `first_social_action` the first time this install performs `action` (`emote`, `chat`).
+/// Cheap to call on every such action. Per install, not per wallet: a guest who later signs in to
+/// another account must not count as a second conversion.
+pub fn track_first_social_action(action: &str) {
+    let engine = globals::engine();
+    let already_sent = engine
+        .bind()
+        .setting("first_social_action_sent".into())
+        .try_to::<bool>()
+        .unwrap_or(false);
+    if already_sent {
+        return;
+    }
+    let is_guest = Core::get().with_session(|s| s.counts_as_guest());
+    // Burn the one-shot only when the event was logged (Android with the EULA accepted).
+    if globals::metrics()
+        .bind_mut()
+        .track_first_social_action(action.to_string(), is_guest)
+    {
+        engine
+            .bind()
+            .set_setting("first_social_action_sent".into(), true.to_variant(), true);
+    }
 }
 
 /// Held alive by Global: a signal connection does not own a RefCounted target.

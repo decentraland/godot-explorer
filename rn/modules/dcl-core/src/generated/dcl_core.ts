@@ -8573,6 +8573,7 @@ export enum SettingKey {
   FtueTutorialOffered,
   FtueTutorialCompleted,
   FtueNewPlayerWallet,
+  FirstSocialActionSent,
 }
 
 const FfiConverterTypeSettingKey = (() => {
@@ -8670,6 +8671,8 @@ const FfiConverterTypeSettingKey = (() => {
           return SettingKey.FtueTutorialCompleted;
         case 45:
           return SettingKey.FtueNewPlayerWallet;
+        case 46:
+          return SettingKey.FirstSocialActionSent;
         default:
           throw new UniffiInternalError.UnexpectedEnumCase();
       }
@@ -8766,6 +8769,8 @@ const FfiConverterTypeSettingKey = (() => {
           return c.writeI32(44);
         case SettingKey.FtueNewPlayerWallet:
           return c.writeI32(45);
+        case SettingKey.FirstSocialActionSent:
+          return c.writeI32(46);
       }
     }
     allocationSize(value: TypeName): number {

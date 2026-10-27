@@ -52,10 +52,11 @@ pub enum SettingKey {
     FtueTutorialOffered,
     FtueTutorialCompleted,
     FtueNewPlayerWallet,
+    FirstSocialActionSent,
 }
 
 impl SettingKey {
-    pub const ALL: [SettingKey; 45] = [
+    pub const ALL: [SettingKey; 46] = [
         Self::SubmitMessageClosesChat,
         Self::Locale,
         Self::GraphicProfile,
@@ -101,6 +102,7 @@ impl SettingKey {
         Self::FtueTutorialOffered,
         Self::FtueTutorialCompleted,
         Self::FtueNewPlayerWallet,
+        Self::FirstSocialActionSent,
     ];
 
     /// The name used by `settings.cfg` and the shell's `keys.ts`.
@@ -143,6 +145,7 @@ impl SettingKey {
             Self::LastParcelY => "last_parcel_y",
             Self::FirstMoveInWorldSent => "first_move_in_world_sent",
             Self::InstallReferrerSent => "install_referrer_sent",
+            Self::FirstSocialActionSent => "first_social_action_sent",
             Self::DebugRotateGuestAnchor => "debug_rotate_guest_anchor",
             Self::LocalAssetsCacheVersion => "local_assets_cache_version",
             Self::Day1NotificationScheduled => "day1_notification_scheduled",
@@ -169,6 +172,7 @@ impl SettingKey {
             | Self::FirstLaunchCompleted
             | Self::FirstMoveInWorldSent
             | Self::InstallReferrerSent
+            | Self::FirstSocialActionSent
             | Self::DebugRotateGuestAnchor
             | Self::Day1NotificationScheduled
             | Self::FtueTutorialOffered
@@ -245,6 +249,7 @@ impl SettingKey {
             Self::LastParcelY => SettingValue::Int(-10),
             Self::FirstMoveInWorldSent => SettingValue::Bool(false),
             Self::InstallReferrerSent => SettingValue::Bool(false),
+            Self::FirstSocialActionSent => SettingValue::Bool(false),
             Self::DebugRotateGuestAnchor => SettingValue::Bool(false),
             Self::LocalAssetsCacheVersion => SettingValue::Int(0),
             Self::Day1NotificationScheduled => SettingValue::Bool(false),

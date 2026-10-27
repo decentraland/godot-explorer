@@ -10,6 +10,7 @@ use godot::classes::{
 };
 use godot::prelude::*;
 
+use crate::app::analytics_controller;
 use crate::avatars::emotes;
 use crate::avatars::loaders::EmoteLoader;
 use crate::fetcher::globals;
@@ -832,6 +833,9 @@ impl DclAvatar {
             screen.to_string(),
             payload.to_string(),
         );
+        if source == "user" {
+            analytics_controller::track_first_social_action("emote");
+        }
     }
 
     /// Pauses the tree on the idle pose for stills (previews, renderers).
