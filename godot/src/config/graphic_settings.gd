@@ -75,9 +75,10 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 	# vs Low without buying meaningful visual quality at typical mobile
 	# resolution (62% of the geometry goes through the shadow pass; Low
 	# keeps shadows visually present with -22% prim and -36% draws,
-	# recovering ~5 fps over High).
+	# recovering ~5 fps over High). AA off as on Medium: the ubershaders built at startup assume no
+	# MSAA, so with it every mesh stays undrawn until its own pipeline compiles.
 	{
-		"aa": 1,
+		"aa": 0,
 		"shadow": 1,
 		"bloom": 2,
 		"skybox": 2,

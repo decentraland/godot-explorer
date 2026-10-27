@@ -149,7 +149,7 @@ pub fn check_gdscript() -> Result<()> {
 }
 
 /// Floor for [`discover_tests`]: the suite count that must still be found.
-const MIN_TESTS: usize = 22;
+const MIN_TESTS: usize = 23;
 
 /// Every headless GDScript test in the project, discovered rather than listed.
 ///

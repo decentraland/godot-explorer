@@ -27,6 +27,10 @@ pub struct DclAndroidPlugin {
 impl DclAndroidPlugin {
     /// Try to get the dcl-godot-android singleton
     fn try_get_singleton() -> Option<Gd<Object>> {
+        // get_singleton logs an engine error when it's missing (every iOS/desktop call).
+        if !Self::is_available() {
+            return None;
+        }
         let singleton =
             godot::classes::Engine::singleton().get_singleton(&StringName::from(SINGLETON_NAME))?;
         Some(singleton.cast::<Object>())
