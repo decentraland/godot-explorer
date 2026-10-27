@@ -25,6 +25,7 @@ use crate::{
     session::{
         account_codec,
         identity::{Session, SessionEvent},
+        signin_verifier::VerifierStore,
         store::{SessionSlot, SessionStore},
     },
 };
@@ -61,6 +62,11 @@ pub struct Hub {
     session: Mutex<Session>,
     events: Arc<HostEvents>,
     store: SessionStore,
+    /// Secrets that bind a browser sign-in to this install.
+    verifiers: VerifierStore,
+    /// `authRequestId` of the browser sign-in this process started, so a cancel can drop its
+    /// verifier.
+    browser_request: Mutex<Option<String>>,
     profile_suffix: Mutex<String>,
     device_anchor: Mutex<String>,
     /// Off for throwaway sessions (previews, benchmarks): they must not overwrite a saved account.
@@ -89,6 +95,8 @@ impl Hub {
             session: Mutex::new(Session::default()),
             events,
             store: SessionStore::new(data_dir),
+            verifiers: VerifierStore::new(data_dir),
+            browser_request: Mutex::new(None),
             profile_suffix: Mutex::new(String::new()),
             device_anchor: Mutex::new(String::new()),
             persist: AtomicBool::new(true),

@@ -47,6 +47,8 @@ export function createMockCore(options: { signedIn?: boolean } = {}): CoreApi {
     connectionRetry: () => {},
     connectionReset: () => {},
     connectionHealthy: () => true,
+    seasonalSkin: () => undefined,
+    seasonalSkinTakeFetchAttempt: () => true,
     ...createMockGates(),
     ...createMockScene(bus),
   };

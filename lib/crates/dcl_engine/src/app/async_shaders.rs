@@ -8,10 +8,6 @@ use dcl_core::Core;
 use godot::classes::RenderingServer;
 use godot::prelude::*;
 
-use super::deep_link::truthy;
-use crate::fetcher::globals;
-use crate::godot_classes::dcl_global::DclGlobal;
-
 pub const FLAG_ASYNC_SHADER_COMPILATION: &str = "async-shader-compilation";
 
 thread_local! {
@@ -30,7 +26,11 @@ pub fn update() {
     if ENABLED.get() {
         return;
     }
-    let enabled = match local_override() {
+    let enabled = match super::feature_flags::local_override(
+        "--async-shaders",
+        "--no-async-shaders",
+        "async-shaders",
+    ) {
         Some(local) => local,
         None if FLAGS_SETTLED.get() => {
             dcl_core::flags::is_enabled(FLAG_ASYNC_SHADER_COMPILATION, false)
@@ -47,27 +47,6 @@ pub fn update() {
             if enabled { "on" } else { "off" },
         );
     }
-}
-
-fn local_override() -> Option<bool> {
-    {
-        let cli = globals::cli();
-        let cli = cli.bind();
-        if cli.has_arg("--no-async-shaders".into()) {
-            return Some(false);
-        }
-        if cli.has_arg("--async-shaders".into()) {
-            return Some(true);
-        }
-    }
-    let link = DclGlobal::try_singleton()?.bind().deep_link_obj.clone();
-    let value = link
-        .bind()
-        .get_params()
-        .get("async-shaders")
-        .map(|v| v.stringify().to_string())
-        .unwrap_or_default();
-    (!value.is_empty()).then(|| truthy(&value))
 }
 
 fn enable() -> bool {

@@ -27,7 +27,7 @@ pub trait AvatarSink {
         is_grounded: bool,
     );
     /// `mask` uses the internal convention: -1 = full body, 0 = upper body.
-    fn play_emote(&mut self, alias: u32, incremental_id: u32, urn: &str, mask: i64);
+    fn play_emote(&mut self, alias: u32, urn: &str, mask: i64);
     fn stop_emote(&mut self, alias: u32);
     fn reset_movement_dedup(&mut self, alias: u32);
     fn spawn_voice_channel(

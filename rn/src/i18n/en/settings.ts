@@ -47,6 +47,7 @@ export const settings = {
 
   SETTINGS_CHAT_SOCIAL: 'CHAT & SOCIAL',
   SETTINGS_CLOSE_CHAT_AFTER_SENDING: 'Close Chat After Sending',
+  SETTINGS_SHOW_OWN_NAMETAG: 'Show My Nametag',
   SETTINGS_CAMERA: 'CAMERA',
   SETTINGS_CAMERA_MODE: 'Camera Mode',
   SETTINGS_CAMERA_FIRST_PERSON: 'First person',

@@ -21,6 +21,8 @@ pub enum SettingKey {
     AudioMusicVolume,
     AudioAvatarAndEmotesVolume,
     AudioMicAmplification,
+    /// Whether the local player's own nametag shows above their head.
+    ShowOwnNametag,
     // Engine-owned: the shell does not list them, the engine reads and writes them.
     WindowMode,
     UiZoom,
@@ -50,10 +52,11 @@ pub enum SettingKey {
     FtueTutorialOffered,
     FtueTutorialCompleted,
     FtueNewPlayerWallet,
+    FirstSocialActionSent,
 }
 
 impl SettingKey {
-    pub const ALL: [SettingKey; 44] = [
+    pub const ALL: [SettingKey; 46] = [
         Self::SubmitMessageClosesChat,
         Self::Locale,
         Self::GraphicProfile,
@@ -71,6 +74,7 @@ impl SettingKey {
         Self::AudioMusicVolume,
         Self::AudioAvatarAndEmotesVolume,
         Self::AudioMicAmplification,
+        Self::ShowOwnNametag,
         Self::WindowMode,
         Self::UiZoom,
         Self::Resolution3dScale,
@@ -98,6 +102,7 @@ impl SettingKey {
         Self::FtueTutorialOffered,
         Self::FtueTutorialCompleted,
         Self::FtueNewPlayerWallet,
+        Self::FirstSocialActionSent,
     ];
 
     /// The name used by `settings.cfg` and the shell's `keys.ts`.
@@ -120,6 +125,7 @@ impl SettingKey {
             Self::AudioMusicVolume => "audio_music_volume",
             Self::AudioAvatarAndEmotesVolume => "audio_avatar_and_emotes_volume",
             Self::AudioMicAmplification => "audio_mic_amplification",
+            Self::ShowOwnNametag => "show_own_nametag",
             Self::WindowMode => "window_mode",
             Self::UiZoom => "ui_zoom",
             Self::Resolution3dScale => "resolution_3d_scale",
@@ -139,6 +145,7 @@ impl SettingKey {
             Self::LastParcelY => "last_parcel_y",
             Self::FirstMoveInWorldSent => "first_move_in_world_sent",
             Self::InstallReferrerSent => "install_referrer_sent",
+            Self::FirstSocialActionSent => "first_social_action_sent",
             Self::DebugRotateGuestAnchor => "debug_rotate_guest_anchor",
             Self::LocalAssetsCacheVersion => "local_assets_cache_version",
             Self::Day1NotificationScheduled => "day1_notification_scheduled",
@@ -157,6 +164,7 @@ impl SettingKey {
     pub fn kind(self) -> SettingKind {
         match self {
             Self::SubmitMessageClosesChat
+            | Self::ShowOwnNametag
             | Self::DynamicGraphicsEnabled
             | Self::DynamicSkybox
             | Self::ShowFps
@@ -164,6 +172,7 @@ impl SettingKey {
             | Self::FirstLaunchCompleted
             | Self::FirstMoveInWorldSent
             | Self::InstallReferrerSent
+            | Self::FirstSocialActionSent
             | Self::DebugRotateGuestAnchor
             | Self::Day1NotificationScheduled
             | Self::FtueTutorialOffered
@@ -206,7 +215,7 @@ impl SettingKey {
     /// The `ConfigData` defaults. The locale is empty: follow the device until the player picks one.
     pub fn default_value(self) -> SettingValue {
         match self {
-            Self::SubmitMessageClosesChat => SettingValue::Bool(false),
+            Self::SubmitMessageClosesChat | Self::ShowOwnNametag => SettingValue::Bool(false),
             Self::DynamicGraphicsEnabled | Self::DynamicSkybox => SettingValue::Bool(true),
             Self::Locale => SettingValue::Text(String::new()),
             Self::GraphicProfile | Self::ParticleQuality => SettingValue::Int(3),
@@ -240,6 +249,7 @@ impl SettingKey {
             Self::LastParcelY => SettingValue::Int(-10),
             Self::FirstMoveInWorldSent => SettingValue::Bool(false),
             Self::InstallReferrerSent => SettingValue::Bool(false),
+            Self::FirstSocialActionSent => SettingValue::Bool(false),
             Self::DebugRotateGuestAnchor => SettingValue::Bool(false),
             Self::LocalAssetsCacheVersion => SettingValue::Int(0),
             Self::Day1NotificationScheduled => SettingValue::Bool(false),
@@ -263,7 +273,7 @@ impl SettingKey {
 
     /// The keys the shell lists; the rest are the engine's own state.
     pub fn shell_visible(self) -> bool {
-        Self::ALL[..17].contains(&self)
+        Self::ALL[..18].contains(&self)
     }
 }
 

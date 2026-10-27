@@ -10,6 +10,7 @@ use godot::classes::{
 };
 use godot::prelude::*;
 
+use crate::app::analytics_controller;
 use crate::avatars::emotes;
 use crate::avatars::loaders::EmoteLoader;
 use crate::fetcher::globals;
@@ -324,6 +325,8 @@ impl DclAvatar {
         if id.is_empty() {
             return;
         }
+        let id = emotes::normalize_emote_id(id);
+        let id = id.as_str();
         if self.emote.is_modifying {
             self.emote.queued_play = Some(EmoteRequest {
                 urn: id.to_string(),
@@ -363,7 +366,7 @@ impl DclAvatar {
         self.emote.current_scene_id = owner_scene_id;
         self.emote.masked_suspended = false;
         if self.is_local_player {
-            self.track_emote(id);
+            self.track_emote(id, owner_scene_id);
         }
         let looping = self.emote.playing_loop;
         let id = id.to_string();
@@ -726,6 +729,24 @@ impl DclAvatar {
         }
     }
 
+    /// Unity re-sends a looping emote's PlayerEmote every cycle over LiveKit (ADR-204) so late
+    /// joiners pick it up. For a remote avatar already looping that emote the re-send is a
+    /// no-op: restarting it would visibly reset the clip each cycle.
+    pub(crate) fn is_loop_reannounce(&self, id: &str, mask: i64) -> bool {
+        // Remote players only: previews have no entity id, and the local player and NPCs
+        // re-trigger on purpose.
+        if self.is_local_player || self.is_avatar_shape || self.dcl_entity_id < 0 {
+            return false;
+        }
+        if !self.emote.playing_loop || !self.emote.is_playing() || mask != self.emote.current_mask {
+            return false;
+        }
+        if emotes::is_emote_default(id) {
+            return emotes::base_emote_urn(id) == self.emote.current_urn;
+        }
+        id == self.emote.current_urn
+    }
+
     /// Whether any emote is playing.
     pub fn is_emote_playing(&self) -> bool {
         self.emote.is_playing()
@@ -792,9 +813,11 @@ impl DclAvatar {
         }
     }
 
-    fn track_emote(&self, id: &str) {
+    fn track_emote(&self, id: &str, owner_scene_id: i32) {
         let is_base = emotes::is_emote_default(id) || emotes::is_base_emote_urn(id);
-        let source = if id.contains("scene-emote") {
+        // Who triggered it (#1410): scenes also play base, collection and utility emotes, so
+        // the owner scene id decides, not the URN.
+        let source = if owner_scene_id >= 0 || emotes::is_scene_emote_urn(id) {
             "scene"
         } else {
             "user"
@@ -810,6 +833,9 @@ impl DclAvatar {
             screen.to_string(),
             payload.to_string(),
         );
+        if source == "user" {
+            analytics_controller::track_first_social_action("emote");
+        }
     }
 
     /// Pauses the tree on the idle pose for stills (previews, renderers).

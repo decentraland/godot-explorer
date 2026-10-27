@@ -1,7 +1,7 @@
 //! Feet, hands and head IK: Unity's per-rig gates and the frame calls. Visual only, bone
 //! modifiers. A remote avatar gets the head alone, since Unity's hands and feet need the sender's
 //! rigid transform, which a remote entity does not carry. Head sync leaves from here too: Unity's
-//! HeadSync sends yaw and pitch, not a look-at vector.
+//! HeadSync sends world-space yaw and pitch, not a look-at vector.
 
 pub mod feet;
 pub mod hands;
@@ -93,18 +93,20 @@ impl DclAvatar {
             self.head_ik_pitch = ik.head.head_pitch_deg;
             self.head_ik_yaw_enabled = head_on;
             self.head_ik_pitch_enabled = head_on;
-            globals::comms().bind_mut().set_head_ik(
-                head_on,
-                ik.head.head_yaw_deg,
-                ik.head.head_pitch_deg,
-            );
+            let basis = self.base().get_global_transform().basis;
+            let (wire_yaw, wire_pitch) =
+                head::body_to_wire(ik.head.head_yaw_deg, ik.head.head_pitch_deg, basis);
+            globals::comms()
+                .bind_mut()
+                .set_head_ik(head_on, wire_yaw, wire_pitch);
         } else {
             // A remote head comes over the wire, never from our camera.
             let head_on = (self.head_ik_yaw_enabled || self.head_ik_pitch_enabled)
                 && rig_free
                 && !stunned
                 && self.lod.distance <= REMOTE_DISTANCE;
-            let (yaw, pitch) = (self.head_ik_yaw, self.head_ik_pitch);
+            let basis = self.base().get_global_transform().basis;
+            let (yaw, pitch) = head::wire_to_body(self.head_ik_yaw, self.head_ik_pitch, basis);
             ik.head
                 .update_remote(self, &skeleton, delta, head_on, yaw, pitch);
         }

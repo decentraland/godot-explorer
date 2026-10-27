@@ -13,8 +13,15 @@
 # Placeholder for a raw Magic SDK error code; cleared at lobby.gd:906 and filled with SDK text.
 godot/src/ui/pages/auth/lobby.tscn	Magic Error 
 
+# Day-index label (D1..D7) formatted onto the login-streak pill, not prose.
+godot/src/ui/components/atoms/controls/streak_day_pill/streak_day_pill.gd	D[b]%d[/b]
+
 # Debug-only button, only built when the debug guest-wallet reset is enabled.
 godot/src/ui/pages/auth/lobby.gd	RESET GUEST WALLET (DEBUG)
+
+# Debug-only addendum to the claim-failed panel (raw rewards-server error code), shown only on
+# non-production builds — see StreakModal._update_claim_failed_label.
+godot/src/ui/components/organisms/streak_modal/streak_modal.gd	\\n[font_size=14][color=gray]code: %s[/color][/font_size]
 
 # Design-time placeholder; the real string is composed at loading_screen.gd:140.
 godot/src/ui/pages/loading_screen/loading_screen.tscn	0000/0000 resouces at 000.00 mb/s - Opt

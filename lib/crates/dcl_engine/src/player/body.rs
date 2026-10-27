@@ -7,6 +7,9 @@ use godot::prelude::*;
 use super::{
     camera_clamp::CameraCollisionClamp,
     desktop_input::PlayerDesktopInput,
+    jump_action::{
+        in_coyote_window, resolve_ground_distance, resolve_jump_action, JumpActionInputs,
+    },
     movement_systems::{
         gait_flags, MovementSystems, FALL_ANIM_SPEED, GLIDE_WIND_RESPONSE,
         HARD_LANDING_FALL_HEIGHT, KIND_IDLE, KIND_JOG, KIND_RUN, KIND_WALK, LONG_FALL_ANIM_SPEED,
@@ -71,7 +74,7 @@ const AIR_ACCEL_MAX: f32 = 20.0;
 const AIR_DRAG: f32 = 0.2;
 
 // Unity parity (ApplyJump.cs / ApplyGravity.cs). Seconds, never ticks.
-const COYOTE_WINDOW: f32 = 0.15;
+pub(super) const COYOTE_WINDOW: f32 = 0.15;
 pub(super) const GRAVITY_ASCENT_FACTOR: f32 = 4.0;
 const LONG_JUMP_TIME: f32 = 0.5;
 const LONG_JUMP_GRAVITY_SCALE: f32 = 0.5;
@@ -226,6 +229,9 @@ pub struct Player {
     air_jump_delay_timer: f32,
     air_jump_direction: Vector3,
     ground_distance: f32,
+    /// `supported || in_coyote` of the last physics tick: the jump icon reads it so it agrees with
+    /// the press (#2960).
+    jump_action_grounded: bool,
     /// True while AvatarRaycast is aimed at the crosshair (mobile, non-cinematic): gates the
     /// restore-to-default so it does not write constants every tick.
     avatar_raycast_crosshair_active: bool,
@@ -298,7 +304,8 @@ impl ICharacterBody3D for Player {
             time_since_glide_end: 1000.0,
             air_jump_delay_timer: 0.0,
             air_jump_direction: Vector3::ZERO,
-            ground_distance: f32::INFINITY,
+            ground_distance: 0.0,
+            jump_action_grounded: true,
             avatar_raycast_crosshair_active: false,
             crosshair_screen_pos: Vector2::ZERO,
             crosshair_alpha: 1.0,
@@ -716,39 +723,20 @@ impl Player {
     pub fn get_jump_action(&self) -> i32 {
         let global = DclGlobal::singleton();
         let global = global.bind();
-        if global.is_jump_disabled() || global.is_all_input_disabled() {
-            return JUMP_ACTION_NONE;
-        }
-        if self.hard_landing_timer > 0.0 {
-            return JUMP_ACTION_NONE;
-        }
-        if self.base().is_on_floor() || self.base().get_position().y <= 0.0 {
-            return JUMP_ACTION_JUMP;
-        }
-        // Airborne. GLIDE_TOGGLE is reported while the glider is open even if the scene
-        // disables gliding: the force-close transitions to CLOSING next tick, and NONE here
-        // would flicker the icon in between.
-        if self.glide_state == GLIDE_OPENING || self.glide_state == GLIDE_GLIDING {
-            return JUMP_ACTION_GLIDE_TOGGLE;
-        }
-        if self.glide_state == GLIDE_CLOSING {
-            return JUMP_ACTION_NONE;
-        }
-        // Closed: an air-jump takes priority over glide-open.
-        if self.jump_count <= MAX_AIR_JUMPS
-            && !global.is_double_jump_disabled()
-            && self.time_since_last_jump >= JUMP_COOLDOWN
-        {
-            return JUMP_ACTION_JUMP;
-        }
-        if !global.is_glide_disabled()
-            && self.ground_distance > GLIDE_MIN_GROUND_DISTANCE
-            && self.time_since_last_jump >= JUMP_TO_GLIDE_INTERVAL
-            && self.time_since_glide_end >= GLIDE_COOLDOWN
-        {
-            return JUMP_ACTION_GLIDE_TOGGLE;
-        }
-        JUMP_ACTION_NONE
+        resolve_jump_action(&JumpActionInputs {
+            jump_disabled: global.is_jump_disabled(),
+            all_input_disabled: global.is_all_input_disabled(),
+            hard_landing: self.hard_landing_timer > 0.0,
+            grounded: self.jump_action_grounded,
+            glide_state: self.glide_state,
+            jump_count: self.jump_count,
+            double_jump_disabled: global.is_double_jump_disabled(),
+            glide_disabled: global.is_glide_disabled(),
+            ground_distance: self.ground_distance,
+            fall_elapsed: self.time_falling,
+            since_last_jump: self.time_since_last_jump,
+            since_glide_end: self.time_since_glide_end,
+        })
     }
 
     /// True while the next jump press would open or close the glider.
@@ -936,31 +924,29 @@ impl Player {
         }
     }
 
-    /// Distance from feet to ground for glide entry and close gating; infinite beyond 20m. Uses
-    /// the terrain layer only, so wearables, triggers and scene gadgets do not collapse the
+    /// Distance from feet to ground for glide entry and close gating. A ray miss reads as the
+    /// height above the clamp-held realm floor, not as infinite altitude. Uses the terrain layer
+    /// only, so wearables, triggers and scene gadgets do not collapse the
     /// reading; the exclude list is a belt-and-suspenders for avatar colliders that might
     /// briefly share the world mask.
     fn measure_ground_distance(&mut self) -> f32 {
         let Some(world) = self.base().get_world_3d() else {
-            return f32::INFINITY;
+            return 0.0;
         };
         let Some(mut space) = world.get_direct_space_state() else {
-            return f32::INFINITY;
+            return 0.0;
         };
         let from = self.base().get_global_position() + Vector3::new(0.0, 0.1, 0.0);
         let to = from + Vector3::new(0.0, -20.0, 0.0);
         let Some(mut query) = PhysicsRayQueryParameters3D::create(from, to) else {
-            return f32::INFINITY;
+            return 0.0;
         };
         query.set_collision_mask(GROUND_RAYCAST_MASK);
         query.set_exclude(&self.raycast_exclude);
         query.set_collide_with_bodies(true);
         query.set_collide_with_areas(false);
         let hit = space.intersect_ray(&query);
-        match hit.get("position") {
-            Some(position) => from.y - position.to::<Vector3>().y,
-            None => f32::INFINITY,
-        }
+        resolve_ground_distance(hit.get("position").map(|p| p.to::<Vector3>().y), from.y)
     }
 
     /// Asymmetric gravity (ApplyGravity.cs): the hold window first (applies on ascent and early
@@ -1154,7 +1140,8 @@ impl Player {
         // The ground jump stays reachable this long after leaving the floor, and the glide gate
         // must not eat the press. velocity.y guards it: the window opens only when walking off
         // a ledge, never on the way up (a jump-pad launch must not become a cancellable ground).
-        let in_coyote = !supported && self.time_falling <= COYOTE_WINDOW && velocity.y <= 0.0;
+        let in_coyote = in_coyote_window(supported, self.time_falling, velocity.y);
+        self.jump_action_grounded = supported || in_coyote;
 
         // Air-jump hover phase: freeze gravity, then fire the impulse and horizontal dash when
         // the timer expires. avatar.rise/fall stay untouched on purpose: flipping them mid-hover
@@ -1223,9 +1210,18 @@ impl Player {
             if self.jump_buffer > 0.0 && self.glide_state == GLIDE_CLOSED {
                 let gate_enabled = !jump_disabled && !glide_disabled;
                 let gate_altitude = self.ground_distance > GLIDE_MIN_GROUND_DISTANCE;
+                // A step-up spends a frame here with vy > 0 (the riser slide), so `in_coyote` is
+                // false while the fall timer is still at one tick: without real airborne time
+                // that frame would open the glider, and the icon flashes with it (#2960).
+                let gate_airborne = self.time_falling > COYOTE_WINDOW;
                 let gate_jump_interval = self.time_since_last_jump >= JUMP_TO_GLIDE_INTERVAL;
                 let gate_cooldown = self.time_since_glide_end >= GLIDE_COOLDOWN;
-                if gate_enabled && gate_altitude && gate_jump_interval && gate_cooldown {
+                if gate_enabled
+                    && gate_altitude
+                    && gate_airborne
+                    && gate_jump_interval
+                    && gate_cooldown
+                {
                     self.glide_state = GLIDE_OPENING;
                     self.glide_timer = GLIDE_OPENING_TIME;
                     self.jump_buffer = 0.0;

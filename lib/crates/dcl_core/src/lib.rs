@@ -32,6 +32,7 @@ pub mod report;
 pub mod review;
 pub mod scene;
 pub mod scene_requests;
+pub mod seasonal_skin;
 pub mod session;
 pub mod settings;
 pub mod urls;

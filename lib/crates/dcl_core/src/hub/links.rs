@@ -6,9 +6,11 @@ use std::sync::Arc;
 
 use crate::{
     app::State,
+    deep_link::parse_deep_link,
     deep_link_route::AuthSnapshot,
     deep_link_route::{
-        ConfigParam, DeepLinkRouter, Effect, MonotonicClock, RouteContext, Routed, StartKind,
+        ConfigParam, DeepLinkRouter, Effect, MonotonicClock, PendingSignIn, RouteContext, Routed,
+        StartKind,
     },
     Platform,
 };
@@ -19,7 +21,7 @@ use super::Hub;
 pub struct LinkOutcome {
     pub routed: Routed,
     /// A browser sign-in the caller must finish now with `complete_browser`.
-    pub complete_sign_in: Option<String>,
+    pub complete_sign_in: Option<PendingSignIn>,
 }
 
 impl Hub {
@@ -52,6 +54,7 @@ impl Hub {
                 pending_mobile_auth: pending,
                 wallet_connected: connected,
             },
+            pending_auth_requests: self.verifiers.pending_ids(),
         }
     }
 
@@ -68,7 +71,18 @@ impl Hub {
         for effect in routed.effects.drain(..) {
             match effect {
                 Effect::CompleteMobileSignIn { identity_id } => {
-                    complete_sign_in = Some(identity_id)
+                    let auth_request_id = parse_deep_link(url)
+                        .and_then(|link| {
+                            link.params
+                                .into_iter()
+                                .rfind(|(key, _)| key == "authRequestId")
+                        })
+                        .map(|(_, value)| value)
+                        .unwrap_or_default();
+                    complete_sign_in = Some(PendingSignIn {
+                        identity_id,
+                        auth_request_id,
+                    })
                 }
                 Effect::SignInParked => {
                     complete_sign_in = complete_sign_in.or_else(|| self.resume_parked_sign_in());
@@ -89,8 +103,12 @@ impl Hub {
                 Effect::Config {
                     param: ConfigParam::FtueTutorialStart,
                 } => crate::ftue::force_tutorial(),
+                // The shell also hears it: a preview launch signs in silently.
                 Effect::SetPreviewUrl { url } => {
-                    self.with_app(|app| app.control(crate::app::Control::SetPreviewUrl { url }))
+                    self.with_app(|app| {
+                        app.control(crate::app::Control::SetPreviewUrl { url: url.clone() })
+                    });
+                    rest.push(Effect::SetPreviewUrl { url });
                 }
                 other => rest.push(other),
             }
@@ -104,13 +122,13 @@ impl Hub {
 
     /// The identity of a sign-in a cold start parked, if the user is signed out to take it. Called
     /// again after boot, since the link can arrive before the saved account was looked up.
-    pub fn resume_parked_sign_in(&self) -> Option<String> {
+    pub fn resume_parked_sign_in(&self) -> Option<PendingSignIn> {
         if !matches!(self.with_app(|app| app.state().clone()), State::SignedOut) {
             return None;
         }
         self.router
             .lock()
             .unwrap_or_else(|e| e.into_inner())
-            .take_pending_signin_identity_id()
+            .take_pending_signin()
     }
 }

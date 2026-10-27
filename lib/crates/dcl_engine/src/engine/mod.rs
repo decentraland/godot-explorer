@@ -14,4 +14,4 @@ mod screenshot_link;
 pub(crate) mod settings_link;
 
 pub use dcl_engine::DclEngine;
-pub(crate) use settings_link::{benchmark_gpu_score, texture_quality_setting};
+pub(crate) use settings_link::{benchmark_gpu_score, show_own_nametag, texture_quality_setting};

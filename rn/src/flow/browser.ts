@@ -3,7 +3,9 @@ import InAppBrowser from 'react-native-inappbrowser-reborn';
 import { applyRouted } from '../app/links';
 import { core } from '../core';
 import { onCoreEvents } from '../core/events';
-import { StartKind } from '../core/native';
+import { Effect_Tags, StartKind } from '../core/native';
+import type { Routed } from '../core/native';
+import { trackInitialLink } from './launchLink';
 
 let started = false;
 
@@ -26,7 +28,15 @@ export function startLinkHandling() {
     },
   });
   Linking.addEventListener('url', ({ url }) => routeLink(url, StartKind.Warm));
-  Linking.getInitialURL().then(url => url && routeLink(url, StartKind.Cold));
+  trackInitialLink(
+    Linking.getInitialURL().then(
+      url =>
+        !!url &&
+        routeLink(url, StartKind.Cold).effects.some(
+          effect => effect.tag === Effect_Tags.SetPreviewUrl,
+        ),
+    ),
+  );
 }
 
 /** A tab the player closes ends the sign-in it was opened for; one we close after the link returns does not. */
@@ -37,7 +47,9 @@ async function openAndWatch(url: string) {
   }
 }
 
-function routeLink(url: string, start: StartKind) {
+function routeLink(url: string, start: StartKind): Routed {
   InAppBrowser.close();
-  applyRouted(core().handleDeepLink(url, start));
+  const routed = core().handleDeepLink(url, start);
+  applyRouted(routed);
+  return routed;
 }

@@ -22,11 +22,12 @@ use super::auth_identity::{
     complete_mobile_auth, create_ephemeral_from_external_signature, create_local_ephemeral,
     generate_ephemeral_for_signing, start_mobile_auth,
 };
-use super::decentraland_auth_server::{do_request, CreateRequest};
+use super::decentraland_auth_server::{do_request, CreateRequest, IdentityStatusError};
 use super::ephemeral_auth_chain::EphemeralAuthChain;
 use super::identity::{RecoverableAccount, Session, SessionEvent};
 use super::remote_wallet::RemoteWallet;
 use super::review_login;
+use super::signin_verifier::{self, VerifierStore};
 use super::thirdweb_flows::{
     perform_delete_guest_account, perform_delete_upgraded_account, perform_email_login,
     perform_link_email, perform_thirdweb_guest_login,
@@ -40,6 +41,10 @@ pub struct DclPlayerIdentity {
     profile: Option<Gd<DclUserProfile>>,
 
     try_connect_account_handle: Option<JoinHandle<()>>,
+
+    /// `authRequestId` of the browser sign-in this process started, so a cancel can drop its
+    /// verifier.
+    mobile_auth_request_id: Option<String>,
 
     #[var(pub)]
     pub is_guest: bool,
@@ -113,6 +118,7 @@ impl INode for DclPlayerIdentity {
             base,
             is_guest: false,
             try_connect_account_handle: None,
+            mobile_auth_request_id: None,
             mutable_profile,
             mutable_avatar,
             lambda_url: String::new(),
@@ -712,6 +718,9 @@ impl DclPlayerIdentity {
             handle.abort();
         }
         self.with_session(|s| s.abort_connect());
+        if let Some(auth_request_id) = self.mobile_auth_request_id.take() {
+            VerifierStore::new(Core::get().data_dir()).remove_pending(&auth_request_id);
+        }
     }
 
     /// Starts mobile auth flow. Opens browser and returns immediately.
@@ -729,6 +738,15 @@ impl DclPlayerIdentity {
         let Some(handle) = Core::try_handle() else {
             panic!("tokio runtime not initialized")
         };
+
+        let auth_request_id = VerifierStore::new(Core::get().data_dir())
+            .add_pending(signin_verifier::create_verifier());
+        if auth_request_id.is_none() {
+            tracing::warn!(
+                "signin_verifier: could not persist the verifier, opening /auth/mobile without authRequestId"
+            );
+        }
+        self.mobile_auth_request_id = auth_request_id.clone();
 
         let instance_id = self.base().instance_id();
         let sender = DclGlobal::singleton()
@@ -754,7 +772,8 @@ impl DclPlayerIdentity {
         };
 
         handle.spawn(async move {
-            let result = start_mobile_auth(sender, provider, user_id, session_id).await;
+            let result =
+                start_mobile_auth(sender, provider, user_id, session_id, auth_request_id).await;
             let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
             };
@@ -787,7 +806,7 @@ impl DclPlayerIdentity {
     /// everything needed is behind `complete_mobile_auth(identity_id)`, and an invalid or
     /// expired id already fails there with a real error.
     #[func]
-    fn complete_mobile_connect_account(&mut self, identity_id: GString) {
+    fn complete_mobile_connect_account(&mut self, identity_id: GString, auth_request_id: GString) {
         self.with_session(|s| s.take_pending_mobile_auth());
 
         let Some(handle) = Core::try_handle() else {
@@ -797,9 +816,28 @@ impl DclPlayerIdentity {
         let instance_id = self.base().instance_id();
         let identity_id = identity_id.to_string();
         let attempt = self.with_session(|s| s.mobile_auth_attempt());
+        let store = VerifierStore::new(Core::get().data_dir());
+        // Foreign ids are dropped by the deep-link router before this; one cancelled since then
+        // is fetched without the header and the server decides.
+        let pending = match store.select_pending(&auth_request_id.to_string()) {
+            signin_verifier::Selection::Use(pending) => Some(pending),
+            signin_verifier::Selection::NoVerifier | signin_verifier::Selection::Foreign => None,
+        };
+        let used_auth_request_id = pending.as_ref().map(|p| p.auth_request_id.clone());
 
         let complete_handle = handle.spawn(async move {
-            let result = complete_mobile_auth(identity_id).await;
+            let result = complete_mobile_auth(identity_id, pending.map(|p| p.verifier)).await;
+            let status = result
+                .as_ref()
+                .err()
+                .and_then(|e| e.downcast_ref::<IdentityStatusError>())
+                .map(|e| e.0);
+            // Transport errors and 5xx keep the verifier: the auth page can send the link again.
+            if let Some(id) = used_auth_request_id
+                .filter(|_| result.is_ok() || signin_verifier::is_terminal_status(status))
+            {
+                store.remove_pending(&id);
+            }
             let Ok(this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
             };
@@ -823,7 +861,11 @@ impl DclPlayerIdentity {
                 }
                 Err(err) => {
                     tracing::error!("Error completing mobile auth: {:?}", err);
-                    let message = format!("Mobile auth completion error: {}", err);
+                    let message = if status == Some(401) {
+                        "AUTH_SIGN_IN_OTHER_REQUEST".to_string()
+                    } else {
+                        format!("Mobile auth completion error: {}", err)
+                    };
                     on_main(this.instance_id(), move |node| {
                         node.mobile_auth_failed(attempt, &message)
                     });

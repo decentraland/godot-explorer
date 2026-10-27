@@ -356,6 +356,12 @@ interface NativeModuleInterface {
     y: number,
     uniffi_out_err: UniffiRustCallStatus,
   ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_seasonal_skin(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_seasonal_skin_take_fetch_attempt(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): number;
   ubrn_uniffi_dcl_core_fn_func_session_backgrounded(
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
@@ -636,6 +642,8 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_review_check(): number;
   ubrn_uniffi_dcl_core_checksum_func_review_fire(): number;
   ubrn_uniffi_dcl_core_checksum_func_scene_link_url(): number;
+  ubrn_uniffi_dcl_core_checksum_func_seasonal_skin(): number;
+  ubrn_uniffi_dcl_core_checksum_func_seasonal_skin_take_fetch_attempt(): number;
   ubrn_uniffi_dcl_core_checksum_func_session_backgrounded(): number;
   ubrn_uniffi_dcl_core_checksum_func_session_foregrounded(): number;
   ubrn_uniffi_dcl_core_checksum_func_session_launched(): number;

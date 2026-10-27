@@ -92,9 +92,8 @@ impl AvatarSink for Gd<AvatarScene> {
             );
     }
 
-    fn play_emote(&mut self, alias: u32, incremental_id: u32, urn: &str, mask: i64) {
-        self.bind_mut()
-            .play_emote(alias, incremental_id, &urn.to_string(), mask);
+    fn play_emote(&mut self, alias: u32, urn: &str, mask: i64) {
+        self.bind_mut().play_emote(alias, urn, mask);
     }
 
     fn stop_emote(&mut self, alias: u32) {

@@ -1,5 +1,5 @@
 //! Avatar nameplates: the `NicknameUi` control and the shared screen-space layer that projects,
-//! fades, stacks and occludes every avatar's plate (#2215).
+//! fades and occludes every avatar's plate (#2215).
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -12,6 +12,7 @@ use godot::classes::{
 };
 use godot::prelude::*;
 
+use super::nameplate_tiers::{Tier, TierState};
 use crate::godot_classes::dcl_avatar::DclAvatar;
 use crate::godot_classes::dcl_global::DclGlobal;
 
@@ -98,6 +99,32 @@ impl NicknameUi {
         self.set_nickname_color(color);
         self.set_client_version(version);
         self.set_room_debug(room);
+    }
+
+    /// Shows the rows the tier allows: `#hash` only in FULL, the badge (checkmark and mic)
+    /// dropped in NAME. The chat bubble follows `show_chat` (distance), not the capped tier.
+    pub fn apply_tier(&mut self, tier: Tier, show_chat: bool) {
+        let (claimed, mic) = (self.name_claimed, self.mic_enabled);
+        if let Some(mut hash) = self.node::<Control>("Hash") {
+            hash.set_visible(tier == Tier::Full && !claimed);
+        }
+        if let Some(mut clip) = self.node::<Control>("MessageClip") {
+            clip.set_visible(show_chat);
+        }
+        if let Some(mut check) = self.node::<Control>("ClaimedCheckmark") {
+            check.set_visible(tier != Tier::Name && claimed);
+        }
+        if let Some(mut icon) = self.node::<Control>("MicEnabled") {
+            icon.set_visible(tier != Tier::Name && mic);
+        }
+    }
+
+    /// The setters write row visibility directly: put the applied tier back on top.
+    fn reassert_tier(&mut self) {
+        let id = self.base().instance_id().to_i64();
+        if let Some((tier, show_chat)) = with_plates(|plates| plates.tiers.applied(id)) {
+            self.apply_tier(tier, show_chat);
+        }
     }
 
     fn create_message_container(&self, message: &str) -> Option<Gd<Control>> {
@@ -210,6 +237,7 @@ impl NicknameUi {
         if let Some(mut check) = self.node::<Control>("ClaimedCheckmark") {
             check.set_visible(value);
         }
+        self.reassert_tier();
     }
 
     #[func]
@@ -221,6 +249,7 @@ impl NicknameUi {
         if let Some(mut icon) = self.node::<Control>("MicEnabled") {
             icon.set_visible(value);
         }
+        self.reassert_tier();
     }
 
     #[func]
@@ -286,107 +315,35 @@ impl NicknameUi {
     }
 }
 
-// On-screen size and distance fade (full below FADE_START, none at FADE_END).
+// On-screen size and distance fade; the content tiers are in `nameplate_tiers`.
 pub const SCALE: f32 = 0.2875;
 /// Fraction of the plate height kept above the head anchor.
 pub const ANCHOR_HEIGHT_FACTOR: f32 = 0.85;
-pub const FADE_START: f32 = 10.0;
-pub const FADE_END: f32 = 15.0;
+/// Fully faded out from here.
+pub const FADE_END: f32 = 25.0;
 /// Alpha per second for the occlusion fade.
 pub const FADE_SPEED: f32 = 6.0;
-const CL_PHYSICS: u32 = 2;
+pub(crate) const CL_PHYSICS: u32 = 2;
 const CL_PLAYER: u32 = 4;
 const BODY_MASK: u32 = CL_PHYSICS | CL_PLAYER;
 /// A plate with alpha 0 whose head is farther than this skips the anchor and projection work.
 pub const FAR_SKIP_DISTANCE: f32 = FADE_END + 5.0;
 pub const NAMETAG_MARGIN: f32 = 0.1;
-const STACK_PAD: f32 = 2.0;
-/// Fraction of the plate height left out (top and bottom) of the collision rect: the visible
-/// pill is much smaller than the control.
-const STACK_COLLISION_INSET: f32 = 0.22;
-/// Fraction of the overlap corrected per frame, so stacking eases instead of snapping.
-const STACK_RELAX: f32 = 0.3;
-/// Extra separation other plates keep from a fading one.
-const STACK_FADE_PAD: f32 = 30.0;
-const STACK_FADE_MIN_RELAX: f32 = 0.15;
 
-/// De-overlap state per visible plate, keyed by the plate's instance id. Each carries an offset
-/// from its projected anchor that springs home when nothing overlaps and eases apart when
-/// plates do. O(n²) over the plates within FADE_END; n is small.
+/// Per-plate state keyed by the plate's instance id.
 #[derive(Default)]
-pub struct PlateSolver {
-    rects: HashMap<i64, Rect2>,
-    offsets: HashMap<i64, Vector2>,
-    alphas: HashMap<i64, f32>,
+pub struct Plates {
     /// World point each plate is drawn at: occlusion rays go there, so a cluster behind one
     /// occluder does not lose every tag.
     ray_targets: HashMap<i64, Vector3>,
+    pub tiers: TierState,
 }
 
-impl PlateSolver {
-    /// Where to draw plate `id` given where it would be alone. A plate yields only to those
-    /// with a lower id, so a pair never escalates.
-    pub fn stack_position(
-        &mut self,
-        id: i64,
-        alpha: f32,
-        desired: Vector2,
-        screen_size: Vector2,
-        view_size: Vector2,
-    ) -> Vector2 {
-        let alpha = alpha.clamp(0.0, 1.0);
-        let offset = self.offsets.get(&id).copied().unwrap_or(Vector2::ZERO);
-        let inset = screen_size.y * STACK_COLLISION_INSET;
-        let col_size = Vector2::new(screen_size.x, screen_size.y - inset * 2.0);
-
-        // Clear any overlapping plate along the axis of least penetration: sideways when
-        // that is cheaper, upward otherwise (no name towers).
-        let mut target = Vector2::ZERO;
-        for (&other_id, &other) in &self.rects {
-            if other_id == id || id < other_id {
-                continue;
-            }
-            let candidate = Rect2::new(desired + target + Vector2::new(0.0, inset), col_size);
-            if !candidate.intersects(other) {
-                continue;
-            }
-            let other_alpha = self.alphas.get(&other_id).copied().unwrap_or(1.0);
-            let pad = STACK_PAD + (1.0 - other_alpha) * STACK_FADE_PAD;
-            let other_end = other.position + other.size;
-            let candidate_end = candidate.position + candidate.size;
-            let overlap_x =
-                candidate_end.x.min(other_end.x) - candidate.position.x.max(other.position.x);
-            let overlap_y =
-                candidate_end.y.min(other_end.y) - candidate.position.y.max(other.position.y);
-            if overlap_x < overlap_y {
-                let other_center_x = other.position.x + other.size.x * 0.5;
-                if desired.x + col_size.x * 0.5 >= other_center_x {
-                    target.x = other_end.x + pad - desired.x;
-                } else {
-                    target.x = other.position.x - pad - col_size.x - desired.x;
-                }
-            } else {
-                target.y = other.position.y - pad - (desired.y + inset) - col_size.y;
-            }
-        }
-        let relax = STACK_RELAX * (STACK_FADE_MIN_RELAX + (1.0 - STACK_FADE_MIN_RELAX) * alpha);
-        let offset = offset.lerp(target, relax);
-        let mut pos = desired + offset;
-        pos.y = pos.y.max(0.0);
-        pos.x = pos.x.clamp(0.0, (view_size.x - screen_size.x).max(0.0));
-        self.offsets.insert(id, pos - desired);
-        self.rects
-            .insert(id, Rect2::new(pos + Vector2::new(0.0, inset), col_size));
-        self.alphas.insert(id, alpha);
-        pos
-    }
-
-    /// Hidden, occluded and off-screen plates reserve no space.
+impl Plates {
+    /// Hidden, occluded and off-screen plates are not tracked.
     pub fn untrack(&mut self, id: i64) {
-        self.rects.remove(&id);
-        self.offsets.remove(&id);
-        self.alphas.remove(&id);
         self.ray_targets.remove(&id);
+        self.tiers.untrack(id);
     }
 
     pub fn set_ray_target(&mut self, id: i64, target: Vector3) {
@@ -396,15 +353,10 @@ impl PlateSolver {
     pub fn ray_target(&self, id: i64) -> Option<Vector3> {
         self.ray_targets.get(&id).copied()
     }
-
-    #[cfg(test)]
-    fn rect(&self, id: i64) -> Option<Rect2> {
-        self.rects.get(&id).copied()
-    }
 }
 
 thread_local! {
-    static SOLVER: RefCell<PlateSolver> = RefCell::new(PlateSolver::default());
+    static PLATES: RefCell<Plates> = RefCell::new(Plates::default());
     static ROOT: RefCell<Option<Gd<Control>>> = const { RefCell::new(None) };
 }
 
@@ -412,8 +364,8 @@ thread_local! {
 pub static DEBUG_DISABLE_OCCLUSION: std::sync::atomic::AtomicBool =
     std::sync::atomic::AtomicBool::new(false);
 
-pub fn with_solver<R>(f: impl FnOnce(&mut PlateSolver) -> R) -> R {
-    SOLVER.with(|solver| f(&mut solver.borrow_mut()))
+pub fn with_plates<R>(f: impl FnOnce(&mut Plates) -> R) -> R {
+    PLATES.with(|plates| f(&mut plates.borrow_mut()))
 }
 
 /// The control nameplates are parented under (screen-space), created on first use under
@@ -458,50 +410,4 @@ pub fn occlusion_query(
 
 pub fn avatar_obj_id(avatar: &DclAvatar) -> i64 {
     avatar.base().instance_id().to_i64()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    const SIZE: Vector2 = Vector2::new(200.0, 40.0);
-    const VIEW: Vector2 = Vector2::new(1600.0, 720.0);
-
-    #[test]
-    fn unconstrained_plate_stays_on_its_anchor() {
-        let mut solver = PlateSolver::default();
-        let desired = Vector2::new(100.0, 100.0);
-        assert_eq!(solver.stack_position(1, 1.0, desired, SIZE, VIEW), desired);
-    }
-
-    #[test]
-    fn overlapping_plates_separate() {
-        let mut solver = PlateSolver::default();
-        solver.stack_position(1, 1.0, Vector2::new(100.0, 100.0), SIZE, VIEW);
-        // The higher id yields; the spring relaxes over frames.
-        for _ in 0..200 {
-            solver.stack_position(2, 1.0, Vector2::new(120.0, 110.0), SIZE, VIEW);
-        }
-        let a = solver.rect(1).unwrap();
-        let b = solver.rect(2).unwrap();
-        assert!(!a.intersects(b));
-    }
-
-    #[test]
-    fn untracked_plate_reserves_no_space() {
-        let mut solver = PlateSolver::default();
-        solver.stack_position(1, 1.0, Vector2::new(100.0, 100.0), SIZE, VIEW);
-        solver.untrack(1);
-        let pos = solver.stack_position(3, 1.0, Vector2::new(100.0, 100.0), SIZE, VIEW);
-        assert_eq!(pos, Vector2::new(100.0, 100.0));
-    }
-
-    #[test]
-    fn plates_stay_inside_the_view() {
-        let mut solver = PlateSolver::default();
-        let pos = solver.stack_position(1, 1.0, Vector2::new(-50.0, -20.0), SIZE, VIEW);
-        assert!(pos.x >= 0.0 && pos.y >= 0.0);
-        let pos = solver.stack_position(2, 1.0, Vector2::new(5000.0, 10.0), SIZE, VIEW);
-        assert!(pos.x <= VIEW.x - SIZE.x);
-    }
 }

@@ -346,10 +346,16 @@ pub async fn async_play_emote(avatar: Gd<DclAvatar>, id: String, mask: i64, owne
     if id.is_empty() {
         return;
     }
+    // Other clients spell built-in emotes differently (#2986): Bevy sends
+    // `...:base-scene-emotes:throw` where Unity and this client send `throw`.
+    let id = emotes::normalize_emote_id(&id);
     let first;
     {
         let mut this = avatar.clone();
         let mut this = this.bind_mut();
+        if this.is_loop_reannounce(&id, mask) {
+            return;
+        }
         let now = now_seconds();
         if now - this.emote.last_emote_time < EMOTE_COOLDOWN_SECONDS {
             return;
@@ -496,7 +502,7 @@ pub async fn load_equipped_emotes(avatar: &Gd<DclAvatar>) {
 
 /// Fetches and extracts one emote into the avatar's table.
 pub async fn async_load_emote(avatar: Gd<DclAvatar>, urn: &str) {
-    if urn.contains("scene-emote") {
+    if emotes::is_scene_emote_urn(urn) {
         async_load_scene_emote(avatar, urn).await;
         return;
     }

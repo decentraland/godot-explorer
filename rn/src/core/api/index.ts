@@ -9,6 +9,7 @@ import type { PushApi } from './push';
 import type { GatesApi } from './gates';
 import type { LifecycleApi } from './lifecycle';
 import type { SceneApi } from './scene';
+import type { SeasonalSkinApi } from './seasonalSkin';
 
 /** Everything the shell can ask of the core: one slice per domain. */
 export type CoreApi = SessionApi &
@@ -21,6 +22,7 @@ export type CoreApi = SessionApi &
   PushApi &
   GatesApi &
   LifecycleApi &
-  SceneApi;
+  SceneApi &
+  SeasonalSkinApi;
 
 export type { SessionApi };

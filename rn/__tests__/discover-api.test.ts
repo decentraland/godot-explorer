@@ -132,6 +132,30 @@ describe('public api', () => {
     expect(urls[1]).toMatch(/\/destinations\/\?offset=0&tag=ftue&sdk=7$/);
   });
 
+  it('swaps the featured banners for the season tag, falling back when it is empty', async () => {
+    const urls: string[] = [];
+    const respond = (seasonal: unknown[]) =>
+      createPublicApi((async (url: string) => {
+        urls.push(url);
+        return {
+          ok: true,
+          json: async () => ({
+            data: url.includes('tag=season') ? seasonal : [place('f')],
+          }),
+        };
+      }) as unknown as typeof fetch);
+    expect(
+      (await respond([place('s')]).banners(true)).map(b => b.place.id),
+    ).toEqual(['s']);
+    expect(urls.some(u => u.includes('only_highlighted'))).toBe(false);
+    expect((await respond([]).banners(true)).map(b => b.place.id)).toEqual([
+      'f',
+    ]);
+    urls.length = 0;
+    await respond([place('s')]).banners();
+    expect(urls.every(u => !u.includes('tag=season'))).toBe(true);
+  });
+
   it('fails when the service does', async () => {
     const bad = createPublicApi((async () => ({
       ok: false,

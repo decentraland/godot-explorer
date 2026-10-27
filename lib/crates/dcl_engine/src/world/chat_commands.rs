@@ -4,6 +4,7 @@ use godot::classes::{Engine, Os};
 use godot::prelude::*;
 
 use super::{chat, navigate, state};
+use crate::app::analytics_controller;
 use crate::fetcher::api::DclNavigator;
 use crate::fetcher::globals;
 use crate::godot_classes::dcl_crash_generator::DclCrashGenerator;
@@ -31,7 +32,9 @@ pub fn submit_message(message: &str) {
     let params: Vec<&str> = message.split(' ').collect();
     let command = params[0].to_lowercase();
     if !command.starts_with('/') {
-        globals::comms().bind_mut().send_chat(message.into());
+        if globals::comms().bind_mut().send_chat(message.into()) {
+            analytics_controller::track_first_social_action("chat");
+        }
         let address = globals::player_identity()
             .bind()
             .get_address_str()

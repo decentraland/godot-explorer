@@ -6,10 +6,11 @@ use godot::prelude::*;
 
 use crate::avatars::impostor::LodState;
 use crate::avatars::nameplate::{
-    self, with_solver, ANCHOR_HEIGHT_FACTOR, DEBUG_DISABLE_OCCLUSION, FADE_END, FADE_SPEED,
-    FADE_START, FAR_SKIP_DISTANCE, NAMETAG_MARGIN, SCALE,
+    self, with_plates, ANCHOR_HEIGHT_FACTOR, CL_PHYSICS, DEBUG_DISABLE_OCCLUSION, FADE_END,
+    FADE_SPEED, FAR_SKIP_DISTANCE, NAMETAG_MARGIN, SCALE,
 };
 use crate::avatars::nameplate_occlusion;
+use crate::avatars::nameplate_tiers::{tier_alpha, Tier, TIER_FULL_END, TIER_NAME_SCALE};
 use crate::avatars::proximity_fade::AvatarProximityFade;
 use crate::godot_classes::dcl_avatar::DclAvatar;
 use crate::godot_classes::dcl_global::DclGlobal;
@@ -146,12 +147,14 @@ impl DclAvatar {
         let name = self.avatar_name.to_string();
         let no_name = self.is_avatar_shape && (name.is_empty() || name == "NPC");
         let far = self.lod.state == LodState::Far;
+        let own_nametag_off = self.is_local_player && !crate::engine::show_own_nametag();
         let should_hide = no_name
             || self.hide_name
             || self.force_hide_name
             || far
             || self.nametag_hidden
             || self.hidden
+            || own_nametag_off
             || (profile_pending && DclGlobal::is_production());
         self.nametag.gate_visible = !should_hide;
         if should_hide {
@@ -249,7 +252,7 @@ impl DclAvatar {
         nameplate_occlusion::remove(self.base().instance_id());
         if let Some(nodes) = self.nodes.as_ref() {
             if nodes.nickname_ui.is_instance_valid() {
-                with_solver(|s| s.untrack(nodes.nickname_ui.instance_id().to_i64()));
+                with_plates(|s| s.untrack(nodes.nickname_ui.instance_id().to_i64()));
                 nodes.nickname_ui.clone().queue_free();
             }
         }
@@ -260,7 +263,7 @@ impl DclAvatar {
     pub(crate) fn nameplate_park(&mut self) {
         if let Some(nodes) = self.nodes.as_mut() {
             if nodes.nickname_ui.is_instance_valid() {
-                with_solver(|s| s.untrack(nodes.nickname_ui.instance_id().to_i64()));
+                with_plates(|s| s.untrack(nodes.nickname_ui.instance_id().to_i64()));
                 nodes
                     .nickname_ui
                     .set_modulate(Color::from_rgba(1.0, 1.0, 1.0, 0.0));
@@ -302,7 +305,7 @@ impl DclAvatar {
             if ui.get_modulate().a == 0.0
                 && camera.get_global_position().distance_to(quad) > FAR_SKIP_DISTANCE
             {
-                with_solver(|s| s.untrack(id));
+                with_plates(|s| s.untrack(id));
                 nameplate_occlusion::set_on_screen(&me, false);
                 ui.set_visible(false);
                 return;
@@ -314,28 +317,44 @@ impl DclAvatar {
                 let anchor = self.nameplate_anchor();
                 let dist = camera.get_global_position().distance_to(anchor);
                 if dist <= FADE_END && !camera.is_position_behind(anchor) {
+                    let me_id = me.instance_id();
+                    let focused = DclGlobal::singleton().bind().selected_avatar == Some(me_id);
+                    let tier = with_plates(|p| p.tiers.content_tier(id, dist, focused));
                     let size = ui.get_combined_minimum_size();
                     ui.set_size(size);
-                    ui.set_scale(Vector2::new(SCALE, SCALE));
-                    let screen_size = size * SCALE;
+                    let scale = SCALE
+                        * if tier == Tier::Name {
+                            TIER_NAME_SCALE
+                        } else {
+                            1.0
+                        };
+                    ui.set_scale(Vector2::new(scale, scale));
+                    let screen_size = size * scale;
                     let mut pos = camera.unproject_position(anchor)
                         - Vector2::new(screen_size.x * 0.5, screen_size.y * ANCHOR_HEIGHT_FACTOR);
                     let view_size = viewport.get_visible_rect().size;
                     on_screen = Rect2::new(Vector2::ZERO, view_size)
                         .intersects(Rect2::new(pos, screen_size));
                     nameplate_occlusion::set_on_screen(&me, on_screen);
-                    let untested = nameplate_occlusion::is_untested(me.instance_id());
+                    let untested = nameplate_occlusion::is_untested(me_id);
                     if on_screen && !self.nametag.occluded && !untested {
-                        // Soft-constrain against the other plates so close-together avatars'
-                        // tags (and their chat bubbles) stay readable.
-                        pos = with_solver(|s| {
-                            s.stack_position(id, ui.get_modulate().a, pos, screen_size, view_size)
+                        // Chat bubbles gate on distance only: the crowd cap must not hide the
+                        // bubble of someone standing next to you.
+                        let show_chat = focused || dist <= TIER_FULL_END;
+                        let changed = with_plates(|p| {
+                            p.tiers.record(id, dist, focused);
+                            p.tiers.set_applied(id, tier, show_chat)
                         });
-                        target_alpha =
-                            ((FADE_END - dist) / (FADE_END - FADE_START)).clamp(0.0, 1.0);
+                        if changed {
+                            ui.bind_mut().apply_tier(tier, show_chat);
+                        }
+                        target_alpha = tier_alpha(tier, dist, focused);
                     } else {
-                        with_solver(|s| s.untrack(id));
+                        with_plates(|p| p.untrack(id));
                     }
+                    // An anchor above the top edge would clip the tag: keep it in the viewport.
+                    pos.y = pos.y.max(0.0);
+                    pos.x = pos.x.clamp(0.0, (view_size.x - screen_size.x).max(0.0));
                     ui.set_position(pos);
                     ui.set_z_index((-(dist * 100.0) as i32).clamp(-4000, 4000));
                     // Where the tag is drawn, as a world point at anchor depth: occlusion rays
@@ -343,12 +362,12 @@ impl DclAvatar {
                     let center = pos + screen_size * 0.5;
                     let point = camera.project_ray_origin(center)
                         + camera.project_ray_normal(center) * dist;
-                    with_solver(|s| s.set_ray_target(id, point));
+                    with_plates(|s| s.set_ray_target(id, point));
                 } else {
-                    with_solver(|s| s.untrack(id));
+                    with_plates(|s| s.untrack(id));
                 }
             }
-            _ => with_solver(|s| s.untrack(id)),
+            _ => with_plates(|s| s.untrack(id)),
         }
         if !on_screen {
             nameplate_occlusion::set_on_screen(&me, false);
@@ -387,13 +406,13 @@ impl DclAvatar {
         if from.distance_to(anchor) > FADE_END {
             return;
         }
-        // Against the tag's drawn (stacked) position, the head anchor before the first one.
+        // Against the tag's drawn position, the head anchor before the first one.
         let ui_id = self
             .nodes
             .as_ref()
             .map(|n| n.nickname_ui.instance_id().to_i64());
         let target = ui_id
-            .and_then(|id| with_solver(|s| s.ray_target(id)))
+            .and_then(|id| with_plates(|s| s.ray_target(id)))
             .unwrap_or(anchor);
         self.nametag.occluded = self.is_occluded(from, target);
     }
@@ -438,7 +457,15 @@ impl DclAvatar {
             let collider = hit
                 .get("collider")
                 .and_then(|c| c.try_to::<Gd<Node3D>>().ok());
+            // Scene colliders generated for invisible meshes (`*_colgen`) are invisible nodes
+            // too: only a CL_PLAYER body may be skipped as a hidden avatar, or walls stop
+            // occluding.
+            let scene_collider = collider
+                .as_ref()
+                .and_then(|c| c.clone().try_cast::<CollisionObject3D>().ok())
+                .is_some_and(|c| c.get_collision_layer() & CL_PHYSICS != 0);
             match collider {
+                _ if scene_collider => return true,
                 Some(collider) if !collider.is_visible_in_tree() => {
                     let mut next = query.get_exclude();
                     if let Some(rid) = hit.get("rid").and_then(|r| r.try_to::<Rid>().ok()) {

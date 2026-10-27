@@ -26,6 +26,11 @@ export function GameplaySection({ m }: { m: SettingsModel }) {
           value={values.submit_message_closes_chat}
           onChange={v => set('submit_message_closes_chat', v)}
         />
+        <ToggleRow
+          label={t('SETTINGS_SHOW_OWN_NAMETAG')}
+          value={values.show_own_nametag}
+          onChange={v => set('show_own_nametag', v)}
+        />
       </Group>
       {env.inWorld && (
         <>

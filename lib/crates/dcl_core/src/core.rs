@@ -149,10 +149,13 @@ impl Core {
         start: crate::deep_link_route::StartKind,
     ) -> crate::deep_link_route::Routed {
         let outcome = self.hub.route_deep_link(url, start, self.config.platform);
-        if let Some(identity_id) = outcome.complete_sign_in {
+        if let Some(token) = outcome.complete_sign_in {
             let hub = &self.hub;
             self.handle().spawn(async move {
-                if let Err(e) = hub.complete_browser(identity_id).await {
+                if let Err(e) = hub
+                    .complete_browser(token.identity_id, token.auth_request_id)
+                    .await
+                {
                     tracing::warn!("deep link sign-in: {e}");
                 }
             });

@@ -99,8 +99,21 @@ async fn fetch_profile(mut me: Gd<DclPlayerIdentity>, address: String, lambda_ur
         return;
     }
     if let Ok(error) = response.try_to::<Gd<PromiseError>>() {
-        me.bind_mut().set_default_profile();
         let reason = error.bind().get_error().to_string();
+        // A profile deployed moments ago can 404 until the catalyst propagates it; keep it.
+        let keeps_local = me.bind().get_profile_or_null().is_some_and(|current| {
+            let current = current.bind();
+            !current.get_name().is_empty()
+                && current
+                    .get_ethereum_address()
+                    .to_string()
+                    .eq_ignore_ascii_case(&address)
+        });
+        if keeps_local {
+            godot_print!("Keeping local profile, fetch failed for {address}: {reason}");
+            return;
+        }
+        me.bind_mut().set_default_profile();
         if reason.contains("404") {
             godot_print!("Profile not found for address {address} - starting with default profile");
         } else {

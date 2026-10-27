@@ -19,6 +19,7 @@ use tokio::sync::oneshot;
 use super::DclEngine;
 use crate::app::{audio_settings, general_settings, graphics, locale};
 use crate::content::resource_provider::ResourceProvider;
+use crate::godot_classes::dcl_avatar::DclAvatar;
 use crate::godot_classes::dcl_global::DclGlobal;
 
 type Task = Box<dyn FnOnce() + Send>;
@@ -109,6 +110,14 @@ pub(crate) fn texture_quality_setting() -> crate::content::texture_quality::Text
         Some(SettingValue::Int(quality)) => TextureQuality::from_i32(quality as i32),
         _ => TextureQuality::Medium,
     }
+}
+
+/// Hidden by default; the player's own plate shows only when the setting is on.
+pub(crate) fn show_own_nametag() -> bool {
+    matches!(
+        value(SettingKey::ShowOwnNametag),
+        Some(SettingValue::Bool(true))
+    )
 }
 
 pub(crate) fn benchmark_gpu_score() -> Option<f64> {
@@ -254,6 +263,14 @@ fn apply_in_engine(key: SettingKey, value: &SettingValue) {
         }
         (SettingKey::MaxCacheSize, _) => {
             general_settings::apply_max_cache_size();
+        }
+        (SettingKey::ShowOwnNametag, _) => {
+            let player = crate::fetcher::globals::scene_runner()
+                .bind()
+                .get_player_avatar_node();
+            if let Some(mut avatar) = player.and_then(|n| n.try_cast::<DclAvatar>().ok()) {
+                avatar.bind_mut().apply_nickname_visibility();
+            }
         }
         _ => {
             if let Some(setting) = audio_apply_function(key) {

@@ -1,7 +1,7 @@
 //! The behaviors of a GltfContainer: requesting its load from the shared coordinator, realizing
 //! the instance, fixing materials, building colliders and following the entity's motion.
 
-use godot::classes::base_material_3d::{Flags, TextureParam};
+use godot::classes::base_material_3d::{CullMode, Flags, TextureParam};
 use godot::classes::node::ProcessMode;
 use godot::classes::physics_server_3d::BodyMode;
 use godot::classes::{
@@ -445,6 +445,9 @@ fn fix_material(mut material: Gd<BaseMaterial3D>) {
     }
     // To replicate Foundation.
     material.set_flag(Flags::ALBEDO_FROM_VERTEX_COLOR, false);
+    if crate::app::feature_flags::force_backface_culling() {
+        material.set_cull_mode(CullMode::BACK);
+    }
 }
 
 #[godot_api(secondary)]

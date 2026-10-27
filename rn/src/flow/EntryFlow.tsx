@@ -20,6 +20,7 @@ import {
   whenSignedIn,
 } from './auth';
 import { core } from '../core';
+import { takePreviewLaunch, whenInitialLinkRouted } from './launchLink';
 import { initialFlow, reduceFlow } from './flowMachine';
 import { FtueStep } from './FtueStep';
 import {
@@ -97,9 +98,15 @@ export function EntryFlow({
     let cancelled = false;
     const succeeded = async () =>
       !cancelled && dispatch({ type: 'authSucceeded', ...(await welcome()) });
-    const failed = () =>
+    const failed = (error?: unknown) =>
       !cancelled &&
-      dispatch({ type: 'authFailed', message: t('FLOW_SIGN_IN_FAILED') });
+      dispatch({
+        type: 'authFailed',
+        message:
+          error instanceof Error && error.message === 'sign_in_other_request'
+            ? t('AUTH_SIGN_IN_OTHER_REQUEST')
+            : t('FLOW_SIGN_IN_FAILED'),
+      });
     if (
       step === 'auth_wait' &&
       (provider === 'google' || provider === 'apple' || provider === 'wallet')
@@ -168,6 +175,8 @@ export function EntryFlow({
   }, []);
 
   const booted = useCallback(async () => {
+    await whenInitialLinkRouted();
+    const preview = takePreviewLaunch();
     if (core().state().tag === 'SignedIn') {
       try {
         dispatch({ type: 'recovered', ...(await welcome()) });
@@ -175,6 +184,10 @@ export function EntryFlow({
       } catch {
         // The profile could not be read: fall through to the normal start.
       }
+    }
+    if (preview) {
+      dispatch({ type: 'previewGuest' });
+      return;
     }
     dispatch({ type: 'booted', next: termsAccepted() ? 'account' : 'terms' });
   }, []);
