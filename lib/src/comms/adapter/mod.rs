@@ -9,3 +9,5 @@ pub mod ws_room;
 
 #[cfg(feature = "use_livekit")]
 mod island_session;
+
+mod profile_fetch;

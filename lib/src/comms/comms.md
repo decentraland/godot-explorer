@@ -32,6 +32,15 @@ assignment arrives, including when gatekeeper still sees a closing participant.
 - Cleanup replaces the scene-room result channel, invalidating pending requests from the
   previous session. Loading, flag callbacks, and delayed retries cannot reopen an ended session.
 
+### Remote profile status
+
+Nameplates distinguish loading, confirmed absence, and request failures. Remote profile
+lookups have a 20-second deadline. Missing profiles do not enter the network retry loop.
+For zone realms, a missing realm and zone-registry profile triggers one read-only lookup
+at peer.decentraland.org, using production content URLs and a cross-environment caption.
+Production versions are independent of zone versions; a later peer profile replaces the
+fallback and clears its caption. Network errors do not count as confirmed absence.
+
 ### Validation
 
 Automated checks:
