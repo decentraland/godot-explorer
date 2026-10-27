@@ -126,6 +126,11 @@ func _async_show_streak_modal_and_wait(
 	)
 	if shown and is_instance_valid(Global.streak_modal_controller.current_streak_modal):
 		await Global.streak_modal_controller.current_streak_modal.tree_exited
+		# A loading screen can start only after the modal was already fully shown — the
+		# controller force-closes it in that case, but by then this function had already
+		# captured `shown = true`. Treat that close the same as never having shown it (#2867).
+		if Global.streak_modal_controller.last_show_interrupted_by_loading:
+			shown = false
 	if streak_widget_card:
 		streak_widget_card.refresh_visibility()
 	Global.upgrade_nudge_coordinator.resume("streak", self)
