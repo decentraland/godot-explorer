@@ -11,7 +11,7 @@
 [ext_resource type="Resource" path="res://src/ui/components/organisms/video_focus_mode/video_focus_margins.tres" id="9_margins"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_chat"]
-bg_color = Color(0.113725, 0.109804, 0.12549, 1)
+bg_color = Color(0.0682353, 0.0658824, 0.0752941, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_header"]
 resource_local_to_scene = true

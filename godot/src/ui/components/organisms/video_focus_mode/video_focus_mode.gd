@@ -38,6 +38,9 @@ const HEADER_HEIGHT_PORTRAIT := 56
 const HEADER_PADDING_Y_LANDSCAPE := 10
 const CHEVRON_SIZE_LANDSCAPE := 48
 const CHEVRON_SIZE_PORTRAIT := 56
+## Space between the member count and the chevron.
+const CHEVRON_GAP_LANDSCAPE := 18
+const CHEVRON_GAP_PORTRAIT := 32
 
 var _video_player: Node = null
 var _chat: Control = null
@@ -168,6 +171,9 @@ func _spawn_chat() -> void:
 	_chat.on_exit_write_mode.connect(_on_chat_exit_write_mode)
 	_chat.submit_message.connect(_on_chat_submit_message)
 	_chat_slot.add_child(_chat)
+	# The column paints the chat's background down to the screen edge, so the chat's own
+	# translucent panel would leave the safe-area band under the input a different shade.
+	_chat.get_node("%PanelContainer_Chat").add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	# Messages grow up from the input, as in the design, instead of hanging from the header.
 	# EXPAND keeps the ScrollContainer sizing the list to its own height; SHRINK_END then
 	# places a shorter list at the bottom of that height.
@@ -224,7 +230,12 @@ func _apply_chat_layout() -> void:
 		HEADER_HEIGHT_PORTRAIT if is_portrait else HEADER_HEIGHT_LANDSCAPE
 	)
 	var chevron_px: int = CHEVRON_SIZE_PORTRAIT if is_portrait else CHEVRON_SIZE_LANDSCAPE
-	_collapse_slot.custom_minimum_size = Vector2(chevron_px, chevron_px)
+	# The slot grows by the gap and the chevron sits at its right end; the header row's own
+	# separation already counts toward the gap.
+	var gap: int = CHEVRON_GAP_PORTRAIT if is_portrait else CHEVRON_GAP_LANDSCAPE
+	var lead: int = maxi(gap - _collapse_slot.get_parent().get_theme_constant("separation"), 0)
+	_collapse_slot.custom_minimum_size = Vector2(lead + chevron_px, chevron_px)
+	_button_collapse_chat.position = Vector2(lead, 0)
 	_button_collapse_chat.size = Vector2(chevron_px, chevron_px)
 	_button_collapse_chat.icon = CHEVRON_ICON_PORTRAIT if is_portrait else CHEVRON_ICON_LANDSCAPE
 	_button_collapse_chat.add_theme_constant_override("icon_max_width", chevron_px)
