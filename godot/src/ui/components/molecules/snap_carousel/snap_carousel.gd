@@ -42,12 +42,22 @@ const FeaturedDataProvider = preload(
 @export var snap_duration: float = 0.25
 @export var auto_fetch: bool = false
 @export var fetch_tag: String = "featured"
+## If set, and fetch_tag comes back with no places, retried once with this tag instead — e.g. a
+## seasonal tag falling back to the evergreen one when nothing's tagged for the season yet. Also
+## triggers on a failed request (FeaturedDataProvider returns [] either way), not only a
+## genuinely empty result — so a failure means two failed requests, not one.
+@export var fallback_fetch_tag: String = ""
 @export var auto_scroll: bool = false
 @export var auto_scroll_interval: float = 3.0
 
 var _title_container: MarginContainer = null
 
 var _cards: Array = []
+# Bumped on every fetch() call; a run whose generation no longer matches when it resolves was
+# superseded by a later call (e.g. auto_fetch on _ready racing a later fetch_tag swap) and must
+# not apply its (stale) result — set_items() rebuilds destructively, so the last write would
+# otherwise win regardless of which call actually started last.
+var _fetch_generation := 0
 var _auto_scroll_timer: Timer = null
 var _is_touching: bool = false
 var _touch_start_x: float = 0.0
@@ -100,8 +110,16 @@ func _apply_mode() -> void:
 
 # gdlint: ignore=async-function-name
 func fetch() -> void:
+	_fetch_generation += 1
+	var generation := _fetch_generation
 	var places = await FeaturedDataProvider.async_fetch_places(fetch_tag)
-	if not is_instance_valid(self) or places.is_empty():
+	if not is_instance_valid(self) or generation != _fetch_generation:
+		return
+	if places.is_empty() and not fallback_fetch_tag.is_empty():
+		places = await FeaturedDataProvider.async_fetch_places(fallback_fetch_tag)
+		if not is_instance_valid(self) or generation != _fetch_generation:
+			return
+	if places.is_empty():
 		return
 	set_items(places)
 

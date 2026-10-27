@@ -384,7 +384,9 @@ impl DclAndroidPlugin {
             "logFirebaseEvent",
             &[event_name.to_variant(), params_json.to_variant()],
         );
-        result.try_to::<bool>().unwrap_or(false)
+        // The Kotlin `Boolean` arrives as an INT Variant (see has_notification_permission);
+        // `try_to::<bool>()` always failed, so one-shot events never saved their flag.
+        result.booleanize()
     }
 
     /// Fetch install referrer data from Google Play.
