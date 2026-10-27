@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://buxjoxmdm2l6v"]
+[gd_scene load_steps=18 format=3 uid="uid://buxjoxmdm2l6v"]
 
 [ext_resource type="Script" uid="uid://dtrv82krgoek8" path="res://src/ui/components/organisms/video_focus_mode/video_focus_mode.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://drjenu4ayufgu" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-exit-focus.svg" id="2_exit"]
@@ -9,6 +9,7 @@
 [ext_resource type="PackedScene" uid="uid://bdlssvxebe4kt" path="res://src/ui/components/atoms/buttons/hud_button/hud_button.tscn" id="7_hud"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/layouts/safe_margin_container.gd" id="8_safe"]
 [ext_resource type="Resource" path="res://src/ui/components/organisms/video_focus_mode/video_focus_margins.tres" id="9_margins"]
+[ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="10_font_regular"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_chat"]
 bg_color = Color(0.0682353, 0.0658824, 0.0752941, 1)
@@ -17,13 +18,19 @@ bg_color = Color(0.0682353, 0.0658824, 0.0752941, 1)
 resource_local_to_scene = true
 content_margin_left = 16.0
 content_margin_right = 16.0
-bg_color = Color(0.0431373, 0.0431373, 0.0509804, 1)
+bg_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 
 [sub_resource type="LabelSettings" id="LabelSettings_header"]
 resource_local_to_scene = true
 font = ExtResource("5_font")
 font_size = 24
 font_color = Color(0.988235, 0.988235, 0.988235, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_count"]
+resource_local_to_scene = true
+font = ExtResource("10_font_regular")
+font_size = 24
+font_color = Color(0.92549, 0.921569, 0.929412, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_flat"]
 
@@ -242,6 +249,7 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="Label_Nearby" type="Label" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/SafeMarginContainer_ChatBottom/VBoxContainer/PanelContainer_Header/HBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "COMMON_NEARBY"
@@ -249,6 +257,7 @@ label_settings = SubResource("LabelSettings_header")
 vertical_alignment = 1
 
 [node name="TextureRect_Members" type="TextureRect" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/SafeMarginContainer_ChatBottom/VBoxContainer/PanelContainer_Header/HBoxContainer"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(24, 24)
 layout_mode = 2
 size_flags_vertical = 4
@@ -261,7 +270,7 @@ unique_name_in_owner = true
 auto_translate_mode = 2
 layout_mode = 2
 text = "1"
-label_settings = SubResource("LabelSettings_header")
+label_settings = SubResource("LabelSettings_count")
 vertical_alignment = 1
 
 [node name="Control_CollapseSlot" type="Control" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/SafeMarginContainer_ChatBottom/VBoxContainer/PanelContainer_Header/HBoxContainer"]

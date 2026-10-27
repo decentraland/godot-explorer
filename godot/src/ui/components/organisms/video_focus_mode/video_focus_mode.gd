@@ -31,16 +31,23 @@ const HEADER_FONT_SIZE_PORTRAIT := 28
 ## Side margin of the exit/rotate row: the HUD chat's 40 px in portrait (hud_margins.tres).
 const CONTROLS_SIDE_MARGIN_LANDSCAPE := 48
 const CONTROLS_SIDE_MARGIN_PORTRAIT := 40
-## Chat header per the design: 76 px tall with 10 px vertical padding and a 48 px chevron in
-## landscape, a 56 px chevron in portrait.
+## Chat header per the design: 76 px tall, 16 x 10 px padding, 24 px icon and 48 px chevron in
+## landscape; 96 px tall, 32 x 13 px padding, 28 px icon and 56 px chevron in portrait.
 const HEADER_HEIGHT_LANDSCAPE := 76
-const HEADER_HEIGHT_PORTRAIT := 56
+const HEADER_HEIGHT_PORTRAIT := 96
+const HEADER_PADDING_X_LANDSCAPE := 16
+const HEADER_PADDING_X_PORTRAIT := 32
 const HEADER_PADDING_Y_LANDSCAPE := 10
+const HEADER_PADDING_Y_PORTRAIT := 13
+const MEMBERS_ICON_LANDSCAPE := 24
+const MEMBERS_ICON_PORTRAIT := 28
 const CHEVRON_SIZE_LANDSCAPE := 48
 const CHEVRON_SIZE_PORTRAIT := 56
 ## Space between the member count and the chevron.
 const CHEVRON_GAP_LANDSCAPE := 18
 const CHEVRON_GAP_PORTRAIT := 32
+## The edge tab's distance from the screen edge, before the device's side inset is added.
+const EXPAND_TAB_EDGE_MARGIN := 24
 
 var _video_player: Node = null
 var _chat: Control = null
@@ -50,6 +57,8 @@ var _chat_collapsed: bool = false
 ## Bumped on every relayout and on exit, so a settle timer from an earlier layout (or an
 ## earlier session) never reveals or scrolls the chat of a later one.
 var _chat_reveal_epoch: int = 0
+## The device's left inset from the last _apply_side_insets, for the landscape input.
+var _inset_left: int = 0
 
 @onready var _layout: BoxContainer = %BoxContainer_Layout
 @onready var _video_panel: Control = %Control_Video
@@ -59,6 +68,8 @@ var _chat_reveal_epoch: int = 0
 @onready var _chat_header: PanelContainer = %PanelContainer_Header
 @onready var _collapse_slot: Control = %Control_CollapseSlot
 @onready var _chat_slot: Control = %Control_ChatSlot
+@onready var _label_nearby: Label = %Label_Nearby
+@onready var _members_icon: TextureRect = %TextureRect_Members
 @onready var _label_members: Label = %Label_Members
 @onready var _controls_margin: MarginContainer = %MarginContainer_Controls
 @onready var _button_exit: Button = %Button_Exit
@@ -85,6 +96,8 @@ func _ready() -> void:
 		func(): _button_expand_chat.pivot_offset = _button_expand_chat.size * 0.5
 	)
 	resized.connect(_update_video_panel_size)
+	# The safe area changes with the rotation, which lands as a resize of the whole overlay.
+	resized.connect(_apply_side_insets)
 	Global.scene_runner.open_video_focus_mode.connect(enter)
 	Global.orientation_changed.connect(_on_orientation_changed)
 	Global.change_virtual_keyboard.connect(_on_change_virtual_keyboard)
@@ -168,6 +181,7 @@ func _spawn_chat() -> void:
 	_chat = CHAT_SCENE.instantiate()
 	_chat.show_welcome_message = false
 	_chat.hide_header = true
+	_chat.on_enter_write_mode.connect(_on_chat_enter_write_mode)
 	_chat.on_exit_write_mode.connect(_on_chat_exit_write_mode)
 	_chat.submit_message.connect(_on_chat_submit_message)
 	_chat_slot.add_child(_chat)
@@ -223,7 +237,7 @@ func _apply_chat_layout() -> void:
 		var box := _button_exit.get_theme_stylebox(slot) as StyleBoxFlat
 		box.set_corner_radius_all(roundi(exit_px * 0.5))
 	var header_box := _chat_header.get_theme_stylebox("panel") as StyleBoxFlat
-	var padding_y: int = 0 if is_portrait else HEADER_PADDING_Y_LANDSCAPE
+	var padding_y: int = HEADER_PADDING_Y_PORTRAIT if is_portrait else HEADER_PADDING_Y_LANDSCAPE
 	header_box.content_margin_top = padding_y
 	header_box.content_margin_bottom = padding_y
 	_chat_header.custom_minimum_size.y = (
@@ -240,13 +254,11 @@ func _apply_chat_layout() -> void:
 	_button_collapse_chat.icon = CHEVRON_ICON_PORTRAIT if is_portrait else CHEVRON_ICON_LANDSCAPE
 	_button_collapse_chat.add_theme_constant_override("icon_max_width", chevron_px)
 	_label_exit.custom_minimum_size = Vector2(0, exit_px)
-	var side: int = CONTROLS_SIDE_MARGIN_PORTRAIT if is_portrait else CONTROLS_SIDE_MARGIN_LANDSCAPE
-	_controls_margin.add_theme_constant_override("margin_left", side)
-	_controls_margin.add_theme_constant_override("margin_right", side)
-	# One LabelSettings is shared by the title and the member count.
-	_label_members.label_settings.font_size = (
-		HEADER_FONT_SIZE_PORTRAIT if is_portrait else HEADER_FONT_SIZE_LANDSCAPE
-	)
+	var header_font: int = HEADER_FONT_SIZE_PORTRAIT if is_portrait else HEADER_FONT_SIZE_LANDSCAPE
+	_label_nearby.label_settings.font_size = header_font
+	_label_members.label_settings.font_size = header_font
+	var icon_px: int = MEMBERS_ICON_PORTRAIT if is_portrait else MEMBERS_ICON_LANDSCAPE
+	_members_icon.custom_minimum_size = Vector2(icon_px, icon_px)
 	_button_expand_chat.visible = _chat_collapsed and not is_portrait
 	_chat_slot.visible = not (_chat_collapsed and is_portrait)
 	if is_portrait:
@@ -273,6 +285,7 @@ func _apply_chat_layout() -> void:
 		_button_expand_chat.pivot_offset = _button_expand_chat.size * 0.5
 		_button_expand_chat.rotation_degrees = 90.0
 	_update_video_panel_size()
+	_apply_side_insets()
 	if _chat != null:
 		_chat.scroll_to_bottom_deferred()
 		_chat_reveal_epoch += 1
@@ -285,6 +298,45 @@ func _scroll_chat_to_bottom(epoch: int) -> void:
 		return
 	_chat.scroll_to_bottom_deferred()
 	_chat.modulate = Color.WHITE
+
+
+## Keeps the buttons, the chat header and the chat clear of the device's side insets (camera
+## cutout, curved edges) while the video and the chat background stay full-bleed. Only the
+## edges that touch the screen take an inset: in landscape the chat column is on the right.
+func _apply_side_insets() -> void:
+	if not visible:
+		return
+	var left := 0
+	var right := 0
+	if Global.is_mobile() or Global.is_emulating_safe_area():
+		# Scaled from window to viewport pixels like SafeMarginContainer.
+		var safe_area: Rect2i = Global.get_safe_area()
+		var window_width := float(maxi(DisplayServer.window_get_size().x, 1))
+		var x_factor := get_viewport().get_visible_rect().size.x / window_width
+		left = maxi(roundi(safe_area.position.x * x_factor), 0)
+		right = maxi(roundi((window_width - safe_area.end.x) * x_factor), 0)
+	_inset_left = left
+	var is_portrait := _layout.vertical
+	var controls_side: int = (
+		CONTROLS_SIDE_MARGIN_PORTRAIT if is_portrait else CONTROLS_SIDE_MARGIN_LANDSCAPE
+	)
+	var video_reaches_right := is_portrait or _chat_collapsed
+	_controls_margin.add_theme_constant_override("margin_left", controls_side + left)
+	_controls_margin.add_theme_constant_override(
+		"margin_right", controls_side + (right if video_reaches_right else 0)
+	)
+	var chat_left: int = left if is_portrait else 0
+	var header_box := _chat_header.get_theme_stylebox("panel") as StyleBoxFlat
+	var header_side: int = HEADER_PADDING_X_PORTRAIT if is_portrait else HEADER_PADDING_X_LANDSCAPE
+	header_box.content_margin_left = header_side + chat_left
+	header_box.content_margin_right = header_side + right
+	if _chat != null:
+		_chat.offset_left = chat_left
+		_chat.offset_right = -right
+	_button_expand_chat.offset_right = -(EXPAND_TAB_EDGE_MARGIN + right)
+	_button_expand_chat.offset_left = (
+		_button_expand_chat.offset_right - _button_expand_chat.custom_minimum_size.x
+	)
 
 
 ## In portrait the video sits under the exit/rotate row and takes the stream's aspect over
@@ -366,7 +418,22 @@ func _on_orientation_changed(is_portrait: bool) -> void:
 		_apply_orientation(is_portrait)
 
 
+## In landscape the input stretches left over the video so it spans the keyboard, like the
+## HUD chat's. A negative margin moves it without reparenting, which would drop its focus
+## and with it the keyboard.
+func _on_chat_enter_write_mode() -> void:
+	if _layout.vertical:
+		return
+	var column_left: float = _chat.global_position.x - global_position.x
+	_chat.get_node("%MarginContainer_LineEditSafeArea").add_theme_constant_override(
+		"margin_left", -roundi(column_left - _inset_left)
+	)
+
+
 func _on_chat_exit_write_mode() -> void:
+	# Back to the column, with the system bar insets the chat keeps on its input.
+	_chat.reset_safe_area_insets()
+	_chat.async_apply_system_bar_insets()
 	# chat.gd hands focus back to the explorer root (deferred), which re-enables movement
 	# under the overlay; this is queued after it and takes the focus back.
 	_grab_focus_if_active.call_deferred()
