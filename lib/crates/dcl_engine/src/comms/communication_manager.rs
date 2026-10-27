@@ -279,8 +279,8 @@ pub struct CommunicationManager {
     /// Whether the emote behind `is_emoting` loops; gates the rfc4 stop (see
     /// `send_emote_stop_over_livekit`).
     is_emoting_loop: bool,
-    /// head sync: the local head turn, pushed every frame by avatar.gd
-    /// (Unity HeadSync). Degrees in the local avatar's own frame, plus whether
+    /// head sync: the local head aim in world space, pushed every frame by the avatar's IK
+    /// (Unity HeadSync). Unity Euler yaw/pitch degrees, plus whether
     /// the sender is aiming at all. The movement packet carries it to peers.
     head_ik_enabled: bool,
     head_ik_yaw: f32,

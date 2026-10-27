@@ -692,10 +692,10 @@ impl DclAvatar {
         self.fall_fast = !grounded_gate && velocity_y < -3.0;
     }
 
-    /// Head turn from the wire. Unity's HeadSync sends the
-    /// sender's yaw/pitch plus the enable flags; the decoder already undoes the
-    /// unsigned [0, 360] wraparound, so these are signed degrees in the sender's
-    /// own frame. A disabled pair drops the turn — the flags follow the sender's
+    /// Head turn from the wire. Unity's HeadSync sends the sender's camera direction as world
+    /// Euler yaw/pitch plus the enable flags; the decoder already undoes the unsigned [0, 360]
+    /// wraparound, so these are signed degrees. The IK projects them into the avatar's own frame
+    /// before the modifiers run. A disabled pair drops the turn: the flags follow the sender's
     /// own gate (grounded, standing still, not emoting).
     pub fn apply_wire_head_ik(
         &mut self,
