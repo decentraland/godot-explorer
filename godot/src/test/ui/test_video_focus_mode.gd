@@ -65,9 +65,14 @@ func _test_lifecycle() -> void:
 	var button_exit: Button = overlay.get_node("%Button_Exit")
 	Global.orientation_changed.emit(true)
 	_expect(layout.vertical, "portrait stacks the chat under the video")
+	var exit_box := button_exit.get_theme_stylebox("normal") as StyleBoxFlat
 	_expect(
-		button_exit.custom_minimum_size == Vector2(92, 92),
-		"portrait sizes the exit button 4 px under the HUD chat disc (92)"
+		(
+			button_exit.custom_minimum_size == Vector2(96, 96)
+			and exit_box.corner_radius_top_left == 48
+			and texture_rect.offset_top > 0.0
+		),
+		"portrait shows a 96 px exit disc and the video under the exit/rotate row"
 	)
 	collapse.pressed.emit()
 	_expect(
@@ -77,8 +82,12 @@ func _test_lifecycle() -> void:
 	Global.orientation_changed.emit(false)
 	_expect(not layout.vertical, "landscape puts the chat beside the video")
 	_expect(
-		button_exit.custom_minimum_size == Vector2(66, 66),
-		"landscape sizes the exit button like the HUD chat disc (66)"
+		(
+			button_exit.custom_minimum_size == Vector2(66, 66)
+			and exit_box.corner_radius_top_left == 10
+			and texture_rect.offset_top == 0.0
+		),
+		"landscape keeps the rounded-square exit and the row floating over the video"
 	)
 	_expect(
 		not chat_column.visible and expand.visible,

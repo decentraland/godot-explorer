@@ -5,3 +5,4 @@
 [resource]
 script = ExtResource("1_margins")
 bottom = 45
+portrait_bottom = 45

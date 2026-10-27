@@ -26,8 +26,8 @@ const HEADER_FONT_SIZE_PORTRAIT := 28
 ## Side margin of the exit/rotate row: the HUD chat's 40 px in portrait (hud_margins.tres).
 const CONTROLS_SIDE_MARGIN_LANDSCAPE := 48
 const CONTROLS_SIDE_MARGIN_PORTRAIT := 40
-## The exit square is trimmed below the 96 px disc size in portrait, per design.
-const PORTRAIT_EXIT_TRIM := 4
+## The exit button's corners in landscape (a disc in portrait), as the close_button atom.
+const EXIT_CORNER_RADIUS_LANDSCAPE := 10
 
 var _video_player: Node = null
 var _chat: Control = null
@@ -197,13 +197,18 @@ func _refresh_chat() -> void:
 func _apply_chat_layout() -> void:
 	var is_portrait := _layout.vertical
 	# Exit and rotate follow the HUD chat bar's discs: 66 px in landscape, 96 px in portrait.
-	# The exit square takes the same footprint and glyph size as the disc beside it.
+	# The exit button takes the same footprint and glyph size as the disc beside it: a
+	# rounded square in landscape, a disc in portrait.
 	var preset := HudButton.Size.LARGE if is_portrait else HudButton.Size.SMALL
 	_button_rotate.size_preset = preset
 	var spec: Vector2i = HudButton.SIZES[preset]
-	var exit_px: int = spec.x - (PORTRAIT_EXIT_TRIM if is_portrait else 0)
+	var exit_px: int = spec.x
 	_button_exit.custom_minimum_size = Vector2(exit_px, exit_px)
 	_button_exit.add_theme_constant_override("icon_max_width", spec.y)
+	var radius: int = roundi(exit_px * 0.5) if is_portrait else EXIT_CORNER_RADIUS_LANDSCAPE
+	for slot in [&"normal", &"pressed"]:
+		var box := _button_exit.get_theme_stylebox(slot) as StyleBoxFlat
+		box.set_corner_radius_all(radius)
 	_label_exit.custom_minimum_size = Vector2(0, exit_px)
 	var side: int = CONTROLS_SIDE_MARGIN_PORTRAIT if is_portrait else CONTROLS_SIDE_MARGIN_LANDSCAPE
 	_controls_margin.add_theme_constant_override("margin_left", side)
@@ -251,10 +256,17 @@ func _scroll_chat_to_bottom(epoch: int) -> void:
 	_chat.modulate = Color.WHITE
 
 
-## In portrait the video panel takes the stream's aspect over the full width (or the whole
-## remaining height when the chat is collapsed); in landscape it takes whatever the chat
-## column leaves.
+## In portrait the video sits under the exit/rotate row and takes the stream's aspect over
+## the full width (or the whole remaining height when the chat is collapsed); in landscape
+## the row floats over the video, which takes whatever the chat column leaves.
 func _update_video_panel_size() -> void:
+	var controls_band := 0.0
+	if _layout.vertical:
+		controls_band = (
+			_controls_margin.get_theme_constant("margin_top") * 2
+			+ _button_exit.custom_minimum_size.y
+		)
+	_texture_rect.offset_top = controls_band
 	if not _layout.vertical or _chat_collapsed:
 		_video_panel.custom_minimum_size = Vector2.ZERO
 		return
@@ -266,7 +278,7 @@ func _update_video_panel_size() -> void:
 		and texture.get_height() > PLACEHOLDER_MAX_SIZE
 	):
 		aspect = float(texture.get_height()) / float(texture.get_width())
-	_video_panel.custom_minimum_size = Vector2(0, roundf(size.x * aspect))
+	_video_panel.custom_minimum_size = Vector2(0, roundf(size.x * aspect + controls_band))
 
 
 ## The caption beside the exit button, shown for a few seconds on every entry.
