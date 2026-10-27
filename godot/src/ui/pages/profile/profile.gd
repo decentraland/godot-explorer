@@ -679,6 +679,7 @@ func _async_send_friend_request(friend_address: String) -> void:
 
 	# Request Friend metric
 	Global.metrics.track_request_friend(friend_address)
+	Global.analytics_controller.track_first_social_action("friend_request")
 
 	# Keep the SENT list live (the social service doesn't echo our own actions).
 	Global.friendship_request_sent.emit(friend_address)
@@ -698,6 +699,7 @@ func _async_accept_friend_request(friend_address: String) -> void:
 
 	# Accept Friend metric (no friendship_id available in profile context)
 	Global.metrics.track_accept_friend(friend_address, "")
+	Global.analytics_controller.track_first_social_action("friend_accept")
 
 	_async_update_buttons_and_lists()
 

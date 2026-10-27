@@ -25,6 +25,7 @@
 [ext_resource type="PackedScene" uid="uid://bk7m3n5xp2qrf" path="res://src/ui/pages/discover/friends/friend_discover_skeleton.tscn" id="21_fskel"]
 [ext_resource type="PackedScene" uid="uid://byp4n7u2145fx" path="res://src/ui/components/molecules/snap_carousel/snap_carousel.tscn" id="22_snap"]
 [ext_resource type="PackedScene" path="res://src/ui/components/molecules/credits_balance_button/credits_balance_button.tscn" id="30_crbtn"]
+[ext_resource type="PackedScene" uid="uid://cr5u4c5campwj" path="res://src/ui/components/molecules/streak_widget_card/streak_widget_card.tscn" id="31_streak"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cwrnu"]
 content_margin_left = 10.0
@@ -72,6 +73,19 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 texture = ExtResource("3_7josf")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="TextureRect_SeasonalOverlay" type="TextureRect" parent="TextureRect" unique_id=2096515412]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 expand_mode = 1
 stretch_mode = 6
 
@@ -255,7 +269,6 @@ theme_override_constants/separation = 40
 
 [node name="GuestUpgradeCard" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" unique_id=1116982919 instance=ExtResource("13_7josf")]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 
 [node name="PlacesFeatured" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" unique_id=1265686382 instance=ExtResource("22_snap")]
@@ -264,6 +277,11 @@ layout_mode = 2
 show_title = false
 auto_fetch = true
 auto_scroll = true
+
+[node name="StreakWidgetCard" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" unique_id=2026100801 instance=ExtResource("31_streak")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 130)
+layout_mode = 2
 
 [node name="FriendsOnline" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" unique_id=411918289 node_paths=PackedStringArray("generator") instance=ExtResource("3_s5vyg")]
 unique_name_in_owner = true
