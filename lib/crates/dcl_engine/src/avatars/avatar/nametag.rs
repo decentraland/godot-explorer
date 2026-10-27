@@ -63,7 +63,8 @@ impl DclAvatar {
     /// Recomputed on `skeleton_updated`. The basis Y row is constant while the avatar only yaws
     /// and moves, so the per-frame cost is adding the skeleton's world origin.
     pub(crate) fn recompute_nametag_posed_top(&mut self) {
-        if !self.nametag.gate_visible {
+        // `skeleton_updated` is deferred and still fires for an avatar removed from the tree.
+        if !self.nametag.gate_visible || !self.base().is_inside_tree() {
             return;
         }
         let Some(nodes) = self.nodes.as_ref() else {
