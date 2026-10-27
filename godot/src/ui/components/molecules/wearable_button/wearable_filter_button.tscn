@@ -1,12 +1,17 @@
 [gd_scene format=3 uid="uid://wuyfsip50bwb"]
 
-[ext_resource type="Texture2D" uid="uid://b2kifoj66rvad" path="res://assets/ui/wearable_categories/hair-icon.svg" id="1_rx2nd"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="1_y1b4k"]
 [ext_resource type="Script" uid="uid://dosaf3s7y62b0" path="res://src/ui/components/molecules/wearable_button/wearable_filter_button.gd" id="2_5x3mr"]
+[ext_resource type="StyleBox" path="res://src/ui/components/molecules/wearable_button/style_subcategory_slot_normal.tres" id="3_slot_n"]
+[ext_resource type="StyleBox" path="res://src/ui/components/molecules/wearable_button/style_subcategory_slot_selected_frame.tres" id="4_slot_f"]
+[ext_resource type="LabelSettings" path="res://src/ui/components/molecules/wearable_button/label_settings_subcategory.tres" id="5_slot_lbl"]
 
 [node name="Wearable_Button" type="Button" unique_id=1471779674]
-offset_right = 143.0
-offset_bottom = 87.0
+custom_minimum_size = Vector2(124, 173)
+offset_right = 124.0
+offset_bottom = 173.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
 focus_mode = 0
 mouse_filter = 1
 mouse_default_cursor_shape = 2
@@ -15,10 +20,92 @@ theme_type_variation = &"WearableCategoryBackpack"
 toggle_mode = true
 action_mode = 0
 keep_pressed_outside = true
-text = "WEARABLE_BUTTON_BODY"
-icon = ExtResource("1_rx2nd")
+text = "HAIR"
+flat = true
 script = ExtResource("2_5x3mr")
-filter_category = 1
+filter_category = 0
 metadata/_custom_type_script = "uid://dq2es2bh7xr7j"
+
+[node name="PanelContainer_Card" type="PanelContainer" parent="." unique_id=1969434437]
+unique_name_in_owner = true
+layout_mode = 1
+offset_right = 124.0
+offset_bottom = 124.0
+mouse_filter = 2
+theme_override_styles/panel = ExtResource("3_slot_n")
+
+[node name="TextureRect_EquippedBackground" type="TextureRect" parent="PanelContainer_Card" unique_id=252336498]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 3
+stretch_mode = 5
+
+[node name="TextureRect_EquippedThumbnail" type="TextureRect" parent="PanelContainer_Card" unique_id=932218871]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 3
+stretch_mode = 5
+
+[node name="Control_EmptyIcon" type="Control" parent="PanelContainer_Card" unique_id=246143567]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ColorRect_Vertical" type="ColorRect" parent="PanelContainer_Card/Control_EmptyIcon" unique_id=2142109852]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -1.3
+offset_top = -10.0
+offset_right = 1.3
+offset_bottom = 10.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.3)
+
+[node name="ColorRect_Horizontal" type="ColorRect" parent="PanelContainer_Card/Control_EmptyIcon" unique_id=1740307007]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -10.0
+offset_top = -1.3
+offset_right = 10.0
+offset_bottom = 1.3
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.3)
+
+[node name="PanelContainer_Selected" type="PanelContainer" parent="." unique_id=1079845225]
+unique_name_in_owner = true
+layout_mode = 1
+offset_left = -5.0
+offset_top = -5.0
+offset_right = 129.0
+offset_bottom = 129.0
+mouse_filter = 2
+theme_override_styles/panel = ExtResource("4_slot_f")
+
+[node name="Label_Category" type="Label" parent="." unique_id=2128735119]
+unique_name_in_owner = true
+layout_mode = 1
+offset_top = 128.0
+offset_right = 124.0
+offset_bottom = 173.0
+text = "Hair"
+label_settings = ExtResource("5_slot_lbl")
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [connection signal="toggled" from="." to="." method="_on_toggled"]

@@ -368,7 +368,7 @@ func _update_visible_categories():
 	for wearable_filter_button: WearableFilterButton in wearable_filter_buttons:
 		var category = wearable_filter_button.get_category_name()
 		var filter_categories: Array = Wearables.Categories.MAIN_CATEGORIES.get(
-			main_category_selected
+			main_category_selected, []
 		)
 		var category_is_visible: bool = (
 			filter_categories != null
@@ -393,7 +393,7 @@ func _update_visible_categories():
 		hseparator_extra_space.hide()
 	if first_wearable_filter_button:
 		for btn in wearable_filter_buttons:
-			btn.set_pressed_no_signal(btn == first_wearable_filter_button)
+			btn.set_slot_pressed_no_signal(btn == first_wearable_filter_button)
 		_on_wearable_filter_button_filter_type(first_wearable_filter_button.get_category_name())
 	elif main_category_selected == Wearables.Categories.ALL:
 		_on_wearable_filter_button_filter_type(Wearables.Categories.ALL)
@@ -495,7 +495,32 @@ func _load_filtered_data(filter: String):
 				if can_use:
 					filtered_data.push_back(wearable_id)
 
+	_sort_equipped_first(filtered_data)
 	request_show_wearables = true
+
+
+func _compute_equipped_item_urns() -> Dictionary:
+	# The profile may store token-instance urns (…:<itemId>:<tokenId>) while the grid keys by the
+	# item urn; collapse the equipped list to item urns so on-chain equipped wearables match.
+	var equipped_item_urns := {}
+	for equipped_urn in Global.player_identity.get_mutable_avatar().get_wearables():
+		equipped_item_urns[to_item_urn(equipped_urn)] = true
+	return equipped_item_urns
+
+
+func _sort_equipped_first(urns: Array) -> void:
+	var equipped_item_urns := _compute_equipped_item_urns()
+	var body_shape = Global.player_identity.get_mutable_avatar().get_body_shape()
+	var equipped: Array = []
+	var unequipped: Array = []
+	for urn in urns:
+		if equipped_item_urns.has(urn) or urn == body_shape:
+			equipped.push_back(urn)
+		else:
+			unequipped.push_back(urn)
+	urns.clear()
+	urns.append_array(equipped)
+	urns.append_array(unequipped)
 
 
 func _can_unequip(category: String) -> bool:
@@ -515,12 +540,7 @@ func _show_wearables():
 	margin_container_no_items.visible = not has_items
 	grid_container_wearables_list.visible = has_items
 
-	# The profile may store token-instance urns (…:<itemId>:<tokenId>) while the grid keys by the
-	# item urn; collapse the equipped list to item urns so on-chain equipped wearables highlight
-	# correctly (and are therefore unequippable).
-	var equipped_item_urns := {}
-	for equipped_urn in Global.player_identity.get_mutable_avatar().get_wearables():
-		equipped_item_urns[to_item_urn(equipped_urn)] = true
+	var equipped_item_urns := _compute_equipped_item_urns()
 
 	for wearable_id in filtered_data:
 		var wearable_item = WEARABLE_ITEM_INSTANTIABLE.instantiate()
@@ -541,6 +561,59 @@ func _show_wearables():
 		)
 		wearable_item.set_pressed_no_signal(is_wearable_pressed)
 		wearable_item.set_equiped(is_wearable_pressed)
+
+	# grid_container_wearables_list is SHRINK_CENTER (3 columns), so a 1- or 2-item category
+	# centers its single short row instead of starting at the left. Pad it out to a full row
+	# with untappable placeholders so the real cards land on the left like a full row would.
+	if filtered_data.size() == 1 or filtered_data.size() == 2:
+		for i in range(3 - filtered_data.size()):
+			var ghost_card := Control.new()
+			ghost_card.custom_minimum_size = Vector2(192, 192)
+			ghost_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			grid_container_wearables_list.add_child(ghost_card)
+
+	_update_subcategory_equipped_slots()
+
+
+## Pushes the currently-equipped wearable of each sub-category onto its filter slot
+## (%TextureRect_EquippedThumbnail), so the sub-category row shows what's equipped instead
+## of a plain icon — one slot per category in Wearables.Categories.MAIN_CATEGORIES.
+func _update_subcategory_equipped_slots() -> void:
+	var avatar = Global.player_identity.get_mutable_avatar()
+	var equipped_by_category: Dictionary = {}
+	for equipped_urn in avatar.get_wearables():
+		var wearable = wearable_data.get(to_item_urn(equipped_urn))
+		if wearable != null:
+			equipped_by_category[wearable.get_category()] = wearable
+	var body_shape_wearable = wearable_data.get(avatar.get_body_shape())
+	if body_shape_wearable != null:
+		equipped_by_category[Wearables.Categories.BODY_SHAPE] = body_shape_wearable
+
+	for wearable_filter_button: WearableFilterButton in wearable_filter_buttons:
+		var wearable: DclItemEntityDefinition = equipped_by_category.get(
+			wearable_filter_button.get_category_name()
+		)
+		if wearable == null:
+			wearable_filter_button.clear_equipped_texture()
+		else:
+			_async_set_slot_thumbnail(wearable_filter_button, wearable)
+
+
+func _async_set_slot_thumbnail(
+	wearable_filter_button: WearableFilterButton, wearable: DclItemEntityDefinition
+) -> void:
+	var dcl_content_mapping = wearable.get_content_mapping()
+	var wearable_thumbnail: String = wearable.get_thumbnail()
+	if dcl_content_mapping.get_hash(wearable_thumbnail).is_empty():
+		return
+	var promise: Promise = Global.content_provider.fetch_texture(
+		wearable_thumbnail, dcl_content_mapping
+	)
+	var res = await PromiseUtils.async_awaiter(promise)
+	if res is PromiseError:
+		printerr("Fetch texture error on ", wearable_thumbnail, ": ", res.get_error())
+		return
+	wearable_filter_button.set_equipped_texture(res.texture, wearable.get_rarity())
 
 
 func _setup_ios_marketplace_section():
@@ -683,6 +756,7 @@ func _on_wearable_equip(wearable_id: String):
 		Global.player_identity.get_mutable_avatar().set_wearables(new_avatar_wearables)
 
 	request_update_avatar = true
+	_update_subcategory_equipped_slots()
 
 
 # The urn to store in the avatar profile for a grid item: the owned token-instance urn
@@ -720,6 +794,7 @@ func _on_wearable_unequip(wearable_id: String):
 
 	Global.player_identity.get_mutable_avatar().set_wearables(new_avatar_wearables)
 	request_update_avatar = true
+	_update_subcategory_equipped_slots()
 
 
 func _async_on_marketplace_equip(urn: String):

@@ -324,10 +324,24 @@ func _update_grid_equipped_state():
 		var normalized := _normalize_emote_urn(urn)
 		if not normalized.is_empty():
 			normalized_equipped.append(normalized)
+	var equipped_items: Array = []
+	var unequipped_items: Array = []
 	for emote_item in all_emote_items:
 		if emote_item is EmoteItemUi:
 			var item_urn := _normalize_emote_urn(emote_item.emote_urn)
-			emote_item.set_equipped(not item_urn.is_empty() and item_urn in normalized_equipped)
+			var is_equipped := not item_urn.is_empty() and item_urn in normalized_equipped
+			emote_item.set_equipped(is_equipped)
+			if is_equipped:
+				equipped_items.push_back(emote_item)
+			else:
+				unequipped_items.push_back(emote_item)
+	var index := 0
+	for emote_item in equipped_items:
+		container_all_emotes.move_child(emote_item, index)
+		index += 1
+	for emote_item in unequipped_items:
+		container_all_emotes.move_child(emote_item, index)
+		index += 1
 
 
 func _sync_grid_selection():
