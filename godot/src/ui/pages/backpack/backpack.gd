@@ -38,7 +38,7 @@ var only_collectibles: bool = false
 var base_wearable_request_id: int = -1
 var wearable_data: Dictionary = {}
 
-var wearable_filter_buttons: Array[WearableFilterButton] = []
+var wearable_filter_buttons: Array[WearableCategorySlot] = []
 var main_category_selected: String
 var request_update_avatar: bool = false  # debounce
 var request_show_wearables: bool = false  # debounce
@@ -212,7 +212,7 @@ func _ready():
 					wearable_filter_button.set_pressed_no_signal(true)
 
 	for wearable_filter_button in container_sub_categories.get_children():
-		if wearable_filter_button is WearableFilterButton:
+		if wearable_filter_button is WearableCategorySlot:
 			wearable_filter_button.filter_type.connect(self._on_wearable_filter_button_filter_type)
 			wearable_filter_buttons.push_back(wearable_filter_button)
 
@@ -364,8 +364,8 @@ func _is_wearables_button_clipped() -> bool:
 
 func _update_visible_categories():
 	#var showed_subcategories: int = 0
-	var first_wearable_filter_button: WearableFilterButton = null
-	for wearable_filter_button: WearableFilterButton in wearable_filter_buttons:
+	var first_wearable_filter_button: WearableCategorySlot = null
+	for wearable_filter_button: WearableCategorySlot in wearable_filter_buttons:
 		var category = wearable_filter_button.get_category_name()
 		var filter_categories: Array = Wearables.Categories.MAIN_CATEGORIES.get(
 			main_category_selected, []
@@ -589,7 +589,7 @@ func _update_subcategory_equipped_slots() -> void:
 	if body_shape_wearable != null:
 		equipped_by_category[Wearables.Categories.BODY_SHAPE] = body_shape_wearable
 
-	for wearable_filter_button: WearableFilterButton in wearable_filter_buttons:
+	for wearable_filter_button: WearableCategorySlot in wearable_filter_buttons:
 		var wearable: DclItemEntityDefinition = equipped_by_category.get(
 			wearable_filter_button.get_category_name()
 		)
@@ -600,7 +600,7 @@ func _update_subcategory_equipped_slots() -> void:
 
 
 func _async_set_slot_thumbnail(
-	wearable_filter_button: WearableFilterButton, wearable: DclItemEntityDefinition
+	wearable_filter_button: WearableCategorySlot, wearable: DclItemEntityDefinition
 ) -> void:
 	var dcl_content_mapping = wearable.get_content_mapping()
 	var wearable_thumbnail: String = wearable.get_thumbnail()

@@ -1,0 +1,245 @@
+[gd_scene format=3 uid="uid://btgwmmseajpbw"]
+
+[ext_resource type="Script" uid="uid://b4fi6gddi3xkj" path="res://src/ui/components/molecules/wearable_category_slot/wearable_category_slot.gd" id="2_slot_gd"]
+[ext_resource type="StyleBox" uid="uid://vtdvsaos8nid" path="res://src/ui/components/molecules/wearable_category_slot/style_subcategory_slot_empty_default.tres" id="3_empty_d"]
+[ext_resource type="FontFile" uid="uid://cvtogigxks73f" path="res://assets/themes/fonts/inter/Inter-Light.ttf" id="3_h3rxk"]
+[ext_resource type="StyleBox" uid="uid://djfwxvinn75me" path="res://src/ui/components/molecules/wearable_category_slot/style_subcategory_slot_outline_pressed.tres" id="4_outline_p"]
+[ext_resource type="LabelSettings" uid="uid://dk250l1uewhqw" path="res://src/ui/components/molecules/wearable_category_slot/label_settings_subcategory.tres" id="5_slot_lbl"]
+
+[sub_resource type="Shader" id="Shader_4b5mw"]
+code = "shader_type canvas_item;
+
+// Corner radius in actual screen pixels, independent of texture size or aspect ratio
+uniform float corner_radius_px : hint_range(0.0, 512.0, 1.0) = 24.0;
+
+uniform bool round_top_left = true;
+uniform bool round_top_right = true;
+uniform bool round_bottom_left = true;
+uniform bool round_bottom_right = true;
+
+varying vec2 local_pos;
+
+float rounded_box_sdf(vec2 p, vec2 half_size, float r_tl, float r_tr, float r_bl, float r_br) {
+	// Select radius based on quadrant (y increases downward in screen space)
+	float r = p.x > 0.0
+		? (p.y > 0.0 ? r_br : r_tr)
+		: (p.y > 0.0 ? r_bl : r_tl);
+	vec2 q = abs(p) - half_size + r;
+	return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+}
+
+void vertex() {
+	local_pos = VERTEX;
+}
+
+void fragment() {
+	vec2 rect_size = vec2(
+		abs(dFdx(local_pos.x) / dFdx(UV.x)),
+		abs(dFdy(local_pos.y) / dFdy(UV.y))
+	);
+	vec2 center = rect_size * 0.5;
+
+	float r = corner_radius_px;
+	float dist = rounded_box_sdf(
+		local_pos - center,
+		center,
+		round_top_left     ? r : 0.0,
+		round_top_right    ? r : 0.0,
+		round_bottom_left  ? r : 0.0,
+		round_bottom_right ? r : 0.0
+	);
+
+	float aa = fwidth(dist);
+	// COLOR already holds modulate * texture(TEXTURE, UV); only mask the corners on its alpha — don't
+	// re-sample the texture (that squares it) and don't overwrite (that drops the parent modulate, so
+	// a dimmed read notification would stay solid).
+	COLOR.a *= 1.0 - smoothstep(-aa, aa, dist);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_h3rxk"]
+shader = SubResource("Shader_4b5mw")
+shader_parameter/corner_radius_px = 8.0
+shader_parameter/round_top_left = true
+shader_parameter/round_top_right = true
+shader_parameter/round_bottom_left = true
+shader_parameter/round_bottom_right = true
+
+[sub_resource type="Shader" id="Shader_h3rxk"]
+code = "shader_type canvas_item;
+
+// Corner radius in actual screen pixels, independent of texture size or aspect ratio
+uniform float corner_radius_px : hint_range(0.0, 512.0, 1.0) = 24.0;
+
+uniform bool round_top_left = true;
+uniform bool round_top_right = true;
+uniform bool round_bottom_left = true;
+uniform bool round_bottom_right = true;
+
+varying vec2 local_pos;
+
+float rounded_box_sdf(vec2 p, vec2 half_size, float r_tl, float r_tr, float r_bl, float r_br) {
+	// Select radius based on quadrant (y increases downward in screen space)
+	float r = p.x > 0.0
+		? (p.y > 0.0 ? r_br : r_tr)
+		: (p.y > 0.0 ? r_bl : r_tl);
+	vec2 q = abs(p) - half_size + r;
+	return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+}
+
+void vertex() {
+	local_pos = VERTEX;
+}
+
+void fragment() {
+	vec2 rect_size = vec2(
+		abs(dFdx(local_pos.x) / dFdx(UV.x)),
+		abs(dFdy(local_pos.y) / dFdy(UV.y))
+	);
+	vec2 center = rect_size * 0.5;
+
+	float r = corner_radius_px;
+	float dist = rounded_box_sdf(
+		local_pos - center,
+		center,
+		round_top_left     ? r : 0.0,
+		round_top_right    ? r : 0.0,
+		round_bottom_left  ? r : 0.0,
+		round_bottom_right ? r : 0.0
+	);
+
+	float aa = fwidth(dist);
+	// COLOR already holds modulate * texture(TEXTURE, UV); only mask the corners on its alpha — don't
+	// re-sample the texture (that squares it) and don't overwrite (that drops the parent modulate, so
+	// a dimmed read notification would stay solid).
+	COLOR.a *= 1.0 - smoothstep(-aa, aa, dist);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_hf1hm"]
+shader = SubResource("Shader_h3rxk")
+shader_parameter/corner_radius_px = 8.0
+shader_parameter/round_top_left = true
+shader_parameter/round_top_right = true
+shader_parameter/round_bottom_left = true
+shader_parameter/round_bottom_right = true
+
+[sub_resource type="LabelSettings" id="LabelSettings_hf1hm"]
+font = ExtResource("3_h3rxk")
+font_size = 44
+font_color = Color(1, 1, 1, 0.3019608)
+
+[node name="Wearable_Category_Slot" type="Button" unique_id=1471779674]
+auto_translate_mode = 2
+custom_minimum_size = Vector2(124, 173)
+offset_right = 124.0
+offset_bottom = 173.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+focus_mode = 0
+mouse_filter = 1
+mouse_default_cursor_shape = 2
+toggle_mode = true
+action_mode = 0
+button_mask = 0
+keep_pressed_outside = true
+flat = true
+script = ExtResource("2_slot_gd")
+metadata/_custom_type_script = "uid://dq2es2bh7xr7j"
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1945584266]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Control" type="Control" parent="VBoxContainer" unique_id=1425598357]
+custom_minimum_size = Vector2(124, 124)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/Control" unique_id=1792304078]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = -5
+theme_override_constants/margin_top = -5
+theme_override_constants/margin_right = -5
+theme_override_constants/margin_bottom = -5
+
+[node name="PanelContainer_Outline" type="PanelContainer" parent="VBoxContainer/Control/MarginContainer" unique_id=-447354391]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = ExtResource("4_outline_p")
+
+[node name="PanelContainer_Card" type="PanelContainer" parent="VBoxContainer/Control" unique_id=1969434437]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(124, 124)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = ExtResource("3_empty_d")
+
+[node name="TextureRect_EquippedBackground" type="TextureRect" parent="VBoxContainer/Control/PanelContainer_Card" unique_id=252336498]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_h3rxk")
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 3
+stretch_mode = 5
+
+[node name="TextureRect_EquippedThumbnail" type="TextureRect" parent="VBoxContainer/Control/PanelContainer_Card" unique_id=932218871]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_hf1hm")
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 3
+stretch_mode = 5
+
+[node name="Control_EmptyIcon" type="Control" parent="VBoxContainer/Control/PanelContainer_Card" unique_id=246143567]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="Label_Add" type="Label" parent="VBoxContainer/Control/PanelContainer_Card/Control_EmptyIcon" unique_id=1858407591]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -14.5
+offset_top = -30.0
+offset_right = 14.5
+offset_bottom = 24.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "+"
+label_settings = SubResource("LabelSettings_hf1hm")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Label_Category" type="Label" parent="VBoxContainer" unique_id=2128735119]
+unique_name_in_owner = true
+auto_translate_mode = 2
+custom_minimum_size = Vector2(0, 45)
+layout_mode = 2
+text = "All"
+label_settings = ExtResource("5_slot_lbl")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[connection signal="toggled" from="." to="." method="_on_toggled"]
