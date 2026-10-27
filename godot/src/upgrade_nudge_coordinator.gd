@@ -147,6 +147,18 @@ func _async_evaluate() -> void:
 			_evaluated_this_session = false
 		return
 
+	# A `true` above can still turn into an involuntary close once a loading screen starts — the
+	# common timing, since the interrupting load usually only starts after the modal is already
+	# fully up (#2867). Wait for the modal to actually go away before trusting it was really seen.
+	if is_instance_valid(Global.modal_manager.current_upgrade_modal):
+		await Global.modal_manager.current_upgrade_modal.tree_exited
+	if Global.modal_manager.last_upgrade_show_interrupted_by_loading:
+		print("[UpgradeNudge] modal closed by an in-flight loading screen; cadence not advanced")
+		# Same reasoning as the stale-trigger branch above: this is not a real failure, so it
+		# shouldn't burn one of only MAX_SHOWS ever-shown slots — retry at the next portrait moment.
+		_evaluated_this_session = false
+		return
+
 	config.upgrade_modal_shown_count += 1
 	config.upgrade_modal_last_shown_unix = int(Time.get_unix_time_from_system())
 	config.save_to_settings_file()

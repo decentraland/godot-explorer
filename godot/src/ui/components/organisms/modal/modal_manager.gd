@@ -37,6 +37,13 @@ var bug_report_modal_scene: PackedScene = null
 var code_modal_scene: PackedScene = null
 var reward_modal_scene: PackedScene = null
 var upgrade_modal_scene: PackedScene = null
+## Set by _on_upgrade_modal_loading_started() when Global.loading_started fires while the upgrade
+## modal is being created or is already open — mirrors StreakModalController's
+## last_show_interrupted_by_loading (#2867: a loading screen that starts only after
+## ModalTransitionGate's wait already settled is otherwise invisible to it). Reset at the top of
+## every async_show_upgrade_modal call; UpgradeNudgeCoordinator reads it after awaiting the
+## modal's own tree_exited to decide whether to advance the nudge's cadence.
+var last_upgrade_show_interrupted_by_loading: bool = false
 var ban_pre_check_active: bool = false
 ## Suppresses a stale ban_kicked_modal triggered by comms after a pre-check was already handled.
 var _suppress_ban_kicked: bool = false
@@ -188,6 +195,7 @@ func _ready() -> void:
 		)
 	Global.on_menu_close.connect(_on_menu_close_ban_recheck)
 	Global.loading_finished.connect(_on_loading_finished_clear_suppress)
+	Global.loading_started.connect(_on_upgrade_modal_loading_started)
 
 
 ## Shows an EXTERNAL_LINK type modal
@@ -1632,11 +1640,28 @@ func _remove_reward_modal() -> void:
 	_reward_canvas_layer = null
 
 
+## A loading screen starting while the upgrade modal is up always wins — the gate inside
+## _async_create_upgrade_modal only guards one that's already visible when its wait starts, not
+## one that begins afterwards (#2867).
+func _on_upgrade_modal_loading_started() -> void:
+	last_upgrade_show_interrupted_by_loading = true
+	if is_instance_valid(current_upgrade_modal) and current_upgrade_modal.visible:
+		close_upgrade_modal()
+
+
 ## Shows the aspirational guest-upgrade nudge modal (issue #2372). Returns true only if the
-## modal was actually created and opened, so the coordinator advances its cadence only then.
+## modal was actually created and opened, so the coordinator advances its cadence only then —
+## the coordinator still has to await current_upgrade_modal.tree_exited and check
+## last_upgrade_show_interrupted_by_loading afterwards, since a `true` here can still turn into
+## an involuntary close once a loading screen starts (open() itself never yields, so that can't
+## happen inside this call).
 func async_show_upgrade_modal() -> bool:
+	last_upgrade_show_interrupted_by_loading = false
 	var modal = await _async_create_upgrade_modal()
 	if not is_instance_valid(modal):
+		return false
+	if last_upgrade_show_interrupted_by_loading:
+		close_upgrade_modal()
 		return false
 	modal.open()
 	return true
