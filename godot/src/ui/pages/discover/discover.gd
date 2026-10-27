@@ -106,9 +106,11 @@ func _show_streak_modal_if_pending() -> void:
 	_showing_streak_modal = true
 	var pending := Global.streak_manager.take_pending_modal()
 	if not pending.is_empty():
-		await _async_show_streak_modal_and_wait(
+		var shown := await _async_show_streak_modal_and_wait(
 			StreakModal.state_from_pending(pending), Global.streak_manager.get_progress_day()
 		)
+		if not shown:
+			Global.streak_manager.requeue_pending_modal(pending)
 	else:
 		await _async_show_streak_current_reminder_if_pending()
 	_showing_streak_modal = false
@@ -119,26 +121,34 @@ func _async_show_streak_current_reminder_if_pending() -> void:
 	var pending_day := Global.streak_manager.take_current_reminder()
 	if pending_day == 0:
 		return
-	await _async_show_streak_modal_and_wait(
+	var shown := await _async_show_streak_modal_and_wait(
 		Global.streak_manager.compute_modal_state(pending_day),
 		Global.streak_manager.get_effective_progress_day(),
 		pending_day
 	)
+	if not shown:
+		Global.streak_manager.untake_current_reminder(pending_day)
 
 
 func _async_show_streak_modal_and_wait(
 	state: int, progress_day: int, pending_day: int = -1
-) -> void:
+) -> bool:
 	var is_guest := StreakManager.is_unlinked_guest()
-	Global.upgrade_nudge_coordinator.suppress_until_cleared("streak")
+	Global.upgrade_nudge_coordinator.suppress_until_cleared("streak", self)
 	var shown := await Global.streak_modal_controller.async_show_streak_modal(
-		state, progress_day, is_guest, pending_day
+		state, progress_day, is_guest, self, pending_day
 	)
 	if shown and is_instance_valid(Global.streak_modal_controller.current_streak_modal):
 		await Global.streak_modal_controller.current_streak_modal.tree_exited
+		# A loading screen can start only after the modal was already fully shown — the
+		# controller force-closes it in that case, but by then this function had already
+		# captured `shown = true`. Treat that close the same as never having shown it (#2867).
+		if Global.streak_modal_controller.last_show_interrupted_by_loading:
+			shown = false
 	if streak_widget_card:
 		streak_widget_card.refresh_visibility()
-	Global.upgrade_nudge_coordinator.resume("streak")
+	Global.upgrade_nudge_coordinator.resume("streak", self)
+	return shown
 
 
 func _on_featured_card_tapped(index: int) -> void:
@@ -346,7 +356,7 @@ func _show_device_support_modal_if_needed() -> void:
 ## happen here, after the modal is confirmed on screen — not in the caller before this even runs —
 ## so a creation failure can't silently burn below-minspec's only-ever chance to show.
 func _async_show_then_resume_nudge(is_end_of_support: bool, forced: bool) -> void:
-	Global.upgrade_nudge_coordinator.suppress_until_cleared("device_support")
+	Global.upgrade_nudge_coordinator.suppress_until_cleared("device_support", self)
 	if is_end_of_support:
 		await Global.modal_manager.async_show_end_of_device_support_modal()
 	else:
@@ -369,7 +379,7 @@ func _async_show_then_resume_nudge(is_end_of_support: bool, forced: bool) -> voi
 				config.below_minspec_modal_shown = true
 			config.save_to_settings_file()
 		await modal.tree_exited
-	Global.upgrade_nudge_coordinator.resume("device_support")
+	Global.upgrade_nudge_coordinator.resume("device_support", self)
 
 
 func _show_low_spec_warning_if_needed():
