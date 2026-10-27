@@ -7,6 +7,13 @@ extends Control
 ## button, a teleport or the menu.
 
 const CHAT_SCENE := preload("res://src/ui/pages/chat/chat.tscn")
+## Two drawings so the stroke stays 4 px at each orientation's chevron size.
+const CHEVRON_ICON_LANDSCAPE := preload(
+	"res://src/ui/components/atoms/buttons/hud_button/icons/hud-chevron-down.svg"
+)
+const CHEVRON_ICON_PORTRAIT := preload(
+	"res://src/ui/components/atoms/buttons/hud_button/icons/hud-chevron-down-large.svg"
+)
 ## How long the exit button keeps its label before collapsing to the icon.
 const EXIT_LABEL_SECONDS := 3.0
 ## Chat column beside the video (design: 430 of 1600 landscape px).
@@ -15,8 +22,6 @@ const LANDSCAPE_CHAT_WIDTH := 430
 const DEFAULT_VIDEO_ASPECT := 9.0 / 16.0
 ## get_backend_texture() hands out a 2x2 black placeholder before the first frame.
 const PLACEHOLDER_MAX_SIZE := 2
-## Collapsed chat in portrait: the header plus about three lines of messages.
-const PORTRAIT_COLLAPSED_CHAT_HEIGHT := 220
 ## Messages re-measure over a few frames after a relayout; the scroll to the latest line
 ## has to wait for that or it lands on the old content height.
 const SCROLL_SETTLE_SECONDS := 0.25
@@ -26,8 +31,13 @@ const HEADER_FONT_SIZE_PORTRAIT := 28
 ## Side margin of the exit/rotate row: the HUD chat's 40 px in portrait (hud_margins.tres).
 const CONTROLS_SIDE_MARGIN_LANDSCAPE := 48
 const CONTROLS_SIDE_MARGIN_PORTRAIT := 40
-## The exit button's corners in landscape (a disc in portrait), as the close_button atom.
-const EXIT_CORNER_RADIUS_LANDSCAPE := 10
+## Chat header per the design: 76 px tall with 10 px vertical padding and a 48 px chevron in
+## landscape, a 56 px chevron in portrait.
+const HEADER_HEIGHT_LANDSCAPE := 76
+const HEADER_HEIGHT_PORTRAIT := 56
+const HEADER_PADDING_Y_LANDSCAPE := 10
+const CHEVRON_SIZE_LANDSCAPE := 48
+const CHEVRON_SIZE_PORTRAIT := 56
 
 var _video_player: Node = null
 var _chat: Control = null
@@ -41,9 +51,10 @@ var _chat_reveal_epoch: int = 0
 @onready var _layout: BoxContainer = %BoxContainer_Layout
 @onready var _video_panel: Control = %Control_Video
 @onready var _texture_rect: TextureRect = %TextureRect_Video
-@onready var _safe_root: MarginContainer = %SafeMarginContainer_Root
+@onready var _chat_bottom_inset: MarginContainer = %SafeMarginContainer_ChatBottom
 @onready var _chat_column: PanelContainer = %PanelContainer_Chat
 @onready var _chat_header: PanelContainer = %PanelContainer_Header
+@onready var _collapse_slot: Control = %Control_CollapseSlot
 @onready var _chat_slot: Control = %Control_ChatSlot
 @onready var _label_members: Label = %Label_Members
 @onready var _controls_margin: MarginContainer = %MarginContainer_Controls
@@ -181,34 +192,42 @@ func _apply_orientation(is_portrait: bool) -> void:
 ## few frames after this call, so it runs after the column is visible and sized, never while
 ## it is hidden, or the messages keep a stale width and overflow when the column comes back.
 func _refresh_chat() -> void:
-	if _chat == null or not _chat_column.visible:
+	if _chat == null or not _chat_column.visible or not _chat_slot.visible:
 		return
 	_chat.apply_orientation(_layout.vertical)
 	# The docked column is narrow in both orientations, so the chat always uses its
 	# full-width (portrait) layout; apply_orientation only sets the sizes and fonts.
 	_chat.set_layout_portrait()
-	# A three-line strip has no room for the write button; expand to type.
-	_chat.button_write.visible = not (_chat_collapsed and _layout.vertical)
 
 
 ## Lays the chat out for the orientation and the collapsed state. Landscape: a fixed-width
 ## column, or nothing (the video takes the whole screen and an edge tab brings it back).
-## Portrait: the chat fills under the video, or shrinks to a strip and the video takes the rest.
+## Portrait: the chat fills under the video, or shrinks to its header and the video takes the rest.
 func _apply_chat_layout() -> void:
 	var is_portrait := _layout.vertical
 	# Exit and rotate follow the HUD chat bar's discs: 66 px in landscape, 96 px in portrait.
-	# The exit button takes the same footprint and glyph size as the disc beside it: a
-	# rounded square in landscape, a disc in portrait.
+	# The exit disc takes the same footprint and glyph size as the one beside it.
 	var preset := HudButton.Size.LARGE if is_portrait else HudButton.Size.SMALL
 	_button_rotate.size_preset = preset
 	var spec: Vector2i = HudButton.SIZES[preset]
 	var exit_px: int = spec.x
 	_button_exit.custom_minimum_size = Vector2(exit_px, exit_px)
 	_button_exit.add_theme_constant_override("icon_max_width", spec.y)
-	var radius: int = roundi(exit_px * 0.5) if is_portrait else EXIT_CORNER_RADIUS_LANDSCAPE
 	for slot in [&"normal", &"pressed"]:
 		var box := _button_exit.get_theme_stylebox(slot) as StyleBoxFlat
-		box.set_corner_radius_all(radius)
+		box.set_corner_radius_all(roundi(exit_px * 0.5))
+	var header_box := _chat_header.get_theme_stylebox("panel") as StyleBoxFlat
+	var padding_y: int = 0 if is_portrait else HEADER_PADDING_Y_LANDSCAPE
+	header_box.content_margin_top = padding_y
+	header_box.content_margin_bottom = padding_y
+	_chat_header.custom_minimum_size.y = (
+		HEADER_HEIGHT_PORTRAIT if is_portrait else HEADER_HEIGHT_LANDSCAPE
+	)
+	var chevron_px: int = CHEVRON_SIZE_PORTRAIT if is_portrait else CHEVRON_SIZE_LANDSCAPE
+	_collapse_slot.custom_minimum_size = Vector2(chevron_px, chevron_px)
+	_button_collapse_chat.size = Vector2(chevron_px, chevron_px)
+	_button_collapse_chat.icon = CHEVRON_ICON_PORTRAIT if is_portrait else CHEVRON_ICON_LANDSCAPE
+	_button_collapse_chat.add_theme_constant_override("icon_max_width", chevron_px)
 	_label_exit.custom_minimum_size = Vector2(0, exit_px)
 	var side: int = CONTROLS_SIDE_MARGIN_PORTRAIT if is_portrait else CONTROLS_SIDE_MARGIN_LANDSCAPE
 	_controls_margin.add_theme_constant_override("margin_left", side)
@@ -218,10 +237,11 @@ func _apply_chat_layout() -> void:
 		HEADER_FONT_SIZE_PORTRAIT if is_portrait else HEADER_FONT_SIZE_LANDSCAPE
 	)
 	_button_expand_chat.visible = _chat_collapsed and not is_portrait
+	_chat_slot.visible = not (_chat_collapsed and is_portrait)
 	if is_portrait:
 		_chat_column.visible = true
 		if _chat_collapsed:
-			_chat_column.custom_minimum_size = Vector2(0, PORTRAIT_COLLAPSED_CHAT_HEIGHT)
+			_chat_column.custom_minimum_size = Vector2.ZERO
 			_chat_column.size_flags_vertical = Control.SIZE_FILL
 			_video_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		else:
@@ -357,12 +377,12 @@ func _on_change_virtual_keyboard(virtual_keyboard_height: int) -> void:
 	if not visible:
 		return
 	# The overlay spans the whole window, so the reported height (which on iOS includes the
-	# bottom inset) is the amount to lift the chat by, minus the bottom margin the safe-area
-	# root already keeps. Scaled like chat_panel.gd.
+	# bottom inset) is the amount to lift the chat by, minus the bottom margin the chat
+	# column already keeps. Scaled like chat_panel.gd.
 	var window_size: Vector2i = DisplayServer.window_get_size()
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	var y_factor: float = viewport_size.y / max(float(window_size.y), 1.0)
-	var safe_bottom: float = float(_safe_root.get_theme_constant("margin_bottom"))
+	var safe_bottom: float = float(_chat_bottom_inset.get_theme_constant("margin_bottom"))
 	_keyboard_margin.custom_minimum_size.y = ceil(
 		max(float(virtual_keyboard_height) * y_factor - safe_bottom, 0.0)
 	)

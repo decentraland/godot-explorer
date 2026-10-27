@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://dtrv82krgoek8" path="res://src/ui/components/organisms/video_focus_mode/video_focus_mode.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://drjenu4ayufgu" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-exit-focus.svg" id="2_exit"]
 [ext_resource type="Texture2D" uid="uid://btkyyrt63j7tv" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-flip-orientation.svg" id="3_rotate"]
-[ext_resource type="Texture2D" uid="uid://1bvilol5e3lf" path="res://assets/ui/Members.svg" id="4_members"]
+[ext_resource type="Texture2D" uid="uid://dspgk3lpv8o7j" path="res://src/ui/components/organisms/video_focus_mode/icons/members.svg" id="4_members"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="5_font"]
 [ext_resource type="Texture2D" uid="uid://bjbfujytp6lmu" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-chevron-down.svg" id="6_chevron"]
 [ext_resource type="PackedScene" uid="uid://bdlssvxebe4kt" path="res://src/ui/components/atoms/buttons/hud_button/hud_button.tscn" id="7_hud"]
@@ -14,6 +14,7 @@
 bg_color = Color(0.113725, 0.109804, 0.12549, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_header"]
+resource_local_to_scene = true
 content_margin_left = 16.0
 content_margin_right = 16.0
 bg_color = Color(0.0431373, 0.0431373, 0.0509804, 1)
@@ -75,7 +76,7 @@ color = Color(0, 0, 0, 1)
 
 [node name="SafeMarginContainer_Root" type="MarginContainer" parent="."]
 unique_name_in_owner = true
-editor_description = "Device safe area (notch, home indicator) in both orientations, as SafeAreaHud does for the HUD chat; no side insets so the landscape video stays full-bleed. video_focus_margins.tres adds the HUD's 45 px bottom floor in both orientations so the chat input clears the home indicator by the same margin as the HUD chat. The background ColorRect behind it paints the inset bands."
+editor_description = "Device safe area (notch, home indicator) in both orientations, as SafeAreaHud does for the HUD chat; no side insets so the landscape video stays full-bleed. The bottom inset is applied inside the chat column (SafeMarginContainer_ChatBottom) so the chat background reaches the bottom edge. The background ColorRect behind it paints the inset bands."
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -86,6 +87,7 @@ mouse_filter = 2
 script = ExtResource("8_safe")
 use_left = false
 use_right = false
+use_bottom = false
 margin_profile = ExtResource("9_margins")
 
 [node name="VBoxContainer_Root" type="VBoxContainer" parent="SafeMarginContainer_Root"]
@@ -140,7 +142,7 @@ theme_override_constants/separation = 12
 
 [node name="Button_Exit" type="Button" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/Control_Video/MarginContainer_Controls/HBoxContainer_Controls"]
 unique_name_in_owner = true
-editor_description = "Rounded square in landscape (10 px, as the close_button atom and the navbar) and a disc in portrait, with the HudButton disc's fill and pressed colours, sized like the HUD chat discs per orientation from code."
+editor_description = "Disc with the HudButton disc's fill and pressed colours, sized like the HUD chat discs per orientation from code."
 custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
 size_flags_vertical = 0
@@ -214,36 +216,47 @@ size_flags_horizontal = 1
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_chat")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat"]
+[node name="SafeMarginContainer_ChatBottom" type="MarginContainer" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat"]
+unique_name_in_owner = true
+editor_description = "Bottom safe area of the chat column: the device inset, with video_focus_margins.tres adding the HUD's 45 px floor so the chat input clears the home indicator by the same margin as the HUD chat."
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("8_safe")
+use_left = false
+use_right = false
+use_top = false
+margin_profile = ExtResource("9_margins")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/SafeMarginContainer_ChatBottom"]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="PanelContainer_Header" type="PanelContainer" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/VBoxContainer"]
+[node name="PanelContainer_Header" type="PanelContainer" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/SafeMarginContainer_ChatBottom/VBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_header")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/VBoxContainer/PanelContainer_Header"]
+[node name="HBoxContainer" type="HBoxContainer" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/SafeMarginContainer_ChatBottom/VBoxContainer/PanelContainer_Header"]
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="Label_Nearby" type="Label" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/VBoxContainer/PanelContainer_Header/HBoxContainer"]
+[node name="Label_Nearby" type="Label" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/SafeMarginContainer_ChatBottom/VBoxContainer/PanelContainer_Header/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "COMMON_NEARBY"
 label_settings = SubResource("LabelSettings_header")
 vertical_alignment = 1
 
-[node name="TextureRect_Members" type="TextureRect" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/VBoxContainer/PanelContainer_Header/HBoxContainer"]
-custom_minimum_size = Vector2(20, 20)
+[node name="TextureRect_Members" type="TextureRect" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/SafeMarginContainer_ChatBottom/VBoxContainer/PanelContainer_Header/HBoxContainer"]
+custom_minimum_size = Vector2(24, 24)
 layout_mode = 2
 size_flags_vertical = 4
 texture = ExtResource("4_members")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Members" type="Label" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/VBoxContainer/PanelContainer_Header/HBoxContainer"]
+[node name="Label_Members" type="Label" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/SafeMarginContainer_ChatBottom/VBoxContainer/PanelContainer_Header/HBoxContainer"]
 unique_name_in_owner = true
 auto_translate_mode = 2
 layout_mode = 2
@@ -251,14 +264,15 @@ text = "1"
 label_settings = SubResource("LabelSettings_header")
 vertical_alignment = 1
 
-[node name="Control_CollapseSlot" type="Control" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/VBoxContainer/PanelContainer_Header/HBoxContainer"]
+[node name="Control_CollapseSlot" type="Control" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/SafeMarginContainer_ChatBottom/VBoxContainer/PanelContainer_Header/HBoxContainer"]
+unique_name_in_owner = true
 editor_description = "Plain Control between the header HBox and the chevron: a Container resets its children's rotation on every sort, so the rotated chevron cannot be a direct child of the HBox."
 custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 
-[node name="Button_CollapseChat" type="Button" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/VBoxContainer/PanelContainer_Header/HBoxContainer/Control_CollapseSlot"]
+[node name="Button_CollapseChat" type="Button" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/SafeMarginContainer_ChatBottom/VBoxContainer/PanelContainer_Header/HBoxContainer/Control_CollapseSlot"]
 unique_name_in_owner = true
 layout_mode = 0
 offset_right = 66.0
@@ -275,7 +289,7 @@ icon = ExtResource("6_chevron")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Control_ChatSlot" type="Control" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/VBoxContainer"]
+[node name="Control_ChatSlot" type="Control" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/SafeMarginContainer_ChatBottom/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3

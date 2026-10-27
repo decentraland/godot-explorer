@@ -76,18 +76,18 @@ func _test_lifecycle() -> void:
 	)
 	collapse.pressed.emit()
 	_expect(
-		chat_column.visible and chat_column.size_flags_vertical == Control.SIZE_FILL,
-		"portrait collapse keeps a fixed-height chat strip"
+		chat_column.visible and not chat_slot.visible,
+		"portrait collapse keeps only the chat header"
 	)
 	Global.orientation_changed.emit(false)
 	_expect(not layout.vertical, "landscape puts the chat beside the video")
 	_expect(
 		(
 			button_exit.custom_minimum_size == Vector2(66, 66)
-			and exit_box.corner_radius_top_left == 10
+			and exit_box.corner_radius_top_left == 33
 			and texture_rect.offset_top == 0.0
 		),
-		"landscape keeps the rounded-square exit and the row floating over the video"
+		"landscape shows a 66 px exit disc and the row floating over the video"
 	)
 	_expect(
 		not chat_column.visible and expand.visible,
