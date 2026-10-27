@@ -216,6 +216,20 @@ impl Settings {
         Ok(rules::display_version(build))
     }
 
+    /// Whether Settings → Dev Tools is offered to `address` (the signed-in wallet, if any).
+    /// Fail-closed: without the build, or with the flags not loaded, production stays off.
+    pub fn dev_tools_enabled(&self, address: Option<&str>) -> bool {
+        let production = lock(&self.engine)
+            .build
+            .as_ref()
+            .is_none_or(|b| b.production);
+        rules::dev_tools_enabled(
+            production,
+            &crate::flags::get_text(rules::FLAG_TESTER_WALLETS, ""),
+            address,
+        )
+    }
+
     fn allows_pseudo(&self) -> bool {
         lock(&self.engine)
             .build

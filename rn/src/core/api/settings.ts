@@ -10,4 +10,5 @@ export type SettingsApi = Pick<
   | 'cacheSize'
   | 'clearCache'
   | 'version'
+  | 'devToolsEnabled'
 >;

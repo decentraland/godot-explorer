@@ -852,6 +852,26 @@ export async function deployProfile(
 }
 
 /**
+ * Whether Settings → Dev Tools is shown: always outside production, on production only for a
+ * signed-in wallet listed in the `tester-wallets` flag.
+ */
+export function devToolsEnabled(): boolean /*throws*/ {
+  return FfiConverterBool.lift(
+    uniffiCaller.rustCallWithError(
+      /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+      /*caller:*/ callStatus => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_dev_tools_enabled(
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ),
+  );
+}
+
+/**
  * Whether the device is end-of-support or below the minimum spec, and which modal is due.
  */
 export async function deviceSupport(
@@ -13572,6 +13592,14 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_deploy_profile',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_dev_tools_enabled() !==
+    6313
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_dev_tools_enabled',
     );
   }
   if (

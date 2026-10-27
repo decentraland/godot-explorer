@@ -86,6 +86,22 @@ pub fn display_version(build: &BuildInfo) -> String {
     }
 }
 
+/// Comma-separated wallet addresses (any case) that get Dev Tools on production builds.
+pub const FLAG_TESTER_WALLETS: &str = "tester-wallets";
+
+/// Dev Tools are always on outside production. On production only for a signed-in wallet listed
+/// in `tester_wallets`; an empty list (flag unloaded or missing) keeps them off.
+pub fn dev_tools_enabled(production: bool, tester_wallets: &str, address: Option<&str>) -> bool {
+    if !production {
+        return true;
+    }
+    let address = address.unwrap_or_default().to_lowercase();
+    !address.is_empty()
+        && tester_wallets
+            .split(',')
+            .any(|wallet| wallet.trim().to_lowercase() == address)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -112,6 +128,17 @@ mod tests {
             display_version(&build(false, "1.14.0.1844")),
             "1.14.0.1844-6cefb54-staging"
         );
+    }
+
+    #[test]
+    fn dev_tools_follow_the_tester_wallets_on_production() {
+        assert!(dev_tools_enabled(false, "", None));
+        assert!(!dev_tools_enabled(true, "0xabc", None));
+        assert!(!dev_tools_enabled(true, "0xabc", Some("")));
+        assert!(!dev_tools_enabled(true, "", Some("0xabc")));
+        assert!(!dev_tools_enabled(true, "0xdef", Some("0xabc")));
+        assert!(dev_tools_enabled(true, "0xdef, 0xABC ,", Some("0xabc")));
+        assert!(dev_tools_enabled(true, "0xabc", Some("0xABC")));
     }
 
     #[test]

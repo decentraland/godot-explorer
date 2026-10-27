@@ -78,8 +78,10 @@ export type SettingsEnv = {
   skyboxLocked: boolean;
   cameraLocked: boolean;
   deviceUnsupported: boolean;
-  /** Dev Tools and the pseudo-locale only exist outside production. */
+  /** The pseudo-locale and the full version only exist outside production. */
   devBuild: boolean;
+  /** Dev Tools: outside production, or a tester wallet on production. */
+  devTools: boolean;
   /** In a world, where Gameplay offers to replay the tutorial. */
   tutorialReplay: boolean;
 };
@@ -90,6 +92,7 @@ export const defaultEnv = (): SettingsEnv => ({
   cameraLocked: false,
   deviceUnsupported: false,
   devBuild: typeof __DEV__ !== 'undefined' && __DEV__,
+  devTools: typeof __DEV__ !== 'undefined' && __DEV__,
   tutorialReplay: false,
 });
 

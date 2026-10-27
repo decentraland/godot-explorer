@@ -14,7 +14,7 @@ import { devRealms } from './links';
 import { Group, SectionCaption, ToggleRow } from './rows';
 import type { SettingsModel } from './useSettings';
 
-/** Only mounted when `env.devBuild`; text-heavy and not in production. */
+/** Only mounted when `env.devTools`; text-heavy. */
 export function DevToolsSection({ m }: { m: SettingsModel }) {
   const { values, set, api } = m;
   const [url, setUrl] = useState(values.websocket_url);

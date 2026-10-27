@@ -21,9 +21,9 @@ const SECTIONS: { key: SectionKey; label: I18nKey }[] = [
   { key: 'dev', label: 'SETTINGS_DEV_TOOLS' },
 ];
 
-/** The seven sections, plus Dev Tools outside production. */
-export const sectionsFor = (devBuild: boolean) =>
-  SECTIONS.filter(s => s.key !== 'dev' || devBuild);
+/** The seven sections, plus Dev Tools when `devTools`. */
+export const sectionsFor = (devTools: boolean) =>
+  SECTIONS.filter(s => s.key !== 'dev' || devTools);
 
 export const sectionLabel = (key: SectionKey): I18nKey =>
   SECTIONS.find(s => s.key === key)!.label;

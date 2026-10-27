@@ -70,3 +70,13 @@ pub async fn clear_cache() -> Result<u64, CoreError> {
 pub fn version() -> Result<String, CoreError> {
     Ok(store()?.version()?)
 }
+
+/// Whether Settings → Dev Tools is shown: always outside production, on production only for a
+/// signed-in wallet listed in the `tester-wallets` flag.
+#[uniffi::export]
+pub fn dev_tools_enabled() -> Result<bool, CoreError> {
+    let address = core()?
+        .hub()
+        .with_session(|s| s.try_address().map(|a| format!("{a:#x}")));
+    Ok(store()?.dev_tools_enabled(address.as_deref()))
+}

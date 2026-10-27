@@ -49,7 +49,7 @@ async function mount(
     onClose?: () => void;
   } = {},
 ) {
-  const api = createMockApi({ env: { devBuild: false }, ...seed });
+  const api = createMockApi({ env: { devBuild: false, devTools: false }, ...seed });
   let tree!: Tree;
   const element: ReactElement = (
     <SafeAreaProvider initialMetrics={metrics}>
@@ -145,8 +145,13 @@ describe('portrait master-detail', () => {
     jest.restoreAllMocks();
   });
 
+  it('shows Dev Tools on a production build for a tester wallet', async () => {
+    const root = await mount({ env: { devBuild: false, devTools: true } });
+    expect(text(root.tree)).toContain('Dev Tools');
+  });
+
   it('shows Dev Tools in a dev build and mounts its section', async () => {
-    const root = await mount({ env: { devBuild: true } });
+    const root = await mount({ env: { devBuild: true, devTools: true } });
     expect(text(root.tree)).toContain('Dev Tools');
     expect(text(root.tree)).toContain('1.14.0-mock');
     await press(root.tree, 'Dev Tools');
@@ -414,7 +419,7 @@ describe('landscape split', () => {
 
 describe('Dev Tools and camera', () => {
   it('drives the dev actions through the api', async () => {
-    const { api, tree } = await mount({ env: { devBuild: true } }, 'dev');
+    const { api, tree } = await mount({ env: { devBuild: true, devTools: true } }, 'dev');
     await press(tree, 'Scene Logs');
     await press(tree, 'TEST NOTIFICATIONS');
     await press(tree, 'CONNECT');

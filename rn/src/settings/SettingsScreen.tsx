@@ -105,7 +105,7 @@ export function SettingsScreen({
             <BackButton onPress={() => onClose?.()} />
           </View>
           <SectionRows
-            devBuild={m.env.devBuild}
+            devTools={m.env.devTools}
             selected={current}
             rowHeight={30}
             onSelect={setSection}
@@ -145,7 +145,7 @@ export function SettingsScreen({
         ) : (
           <View style={styles.flex}>
             <SectionRows
-              devBuild={m.env.devBuild}
+              devTools={m.env.devTools}
               rowHeight={51}
               onSelect={setSection}
             />

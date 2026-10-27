@@ -76,6 +76,7 @@ export function createCoreSettingsApi(): SettingsApi {
     },
     getEnv: async () => ({
       ...defaultEnv(),
+      devTools: core().devToolsEnabled(),
       tutorialReplay: core().state().tag === 'InWorld',
     }),
     getAccount: async () => {

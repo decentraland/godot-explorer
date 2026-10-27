@@ -25,7 +25,7 @@ function Preview({ cfg }: { cfg: Cfg }) {
     () =>
       createMockApi({
         ...cfg.seed,
-        env: { devBuild: false, ...cfg.seed?.env },
+        env: { devBuild: false, devTools: false, ...cfg.seed?.env },
       }),
     [cfg.seed],
   );
@@ -215,7 +215,7 @@ const ENTRIES: Record<string, Cfg> = {
     title: 'Dev tools',
     section: 'dev',
     seed: {
-      env: { devBuild: true },
+      env: { devBuild: true, devTools: true },
       values: { raycast_debugger: true, scene_logs: true },
     },
   },

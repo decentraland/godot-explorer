@@ -247,6 +247,9 @@ interface NativeModuleInterface {
   ): bigint;
   ubrn_uniffi_dcl_core_fn_func_delete_account(): bigint;
   ubrn_uniffi_dcl_core_fn_func_deploy_profile(update: Uint8Array): bigint;
+  ubrn_uniffi_dcl_core_fn_func_dev_tools_enabled(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): number;
   ubrn_uniffi_dcl_core_fn_func_device_support(facts: Uint8Array): bigint;
   ubrn_uniffi_dcl_core_fn_func_device_support_modal_shown(
     modal: Uint8Array,
@@ -607,6 +610,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_debug_fire_events(): number;
   ubrn_uniffi_dcl_core_checksum_func_delete_account(): number;
   ubrn_uniffi_dcl_core_checksum_func_deploy_profile(): number;
+  ubrn_uniffi_dcl_core_checksum_func_dev_tools_enabled(): number;
   ubrn_uniffi_dcl_core_checksum_func_device_support(): number;
   ubrn_uniffi_dcl_core_checksum_func_device_support_modal_shown(): number;
   ubrn_uniffi_dcl_core_checksum_func_enter_world(): number;

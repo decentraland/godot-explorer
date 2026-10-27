@@ -82,5 +82,6 @@ export function createMockSettings(): SettingsApi {
       return cacheBytes;
     },
     version: () => '1.14.0-mock',
+    devToolsEnabled: () => true,
   };
 }

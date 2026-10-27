@@ -5,19 +5,19 @@ import { sectionsFor, SectionKey } from './sections';
 
 /** The section rows; `selected` marks the open one in the landscape column. */
 export function SectionRows({
-  devBuild,
+  devTools,
   selected,
   rowHeight,
   onSelect,
 }: {
-  devBuild: boolean;
+  devTools: boolean;
   selected?: SectionKey | null;
   rowHeight: number;
   onSelect: (key: SectionKey) => void;
 }) {
   return (
     <View style={rowHeight < 40 ? styles.tightRows : undefined}>
-      {sectionsFor(devBuild).map(s => (
+      {sectionsFor(devTools).map(s => (
         <LinkRow
           key={s.key}
           label={t(s.label)}
