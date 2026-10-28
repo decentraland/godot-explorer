@@ -1114,26 +1114,50 @@ pub(super) fn set_owner_recursive(node: &mut Gd<Node>, owner: &Gd<Node>) {
     }
 }
 
+// First chunk type of a GLB: "JSON" read little-endian.
+const GLB_CHUNK_JSON: u32 = 0x4E4F534A;
+// glTF JSON for a whole scene is under 10 MB unless buffers are base64-embedded;
+// past this the file is broken, and this read would be the client's
+// single largest allocation.
+const MAX_GLTF_JSON_BYTES: u64 = 64 * 1024 * 1024;
+
 /// Parse GLTF/GLB file to extract dependencies (images and buffers).
 /// Returns file paths as referenced in the GLTF (relative paths like "textures/image.png").
 pub async fn get_dependencies(file_path: &str) -> Result<Vec<String>, anyhow::Error> {
     let mut dependencies = Vec::new();
     let mut file = tokio::fs::File::open(file_path).await?;
+    let file_len = file.metadata().await?.len();
 
-    let magic = file.read_i32_le().await?;
+    let magic = file.read_u32_le().await?;
     let json: serde_json::Value = if magic == 0x46546C67 {
-        let _version = file.read_i32_le().await?;
-        let _length = file.read_i32_le().await?;
-        let chunk_length = file.read_i32_le().await?;
-        let _chunk_type = file.read_i32_le().await?;
+        let _version = file.read_u32_le().await?;
+        let _length = file.read_u32_le().await?;
+        let chunk_length = file.read_u32_le().await? as u64;
+        let chunk_type = file.read_u32_le().await?;
 
+        if chunk_type != GLB_CHUNK_JSON {
+            return Err(anyhow::Error::msg(format!(
+                "glb {file_path}: first chunk type {chunk_type:#010x} is not JSON"
+            )));
+        }
+        // 20 = 12-byte header + this chunk's length/type words.
+        if chunk_length > file_len.saturating_sub(20) || chunk_length > MAX_GLTF_JSON_BYTES {
+            return Err(anyhow::Error::msg(format!(
+                "glb {file_path}: JSON chunk of {chunk_length} bytes in a {file_len}-byte file (cap {MAX_GLTF_JSON_BYTES})"
+            )));
+        }
         let mut json_data = vec![0u8; chunk_length as usize];
-        let _ = file.read_exact(&mut json_data).await?;
+        file.read_exact(&mut json_data).await?;
         serde_json::de::from_slice(json_data.as_slice())
     } else {
-        let mut json_data = Vec::new();
-        let _ = file.seek(std::io::SeekFrom::Start(0)).await?;
-        let _ = file.read_to_end(&mut json_data).await?;
+        if file_len > MAX_GLTF_JSON_BYTES {
+            return Err(anyhow::Error::msg(format!(
+                "gltf {file_path}: {file_len} bytes exceeds the {MAX_GLTF_JSON_BYTES}-byte cap"
+            )));
+        }
+        let mut json_data = Vec::with_capacity(file_len as usize);
+        file.seek(std::io::SeekFrom::Start(0)).await?;
+        file.read_to_end(&mut json_data).await?;
         serde_json::de::from_slice(json_data.as_slice())
     }?;
 
@@ -1437,6 +1461,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::path::{Path, PathBuf};
+
     use super::*;
 
     fn chunk(kind: &[u8; 4], data: &[u8]) -> Vec<u8> {
@@ -1467,5 +1493,58 @@ mod tests {
         // nothing to strip, or a truncated chunk: keep the original bytes
         assert_eq!(strip_png_colorspace_chunks(&expected), None);
         assert_eq!(strip_png_colorspace_chunks(&png[..png.len() - 3]), None);
+    }
+
+    // magic, version 2, total length, chunk_length, chunk_type, payload - all little-endian u32s.
+    async fn write_glb(name: &str, chunk_length: u32, chunk_type: u32, payload: &[u8]) -> PathBuf {
+        let path = std::env::temp_dir().join(format!("dcl-glb-{}-{name}.glb", std::process::id()));
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(&0x46546C67u32.to_le_bytes());
+        bytes.extend_from_slice(&2u32.to_le_bytes());
+        bytes.extend_from_slice(&((20 + payload.len()) as u32).to_le_bytes());
+        bytes.extend_from_slice(&chunk_length.to_le_bytes());
+        bytes.extend_from_slice(&chunk_type.to_le_bytes());
+        bytes.extend_from_slice(payload);
+        tokio::fs::write(&path, bytes).await.unwrap();
+        path
+    }
+
+    async fn dependencies_of(path: &Path) -> Result<Vec<String>, anyhow::Error> {
+        let result = get_dependencies(path.to_str().unwrap()).await;
+        let _ = std::fs::remove_file(path);
+        result
+    }
+
+    #[tokio::test]
+    async fn glb_json_chunk_lists_external_uris() {
+        let payload =
+            br#"{"images":[{"uri":"tex.png"},{"uri":"data:x"}],"buffers":[{"uri":"m.bin"}]}"#;
+        let path = write_glb("ok", payload.len() as u32, GLB_CHUNK_JSON, payload).await;
+        assert_eq!(
+            dependencies_of(&path).await.unwrap(),
+            vec!["tex.png".to_string(), "m.bin".to_string()]
+        );
+    }
+
+    #[tokio::test]
+    async fn glb_negative_chunk_length_is_an_error() {
+        // i32 -1 read as u32: used to sign-extend into a usize::MAX allocation.
+        let path = write_glb("neg", u32::MAX, GLB_CHUNK_JSON, b"{}").await;
+        let err = dependencies_of(&path).await.unwrap_err();
+        assert!(err.to_string().contains("JSON chunk"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn glb_chunk_length_past_eof_is_an_error() {
+        let path = write_glb("eof", 4096, GLB_CHUNK_JSON, b"{}  ").await;
+        let err = dependencies_of(&path).await.unwrap_err();
+        assert!(err.to_string().contains("JSON chunk"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn glb_first_chunk_not_json_is_an_error() {
+        let path = write_glb("bin", 2, 0x004E4942, b"{}").await;
+        let err = dependencies_of(&path).await.unwrap_err();
+        assert!(err.to_string().contains("not JSON"), "{err}");
     }
 }

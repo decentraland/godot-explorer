@@ -10,40 +10,31 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Set prod/staging flag based on branch
+    - name: Set prod/staging flag and branch name
       shell: bash
+      # Git allows `$`, `(`, `)` and `;` in branch names, so they only ever reach the shell
+      # through the environment, never as script text.
+      env:
+        REF_INPUT: ${{ inputs.ref }}
+        GH_REF: ${{ github.ref }}
+        HEAD_REF: ${{ github.head_ref }}
+        REF_NAME: ${{ github.ref_name }}
       run: |
-        REF="${{ inputs.ref }}"
-        if [ -z "$REF" ]; then
-          REF="${{ github.ref }}"
-        fi
+        set -eu
+        REF="${REF_INPUT:-$GH_REF}"
         # Any branch whose name starts with "release" is a prod build
         # (e.g. release, release-1.10, release/1.10). Accepts both the
         # refs/heads/<branch> and bare <branch> forms.
         case "$REF" in
-          refs/heads/release* | release*)
-            echo "PROD_FLAG=--prod" >> $GITHUB_ENV
-            echo "Running on a release* branch - setting PROD_FLAG=--prod (ref=$REF)"
-            ;;
-          *)
-            echo "PROD_FLAG=--staging" >> $GITHUB_ENV
-            echo "Running on $REF - setting PROD_FLAG=--staging"
-            ;;
+          refs/heads/release* | release*) FLAG=--prod ;;
+          *) FLAG=--staging ;;
         esac
-    - name: Set branch name for Sentry tags
-      shell: bash
-      run: |
         # Prefer the explicit ref input (an on-demand rebuild of a specific branch, where the
         # triggering event's ref is unrelated), then head_ref (the PR source branch), then ref_name.
-        REF_INPUT="${{ inputs.ref }}"
-        REF_INPUT="${REF_INPUT#refs/heads/}"
-        if [ -n "$REF_INPUT" ]; then
-          echo "BRANCH_NAME=$REF_INPUT" >> $GITHUB_ENV
-          echo "Setting BRANCH_NAME=$REF_INPUT (from ref input)"
-        elif [ -n "${{ github.head_ref }}" ]; then
-          echo "BRANCH_NAME=${{ github.head_ref }}" >> $GITHUB_ENV
-          echo "Setting BRANCH_NAME=${{ github.head_ref }}"
-        else
-          echo "BRANCH_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
-          echo "Setting BRANCH_NAME=${{ github.ref_name }}"
-        fi
+        BRANCH="${REF_INPUT#refs/heads/}"
+        BRANCH="${BRANCH:-${HEAD_REF:-$REF_NAME}}"
+        {
+          echo "PROD_FLAG=$FLAG"
+          printf 'BRANCH_NAME=%s\n' "$BRANCH"
+        } >> "$GITHUB_ENV"
+        echo "PROD_FLAG=$FLAG BRANCH_NAME=$BRANCH (ref=$REF)"

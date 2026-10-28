@@ -3,9 +3,9 @@ name: 📱 Mobile Build & Distribute (iOS TestFlight + Android APK)
 # Single entry point that builds & distributes BOTH mobile platforms with a mirrored, store-aware
 # flow. prepare allocates ONE authoritative build number for the commit; each leg then resolves
 # reuse-vs-rebuild against it (a shared guard) so iOS and Android can never diverge:
-#   - iOS    → resolve (reuse the self-hosted R2 export if its baked number is current, else rebuild)
+#   - iOS    → resolve (reuse the R2 export if its baked number is current, else rebuild)
 #              → sign & upload to TestFlight via the godot-asc-deploy repo
-#   - Android → resolve (reuse the push-built R2 APK if its baked number is current, else rebuild it
+#   - Android → resolve (reuse the R2 APK if its baked number is current, else rebuild it
 #              here via android_builds.yml) → surface the R2 download link (Slack + PR comment)
 #
 # Triggered by:
@@ -17,17 +17,26 @@ name: 📱 Mobile Build & Distribute (iOS TestFlight + Android APK)
 #   - The `build` label on a PR (alias: `build-ios` for backward compatibility)
 #   - Manual workflow dispatch on the main / release branch
 #
-# The Android leg rebuilds only when the push-built APK is missing or its baked number was
-# superseded on a store; otherwise it reuses that APK and just surfaces the R2 download link. It
-# does NOT push to a store. For main/release builds it additionally surfaces the AAB (Play Store
-# artifact); a rebuild regenerates the AAB with the current number too.
+# Why pull_request_target. The label flow runs as pull_request_target: this file, the local actions and the
+# scripts come from the BASE branch, and github.ref is the base branch, so the `mobile-release`
+# environment (deployment branches main / release / release-*) admits the orchestration jobs. The
+# only jobs that run the PR's code are the build jobs inside the called workflows, which hold no
+# secrets. Every R2 key is written under a segment computed here from event data (`pr-<N>` for
+# PRs), never from a branch name, so PR runs and main/release distributions never share an
+# R2 key. Branch names and other PR-controlled strings reach shell steps only
+# through `env:`.
+#
+# The Android leg rebuilds only when the R2 APK is missing or its baked number was superseded on a
+# store; otherwise it reuses that APK and just surfaces the R2 download link. It does NOT push to
+# a store. For main/release builds it additionally surfaces the AAB (Play Store artifact); a
+# rebuild regenerates the AAB with the current number too.
 on:
   push:
     branches:
       - release          # every release push → full distribution
   schedule:
     - cron: '0 9 * * 1-5'  # weekdays 09:00 UTC → main, only if changed since last build
-  pull_request:
+  pull_request_target:
     types: [labeled]
   workflow_dispatch:
     inputs:
@@ -43,28 +52,35 @@ on:
         default: ''
 
 permissions:
-  pull-requests: write
   contents: read
-  actions: write
-  id-token: write   # OIDC token for keyless Google Cloud auth (Firebase App Distribution via WIF)
 
 jobs:
   prepare:
     name: Prepare distribution
-    # Run for: push to release, the weekday main cron, a manual dispatch, or the
-    # build / build-ios label on a PR.
+    # Run for: push to release, the weekday main cron, a manual dispatch, or the build / build-ios
+    # label on a same-repo PR into main / release*.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       github.event_name == 'schedule' ||
       github.event_name == 'push' ||
-      github.event.label.name == 'build' ||
-      github.event.label.name == 'build-ios'
+      (github.event_name == 'pull_request_target' &&
+       (github.event.label.name == 'build' || github.event.label.name == 'build-ios') &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       (github.base_ref == 'main' || github.base_ref == 'release' || startsWith(github.base_ref, 'release-')))
     runs-on: ubuntu-latest
+    environment: mobile-release
+    permissions:
+      contents: read
+      pull-requests: write
+      actions: write
     outputs:
       ref: ${{ steps.ctx.outputs.ref }}
       sha: ${{ steps.ctx.outputs.sha }}
       pr_number: ${{ steps.ctx.outputs.pr_number }}
-      safe_branch: ${{ steps.ctx.outputs.safe_branch }}
+      # Trusted R2 key segment: main | release | release-x (push/cron/dispatch) or pr-<N> (label).
+      r2_segment: ${{ steps.ctx.outputs.r2_segment }}
+      # Whether this distribution ships the Play AAB (main / release* refs).
+      publish_aab: ${{ steps.ctx.outputs.publish_aab }}
       # Defaults to 'true' for every event except the cron, where the change-detection
       # step below may set it to 'false' when main is unchanged since the last build.
       should_build: ${{ steps.changes.outputs.should_build || 'true' }}
@@ -76,65 +92,97 @@ jobs:
       pr_url: ${{ steps.ctx.outputs.pr_url }}
       commit_short: ${{ steps.ctx.outputs.commit_short }}
       # The ONE authoritative store build number for this commit + the full baked version string.
-      # Both mobile legs bake/compare THIS number, so iOS and Android can never diverge. Empty on
-      # fork PRs (no allocator secret) → downstream guards skip and nothing ships to a store.
+      # Both mobile legs bake/compare THIS number, so iOS and Android can never diverge.
       build_number: ${{ steps.buildnum.outputs.build_number }}
       build_version: ${{ steps.buildnum.outputs.build_version }}
       # When this run started (ISO-8601 UTC) — ios-wait only considers godot-asc-deploy runs created
       # after it, so a run dispatched by a superseded distribution of the same commit is ignored.
       started_at: ${{ steps.ctx.outputs.started_at }}
     steps:
+      # Base branch under pull_request_target: trusted scripts and actions.
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Resolve build context
         id: ctx
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          SERVER_URL: ${{ github.server_url }}
+          ACTOR: ${{ github.actor }}
+          REF_NAME: ${{ github.ref_name }}
+          GH_SHA: ${{ github.sha }}
+          INPUT_REF: ${{ github.event.inputs.ref }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUM: ${{ github.event.pull_request.number }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            REF="${{ github.event.inputs.ref }}"
-            SHA=$(gh api "repos/${{ github.repository }}/commits/${REF}" --jq '.sha')
-            PR_NUMBER=""
-            TRIGGERED_BY="manual by ${{ github.actor }}"
-          elif [ "${{ github.event_name }}" = "schedule" ]; then
-            REF="${{ github.ref_name }}"; SHA="${{ github.sha }}"; PR_NUMBER=""
-            TRIGGERED_BY="daily trigger"
-          elif [ "${{ github.event_name }}" = "push" ]; then
-            REF="${{ github.ref_name }}"; SHA="${{ github.sha }}"; PR_NUMBER=""
-            TRIGGERED_BY="push to ${REF}"
-          else
-            REF="${{ github.event.pull_request.head.ref }}"
-            SHA="${{ github.event.pull_request.head.sha }}"
-            PR_NUMBER="${{ github.event.pull_request.number }}"
-            TRIGGERED_BY="label by ${{ github.actor }}"
-          fi
-          SAFE_BRANCH=$(echo "$REF" | tr '/' '-')
+          set -eu
+          case "$EVENT_NAME" in
+            workflow_dispatch)
+              if ! [[ "$INPUT_REF" =~ ^(main|release([-/][A-Za-z0-9._-]+)?)$ ]]; then
+                echo "::error::ref must be main, release or release-*; got '$INPUT_REF'"
+                exit 1
+              fi
+              REF="$INPUT_REF"
+              SHA=$(gh api "repos/$REPO/commits/$REF" --jq '.sha')
+              PR_NUMBER=""
+              TRIGGERED_BY="manual by $ACTOR"
+              SEGMENT=$(echo "$REF" | tr '/' '-')
+              ;;
+            schedule)
+              REF="$REF_NAME"; SHA="$GH_SHA"; PR_NUMBER=""
+              TRIGGERED_BY="daily trigger"
+              SEGMENT="$REF"
+              ;;
+            push)
+              REF="$REF_NAME"; SHA="$GH_SHA"; PR_NUMBER=""
+              TRIGGERED_BY="push to ${REF}"
+              SEGMENT="$REF"
+              ;;
+            pull_request_target)
+              REF="$PR_HEAD_REF"
+              SHA="$PR_HEAD_SHA"
+              PR_NUMBER="$PR_NUM"
+              TRIGGERED_BY="label by $ACTOR"
+              SEGMENT="pr-${PR_NUMBER}"
+              ;;
+            *)
+              echo "::error::unsupported event $EVENT_NAME"; exit 1 ;;
+          esac
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::could not resolve a commit sha"; exit 1; }
+          # The AAB (Play Store artifact) is only produced for main / release* refs.
+          case "$REF" in main|release*) PUBLISH_AAB=true;; *) PUBLISH_AAB=false;; esac
           PR_URL=""
-          [ -n "$PR_NUMBER" ] && PR_URL="${{ github.server_url }}/${{ github.repository }}/pull/${PR_NUMBER}"
+          [ -n "$PR_NUMBER" ] && PR_URL="${SERVER_URL}/${REPO}/pull/${PR_NUMBER}"
           {
             echo "ref=$REF"
             echo "sha=$SHA"
             echo "pr_number=$PR_NUMBER"
-            echo "safe_branch=$SAFE_BRANCH"
+            echo "r2_segment=$SEGMENT"
+            echo "publish_aab=$PUBLISH_AAB"
             echo "triggered_by=$TRIGGERED_BY"
             echo "pr_url=$PR_URL"
             echo "commit_short=${SHA:0:7}"
             echo "started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } >> "$GITHUB_OUTPUT"
-          echo "Distributing ref=$REF sha=$SHA pr=$PR_NUMBER trigger=$TRIGGERED_BY"
+          echo "Distributing ref=$REF sha=$SHA pr=$PR_NUMBER segment=$SEGMENT aab=$PUBLISH_AAB trigger=$TRIGGERED_BY"
 
       - name: Check main for changes since last successful distribution
         id: changes
         if: github.event_name == 'schedule'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CURRENT_SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
         run: |
-          CURRENT_SHA="${{ github.sha }}"
           # Last *successful* mobile_distribute run on main (cron or dispatch-on-main).
           # PR-label runs live on the PR head branch and push-to-release on `release`,
           # so --branch main isolates the real main distributions.
           LAST_SHA=$(gh run list \
-            --repo "${{ github.repository }}" \
+            --repo "$REPO" \
             --workflow mobile_distribute.yml \
             --branch main \
             --status success \
@@ -150,10 +198,8 @@ jobs:
           fi
 
       # Allocate the authoritative store build number for this commit ONCE (idempotent per SHA), up
-      # front, so both mobile legs bake/compare the SAME number and can never diverge. The build jobs
-      # (ios_r2_artifact / android_builds) still run compute-build-number themselves — needed so
-      # build.rs sees DCL_BUILD_NUMBER at build time — but it's idempotent and returns this same
-      # number. Gated to skip on the cron no-op; empty on fork PRs (no secret) → guards skip.
+      # front, so both mobile legs bake/compare the SAME number and can never diverge. The build
+      # jobs receive it as an input; they never see the allocator key.
       - name: Allocate build number
         id: compute
         if: steps.changes.outputs.should_build != 'false'
@@ -206,31 +252,36 @@ jobs:
           python3 .github/scripts/slack-root.py
 
       - name: Remove trigger label
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request_target'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+          LABEL: ${{ github.event.label.name }}
         run: |
-          gh pr edit "${{ github.event.pull_request.number }}" \
-            --repo "${{ github.repository }}" \
-            --remove-label "${{ github.event.label.name }}" || true
+          gh pr edit "$PR_NUM" --repo "$REPO" --remove-label "$LABEL" || true
 
       - name: Cancel previous distribution runs for this branch
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request_target'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          RUN_ID: ${{ github.run_id }}
         run: |
           for STATUS in in_progress queued; do
+            # HEAD_REF is read by jq from the environment — no shell interpolation in the filter.
             IDS=$(gh run list \
-              --repo "${{ github.repository }}" \
+              --repo "$REPO" \
               --workflow mobile_distribute.yml \
-              --branch "${{ github.event.pull_request.head.ref }}" \
               --status "$STATUS" \
-              --json databaseId \
-              --jq '.[].databaseId')
+              --limit 100 \
+              --json databaseId,headBranch \
+              --jq '.[] | select(.headBranch == env.HEAD_REF) | .databaseId')
             for ID in $IDS; do
-              if [ -n "$ID" ] && [ "$ID" != "${{ github.run_id }}" ]; then
+              if [ -n "$ID" ] && [ "$ID" != "$RUN_ID" ]; then
                 echo "Cancelling previous run: $ID"
-                gh run cancel "$ID" --repo "${{ github.repository }}" || true
+                gh run cancel "$ID" --repo "$REPO" || true
               fi
             done
           done
@@ -262,40 +313,44 @@ jobs:
           python3 .github/scripts/pr-card.py
 
   # iOS leg, step 1: build the unsigned Godot export and publish it to R2 (no Apple creds).
-  # Before paying for a WarpBuild rebuild, check whether the self-hosted iOS runner already produced
-  # (or is producing) the unsigned export for THIS exact commit in R2 (ios_self_hosted.yml uploads it
-  # on every push). If so, skip the rebuild and sign that artifact directly (ios-dispatch). Mirrors
-  # android-notify's R2 poll + fail-fast.
+  # Before paying for a WarpBuild rebuild, check whether an unsigned export for THIS exact commit
+  # already exists in R2 under the trusted segment (a previous distribution of the same commit, or
+  # the self-hosted iOS runner when enabled). If so, skip the rebuild and sign that artifact
+  # directly (ios-dispatch). Mirrors android-resolve.
   ios-resolve:
     name: 🍏 iOS — resolve (reuse existing export?)
     needs: prepare
     if: needs.prepare.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    environment: mobile-release
+    permissions:
+      contents: read
+      pull-requests: write
     outputs:
       reuse: ${{ steps.combine.outputs.reuse }}
     env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
-      AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
-      AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
-      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-      SLACK_CHANNEL:   ${{ secrets.SLACK_CHANNEL_ID }}
-      SLACK_TS:        ${{ needs.prepare.outputs.slack_ts }}
+      SLACK_TS:    ${{ needs.prepare.outputs.slack_ts }}
       REF:         ${{ needs.prepare.outputs.ref }}
       SHA:         ${{ needs.prepare.outputs.sha }}
-      SAFE_BRANCH: ${{ needs.prepare.outputs.safe_branch }}
+      R2_SEGMENT:  ${{ needs.prepare.outputs.r2_segment }}
       PR_NUMBER:   ${{ needs.prepare.outputs.pr_number }}
       RUN_ID:      ${{ github.run_id }}
-      GH_TOKEN:    ${{ secrets.GITHUB_TOKEN }}
+      REPO:        ${{ github.repository }}
       # ios_self_hosted.yml is DISABLED (the `dcl-ios` Mac was shut down), so no self-hosted export
       # will ever appear for a commit — don't burn 20 minutes polling for one. Flip back to 'true'
       # together with that workflow's triggers if the runner comes back.
       IOS_SELF_HOSTED_ENABLED: 'false'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Validate required secrets
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
+          AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+          AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
         run: |
           MISSING=""
           [ -z "$AWS_S3_BUCKET" ] && MISSING="$MISSING MOBILE_ARTIFACTS_R2_BUCKET"
@@ -306,10 +361,15 @@ jobs:
 
       - name: Poll for an existing export
         id: poll
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+          AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          KEY="ios/${SAFE_BRANCH}/${SHA}/export.tar.gz"
+          KEY="ios/${R2_SEGMENT}/${SHA}/export.tar.gz"
           echo "Looking for an existing unsigned export at s3://${AWS_S3_BUCKET}/${KEY}"
-          echo "(produced by the self-hosted iOS runner — ios_self_hosted.yml — for this commit)"
           have_export() { aws s3api head-object --bucket "$AWS_S3_BUCKET" --key "$KEY" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null 2>&1; }
 
           have=false
@@ -324,9 +384,9 @@ jobs:
             DEADLINE=$(( $(date +%s) + 20 * 60 ))
             while true; do
               if have_export; then echo "✅ Export appeared."; have=true; break; fi
-              CONCLUSION=$(gh run list --repo "${{ github.repository }}" --workflow ios_self_hosted.yml \
+              CONCLUSION=$(gh run list --repo "$REPO" --workflow ios_self_hosted.yml \
                 --limit 100 --json headSha,conclusion \
-                --jq "first(.[] | select(.headSha==\"$SHA\")) | .conclusion // empty" 2>/dev/null || true)
+                --jq 'first(.[] | select(.headSha==env.SHA)) | .conclusion // empty' 2>/dev/null || true)
               case "$CONCLUSION" in
                 failure|cancelled|skipped|timed_out|success)
                   echo "ℹ️  self-hosted run for $SHA concluded '$CONCLUSION' with no usable export → building on CI."
@@ -349,25 +409,33 @@ jobs:
         id: guard
         if: steps.poll.outputs.have_export == 'true'
         uses: ./.github/actions/check-build-number-current
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
         with:
-          bucket: ${{ env.AWS_S3_BUCKET }}
-          endpoint: ${{ env.AWS_ENDPOINT_URL }}
-          sidecar-key: ios/${{ env.SAFE_BRANCH }}/${{ env.SHA }}/build_number.txt
+          bucket: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
+          endpoint: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+          sidecar-key: ios/${{ env.R2_SEGMENT }}/${{ env.SHA }}/build_number.txt
           expected-number: ${{ needs.prepare.outputs.build_number }}
 
       - name: Combine reuse decision
         id: combine
+        env:
+          HAVE: ${{ steps.poll.outputs.have_export }}
+          CURRENT: ${{ steps.guard.outputs.current }}   # empty when the guard was skipped (no export)
         run: |
-          have='${{ steps.poll.outputs.have_export }}'
-          current='${{ steps.guard.outputs.current }}'   # empty when the guard was skipped (no export)
-          if [ "$have" = "true" ] && [ "$current" != "false" ]; then reuse=true; else reuse=false; fi
+          if [ "$HAVE" = "true" ] && [ "$CURRENT" != "false" ]; then reuse=true; else reuse=false; fi
           echo "reuse=$reuse" >> "$GITHUB_OUTPUT"
-          echo "→ reuse=$reuse (have_export=$have, current=${current:-n/a})"
+          echo "→ reuse=$reuse (have_export=$HAVE, current=${CURRENT:-n/a})"
 
       - name: Slack — iOS reuse decision
         if: env.SLACK_TS != ''
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
+          REUSE: ${{ steps.combine.outputs.reuse }}
         run: |
-          if [ "${{ steps.combine.outputs.reuse }}" = "true" ]; then
+          if [ "$REUSE" = "true" ]; then
             bash .github/scripts/slack-reply.sh "♻️ iOS — found an existing export for this commit; skipping the CI rebuild."
           else
             bash .github/scripts/slack-reply.sh "🔨 iOS — no existing export; building on CI."
@@ -375,22 +443,33 @@ jobs:
 
       - name: PR card — iOS reuse decision
         if: env.PR_NUMBER != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REUSE: ${{ steps.combine.outputs.reuse }}
         run: |
-          if [ "${{ steps.combine.outputs.reuse }}" = "true" ]; then
+          if [ "$REUSE" = "true" ]; then
             export IOS_LINE="♻️ reusing existing export" LOG="♻️ iOS — found an existing export for this commit; skipping the CI rebuild"
           else
             export IOS_LINE="🔨 building on CI" LOG="🔨 iOS — no existing export; building on CI"
           fi
           python3 .github/scripts/pr-card.py
 
+  # The called workflow's `build` job holds no secrets; its `publish` job binds the environment.
+  # `secrets: inherit` is what lets that job read the environment's secrets; nothing sensitive
+  # lives at repository level.
   ios-build:
     name: 🍏 iOS → R2 (unsigned export)
     needs: [prepare, ios-resolve]
     if: needs.prepare.outputs.should_build == 'true' && needs.ios-resolve.outputs.reuse == 'false'
     uses: ./.github/workflows/ios_r2_artifact.yml
+    permissions:
+      contents: read
+      pull-requests: write
     with:
       ref: ${{ needs.prepare.outputs.ref }}
       sha: ${{ needs.prepare.outputs.sha }}
+      r2_segment: ${{ needs.prepare.outputs.r2_segment }}
+      build_number: ${{ needs.prepare.outputs.build_number }}
       pr_number: ${{ needs.prepare.outputs.pr_number }}
       slack_ts: ${{ needs.prepare.outputs.slack_ts }}
       # Fire the godot-asc-deploy handoff from INSIDE ios-build, right after the export lands
@@ -401,31 +480,35 @@ jobs:
       whats_new: ${{ github.event.inputs.whats_new }}
     secrets: inherit
 
-  # Reuse path: an unsigned export for this commit already exists in R2 (built by the self-hosted
-  # runner), so skip WarpBuild and hand off to godot-asc-deploy directly with the same payload.
+  # Reuse path: an unsigned export for this commit already exists in R2, so skip WarpBuild and
+  # hand off to godot-asc-deploy directly with the same payload.
   ios-dispatch:
     name: 🍏 iOS — dispatch (reuse existing export)
     needs: [prepare, ios-resolve]
     if: needs.prepare.outputs.should_build == 'true' && needs.ios-resolve.outputs.reuse == 'true'
     runs-on: ubuntu-latest
+    environment: mobile-release
+    permissions:
+      contents: read
+      pull-requests: write
     env:
-      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-      SLACK_CHANNEL:   ${{ secrets.SLACK_CHANNEL_ID }}
       SLACK_TS:        ${{ needs.prepare.outputs.slack_ts }}
-      GH_TOKEN:        ${{ secrets.GITHUB_TOKEN }}
       PR_NUMBER:       ${{ needs.prepare.outputs.pr_number }}
       SHA:             ${{ needs.prepare.outputs.sha }}
       RUN_ID:          ${{ github.run_id }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       # The build number + version string come from prepare's single authoritative allocation — the
-      # SAME number the self-hosted build already baked into this export for this commit.
+      # SAME number already baked into this export for this commit. `ref` is the trusted segment:
+      # asc-deploy reconstructs the R2 key from it and names its run `🍏 <segment> @ <sha>`.
       - name: Dispatch godot-asc-deploy (sign & upload to TestFlight)
         uses: ./.github/actions/dispatch-asc-deploy
         with:
           gh-token: ${{ secrets.ASC_DEPLOY_DISPATCH_TOKEN }}
-          ref: ${{ needs.prepare.outputs.ref }}
+          ref: ${{ needs.prepare.outputs.r2_segment }}
           sha: ${{ needs.prepare.outputs.sha }}
           whats_new: ${{ github.event.inputs.whats_new }}
           pr_number: ${{ needs.prepare.outputs.pr_number }}
@@ -436,12 +519,16 @@ jobs:
 
       - name: Slack — handed off (reused export)
         if: success() && env.SLACK_TS != ''
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
         run: |
           bash .github/scripts/slack-reply.sh "♻️🤝 iOS — reused export, handed off to the signing pipeline (godot-asc-deploy)."
 
       - name: PR card — handed off (reused export)
         if: success() && env.PR_NUMBER != ''
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           IOS_LINE: "♻️ reused export · signing…"
           LOG: "♻️🤝 iOS — reused export, handed off to the signing pipeline (godot-asc-deploy)"
         run: |
@@ -449,13 +536,16 @@ jobs:
 
       - name: Slack — handoff failed
         if: failure() && env.SLACK_TS != ''
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
         run: |
           bash .github/scripts/slack-reply.sh "❌ iOS — failed to hand off to the signing pipeline (check ASC_DEPLOY_DISPATCH_TOKEN)."
 
   # iOS leg, step 3 (PR distributions only): the sign & upload runs in godot-asc-deploy, which by
   # design holds NO token for this public repo — so it can't write the iOS outcome to the PR card
   # itself. Instead we WATCH its run from here: ASC_DEPLOY_DISPATCH_TOKEN (Actions: write ⊇ read)
-  # can list that repo's runs, and deploy_testflight.yml names each run "🍏 <branch> @ <sha>" so the
+  # can list that repo's runs, and deploy_testflight.yml names each run "🍏 <segment> @ <sha>" so the
   # one we dispatched is matchable. Mirrors what asc-deploy writes to the Slack root card. Best
   # effort: never fails the distribution, and skipped when there's no PR (Slack covers those).
   ios-wait:
@@ -466,16 +556,22 @@ jobs:
       (needs.ios-build.result == 'success' || needs.ios-dispatch.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 55
+    environment: mobile-release
+    permissions:
+      contents: read
+      pull-requests: write
     env:
       PR_NUMBER:    ${{ needs.prepare.outputs.pr_number }}
       SHA:          ${{ needs.prepare.outputs.sha }}
       RUN_ID:       ${{ github.run_id }}
-      SAFE_BRANCH:  ${{ needs.prepare.outputs.safe_branch }}
+      R2_SEGMENT:   ${{ needs.prepare.outputs.r2_segment }}
       BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
       SINCE:        ${{ needs.prepare.outputs.started_at }}
       DEPLOY_REPO:  decentraland/godot-asc-deploy
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Watch the godot-asc-deploy run
         id: watch
@@ -485,7 +581,7 @@ jobs:
           CARD_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Must match `run-name` in godot-asc-deploy/.github/workflows/deploy_testflight.yml.
-          export TITLE="🍏 ${SAFE_BRANCH} @ ${SHA}"
+          export TITLE="🍏 ${R2_SEGMENT} @ ${SHA}"
           echo "Watching ${DEPLOY_REPO} for a deploy_testflight.yml run titled '${TITLE}' created after ${SINCE}"
           # asc-deploy's own timeout is 45 min; the run can also sit queued for a macOS runner.
           DEADLINE=$(( $(date +%s) + 50 * 60 ))
@@ -557,8 +653,14 @@ jobs:
         needs.ios-build.result == 'failure' || needs.ios-build.result == 'cancelled' ||
         needs.ios-dispatch.result == 'failure' || needs.ios-dispatch.result == 'cancelled' )
     runs-on: ubuntu-latest
+    environment: mobile-release
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
       - name: Update root → failed/cancelled
         if: needs.prepare.outputs.slack_ts != ''
         env:
@@ -604,49 +706,59 @@ jobs:
           fi
           python3 .github/scripts/pr-card.py
 
-  # Android leg, step 1 (mirrors ios-resolve): the signed APK for this commit is normally produced by
-  # the push CI (runner.yml → android_builds.yml) and uploaded to R2. Wait for it, then apply the SAME
-  # monotonic guard as iOS. reuse=true → surface the existing APK (android-notify); reuse=false
-  # (missing, superseded, or the push build failed) → rebuild it here (android-build).
+  # Android leg, step 1 (mirrors ios-resolve): for main/release the signed APK for this commit is
+  # normally produced by the push CI (runner.yml → android_builds.yml) and uploaded to R2 under the
+  # same segment. Wait for it, then apply the SAME monotonic guard as iOS. reuse=true → surface
+  # the existing APK (android-notify); reuse=false (missing, superseded, or the push build failed)
+  # → rebuild it here (android-build). PR CI no longer publishes to R2, so for a PR only a previous
+  # distribution of the same commit can be reused — one check, no poll.
   android-resolve:
     name: 🤖 Android — resolve (reuse existing APK?)
     needs: prepare
     if: needs.prepare.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    environment: mobile-release
+    permissions:
+      contents: read
+      pull-requests: write
     outputs:
       reuse: ${{ steps.combine.outputs.reuse }}
     env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
-      AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
-      AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
-      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-      SLACK_CHANNEL:   ${{ secrets.SLACK_CHANNEL_ID }}
-      SLACK_TS:        ${{ needs.prepare.outputs.slack_ts }}
+      SLACK_TS:    ${{ needs.prepare.outputs.slack_ts }}
       REF:         ${{ needs.prepare.outputs.ref }}
       SHA:         ${{ needs.prepare.outputs.sha }}
-      SAFE_BRANCH: ${{ needs.prepare.outputs.safe_branch }}
+      R2_SEGMENT:  ${{ needs.prepare.outputs.r2_segment }}
       PR_NUMBER:   ${{ needs.prepare.outputs.pr_number }}
       RUN_ID:      ${{ github.run_id }}
-      GH_TOKEN:    ${{ secrets.GITHUB_TOKEN }}
+      REPO:        ${{ github.repository }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Slack — Android resolve started
         if: env.SLACK_TS != ''
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
         run: |
           bash .github/scripts/slack-reply.sh "🤖 Android — checking for the signed APK from CI… (${REF})"
 
       - name: PR card — Android resolve started
         if: env.PR_NUMBER != ''
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ANDROID_LINE: "⏳ waiting for the CI APK…"
           LOG: "🤖 Android — checking for the signed APK from CI…"
         run: |
           python3 .github/scripts/pr-card.py
 
       - name: Validate required secrets
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
+          AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+          AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
         run: |
           MISSING=""
           [ -z "$AWS_S3_BUCKET" ] && MISSING="$MISSING MOBILE_ARTIFACTS_R2_BUCKET"
@@ -657,39 +769,56 @@ jobs:
 
       - name: Poll for the push-built APK
         id: poll
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+          AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          KEY="android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
-          echo "Waiting for s3://${AWS_S3_BUCKET}/${KEY}"
-          echo "(produced by the Android CI build — runner.yml → android_builds.yml — for this commit)"
+          KEY="android/${R2_SEGMENT}/${SHA}/decentraland.godot.client.apk"
+          echo "Looking for s3://${AWS_S3_BUCKET}/${KEY}"
           have_apk() { aws s3 ls "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null 2>&1; }
 
-          # Build CI takes ~35 min; give it headroom. Unlike the old android-notify, a missing/failed
-          # push build is NOT fatal here — it just means we rebuild the APK ourselves (android-build),
-          # mirroring the iOS self-sufficient rebuild.
-          DEADLINE=$(( $(date +%s) + 50 * 60 ))
-          INPROG=0
           have=false
-          while true; do
-            if have_apk; then echo "✅ APK is available in R2."; have=true; break; fi
-            CONCLUSION=$(gh run list --repo "${{ github.repository }}" --workflow runner.yml \
-              --limit 100 --json headSha,conclusion \
-              --jq "first(.[] | select(.headSha==\"$SHA\") | .conclusion) // empty" 2>/dev/null || true)
-            case "$CONCLUSION" in
-              failure|cancelled|timed_out)
-                echo "ℹ️  Android CI for $SHA concluded '$CONCLUSION' with no APK → rebuilding here."
-                break ;;
-            esac
-            if [ "$(date +%s)" -ge "$DEADLINE" ]; then
-              echo "ℹ️  timed out waiting for the push APK → rebuilding here."
-              break
+          if [ -n "$PR_NUMBER" ]; then
+            if have_apk; then
+              echo "✅ A distribution APK for this commit is already in R2."
+              have=true
+            else
+              echo "ℹ️  no distribution APK for this commit yet → building here."
             fi
-            if [ "$INPROG" = "0" ] && [ -n "${SLACK_CHANNEL:-}" ] && [ -n "${SLACK_TS:-}" ]; then
-              bash .github/scripts/slack-reply.sh "🤖 Android — CI build in progress, waiting for the APK to land in R2…"
-              INPROG=1
-            fi
-            echo "⏳ Not ready yet (CI conclusion='${CONCLUSION:-pending}'), retrying in 30s..."
-            sleep 30
-          done
+          else
+            echo "(produced by the Android CI build — runner.yml → android_builds.yml — for this commit)"
+            # Build CI takes ~35 min; give it headroom. A missing/failed push build is NOT fatal
+            # here — it just means we rebuild the APK ourselves (android-build), mirroring the iOS
+            # self-sufficient rebuild.
+            DEADLINE=$(( $(date +%s) + 50 * 60 ))
+            INPROG=0
+            while true; do
+              if have_apk; then echo "✅ APK is available in R2."; have=true; break; fi
+              CONCLUSION=$(gh run list --repo "$REPO" --workflow runner.yml \
+                --limit 100 --json headSha,conclusion \
+                --jq 'first(.[] | select(.headSha==env.SHA) | .conclusion) // empty' 2>/dev/null || true)
+              case "$CONCLUSION" in
+                failure|cancelled|timed_out)
+                  echo "ℹ️  Android CI for $SHA concluded '$CONCLUSION' with no APK → rebuilding here."
+                  break ;;
+              esac
+              if [ "$(date +%s)" -ge "$DEADLINE" ]; then
+                echo "ℹ️  timed out waiting for the push APK → rebuilding here."
+                break
+              fi
+              if [ "$INPROG" = "0" ] && [ -n "${SLACK_CHANNEL:-}" ] && [ -n "${SLACK_TS:-}" ]; then
+                bash .github/scripts/slack-reply.sh "🤖 Android — CI build in progress, waiting for the APK to land in R2…"
+                INPROG=1
+              fi
+              echo "⏳ Not ready yet (CI conclusion='${CONCLUSION:-pending}'), retrying in 30s..."
+              sleep 30
+            done
+          fi
           echo "have_apk=$have" >> "$GITHUB_OUTPUT"
 
       # Same shared guard as iOS: reuse the APK only while its baked number is still authoritative.
@@ -697,25 +826,33 @@ jobs:
         id: guard
         if: steps.poll.outputs.have_apk == 'true'
         uses: ./.github/actions/check-build-number-current
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
         with:
-          bucket: ${{ env.AWS_S3_BUCKET }}
-          endpoint: ${{ env.AWS_ENDPOINT_URL }}
-          sidecar-key: android/${{ env.SAFE_BRANCH }}/${{ env.SHA }}/build_number.txt
+          bucket: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
+          endpoint: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+          sidecar-key: android/${{ env.R2_SEGMENT }}/${{ env.SHA }}/build_number.txt
           expected-number: ${{ needs.prepare.outputs.build_number }}
 
       - name: Combine reuse decision
         id: combine
+        env:
+          HAVE: ${{ steps.poll.outputs.have_apk }}
+          CURRENT: ${{ steps.guard.outputs.current }}   # empty when the guard was skipped (no APK)
         run: |
-          have='${{ steps.poll.outputs.have_apk }}'
-          current='${{ steps.guard.outputs.current }}'   # empty when the guard was skipped (no APK)
-          if [ "$have" = "true" ] && [ "$current" != "false" ]; then reuse=true; else reuse=false; fi
+          if [ "$HAVE" = "true" ] && [ "$CURRENT" != "false" ]; then reuse=true; else reuse=false; fi
           echo "reuse=$reuse" >> "$GITHUB_OUTPUT"
-          echo "→ reuse=$reuse (have_apk=$have, current=${current:-n/a})"
+          echo "→ reuse=$reuse (have_apk=$HAVE, current=${CURRENT:-n/a})"
 
       - name: Slack — Android reuse decision
         if: env.SLACK_TS != ''
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
+          REUSE: ${{ steps.combine.outputs.reuse }}
         run: |
-          if [ "${{ steps.combine.outputs.reuse }}" = "true" ]; then
+          if [ "$REUSE" = "true" ]; then
             bash .github/scripts/slack-reply.sh "♻️ Android — found a current APK for this commit; skipping the rebuild."
           else
             bash .github/scripts/slack-reply.sh "🔨 Android — no current APK; rebuilding on CI."
@@ -723,8 +860,11 @@ jobs:
 
       - name: PR card — Android reuse decision
         if: env.PR_NUMBER != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REUSE: ${{ steps.combine.outputs.reuse }}
         run: |
-          if [ "${{ steps.combine.outputs.reuse }}" = "true" ]; then
+          if [ "$REUSE" = "true" ]; then
             export ANDROID_LINE="♻️ reusing the CI APK · publishing…" LOG="♻️ Android — found a current APK for this commit; skipping the rebuild"
           else
             export ANDROID_LINE="🔨 rebuilding on CI" LOG="🔨 Android — no current APK; rebuilding on CI"
@@ -732,52 +872,64 @@ jobs:
           python3 .github/scripts/pr-card.py
 
   # Rebuild path (mirrors ios-build): no current APK (missing, superseded, or the push build failed),
-  # so build & sign a fresh one for this exact commit. android_builds.yml bakes prepare's number (via
-  # its own idempotent compute-build-number) and re-uploads the APK + sidecar (+ AAB on main/release)
-  # to the same R2 key android-notify surfaces. concurrency_key isolates it from the push build so
-  # the two don't cancel each other.
+  # so build & sign a fresh one for this exact commit. android_builds.yml bakes prepare's number and
+  # its sign-publish job uploads the APK + sidecar (+ AAB on main/release*) to the same R2 key
+  # android-notify surfaces. concurrency_key isolates it from the push build so the two don't cancel
+  # each other. The called `build` job holds no secrets; `secrets: inherit` is what lets the
+  # environment-bound sign-publish job read the environment's secrets.
   android-build:
     name: 🤖 Android → R2 (rebuild signed APK)
     needs: [prepare, android-resolve]
     if: needs.prepare.outputs.should_build == 'true' && needs.android-resolve.outputs.reuse == 'false'
     uses: ./.github/workflows/android_builds.yml
+    permissions:
+      contents: read
+      pull-requests: write
     with:
       ref: ${{ needs.prepare.outputs.ref }}
       sha: ${{ needs.prepare.outputs.sha }}
       concurrency_key: distribute-${{ needs.prepare.outputs.sha }}
+      r2_segment: ${{ needs.prepare.outputs.r2_segment }}
+      build_number: ${{ needs.prepare.outputs.build_number }}
+      publish_aab: ${{ needs.prepare.outputs.publish_aab == 'true' }}
     secrets: inherit
 
   # Surface (mirrors ios-dispatch's terminal role): by now the APK is guaranteed in R2 — either the
-  # reused push build (android-resolve confirmed it) or the fresh android-build (a completed
-  # dependency). Post the download link + PR comment; surface the AAB on main/release. No runner.yml
-  # re-poll — an android-build rebuild lives under THIS workflow, not runner.yml. Runs on the reuse
-  # path (android-build skipped) and the rebuild path alike.
+  # reused build (android-resolve confirmed it) or the fresh android-build (a completed
+  # dependency). Post the download link + PR comment; surface the AAB on main/release. Runs on the
+  # reuse path (android-build skipped) and the rebuild path alike.
   android-notify:
     name: 🤖 Android → APK ready
     needs: [prepare, android-resolve, android-build]
     if: always() && needs.prepare.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    environment: mobile-release
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write   # OIDC token for keyless Google Cloud auth (Firebase App Distribution via WIF)
     env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
-      AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
-      AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
       # Public R2 domain mapped to the mobile-artifacts bucket root.
       R2_PUBLIC_BASE_URL: "https://mobile-artifacts.dclregenesislabs.xyz"
-      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-      SLACK_CHANNEL:   ${{ secrets.SLACK_CHANNEL_ID }}
-      SLACK_TS:        ${{ needs.prepare.outputs.slack_ts }}
-      REF: ${{ needs.prepare.outputs.ref }}
-      SHA: ${{ needs.prepare.outputs.sha }}
-      PR_NUMBER: ${{ needs.prepare.outputs.pr_number }}
-      RUN_ID: ${{ github.run_id }}
-      SAFE_BRANCH: ${{ needs.prepare.outputs.safe_branch }}
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SLACK_TS:    ${{ needs.prepare.outputs.slack_ts }}
+      REF:         ${{ needs.prepare.outputs.ref }}
+      SHA:         ${{ needs.prepare.outputs.sha }}
+      PR_NUMBER:   ${{ needs.prepare.outputs.pr_number }}
+      RUN_ID:      ${{ github.run_id }}
+      R2_SEGMENT:  ${{ needs.prepare.outputs.r2_segment }}
+      PUBLISH_AAB: ${{ needs.prepare.outputs.publish_aab }}
+      RUN_URL:     ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Validate required secrets
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
+          AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+          AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
         run: |
           MISSING=""
           [ -z "$AWS_S3_BUCKET" ] && MISSING="$MISSING MOBILE_ARTIFACTS_R2_BUCKET"
@@ -790,10 +942,15 @@ jobs:
           echo "✅ Required secrets present"
 
       - name: Confirm APK present in R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+          AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
         run: |
-          KEY="android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
+          KEY="android/${R2_SEGMENT}/${SHA}/decentraland.godot.client.apk"
           echo "Confirming s3://${AWS_S3_BUCKET}/${KEY}"
-          # By now the APK is expected present — either the reused push build (android-resolve
+          # By now the APK is expected present — either the reused build (android-resolve
           # confirmed it) or the fresh android-build (a completed dependency). Short poll for R2
           # eventual consistency; fail (→ failure surface below) only if it's genuinely absent.
           DEADLINE=$(( $(date +%s) + 10 * 60 ))
@@ -812,16 +969,20 @@ jobs:
 
       - name: Slack — Android APK ready
         if: success() && env.SLACK_TS != ''
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
         run: |
-          APK="${R2_PUBLIC_BASE_URL}/android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
+          APK="${R2_PUBLIC_BASE_URL}/android/${R2_SEGMENT}/${SHA}/decentraland.godot.client.apk"
           bash .github/scripts/slack-reply.sh "✅ Android — APK ready: ${APK}"
           ANDROID_LINE="✅ APK ready" APK_URL="$APK" python3 .github/scripts/slack-root.py
 
       - name: PR card — Android APK ready
         if: success() && env.PR_NUMBER != ''
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ANDROID_LINE: "✅ APK ready"
-          APK_URL: ${{ env.R2_PUBLIC_BASE_URL }}/android/${{ env.SAFE_BRANCH }}/${{ env.SHA }}/decentraland.godot.client.apk
+          APK_URL: ${{ env.R2_PUBLIC_BASE_URL }}/android/${{ env.R2_SEGMENT }}/${{ env.SHA }}/decentraland.godot.client.apk
           LOG: "✅ Android — APK ready"
         run: |
           python3 .github/scripts/pr-card.py
@@ -855,6 +1016,10 @@ jobs:
         # service-account keys firebase-tools would otherwise need.
         if: success() && steps.gcp-auth.outcome == 'success'
         env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+          AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
           ACCESS_TOKEN: ${{ steps.gcp-auth.outputs.access_token }}
           FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
           # Comma-separated Firebase tester group aliases (created in the Firebase console).
@@ -868,7 +1033,7 @@ jobs:
           fi
           BASE=https://firebaseappdistribution.googleapis.com
 
-          APK_KEY="android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
+          APK_KEY="android/${R2_SEGMENT}/${SHA}/decentraland.godot.client.apk"
           echo "📥 Downloading APK from R2: ${APK_KEY}"
           aws s3 cp "s3://${AWS_S3_BUCKET}/${APK_KEY}" ./firebase-dist.apk --endpoint-url "$AWS_ENDPOINT_URL"
 
@@ -917,6 +1082,8 @@ jobs:
       - name: Slack — Android sent to Firebase App Distribution
         if: success() && env.FIREBASE_DIST_OK == 'true' && env.SLACK_TS != ''
         env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
           FIREBASE_TESTER_GROUPS: ${{ vars.FIREBASE_TESTER_GROUPS || 'qa' }}
         run: |
           bash .github/scripts/slack-reply.sh "📲 Android — sent to Firebase App Distribution (groups: ${FIREBASE_TESTER_GROUPS})"
@@ -924,12 +1091,16 @@ jobs:
       - name: PR card — Android sent to Firebase App Distribution
         if: success() && env.FIREBASE_DIST_OK == 'true' && env.PR_NUMBER != ''
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FIREBASE_TESTER_GROUPS: ${{ vars.FIREBASE_TESTER_GROUPS || 'qa' }}
         run: |
           LOG="📲 Android — sent to Firebase App Distribution (groups: ${FIREBASE_TESTER_GROUPS})" python3 .github/scripts/pr-card.py
 
       - name: Slack — Android failed
         if: failure() && env.SLACK_TS != ''
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
         run: |
           bash .github/scripts/slack-reply.sh "❌ Android — APK not produced for ${SHA} (CI build failed)"
           ANDROID_LINE="❌ CI build failed" python3 .github/scripts/slack-root.py
@@ -937,6 +1108,7 @@ jobs:
       - name: PR card — Android failed
         if: failure() && env.PR_NUMBER != ''
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           STATUS: failed
           ANDROID_LINE: "❌ CI build failed"
           LOG: "❌ Android — APK not produced (CI build failed) — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
@@ -948,9 +1120,14 @@ jobs:
       # or the weekday main cron). Best-effort: if the AAB isn't in R2 we warn and skip
       # rather than failing the job.
       - name: Wait for Android AAB in R2
-        if: success() && (needs.prepare.outputs.ref == 'main' || startsWith(needs.prepare.outputs.ref, 'release'))
+        if: success() && env.PUBLISH_AAB == 'true'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+          AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
         run: |
-          KEY="android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.aab"
+          KEY="android/${R2_SEGMENT}/${SHA}/decentraland.godot.client.aab"
           echo "Waiting for s3://${AWS_S3_BUCKET}/${KEY}"
 
           # The AAB is uploaded in the same CI step as the APK, so it should already be
@@ -973,13 +1150,17 @@ jobs:
 
       - name: Slack — Android AAB ready
         if: success() && env.AAB_READY == 'true' && env.SLACK_TS != ''
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
         run: |
-          bash .github/scripts/slack-reply.sh "📦 Android — AAB ready (Play Store): ${R2_PUBLIC_BASE_URL}/android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.aab"
+          bash .github/scripts/slack-reply.sh "📦 Android — AAB ready (Play Store): ${R2_PUBLIC_BASE_URL}/android/${R2_SEGMENT}/${SHA}/decentraland.godot.client.aab"
 
       - name: PR card — Android AAB ready
         if: success() && env.AAB_READY == 'true' && env.PR_NUMBER != ''
         env:
-          AAB_URL: ${{ env.R2_PUBLIC_BASE_URL }}/android/${{ env.SAFE_BRANCH }}/${{ env.SHA }}/decentraland.godot.client.aab
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AAB_URL: ${{ env.R2_PUBLIC_BASE_URL }}/android/${{ env.R2_SEGMENT }}/${{ env.SHA }}/decentraland.godot.client.aab
           LOG: "📦 Android — AAB ready (Play Store)"
         run: |
           python3 .github/scripts/pr-card.py
