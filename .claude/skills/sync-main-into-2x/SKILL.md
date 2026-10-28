@@ -145,8 +145,7 @@ cd lib && cargo fmt --all --check \
   && cargo clippy --workspace --all-targets -- -D warnings \
   && cargo test -p dcl_core && cargo test -p dclgodot --lib     # includes call_targets
 cd ../rn && npx tsc --noEmit && npm run lint && npm test        # when rn/ or the FFI changed
-cd .. && python3 -m unittest discover -s tools/i18n -p 'test_*.py' \
-  && python3 tools/i18n/format_csv.py --check && python3 tools/i18n/extract_strings.py --check
+cd rn && node scripts/i18n-engine.mjs --check                   # when a port touched strings
 ```
 
 Device QA is not part of a sync unless a port changes something QA can see; then the test plan

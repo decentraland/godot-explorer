@@ -1,6 +1,7 @@
 import { backpack } from './backpack';
 import { common } from './common';
 import { discover } from './discover';
+import { engine } from './engine';
 import { flow } from './flow';
 import { ftue } from './ftue';
 import { hud } from './hud';
@@ -15,6 +16,7 @@ export const en = {
   ...backpack,
   ...common,
   ...discover,
+  ...engine,
   ...flow,
   ...ftue,
   ...hud,

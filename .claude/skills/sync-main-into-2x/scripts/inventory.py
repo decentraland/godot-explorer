@@ -43,7 +43,7 @@ def on_2x(ref, path, crate_files):
 def classify(path):
     if path.startswith(".github/"):
         return "ci"
-    if path.startswith("godot/locale/") or path.startswith("tools/i18n/"):
+    if path.startswith("godot/locale/") or path.startswith("rn/src/i18n/"):
         return "i18n"
     if path.endswith((".gd", ".gd.uid")) and path.startswith("godot/src/"):
         return "ui-gd" if path.startswith("godot/src/ui/") else "gd"

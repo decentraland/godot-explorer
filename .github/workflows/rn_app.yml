@@ -64,8 +64,8 @@ jobs:
         run: >-
           npx --yes license-checker@25.0.1 --production --excludePrivatePackages --summary
           --onlyAllow "MIT;ISC;BSD-3-Clause;BSD-2-Clause;Apache-2.0;BlueOak-1.0.0;FSL-1.1-MIT;MPL-2.0;Unlicense;CC0-1.0;CC-BY-4.0;Python-2.0;0BSD;(MIT OR CC0-1.0);(MIT OR Apache-2.0);(BSD-3-Clause OR GPL-2.0)"
-      - name: Translations match godot/locale
-        run: node scripts/i18n-from-csv.mjs --check
+      - name: Engine translations match the RN catalogue
+        run: node scripts/i18n-engine.mjs --check
 
   bindings:
     name: Bindings match the Rust API

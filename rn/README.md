@@ -27,8 +27,9 @@ camera look stay in Godot. Orientation belongs to RN: portrait before a scene, l
   `src/modals/`, `src/notifications/`: the screens, built from Figma (`docs/rn-ui-spec/`). Public GETs (places,
   events, catalog) live here with hosts from `core.urls()`; anything signed is a typed core call.
 - `src/ds/`: the design system: tokens, fonts, `AppText`, `Pill`, `Tabs`, `ItemCard`, buttons, icons.
-- `src/i18n/`: `en`, `es`, `pt_BR`; `es` and `pt_BR` are generated from `godot/locale/*.csv`
-  (`node scripts/i18n-from-csv.mjs`, checked in CI with `--check`).
+- `src/i18n/`: the only translation source: `en`, `es`, `pt_BR`, one file per area. The `engine` area is
+  what Godot draws itself; `node scripts/i18n-engine.mjs` exports it to `godot/locale/*.csv` (checked in CI
+  with `--check`). `__tests__/i18n-coverage.test.ts` fails on hardcoded UI text.
 - `src/gallery/`: a component gallery (every screen and state with fixtures), also exercised by jest.
 - `modules/dcl-core/`: the generated TurboModule. Regenerate it after any change to a Rust signature in
   `dcl_core` or `dcl_host`: `cd lib && cargo build -p dcl_bindings && cd ../rn && node scripts/ubrn-generate.mjs`

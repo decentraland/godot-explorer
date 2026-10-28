@@ -1,0 +1,23 @@
+import type { engine as en } from '../en/engine';
+
+export const engine: Partial<Record<keyof typeof en, string>> = {
+  EMOTES_EDIT: 'Editar',
+  EMOTES_EMOTES: 'Emotes',
+  EMOTES_EQUIP_EMOTE: 'Equipar Emote',
+  TOOLTIP_ACTION_TAP: 'Tocar',
+  TOOLTIP_ACTION_JUMP: 'Pular',
+  TOOLTIP_ACTION_PRIMARY: 'Primária',
+  TOOLTIP_ACTION_SECONDARY: 'Secundária',
+  TOOLTIP_ACTION_1: 'Ação 1',
+  TOOLTIP_ACTION_2: 'Ação 2',
+  TOOLTIP_ACTION_3: 'Ação 3',
+  TOOLTIP_ACTION_4: 'Ação 4',
+  CHAT_SYSTEM_CHANGING_REALM:
+    '[color=#ccc]Tentando ir para o Realm {realm}…[/color]',
+  CHAT_SYSTEM_CHANGING_WORLD:
+    '[color=#ccc]Tentando ir para o World {world}…[/color]',
+  CHAT_SYSTEM_NO_CAMERA: '[color=#ccc]🔴 Sem câmera ativa[/color]',
+  CHAT_SYSTEM_TELEPORTED: '[color=#ccc]🟢 Teleportado a {location}[/color]',
+  CHAT_SYSTEM_UNKNOWN_COMMAND: '[color=#ccc]🔴 Comando desconhecido[/color]',
+  TOOLTIP_VIEW_PROFILE: 'Ver perfil',
+};
