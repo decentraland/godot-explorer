@@ -46,6 +46,11 @@ const CHEVRON_SIZE_PORTRAIT := 56
 ## Space between the member count and the chevron.
 const CHEVRON_GAP_LANDSCAPE := 18
 const CHEVRON_GAP_PORTRAIT := 32
+## Exit glyph inside its disc, per the design: centred in height, a little left of centre.
+const EXIT_ICON_LANDSCAPE := 36
+const EXIT_ICON_PORTRAIT := 54
+const EXIT_ICON_SHIFT_LANDSCAPE := 2
+const EXIT_ICON_SHIFT_PORTRAIT := 4
 ## The edge tab's distance from the screen edge, before the device's side inset is added.
 const EXPAND_TAB_EDGE_MARGIN := 24
 
@@ -226,16 +231,20 @@ func _refresh_chat() -> void:
 func _apply_chat_layout() -> void:
 	var is_portrait := _layout.vertical
 	# Exit and rotate follow the HUD chat bar's discs: 66 px in landscape, 96 px in portrait.
-	# The exit disc takes the same footprint and glyph size as the one beside it.
 	var preset := HudButton.Size.LARGE if is_portrait else HudButton.Size.SMALL
 	_button_rotate.size_preset = preset
 	var spec: Vector2i = HudButton.SIZES[preset]
 	var exit_px: int = spec.x
 	_button_exit.custom_minimum_size = Vector2(exit_px, exit_px)
-	_button_exit.add_theme_constant_override("icon_max_width", spec.y)
+	_button_exit.add_theme_constant_override(
+		"icon_max_width", EXIT_ICON_PORTRAIT if is_portrait else EXIT_ICON_LANDSCAPE
+	)
+	# A right content margin of twice the shift moves the centred glyph left by the shift.
+	var exit_shift: int = EXIT_ICON_SHIFT_PORTRAIT if is_portrait else EXIT_ICON_SHIFT_LANDSCAPE
 	for slot in [&"normal", &"pressed"]:
 		var box := _button_exit.get_theme_stylebox(slot) as StyleBoxFlat
 		box.set_corner_radius_all(roundi(exit_px * 0.5))
+		box.content_margin_right = exit_shift * 2
 	var header_box := _chat_header.get_theme_stylebox("panel") as StyleBoxFlat
 	var padding_y: int = HEADER_PADDING_Y_PORTRAIT if is_portrait else HEADER_PADDING_Y_LANDSCAPE
 	header_box.content_margin_top = padding_y
@@ -425,15 +434,14 @@ func _on_chat_enter_write_mode() -> void:
 	if _layout.vertical:
 		return
 	var column_left: float = _chat.global_position.x - global_position.x
-	_chat.get_node("%MarginContainer_LineEditSafeArea").add_theme_constant_override(
-		"margin_left", -roundi(column_left - _inset_left)
-	)
+	var input_row: MarginContainer = _chat.get_node("%MarginContainer_LineEditSafeArea")
+	input_row.add_theme_constant_override("margin_left", -roundi(column_left - _inset_left))
+	# No room kept for the navigation bar: it stays hidden while typing here.
+	input_row.add_theme_constant_override("margin_right", 0)
 
 
 func _on_chat_exit_write_mode() -> void:
-	# Back to the column, with the system bar insets the chat keeps on its input.
 	_chat.reset_safe_area_insets()
-	_chat.async_apply_system_bar_insets()
 	# chat.gd hands focus back to the explorer root (deferred), which re-enables movement
 	# under the overlay; this is queued after it and takes the focus back.
 	_grab_focus_if_active.call_deferred()
@@ -473,3 +481,22 @@ func _on_change_virtual_keyboard(virtual_keyboard_height: int) -> void:
 		_chat.close_write_mode_if_active()
 	else:
 		_chat.scroll_to_bottom_deferred()
+		if not _layout.vertical:
+			_hide_android_navigation_bar()
+
+
+## Android brings the navigation bar back with the keyboard even in immersive mode; in
+## landscape it would sit beside the full-width input. WindowInsetsController needs API 30.
+func _hide_android_navigation_bar() -> void:
+	if OS.get_name() != "Android" or not Engine.has_singleton("AndroidRuntime"):
+		return
+	var android_runtime: Object = Engine.get_singleton("AndroidRuntime")
+	var activity: Object = android_runtime.getActivity()
+	# Window calls must run on the Android UI thread.
+	var hide_bar := func():
+		var controller: Object = activity.getWindow().getInsetsController()
+		if controller == null:
+			return
+		var insets_type: Object = JavaClassWrapper.wrap("android.view.WindowInsets$Type")
+		controller.hide(insets_type.navigationBars())
+	activity.runOnUiThread(android_runtime.createRunnableFromGodotCallable(hide_bar))
