@@ -10,7 +10,7 @@ extends Node
 # compiles before the autoloads exist.
 
 ## Guards against a silent early return: every check below must have run.
-const EXPECTED_CHECKS := 19
+const EXPECTED_CHECKS := 24
 
 var _failures: Array[String] = []
 var _checks: int = 0
@@ -22,6 +22,7 @@ func _ready() -> void:
 	_test_crowd_cap()
 	_test_crowd_tiebreak_and_stickiness()
 	_test_tier_alpha()
+	_test_profile_status()
 	_finish()
 
 
@@ -165,6 +166,29 @@ func _test_tier_alpha() -> void:
 		1.0,
 		NameplateLayer._tier_alpha(NameplateLayer.Tier.FULL, 24.0, true)
 	)
+
+
+func _test_profile_status() -> void:
+	var scene := load("res://src/decentraland_components/nickname_ui.tscn")
+	var ui = scene.instantiate()
+	ui.profile_status = "NAMEPLATE_PROFILE_CROSS_ENVIRONMENT"
+	add_child(ui)
+	ui.nickname = "Test user"
+	_expect(
+		"cross-environment caption",
+		"NAMEPLATE_PROFILE_CROSS_ENVIRONMENT",
+		ui._profile_status_label.text
+	)
+	_expect("caption visible", true, ui._profile_status_label.visible)
+	_expect("caption does not replace nickname", "Test user", ui.nickname_label.text)
+	_expect(
+		"caption translates",
+		Node.AUTO_TRANSLATE_MODE_ALWAYS,
+		ui._profile_status_label.auto_translate_mode
+	)
+	ui.profile_status = ""
+	_expect("local profile clears caption", false, ui._profile_status_label.visible)
+	ui.free()
 
 
 func _expect(ctx: String, expected: Variant, actual: Variant) -> void:
