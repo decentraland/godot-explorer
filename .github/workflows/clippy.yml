@@ -39,6 +39,10 @@ jobs:
         working-directory: lib
         run: cargo clippy -- -D warnings
 
+      - name: cargo clippy (enable_inspector)
+        working-directory: lib
+        run: cargo clippy --features enable_inspector -- -D warnings
+
       - name: Version check
         run: cargo run -- version-check
 

@@ -1,4 +1,7 @@
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::{
+    sync::atomic::{AtomicU64, Ordering},
+    time::Duration,
+};
 
 use futures_util::{SinkExt, StreamExt};
 use tokio::{net::TcpStream, sync::Mutex};
@@ -7,6 +10,8 @@ use tokio_tungstenite::{tungstenite::Message, MaybeTlsStream, WebSocketStream};
 use crate::urls;
 
 type RpcSocket = WebSocketStream<MaybeTlsStream<TcpStream>>;
+
+const RPC_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// JSON-RPC client for the Ethereum node behind `urls::ethereum_rpc`, used by scenes'
 /// `sendAsync`. Requests are serialized on one lazily opened WebSocket.
@@ -35,19 +40,28 @@ impl EthereumProvider {
         params: &[serde_json::Value],
     ) -> Result<serde_json::Value, anyhow::Error> {
         let mut socket = self.socket.lock().await;
-
-        if socket.is_none() {
-            let provider_url = urls::ethereum_rpc_with_project("kernel-local");
-            let (stream, _) = tokio_tungstenite::connect_async(provider_url).await?;
-            socket.replace(stream);
-        }
-
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
-        let result = request(socket.as_mut().unwrap(), id, method, params).await;
-        if result.is_err() {
-            socket.take();
-        }
-        result
+
+        // The socket is out of the Option while in use, so a timed-out or cancelled request
+        // drops it and the next call reconnects instead of reading a stale reply.
+        let call = async {
+            let mut stream = match socket.take() {
+                Some(stream) => stream,
+                None => {
+                    let provider_url = urls::ethereum_rpc_with_project("kernel-local");
+                    tokio_tungstenite::connect_async(provider_url).await?.0
+                }
+            };
+            let result = request(&mut stream, id, method, params).await;
+            if result.is_ok() {
+                socket.replace(stream);
+            }
+            result
+        };
+
+        tokio::time::timeout(RPC_TIMEOUT, call)
+            .await
+            .unwrap_or_else(|_| Err(anyhow::anyhow!("{method}: Ethereum RPC request timed out")))
     }
 }
 
@@ -73,13 +87,16 @@ async fn request(
         if response["id"] != id {
             continue;
         }
-        if let Some(error) = response.get("error") {
-            anyhow::bail!(
-                "(code: {}, message: {}, data: {})",
+        if let Some(error) = response.get("error").filter(|error| !error.is_null()) {
+            let mut message = format!(
+                "{method} failed (code: {}, message: {}",
                 error["code"],
-                error["message"].as_str().unwrap_or_default(),
-                error["data"]
+                error["message"].as_str().unwrap_or_default()
             );
+            if !error["data"].is_null() {
+                message.push_str(&format!(", data: {}", error["data"]));
+            }
+            anyhow::bail!("{message})");
         }
         return Ok(response["result"].take());
     }
