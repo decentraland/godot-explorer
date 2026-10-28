@@ -317,8 +317,7 @@ func _ensure_lazy_collider(mesh_instance: MeshInstance3D) -> StaticBody3D:
 			return null
 		shape = ConcavePolygonShape3D.new()
 		shape.set_faces(mesh.get_meta("dcl_faces"))
-		# Unity's mesh colliders are double-sided, thin slabs included (#2853 B2).
-		shape.backface_collision = true
+		shape.backface_collision = false
 		mesh.set_meta("dcl_shape", shape)
 		# The shape owns its own copy of the faces (plus the BVH) — drop ours.
 		mesh.remove_meta("dcl_faces")

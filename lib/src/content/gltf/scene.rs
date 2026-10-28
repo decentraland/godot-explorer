@@ -5,8 +5,7 @@ use godot::{
         base_material_3d::{CullMode, ShadingMode, Transparency},
         geometry_instance_3d::ShadowCastingSetting,
         node::ProcessMode,
-        BaseMaterial3D, CollisionShape3D, ConcavePolygonShape3D, MeshInstance3D, Node, Node3D,
-        StandardMaterial3D, StaticBody3D,
+        BaseMaterial3D, MeshInstance3D, Node, Node3D, StandardMaterial3D, StaticBody3D,
     },
     prelude::*,
 };
@@ -228,28 +227,6 @@ fn create_scene_colliders_inner(
                 static_body_3d.set_collision_mask(0);
                 let colgen_name = format!("{}_colgen", mesh_instance_3d.get_name());
                 static_body_3d.set_name(&colgen_name);
-
-                // Unity's PhysX MeshCollider is always double-sided, so every generated
-                // collider is: a thin slab is a volume, not a one-way plane, and
-                // single-siding one dropped bodies through thin floors and blockers
-                // (#2853 B2). The creator-facing one-way is the SDK's PlaneMesh
-                // primitive, built in mesh_collider.rs, not here.
-                for body_child in static_body_3d
-                    .get_children_ex()
-                    .include_internal(true)
-                    .done()
-                    .iter_shared()
-                {
-                    if let Ok(collision_shape_3d) =
-                        body_child.clone().try_cast::<CollisionShape3D>()
-                    {
-                        if let Some(shape) = collision_shape_3d.get_shape() {
-                            if let Ok(mut concave) = shape.try_cast::<ConcavePolygonShape3D>() {
-                                concave.set_backface_collision_enabled(true);
-                            }
-                        }
-                    }
-                }
 
                 // Set owner so it gets saved with PackedScene
                 static_body_3d.set_owner(&root_node.clone().upcast::<Node>());

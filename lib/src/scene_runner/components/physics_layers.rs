@@ -14,7 +14,7 @@ pub const AVATAR_BITS: u32 = 4 | 8;
 /// Layer 17, the `SDKAvatarHit` equivalent.
 pub const SDK_AVATAR_HIT_LAYER: u32 = 1 << 16;
 
-/// Godot collision layer for a collider a scene authored.
+/// Godot layer for a collider authored by a scene.
 pub fn collider_layer(mask: u32) -> u32 {
     if mask & AVATAR_BITS != 0 && mask & !AVATAR_BITS == 0 {
         SDK_AVATAR_HIT_LAYER
@@ -23,8 +23,8 @@ pub fn collider_layer(mask: u32) -> u32 {
     }
 }
 
-/// Collision mask for a query a scene authored (raycast, trigger area): the
-/// avatar bits also match colliders routed to the `SDKAvatarHit` layer.
+/// Mask for a query authored by a scene (raycast, trigger area). The avatar
+/// bits also match colliders routed to the `SDKAvatarHit` layer.
 pub fn query_mask(mask: u32) -> u32 {
     if mask & AVATAR_BITS != 0 {
         mask | SDK_AVATAR_HIT_LAYER
