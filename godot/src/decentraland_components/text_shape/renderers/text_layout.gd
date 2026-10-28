@@ -135,6 +135,12 @@ const FONT_SANS_BOLD: String = "uid://ru8tau3y1nqn"  # Inter-Bold.ttf (v3.3, fla
 const FONT_SERIF_BOLD: String = "uid://1vmt0d4x5gr1"  # NotoSerif-Bold.ttf
 const FONT_MONO_BOLD: String = "uid://bfqjyubth6dkc"  # AtkinsonHyperlegibleMono-Bold.ttf
 
+const FONT_EMOJI: String = "uid://ivxdopbqg6xx"  # NotoColorEmoji-Regular.ttf (SVG color glyphs)
+const FONT_CJK: String = "uid://dfx6banyqu12e"  # NotoSansSC-VariableFont_wght.ttf
+
+static var _glyph_fallbacks: Array[Font] = []
+static var _glyph_fallbacks_bold: Array[Font] = []
+
 
 ## Looks up a per-face value in `table` by the font's .ttf filename, returning `fallback` for
 ## an unknown or null face. Shared by all the per-font correction tables above.
@@ -221,22 +227,51 @@ static func pixels_to_world(pixels: float) -> float:
 static func load_font(font_index: int) -> Font:
 	match font_index:
 		1:
-			return load(FONT_SERIF) as Font
+			return _with_glyph_fallbacks(load(FONT_SERIF))
 		2:
-			return load(FONT_MONO) as Font
+			return _with_glyph_fallbacks(load(FONT_MONO))
 		_:
-			return load(FONT_SANS) as Font
+			return _with_glyph_fallbacks(load(FONT_SANS))
 
 
 ## Real bold face for a Font enum value (0 sans, 1 serif, 2 monospace), used for [b] markup.
 static func load_bold_font(font_index: int) -> Font:
 	match font_index:
 		1:
-			return load(FONT_SERIF_BOLD) as Font
+			return _with_glyph_fallbacks(load(FONT_SERIF_BOLD), true)
 		2:
-			return load(FONT_MONO_BOLD) as Font
+			return _with_glyph_fallbacks(load(FONT_MONO_BOLD), true)
 		_:
-			return load(FONT_SANS_BOLD) as Font
+			return _with_glyph_fallbacks(load(FONT_SANS_BOLD), true)
+
+
+## Bundled fallbacks for glyphs the faces lack: colour emoji (Android 15+ only has COLRv1 emoji,
+## which Godot can't draw) and CJK as MSDF like the faces, so outlines draw as a ring. The CJK
+## copy shares the chat font's data; the engine fork fixes its overlapping contours.
+static func _with_glyph_fallbacks(font: Font, bold := false) -> Font:
+	if font.fallbacks.is_empty():
+		if _glyph_fallbacks.is_empty():
+			var emoji := FontVariation.new()
+			emoji.base_font = load(FONT_EMOJI)
+			emoji.baseline_offset = -0.1
+			var cjk: FontFile = load(FONT_CJK).duplicate()
+			cjk.multichannel_signed_distance_field = true
+			cjk.msdf_pixel_range = int(MSDF_PIXEL_RANGE)
+			cjk.msdf_size = int(MSDF_SIZE)
+			_glyph_fallbacks = [emoji, _cjk_weight(cjk, 400)]
+			_glyph_fallbacks_bold = [emoji, _cjk_weight(cjk, 700)]
+		font.fallbacks = _glyph_fallbacks_bold if bold else _glyph_fallbacks
+	return font
+
+
+## The variable CJK face defaults to its thinnest weight.
+static func _cjk_weight(cjk: FontFile, weight: int) -> FontVariation:
+	var variation := FontVariation.new()
+	variation.base_font = cjk
+	variation.variation_opentype = {
+		TextServerManager.get_primary_interface().name_to_tag("wght"): weight
+	}
+	return variation
 
 
 ## Resolve the raw params + font into a flat Dictionary the renderers consume.
