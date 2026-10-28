@@ -65,6 +65,8 @@ normalize_device() {
     adb shell settings put global "$scale" 0
   done
   adb shell settings put system font_scale 1.0
+  # A slow emulator can ANR the launcher; its dialog would sit on top of the capture.
+  adb shell settings put global hide_error_dialogs 1
   adb shell settings put global sysui_demo_allowed 1
   demo() { adb shell am broadcast -a com.android.systemui.demo -e command "$@" >/dev/null; }
   demo enter
