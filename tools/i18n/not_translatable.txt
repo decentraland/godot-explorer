@@ -188,9 +188,3 @@ godot/src/logic/sentry_seeder.gd	Scene crashed: %s (%s): %s
 godot/src/logic/sentry_seeder.gd	Scene killed: %s
 godot/src/logic/sentry_seeder.gd	Scene spawned: %s
 godot/src/logic/sentry_seeder.gd	onTrimMemory level=%d
-
-# Debug-only card (`--dev-intent`) that shows text an agent wrote for the human running the
-# client. The whole payload is authored by whoever launched it, so nothing here is translated;
-# every display node is auto_translate_mode = 2, which the scanner skips for scenes; this is
-# the row-number template it still sees in GDScript.
-godot/src/ui/components/organisms/dev_intent_panel/dev_intent_panel.gd	%d. %s

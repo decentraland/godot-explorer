@@ -117,7 +117,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
         with:
-          toolchain: "1.90"
+          toolchain: "1.94"
           targets: aarch64-apple-ios
 
       # Cache the Rust dep compilation (host + iOS) so we don't rebuild the whole tree every
@@ -132,6 +132,10 @@ jobs:
 
       - name: Install dependencies
         uses: ./.github/actions/install-deps
+
+      # `export --target ios` stages the React Native app (rn/) into exports/rn and needs Node 22 + CocoaPods.
+      - name: Set up Node + npm ci (React Native app)
+        uses: ./.github/actions/rn-npm-ci
 
       - name: Cargo install
         timeout-minutes: 15

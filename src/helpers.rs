@@ -129,9 +129,11 @@ impl AndroidBuildEnv {
         // and without one every libdclgodot.so frame in an Android tombstone has
         // nothing for sentry-java to turn into a debug-id, so the crash stays
         // unsymbolicated in Sentry. sha1 is the 20-byte form sentry-cli registers.
+        // `-soname`: the TurboModule and the Kotlin bindings link against this file, and without a
+        // DT_SONAME their NEEDED entry would be a build path instead of the copy Godot loaded.
         let rustflags = format!(
             "-L{}/toolchains/llvm/prebuilt/{}/lib/aarch64-unknown-linux-musl \
-             -C link-arg=-Wl,--build-id=sha1",
+             -C link-arg=-Wl,--build-id=sha1 -C link-arg=-Wl,-soname,libdclgodot.so",
             self.ndk_path, host_tag
         );
 
@@ -178,6 +180,11 @@ pub struct BinPaths;
 impl BinPaths {
     pub fn godot() -> PathBuf {
         PathBuf::from(BIN_FOLDER).join("godot")
+    }
+
+    /// The fork's GDExtension API, which `lib/.cargo/config.toml` hands to the `godot` crate.
+    pub fn extension_api() -> PathBuf {
+        Self::godot().join("extension_api.json")
     }
 
     pub fn godot_bin() -> PathBuf {

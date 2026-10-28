@@ -1,0 +1,81 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-feature android:glEsVersion="0x00030000" android:required="true" />
+
+    <application
+      android:name=".MainApplication"
+      android:label="@string/app_name"
+      android:icon="@mipmap/ic_launcher"
+      android:allowBackup="false"
+      android:appCategory="game"
+      android:isGame="true"
+      android:hasFragileUserData="false"
+      android:theme="@style/AppTheme"
+      android:usesCleartextTraffic="${usesCleartextTraffic}"
+      android:supportsRtl="true"
+      tools:ignore="GoogleAppIndexingWarning">
+      <activity
+        android:name=".MainActivity"
+        android:label="@string/app_name"
+        android:configChanges="layoutDirection|locale|orientation|keyboardHidden|screenSize|smallestScreenSize|density|keyboard|navigation|screenLayout|uiMode"
+        android:screenOrientation="${screenOrientation}"
+        android:launchMode="singleTask"
+        android:resizeableActivity="false"
+        android:windowSoftInputMode="adjustResize"
+        android:exported="false"
+        tools:ignore="UnusedAttribute" />
+
+      <!-- Same component name as the Godot-exported app's launcher, so home-screen shortcuts
+           survive the update and the xtask Android launch command keeps working. -->
+      <activity-alias
+        android:name="com.godot.game.GodotAppLauncher"
+        android:targetActivity=".MainActivity"
+        android:exported="true">
+        <intent-filter>
+          <action android:name="android.intent.action.MAIN" />
+          <category android:name="android.intent.category.DEFAULT" />
+          <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+        <intent-filter>
+          <action android:name="android.intent.action.VIEW" />
+          <category android:name="android.intent.category.DEFAULT" />
+          <category android:name="android.intent.category.BROWSABLE" />
+          <data android:scheme="decentraland" />
+        </intent-filter>
+        <intent-filter android:autoVerify="true">
+          <action android:name="android.intent.action.VIEW" />
+          <category android:name="android.intent.category.DEFAULT" />
+          <category android:name="android.intent.category.BROWSABLE" />
+          <data android:scheme="https" android:host="mobile.dclexplorer.com" />
+        </intent-filter>
+        <intent-filter android:autoVerify="true">
+          <action android:name="android.intent.action.VIEW" />
+          <category android:name="android.intent.category.DEFAULT" />
+          <category android:name="android.intent.category.BROWSABLE" />
+          <data android:scheme="https" android:host="decentraland.org" android:pathPrefix="/mobile" />
+          <data android:scheme="https" android:host="decentraland.org" android:pathPrefix="/jump" />
+          <data android:scheme="https" android:host="decentraland.org" android:pathPrefix="/events" />
+          <data android:scheme="https" android:host="decentraland.org" android:pathPrefix="/places" />
+        </intent-filter>
+        <intent-filter android:autoVerify="true">
+          <action android:name="android.intent.action.VIEW" />
+          <category android:name="android.intent.category.DEFAULT" />
+          <category android:name="android.intent.category.BROWSABLE" />
+          <data android:scheme="https" android:host="decentraland.zone" android:pathPrefix="/mobile" />
+          <data android:scheme="https" android:host="decentraland.zone" android:pathPrefix="/jump" />
+          <data android:scheme="https" android:host="decentraland.zone" android:pathPrefix="/events" />
+          <data android:scheme="https" android:host="decentraland.zone" android:pathPrefix="/places" />
+        </intent-filter>
+      </activity-alias>
+
+      <!-- The dcl-godot-android plugin manifest tweaks the Godot template's activity, which this
+           app does not have. -->
+      <activity android:name="com.godot.game.GodotApp" tools:node="remove" />
+    </application>
+</manifest>

@@ -1,0 +1,137 @@
+// https://github.com/decentraland/hammurabi/pull/33/files#diff-18afcd5f94e3688aad1ba36fa1db3e09b472b271d1e0cf5aeb59ebd32f43a328
+
+use dcl_core::Core;
+use std::collections::HashMap;
+
+use http::{Method, Uri};
+
+use crate::{
+    auth::{ephemeral_auth_chain::EphemeralAuthChain, wallet::signed_fetch_payload},
+    godot_classes::dcl_global::DclGlobal,
+    http_request::{
+        http_queue_requester::HttpQueueRequester,
+        request_response::{RequestOption, ResponseEnum, ResponseType},
+    },
+};
+
+#[derive(Debug, serde::Deserialize)]
+pub struct SignedLoginResponse {
+    pub message: Option<String>,
+    #[serde(rename = "fixedAdapter")]
+    pub fixed_adapter: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+pub struct SignedLoginMeta {
+    pub intent: String,
+    pub signer: String,
+    #[serde(rename = "isGuest")]
+    is_guest: bool,
+    origin: String,
+    /// The shared secret of a password-protected world (#2651). `world-comms-handler`
+    /// reads it from this metadata; it is skipped when absent, so the signed payload for
+    /// every other realm stays exactly what it was.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    secret: Option<String>,
+}
+
+impl SignedLoginMeta {
+    pub fn new(is_guest: bool, origin: Uri, secret: Option<String>) -> Self {
+        let origin = origin.into_parts();
+
+        Self {
+            intent: "dcl:explorer:comms-handshake".to_owned(),
+            signer: "dcl:explorer".to_owned(),
+            is_guest,
+            origin: format!("{}://{}", origin.scheme.unwrap(), origin.authority.unwrap()),
+            secret,
+        }
+    }
+}
+
+pub enum SignedLoginPollStatus {
+    Pending,
+    Complete(SignedLoginResponse),
+    Error(anyhow::Error),
+}
+
+pub struct SignedLogin {
+    login_result_receiver: tokio::sync::oneshot::Receiver<SignedLoginPollStatus>,
+}
+
+impl SignedLogin {
+    pub fn new(uri: Uri, ephemeral_auth_chain: EphemeralAuthChain, meta: SignedLoginMeta) -> Self {
+        let (login_result_sender, login_result_receiver) = tokio::sync::oneshot::channel();
+
+        Core::spawn(async move {
+            let unix_time = crate::utils::clock::unix_time_ms();
+
+            let meta = serde_json::to_string(&meta).unwrap();
+            // Same format as `sign_request`; the method is already the literal "post".
+            let payload = signed_fetch_payload("post", uri.path(), unix_time, &meta);
+
+            let signature = ephemeral_auth_chain
+                .ephemeral_wallet()
+                .sign_message(&payload)
+                .await
+                .expect("signature by ephemeral should always work");
+
+            let mut chain = ephemeral_auth_chain.auth_chain().clone();
+            chain.add_signed_entity(payload, signature);
+
+            let mut headers = HashMap::from_iter(chain.headers());
+            headers.insert("x-identity-timestamp".into(), format!("{unix_time}"));
+            headers.insert("x-identity-metadata".into(), meta.to_string());
+
+            let http_requester =
+                HttpQueueRequester::new(1, DclGlobal::get_network_inspector_sender());
+            let response = http_requester
+                .request(
+                    RequestOption::new(
+                        0,
+                        uri.to_string(),
+                        Method::POST,
+                        ResponseType::AsJson,
+                        None,
+                        Some(headers),
+                        None,
+                    ),
+                    0,
+                )
+                .await;
+
+            match response {
+                Ok(response) => {
+                    if let Ok(ResponseEnum::Json(Ok(json))) = response.response_data {
+                        if let Ok(response) = serde_json::from_value::<SignedLoginResponse>(json) {
+                            let _ =
+                                login_result_sender.send(SignedLoginPollStatus::Complete(response));
+                            return;
+                        }
+                    }
+                }
+                Err(e) => {
+                    let _ = login_result_sender.send(SignedLoginPollStatus::Error(
+                        anyhow::anyhow!(e.error_message),
+                    ));
+                    return;
+                }
+            }
+            let _ = login_result_sender.send(SignedLoginPollStatus::Error(anyhow::anyhow!(
+                "unknown error"
+            )));
+        });
+
+        SignedLogin {
+            login_result_receiver,
+        }
+    }
+
+    pub fn poll(&mut self) -> SignedLoginPollStatus {
+        match self.login_result_receiver.try_recv() {
+            Ok(result) => result,
+            Err(tokio::sync::oneshot::error::TryRecvError::Empty) => SignedLoginPollStatus::Pending,
+            _ => SignedLoginPollStatus::Error(anyhow::anyhow!("channel closed")),
+        }
+    }
+}

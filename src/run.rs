@@ -207,11 +207,11 @@ fn get_v8_version_using_metadata() -> anyhow::Result<String> {
     cmd.manifest_path("lib/Cargo.toml");
     let metadata = cmd.exec()?;
 
-    // Find the package corresponding to "lib/Cargo.toml"
+    // Find the package corresponding to "dclgodot"
     let lib_package = metadata
         .packages
         .iter()
-        .find(|pkg| pkg.manifest_path.ends_with("lib/Cargo.toml"))
+        .find(|pkg| pkg.name == "dclgodot")
         .ok_or_else(|| anyhow::anyhow!("lib package not found in cargo metadata"))?;
 
     // Iterate through its dependencies to locate "v8"
@@ -1024,11 +1024,11 @@ fn encode_query_value(v: &str) -> String {
 }
 
 /// iOS bundle identifier
-const IOS_BUNDLE_ID: &str = "org.decentraland.godotexplorer";
+pub const IOS_BUNDLE_ID: &str = "org.decentraland.godotexplorer";
 
 /// Deploy and run on iOS device using xcodebuild and xcrun devicectl
 fn deploy_and_run_ios(
-    release: bool,
+    _release: bool,
     extras: Vec<String>,
     stream_device_logs: bool,
     install_app: bool,
@@ -1043,52 +1043,11 @@ fn deploy_and_run_ios(
 
     // Build + install (skipped under --launch-only — relaunch what's installed).
     if install_app {
-        let xcodeproj = format!("{}decentraland-godot-client.xcodeproj", EXPORTS_FOLDER);
-        if !std::path::Path::new(&xcodeproj).exists() {
-            return Err(anyhow::anyhow!(
-                "Xcode project not found at: {}. Run export first.",
-                xcodeproj
-            ));
-        }
-
-        // Build the Xcode project
-        let configuration = if release { "Release" } else { "Debug" };
-        let derived_data = format!("{}build", EXPORTS_FOLDER);
-
-        let spinner = create_spinner("Building Xcode project...");
-        let build_output = std::process::Command::new("xcodebuild")
-            .args([
-                "-project",
-                &xcodeproj,
-                "-scheme",
-                "decentraland-godot-client",
-                "-configuration",
-                configuration,
-                "-destination",
-                "generic/platform=iOS",
-                "-derivedDataPath",
-                &derived_data,
-                "-allowProvisioningUpdates",
-                "build",
-            ])
-            .output()?;
-        spinner.finish();
-
-        if !build_output.status.success() {
-            let stderr = String::from_utf8_lossy(&build_output.stderr);
-            return Err(anyhow::anyhow!("xcodebuild failed:\n{}", stderr));
-        }
-
-        print_message(MessageType::Success, "Xcode build succeeded");
-
-        // Find the .app bundle
-        let app_path = format!(
-            "{}/Build/Products/{}-iphoneos/decentraland-godot-client.app",
-            derived_data, configuration
-        );
-        if !std::path::Path::new(&app_path).exists() {
-            return Err(anyhow::anyhow!(".app not found at: {}", app_path));
-        }
+        // The React Native app (rn/ios) hosts the engine; the Godot template (debug/release) was
+        // picked at export time, and the app always builds Release so the JS is bundled.
+        let app_path = crate::rn_app::build_ios(false)?
+            .to_string_lossy()
+            .into_owned();
 
         // Install on device
         let spinner = create_spinner("Installing on iOS device...");
@@ -1200,7 +1159,10 @@ fn get_connected_ios_device() -> anyhow::Result<String> {
     // Lines contain: Name  Hostname  Identifier  State  ...
     // State can be "connected", "available", "available (paired)", etc.
     for line in stdout.lines() {
-        if line.contains("connected") || line.contains("available") {
+        // "unavailable" (e.g. a paired Apple Watch) also contains "available".
+        if !line.contains("unavailable")
+            && (line.contains("connected") || line.contains("available"))
+        {
             // Extract the UUID (format: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX)
             for word in line.split_whitespace() {
                 if word.len() == 36 && word.chars().filter(|c| *c == '-').count() == 4 {

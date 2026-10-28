@@ -1,0 +1,26 @@
+# Smoke test of the shipping app: fresh install, guest sign-in, the avatar screen and the first world. The entry-flow strings are English on every device language.
+# Run: maestro test rn/.maestro/smoke.yaml   (a phone or emulator with the app installed)
+appId: org.decentraland.godotexplorer
+---
+- clearState
+- launchApp
+- extendedWaitUntil:
+    visible: "Accept and continue"
+    timeout: 60000
+- tapOn: "Accept and continue"
+- tapOn: "Play as guest"
+- extendedWaitUntil:
+    visible: "Randomize"
+    timeout: 90000
+- waitForAnimationToEnd
+# By point: the engine surface sits above RN on this screen, where a text match misses the button.
+- tapOn:
+    point: "50%,84%"
+# A new guest lands in Genesis Plaza and is offered the tutorial (localized: Skip / Pular / Saltar).
+- extendedWaitUntil:
+    visible: "(?i).*(skip|pular|saltar).*"
+    timeout: 180000
+- tapOn: "(?i).*(skip|pular|saltar).*"
+- extendedWaitUntil:
+    visible: ".*FPS.*"
+    timeout: 60000

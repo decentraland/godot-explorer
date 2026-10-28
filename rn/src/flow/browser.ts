@@ -1,0 +1,55 @@
+import { Linking } from 'react-native';
+import InAppBrowser from 'react-native-inappbrowser-reborn';
+import { applyRouted } from '../app/links';
+import { core } from '../core';
+import { onCoreEvents } from '../core/events';
+import { Effect_Tags, StartKind } from '../core/native';
+import type { Routed } from '../core/native';
+import { trackInitialLink } from './launchLink';
+
+let started = false;
+
+/**
+ * Opens the pages the core asks for (sign-in) and sends every `decentraland://` link back to it.
+ * Called once at startup; the browser returns through the deep link, not through this call.
+ */
+export function startLinkHandling() {
+  if (started) {
+    return;
+  }
+  started = true;
+  onCoreEvents({
+    openUrl: ({ url }) => {
+      InAppBrowser.isAvailable()
+        .then(available =>
+          available ? openAndWatch(url) : Linking.openURL(url),
+        )
+        .catch(() => Linking.openURL(url));
+    },
+  });
+  Linking.addEventListener('url', ({ url }) => routeLink(url, StartKind.Warm));
+  trackInitialLink(
+    Linking.getInitialURL().then(
+      url =>
+        !!url &&
+        routeLink(url, StartKind.Cold).effects.some(
+          effect => effect.tag === Effect_Tags.SetPreviewUrl,
+        ),
+    ),
+  );
+}
+
+/** A tab the player closes ends the sign-in it was opened for; one we close after the link returns does not. */
+async function openAndWatch(url: string) {
+  const result = await InAppBrowser.open(url);
+  if (result.type === 'cancel' && core().state().tag === 'SigningIn') {
+    core().cancelSignIn();
+  }
+}
+
+function routeLink(url: string, start: StartKind): Routed {
+  InAppBrowser.close();
+  const routed = core().handleDeepLink(url, start);
+  applyRouted(routed);
+  return routed;
+}

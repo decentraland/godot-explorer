@@ -1,7 +1,0 @@
-[gd_scene format=3 uid="uid://b0jonmd2rfupn"]
-
-[ext_resource type="Script" uid="uid://b17n1qqifgain" path="res://src/main.gd" id="1_2a1rx"]
-
-[node name="main" type="Node" unique_id=2004683069]
-script = ExtResource("1_2a1rx")
-metadata/mobile_preview_orientation = "portrait"

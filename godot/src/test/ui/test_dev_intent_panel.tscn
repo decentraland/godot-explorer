@@ -1,6 +1,0 @@
-[gd_scene format=3 uid="uid://du01ovu1c31h7"]
-
-[ext_resource type="Script" uid="uid://ucf646cy0fbb" path="res://src/test/ui/test_dev_intent_panel.gd" id="1_devintent"]
-
-[node name="TestDevIntentPanel" type="Node"]
-script = ExtResource("1_devintent")

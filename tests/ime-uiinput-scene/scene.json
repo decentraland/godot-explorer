@@ -1,0 +1,8 @@
+{
+  "ecs7": true,
+  "runtimeVersion": "7",
+  "display": { "title": "UiInput soft keyboard test" },
+  "scene": { "parcels": ["0,0"], "base": "0,0" },
+  "main": "bin/index.js",
+  "spawnPoints": [{ "name": "spawn1", "default": true, "position": { "x": 8, "y": 0, "z": 8 } }]
+}

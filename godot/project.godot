@@ -25,8 +25,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 config/name="Decentraland"
 config/description="Decentraland Explorer powered by Decentraland DAO"
-run/main_scene="res://src/main.tscn"
-run/main_loop_type="ProjectMainLoop"
+run/main_scene="res://src/dcl_root.tscn"
 config/features=PackedStringArray("4.6")
 boot_splash/bg_color=Color(0.411765, 0.121569, 0.662745, 1)
 boot_splash/stretch_mode=0
@@ -41,23 +40,8 @@ general/ios/session_category=3
 
 [autoload]
 
-UiSounds="*res://src/helpers_components/ui_sounds.gd"
-Global="*res://src/global.gd"
-SessionTracker="*res://src/session_tracker.gd"
-SplashOverlay="*res://src/ui/splash_overlay/splash_overlay.gd"
-NotificationsManager="*res://src/notifications_manager.gd"
-ConnectionQualityMonitor="*res://src/connection_quality_monitor.gd"
-EmptyParcelProps="*res://assets/empty-scenes/empty_parcel_props.tscn"
-Iap="*res://src/iap/iap_manager.gd"
-MarketplaceTracker="*res://src/iap/marketplace_tracker.gd"
-ImpostorCapturer="*res://src/decentraland_components/avatar/impostor/impostor_capturer.gd"
-AvatarLODCoordinator="*res://src/decentraland_components/avatar/impostor/avatar_lod_coordinator.gd"
-DebugWs="*res://src/tool/debug_server/debug_ws_server.gd"
-DevLocalhostRelay="*res://src/tool/dev_localhost_relay.gd"
-GltfLoadingCoordinator="*res://src/decentraland_components/gltf_loading_coordinator.gd"
-LightSourceManager="*res://src/decentraland_components/light_source_manager.gd"
-TouchFeedback="*res://src/ui/touch_feedback/touch_feedback_overlay.gd"
-DevIntent="*res://src/ui/components/organisms/dev_intent_panel/dev_intent_overlay.gd"
+Global="*res://src/global.tscn"
+GlobalBoot="*res://src/global_boot.tscn"
 
 [debug]
 
@@ -84,7 +68,7 @@ import/use_multiple_threads=false
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/dcl-godot-android/plugin.cfg", "res://addons/dcl-ios-devtools/plugin.cfg", "res://addons/dcl_build_plugin/plugin.cfg", "res://addons/dcl_dev_tools/plugin.cfg", "res://addons/dcl_mobile_preview/plugin.cfg", "res://addons/emote_converter/plugin.cfg", "res://addons/resource_tracker/plugin.cfg")
+enabled=PackedStringArray("res://addons/dcl-godot-android/plugin.cfg", "res://addons/dcl_build_plugin/plugin.cfg", "res://addons/emote_converter/plugin.cfg")
 
 [filesystem]
 
@@ -272,14 +256,6 @@ lights_and_shadows/positional_shadow/atlas_size=2048
 lights_and_shadows/positional_shadow/atlas_quadrant_3_subdiv=3
 environment/screen_space_reflection/roughness_quality=0
 
-[sentry]
-
-options/auto_init=false
-options/dsn="https://03559fa545b3fa2bc9e876a41d6aab2f@o4510187684298752.ingest.us.sentry.io/4510187688361984"
-options/debug_printing=0
-options/diagnostic_level=4
-schema_version=4
-
 [shader_globals]
 
 day_night_cycle={
@@ -315,8 +291,3 @@ ambient_color={
 "value": Vector3(0.35, 0.36, 0.4)
 }
 
-[xr]
-
-openxr/foveation_level=3
-openxr/enabled.xr=false
-shaders/enabled.xr=false
