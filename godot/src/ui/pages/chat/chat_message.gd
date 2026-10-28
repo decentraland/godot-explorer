@@ -174,7 +174,7 @@ func make_urls_clickable(text: String) -> String:
 			escaped_names.append(_regex_escape(match_key))
 
 		var mention_regex = RegEx.new()
-		mention_regex.compile("(?i)@(" + "|".join(escaped_names) + ")")
+		mention_regex.compile(r"(?i)(?<![\w.-])@(" + "|".join(escaped_names) + r")(?![\w#])")
 
 		var mention_results = mention_regex.search_all(processed_text)
 		for i in range(mention_results.size() - 1, -1, -1):
@@ -368,17 +368,30 @@ func _get_mention_lookup() -> Dictionary:
 
 	var base_name_owners = {}
 	for full_identity in full_identities:
-		var base_name_lower = full_identity.split("#", false)[0].to_lower()
+		var base_name_lower = _base_name_lower(full_identity)
+		if base_name_lower.is_empty():
+			continue
 		base_name_owners[base_name_lower] = base_name_owners.get(base_name_lower, 0) + 1
 
 	var lookup = {}
 	for full_identity in full_identities:
 		lookup[full_identity.to_lower()] = full_identity
-		var base_name_lower = full_identity.split("#", false)[0].to_lower()
-		if base_name_owners[base_name_lower] == 1:
+		var base_name_lower = _base_name_lower(full_identity)
+		if not base_name_lower.is_empty() and base_name_owners[base_name_lower] == 1:
 			lookup[base_name_lower] = full_identity
 
 	return lookup
+
+
+## Lowercased name part before "#tag", or "" for a degenerate identity (an empty display
+## name, so the identity is just "#tag" or the literal "#") — `split("#", false)` drops
+## the empty leading part in both cases, so parts[0] would otherwise be the tag itself,
+## or out of range entirely for "#".
+func _base_name_lower(full_identity: String) -> String:
+	if full_identity.begins_with("#"):
+		return ""
+	var parts = full_identity.split("#", false)
+	return parts[0].to_lower() if not parts.is_empty() else ""
 
 
 func _is_valid_mention(mention: String) -> bool:
