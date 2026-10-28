@@ -67,13 +67,20 @@ function payload(overrides: Partial<ReportEvent>): ReportPayload {
   };
 }
 
+const devFlag = globalThis as { __DEV__?: boolean };
+const wasDev = devFlag.__DEV__;
+
 beforeEach(() => {
   jest.clearAllMocks();
+  devFlag.__DEV__ = false;
   setCoreForTests(createMockCore());
   resetCoreEventsForTests();
 });
 
-afterEach(() => setCoreForTests(undefined));
+afterEach(() => {
+  devFlag.__DEV__ = wasDev;
+  setCoreForTests(undefined);
+});
 
 describe('initSentry', () => {
   it('starts the SDK with the public key, the core environment and no PII or tracing', () => {
@@ -100,6 +107,15 @@ describe('initSentry', () => {
     initSentry();
     expect(mocked.init.mock.calls[1][0]).toMatchObject({
       environment: 'development',
+      enabled: false,
+    });
+  });
+
+  it('reports nothing from debug builds, whatever the core environment', () => {
+    devFlag.__DEV__ = true;
+    initSentry();
+    expect(mocked.init.mock.calls[0][0]).toMatchObject({
+      environment: 'production',
       enabled: false,
     });
   });

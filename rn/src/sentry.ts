@@ -56,8 +56,9 @@ export function initSentry() {
     dsn: SENTRY_DSN,
     environment,
     release: releaseFor(coreVersion()),
-    // Development builds report nothing, as before.
-    enabled: environment !== 'development',
+    // Development builds report nothing, as before; neither do debug (Metro) builds, whose mock core
+    // says `org` (the visual-snapshot runs would report into production).
+    enabled: environment !== 'development' && !__DEV__,
     sendDefaultPii: false,
     // Tracing off: no tracesSampleRate.
   });
