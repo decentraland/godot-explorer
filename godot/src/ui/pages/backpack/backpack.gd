@@ -49,9 +49,8 @@ var avatar_loading_counter: int = 0
 var blacklist_deploy_timer: Timer  # Timer for debounced blacklist changes
 var is_loading_profile: bool = false
 
-# Resolved in _ready() instead of @onready — on portrait these live inside
-# backpack_wearables_content.tscn (see right_editor_container below), and a nested scene
-# instance's nodes keep their own owner, so %unique-name can't reach them from here.
+# Resolved in _ready() instead of @onready — on portrait these are read off
+# right_editor_container's own BackpackWearablesContent script instead of %unique-name here.
 var color_carrousel
 var carrousel_separator
 var grid_container_wearables_list
@@ -122,9 +121,17 @@ var _wearable_token_urns: Dictionary = {}
 @onready var size_canary: Control = get_node_or_null("%HBoxContainer_SizeCanary")
 @onready var button_credits: Control = %Button_Credits
 @onready var margin_container_credits: Control = %MarginContainer_Credits
-## Instance root is always reachable via %unique-name (it's placed directly in this scene);
-## only its own internal children are not — see the vars resolved from it in _ready().
-@onready var right_editor_container: MarginContainer = %RightEditorContainer
+## Portrait: injected at runtime via draggable_bottom_sheet's content_scene (same mechanism
+## Profile uses) rather than declared as a static child in the .tscn — a hand-declared node
+## under an instanced sub-scene's own child fails to come back on an exported Android build
+## (confirmed live: the node is simply missing from the tree, no error), even though the
+## identical scene instantiates fine standalone. Landscape has no such instanced ancestor,
+## so it keeps the direct %-lookup.
+@onready var right_editor_container: MarginContainer = (
+	draggable_bottom_sheet.get_content_instance() as MarginContainer
+	if draggable_bottom_sheet
+	else %RightEditorContainer
+)
 
 # "NEW" tag (#2300) session state. Per category ("wearable"/"emote"): the baseline snapshot
 # (item_urn -> count) each item must exceed to be tagged new, captured once per app session
@@ -152,11 +159,10 @@ static var _newtag_session_wallet: String = ""
 static var _base_urn_by_lower: Dictionary = {}
 
 
-## Portrait: WearableEditor/EmoteEditor and everything around them live inside
-## backpack_wearables_content.tscn (right_editor_container's own scene) — its nodes keep
-## that scene as their owner, so %unique-name can't reach them from here; read them off
-## the content scene's own script instead. Landscape never extracted this, so it keeps
-## the plain %unique-name lookups it always had.
+## Portrait: WearableEditor/EmoteEditor and everything around them are grouped under
+## BackpackWearablesContent (right_editor_container's script) — read them off its own
+## resolved vars instead of re-doing the %unique-name lookups here. Landscape keeps its
+## own flat %unique-name lookups.
 func _resolve_wearables_content_nodes() -> void:
 	if draggable_bottom_sheet:
 		var content := right_editor_container as BackpackWearablesContent
@@ -229,13 +235,13 @@ func _ready():
 			draggable_bottom_sheet.panel_container_header,
 		]
 		draggable_bottom_sheet.drag_state_changed.connect(self._on_sheet_drag_state_changed)
+		draggable_bottom_sheet.scroll_reference = scroll_container_items
 
 	emote_editor.avatar = avatar_preview.avatar
 	emote_editor.set_new_emotes.connect(self._on_set_new_emotes)
 	emote_editor.emote_equipped.connect(self._on_emote_equipped)
-	# Portrait only: WearableEditor/EmoteEditor now live in their own scene
-	# (backpack_wearables_content.tscn, instanced into the draggable sheet) — a .tscn
-	# connection can't cross a scene-file boundary, so these are wired here instead.
+	# Portrait only: wired here instead of as static [connection] blocks, matching how
+	# right_editor_container's other signals are already read off its own script.
 	# Landscape still has its own static [connection] blocks for the same signals (its
 	# layout wasn't touched), so this must not also run there or they'd double-fire.
 	if draggable_bottom_sheet:

@@ -377,7 +377,7 @@ script = ExtResource("3_0ypv2")
 use_top = false
 use_bottom = false
 
-[node name="HBoxContainer_Backpack" parent="VBoxContainer/SafeMarginContainer" unique_id=1495390153 node_paths=PackedStringArray("scroll_reference") instance=ExtResource("40_sheet")]
+[node name="HBoxContainer_Backpack" parent="VBoxContainer/SafeMarginContainer" unique_id=1495390153 instance=ExtResource("40_sheet")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
@@ -385,13 +385,21 @@ show_close_button = false
 card_color = Color(0.27450982, 0.05882353, 0.43529412, 1)
 handle_margin_top = 16
 handle_margin_bottom = 12
-scroll_reference = NodePath("Control_Card/PanelContainer_Card/VBoxContainer/ScrollContent/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/MarginItemsContainer/MarginContainer/ScrollContainer_Items")
+restrict_drag_to_card = true
+content_scene = ExtResource("41_content")
 
 [node name="Control_LeftBar" type="Control" parent="VBoxContainer2/Control" unique_id=7635543]
 unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 
 [node name="TextureProgressBar_AvatarLoading" parent="VBoxContainer2/Control/Control_LeftBar" unique_id=2011223973 instance=ExtResource("4_saosw")]
@@ -436,12 +444,6 @@ size_flags_vertical = 8
 
 [node name="ScrollContent" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_Card/PanelContainer_Card/VBoxContainer" index="1"]
 vertical_scroll_mode = 0
-
-[node name="RightEditorContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_Card/PanelContainer_Card/VBoxContainer/ScrollContent" unique_id=1039508584 instance=ExtResource("41_content")]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
 
 [node name="TextureProgressBar_BackpackLoading" parent="." unique_id=1912826069 instance=ExtResource("4_saosw")]
 unique_name_in_owner = true

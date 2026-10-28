@@ -26,8 +26,6 @@ resource_local_to_scene = false
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cq6cy"]
 bg_color = Color(0.27450982, 0.05882353, 0.43529412, 1)
-corner_radius_top_left = 24
-corner_radius_top_right = 24
 shadow_color = Color(0, 0, 0, 0.25)
 shadow_size = 4
 
@@ -39,8 +37,7 @@ script = ExtResource("9_content_gd")
 custom_minimum_size = Vector2(0, 730)
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 8
-size_flags_stretch_ratio = 1.45
+size_flags_vertical = 3
 theme_override_constants/margin_left = 0
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 0

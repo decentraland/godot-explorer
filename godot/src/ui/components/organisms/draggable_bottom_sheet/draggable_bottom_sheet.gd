@@ -45,6 +45,12 @@ const _PEEK_HEIGHT := 64.0
 ## ScrollContainer instead; otherwise this always reads 0 and every downward drag anywhere
 ## on the card collapses the sheet instead of scrolling the content.
 @export var scroll_reference: ScrollContainer
+## When true, a drag gesture only starts if the touch begins on the card/header — needed when
+## something else above the card (e.g. Backpack's AvatarPreview, which rotates/pinch-zooms the
+## camera there) also listens for raw touch input and would otherwise fight over the same
+## events. Defaults to false (Profile's current behavior: swipe from anywhere), since Profile's
+## portrait sheet has nothing above the card competing for touch input.
+@export var restrict_drag_to_card: bool = false
 
 var drag_state := DragState.HALF
 var dragging := false
@@ -59,6 +65,8 @@ var _ignore_input: bool = false
 var _focus_out_state: DragState = DragState.HALF
 var _state_at_touch_start: DragState = DragState.HALF
 var _last_touch_end_ms: int = 0
+var _active_touch_index: int = -1
+var _scroll_value_at_touch_start: float = 0.0
 
 @onready var panel_container_header: PanelContainer = %PanelContainer_Header
 @onready var panel_container_card: PanelContainer = %PanelContainer_Card
@@ -130,6 +138,7 @@ func reset_to_half() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		dragging = false
+		_active_touch_index = -1
 		# Block input immediately so phantom touch-cancel events (delivered by iOS
 		# when the app backgrounds) cannot accidentally change the drag state.
 		_ignore_input = true
@@ -203,10 +212,18 @@ func _input(event: InputEvent) -> void:
 
 	if event is InputEventScreenTouch:
 		if event.pressed:
+			if _active_touch_index != -1:
+				return
+			if restrict_drag_to_card and not _is_on_card(event.position):
+				return
+			_active_touch_index = event.index
 			start_pos = event.position
 			dragging = true
 			_state_at_touch_start = drag_state
-		elif dragging:
+			var scroller: ScrollContainer = scroll_reference if scroll_reference else scroll_content
+			_scroll_value_at_touch_start = scroller.get_v_scroll()
+		elif dragging and event.index == _active_touch_index:
+			_active_touch_index = -1
 			dragging = false
 			_last_touch_end_ms = Time.get_ticks_msec()
 			var drag_distance: float = event.position.y - start_pos.y
@@ -270,22 +287,36 @@ func _on_button_close_pressed() -> void:
 		tween_to(_card_half_position)
 
 
+func _is_on_card(pos: Vector2) -> bool:
+	if panel_container_card.get_global_rect().has_point(pos):
+		return true
+	return (
+		panel_container_header.visible and panel_container_header.get_global_rect().has_point(pos)
+	)
+
+
 func _is_scrolling(pos: Vector2, gesture: DragGesture) -> bool:
 	var scroller: ScrollContainer = scroll_reference if scroll_reference else scroll_content
 	var scroll_rect := scroller.get_global_rect()
 	if not scroll_rect.has_point(pos):
 		return false
 	var v_scroll := scroller.get_v_scroll()
+	# The content actually moved during this touch — it was a scroll, not a sheet-drag,
+	# regardless of how close the release landed to either edge. A fixed "near the edge"
+	# threshold here misfired on a slow scroll that ended within it (e.g. browsing items one
+	# by one near the bottom of the list) even though the whole gesture was clearly a scroll.
+	if v_scroll != _scroll_value_at_touch_start:
+		return true
 	if gesture == DragGesture.DOWN:
 		# Still scrolled down from the top — there's room to keep scrolling toward it;
 		# don't let this collapse the sheet.
-		return v_scroll > _DRAG_THRESHOLD
+		return v_scroll > 0.0
 	if gesture == DragGesture.UP:
 		# Not yet at the bottom of the content — there's more to reveal by scrolling;
 		# don't let this expand the sheet instead.
 		var v_scroll_bar := scroller.get_v_scroll_bar()
 		var max_scroll: float = v_scroll_bar.max_value - v_scroll_bar.page
-		return v_scroll < max_scroll - _DRAG_THRESHOLD
+		return v_scroll < max_scroll
 	return false
 
 
