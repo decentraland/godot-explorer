@@ -448,10 +448,12 @@ func _push_scene_interactable_area() -> void:
 
 
 ## Dev-only translucent overlay to verify the computed interactable area on device.
-## Never shows in production; within dev, gated by `show_interactable_area`.
+## Gated by `show_interactable_area` and, on production, by the Dev Tools tester wallets.
 func _update_interactable_area_debug(area: Rect2) -> void:
 	# The label is a child of the ColorRect, so toggling the rect toggles both.
-	interactable_area_debug.visible = not Global.is_production() and show_interactable_area
+	interactable_area_debug.visible = (
+		show_interactable_area and Global.feature_flags.dev_tools_enabled()
+	)
 	if not interactable_area_debug.visible:
 		return
 	interactable_area_debug.position = area.position

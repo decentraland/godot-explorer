@@ -153,6 +153,16 @@ func take_pending_modal() -> String:
 	return pending
 
 
+## Restores a value take_pending_modal() returned when the caller never actually got it on
+## screen (e.g. Discover wasn't visible yet), so the next landing gets another chance at it
+## instead of the celebration being silently dropped.
+func requeue_pending_modal(pending: String) -> void:
+	if pending.is_empty():
+		return
+	Global.config.streak_state_for_current_wallet().pending_modal = pending
+	Global.config.save_to_settings_file()
+
+
 func get_progress_day() -> int:
 	return Global.config.streak_state_for_current_wallet().progress_day
 
@@ -244,6 +254,16 @@ func take_current_reminder() -> int:
 	state.current_reminder_shown_day = pending
 	Global.config.save_to_settings_file()
 	return pending
+
+
+## Restores the "shown today" marker take_current_reminder() set when the caller never actually
+## got it on screen, so the next landing shows the invite/reminder instead of it being silently
+## treated as already seen.
+func untake_current_reminder(day: int) -> void:
+	var state: Dictionary = Global.config.streak_state_for_current_wallet()
+	if state.current_reminder_shown_day == day:
+		state.current_reminder_shown_day = 0
+		Global.config.save_to_settings_file()
 
 
 ## Visible from the very first Discover landing — even before the player has jumped in once,

@@ -33,10 +33,10 @@ const HOUR_SECONDS := 3600
 const MAX_SHOWS := 3
 
 var _evaluated_this_session: bool = false
-# Tags of callers currently outranking this nudge (e.g. a device-support modal #2936/#2935, or a
-# pending login-streak modal #3018) — set via suppress_until_cleared(tag), cleared via
-# resume(tag). _try_evaluate() checks this without consuming _evaluated_this_session, so the real
-# evaluation still runs once the last suppressor calls resume().
+# Tag -> the calling Nodes currently outranking this nudge under that tag (e.g. a device-support
+# modal, or a pending login-streak modal). Multiple callers can share a tag, so this tracks each
+# one rather than a bool/count; freed callers are pruned before every check, so one that died
+# mid-wait can't hold this open forever.
 var _suppressors: Dictionary = {}
 
 
@@ -62,23 +62,42 @@ func _on_loading_finished() -> void:
 	_try_evaluate()
 
 
-## Called synchronously by a caller right before it shows a modal that should outrank this nudge
-## (e.g. discover.gd before a device-support or login-streak modal), so the suppression is in
-## place before that same call stack's Global.set_orientation_portrait() can fire this
-## coordinator's own orientation-triggered evaluation. `tag` identifies the caller so concurrent
-## suppressors don't clear each other's hold early.
-func suppress_until_cleared(tag: String) -> void:
-	_suppressors[tag] = true
+## Called synchronously right before a caller shows a modal that should outrank this nudge (e.g.
+## discover.gd before a device-support or login-streak modal), so the suppression is in place
+## before that same call stack's Global.set_orientation_portrait() can fire this coordinator's own
+## orientation-triggered evaluation. `caller` is whoever makes the matching resume() call (normally
+## its own `self`) — tracked by identity so a caller freed before getting there can be pruned.
+func suppress_until_cleared(tag: String, caller: Node) -> void:
+	var callers: Array = _suppressors.get(tag, [])
+	callers.append(caller)
+	_suppressors[tag] = callers
 
 
-## Called once the modal that outranked this nudge (identified by the same `tag` passed to
+## Called once the modal that outranked this nudge (same `tag`/`caller` passed to
 ## suppress_until_cleared) has been dismissed — re-attempts the evaluation once no suppressor
-## remains. A no-op if `tag` wasn't actually suppressing (e.g. this session's evaluation already
-## happened some other way).
-func resume(tag: String) -> void:
-	_suppressors.erase(tag)
+## remains.
+func resume(tag: String, caller: Node) -> void:
+	var callers: Array = _suppressors.get(tag, [])
+	callers.erase(caller)
+	if callers.is_empty():
+		_suppressors.erase(tag)
+	else:
+		_suppressors[tag] = callers
+	_prune_stale_suppressors()
 	if _suppressors.is_empty():
 		_try_evaluate()
+
+
+## Drops any suppressor whose caller is no longer alive, so one freed mid-wait (teardown from
+## Global.return_to_discover() or sign-out) cannot block the nudge for the rest of the session.
+func _prune_stale_suppressors() -> void:
+	for tag in _suppressors.keys():
+		var callers: Array = _suppressors[tag]
+		callers = callers.filter(func(caller): return is_instance_valid(caller))
+		if callers.is_empty():
+			_suppressors.erase(tag)
+		else:
+			_suppressors[tag] = callers
 
 
 func _try_evaluate() -> void:
@@ -89,6 +108,7 @@ func _try_evaluate() -> void:
 		return
 	if not Global.is_orientation_portrait():
 		return
+	_prune_stale_suppressors()
 	# A higher-priority modal (device-support #2936/#2935, login-streak #3018) is showing — don't
 	# consume this session's evaluation slot; the suppressor calls resume() once it's dismissed.
 	if not _suppressors.is_empty():
@@ -119,11 +139,40 @@ func _async_evaluate() -> void:
 	# would burn a nudge slot and shift the next deadline.
 	if not await Global.modal_manager.async_show_upgrade_modal():
 		print("[UpgradeNudge] modal failed to show; cadence not advanced")
+		# A stale trigger (teardown started, guest already upgraded) isn't a real failure — retry
+		# at the next portrait moment instead of burning this session's only other chance. A
+		# genuine failure (missing scene, freed mid-creation) keeps the slot spent: retrying it on
+		# every subsequent portrait flip would re-hit thirdweb each time for no new outcome.
+		if _upgrade_trigger_is_stale():
+			_evaluated_this_session = false
+		return
+
+	# A `true` above can still turn into an involuntary close once a loading screen starts — the
+	# common timing, since the interrupting load usually only starts after the modal is already
+	# fully up (#2867). Wait for the modal to actually go away before trusting it was really seen.
+	if is_instance_valid(Global.modal_manager.current_upgrade_modal):
+		await Global.modal_manager.current_upgrade_modal.tree_exited
+	if Global.modal_manager.last_upgrade_show_interrupted_by_loading:
+		print("[UpgradeNudge] modal closed by an in-flight loading screen; cadence not advanced")
+		# Same reasoning as the stale-trigger branch above: this is not a real failure, so it
+		# shouldn't burn one of only MAX_SHOWS ever-shown slots — retry at the next portrait moment.
+		_evaluated_this_session = false
 		return
 
 	config.upgrade_modal_shown_count += 1
 	config.upgrade_modal_last_shown_unix = int(Time.get_unix_time_from_system())
 	config.save_to_settings_file()
+
+
+## Mirrors the stale-trigger check ModalManager._async_create_upgrade_modal() bails on, so a
+## failed show can tell "nothing to show anymore" apart from "the modal is genuinely broken".
+func _upgrade_trigger_is_stale() -> bool:
+	return (
+		Global._signing_out
+		or Global._returning_to_discover
+		or not Global.is_orientation_portrait()
+		or (Global.player_identity != null and Global.player_identity.is_thirdweb_guest_upgraded())
+	)
 
 
 # The nudge only applies to a thirdweb guest that hasn't upgraded yet. The "already

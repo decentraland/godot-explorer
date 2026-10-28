@@ -147,7 +147,8 @@ func _on_button_send_pressed():
 
 	_scroll_to_bottom()
 	if message.begins_with("/"):
-		exit_chat()
+		# The global signal, not exit_chat(): the chatbar only leaves chat mode on it.
+		Global.close_chat.emit()
 	elif Global.get_config().submit_message_closes_chat:
 		_close_write_mode()
 	else:
@@ -175,7 +176,7 @@ func _on_line_edit_command_text_submitted(new_text):
 	button_send.disabled = true
 	_scroll_to_bottom()
 	if new_text.begins_with("/"):
-		exit_chat()
+		Global.close_chat.emit()
 	elif Global.get_config().submit_message_closes_chat:
 		_close_write_mode()
 	else:

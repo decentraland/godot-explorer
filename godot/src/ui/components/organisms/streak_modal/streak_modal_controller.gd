@@ -8,14 +8,33 @@ extends Node
 
 const STREAK_MODAL_SCENE_PATH = "res://src/ui/components/organisms/streak_modal/streak_modal.tscn"
 
+## ~0.2s at 60fps: long enough to cover a caller's own same-frame show() call, short enough to
+## never visibly delay the modal if the caller really did navigate away.
+const CALLER_VISIBLE_WAIT_FRAMES := 12
+
 var current_streak_modal: StreakModal = null
 var streak_modal_scene: PackedScene = null
-# Raw rewards-server error code (e.g. "already_claimed") from the most recent failed claim —
-# "" after a successful one or before any claim has run. Debug-only surface (see
-# StreakModal._set_claim_failed_visible): QA needs this to tell apart WHY a claim failed without
-# pulling device logs; a real player only ever sees the generic "Reward claim failed" copy.
+# Raw rewards-server error code (e.g. "campaign_disabled") from the most recent failed claim —
+# "" after a successful one or before any claim has run. Shown on non-production builds only.
 var last_claim_error_code: String = ""
+# RewardClaimer's reason for the most recent failed claim; "network" gets its own copy.
+var last_claim_error_reason: String = ""
+## Set by _on_loading_started() when Global.loading_started fires while this modal is being
+## created or is already open — ModalTransitionGate only guards a loading screen that is already
+## visible when the wait starts; it can't see one that begins afterwards (#2867: jump-in from a
+## pre-game Discover, where the gate no-ops because Global.get_explorer() is still null, then
+## async_teleport_to's change_scene_to_file sails the modal's root-level CanvasLayer straight over
+## the explorer's loading screen it spins up). Reset at the top of every async_show_streak_modal
+## call. Public (unlike _creating_streak_modal): a caller whose async_show_streak_modal already
+## returned true — the common timing, since the interrupting load usually only starts after the
+## modal is already up — can only learn the close was involuntary by reading this once its own
+## `await current_streak_modal.tree_exited` resolves; discover.gd does exactly that to decide
+## whether to requeue the pending state it consumed.
+var last_show_interrupted_by_loading: bool = false
 var _streak_canvas_layer: CanvasLayer = null
+## Set for the whole creation, including the ModalTransitionGate wait, so a second trigger
+## firing mid-wait is dropped instead of racing it for current_streak_modal.
+var _creating_streak_modal: bool = false
 
 
 func _ready() -> void:
@@ -27,6 +46,16 @@ func _ready() -> void:
 				+ STREAK_MODAL_SCENE_PATH
 			)
 		)
+	Global.loading_started.connect(_on_loading_started)
+
+
+## A loading screen starting while the streak modal is up always wins, regardless of why it
+## started — closing it here (rather than leaving it to ModalTransitionGate, which only runs
+## once at creation time) is what makes async_show_streak_modal's return value trustworthy.
+func _on_loading_started() -> void:
+	last_show_interrupted_by_loading = true
+	if is_open():
+		close_streak_modal()
 
 
 func is_open() -> bool:
@@ -39,13 +68,32 @@ func is_open() -> bool:
 ## @param pending_day: -1 ("not specified") falls back to progress_day; any other value (0
 ## included) renders exactly that day as the row's "today" pill — see StreakModal's own doc
 ## comment on _pending_day for why 0 can't share the -1 default.
+## @param caller: Discover or its streak widget card — bails if it is gone or hidden once the
+## ModalTransitionGate wait below settles.
+## @return false whenever the modal never ended up staying on screen for the player — including
+## a loading screen interrupting it mid-creation or mid-setup, here below. A `true` here can
+## STILL turn into an involuntary close later (the interrupting load usually starts only after
+## the modal is already fully up) — a caller that awaits current_streak_modal.tree_exited after a
+## `true` must check last_show_interrupted_by_loading once that resolves to find out which it was.
 func async_show_streak_modal(
-	state: int, progress_day: int, is_guest: bool, pending_day: int = -1
+	state: int, progress_day: int, is_guest: bool, caller: Node, pending_day: int = -1
 ) -> bool:
-	var modal = await _async_create_streak_modal()
+	last_show_interrupted_by_loading = false
+	var modal = await _async_create_streak_modal(caller)
 	if not is_instance_valid(modal):
 		return false
+	if last_show_interrupted_by_loading:
+		# _on_loading_started()'s own close_streak_modal() call only fires while is_open() (the
+		# modal is visible) — modal stays hidden through all of _async_create_streak_modal's own
+		# waits, so an interrupt landing there needs its own cleanup here instead.
+		close_streak_modal()
+		return false
 	await modal.async_setup(state, progress_day, is_guest, pending_day)
+	# async_setup() awaits its own render/thumbnail work, which is another window a loading
+	# screen can start in before the modal is actually shown to the player.
+	if last_show_interrupted_by_loading:
+		close_streak_modal()
+		return false
 	return true
 
 
@@ -55,17 +103,47 @@ func close_streak_modal() -> void:
 		_remove_streak_modal()
 
 
-func _async_create_streak_modal() -> StreakModal:
+func _async_create_streak_modal(caller: Node) -> StreakModal:
+	# Without this, a second trigger firing mid-wait would also pass the is_instance_valid()
+	# check below (current_streak_modal isn't set yet) and race this call for it.
+	if _creating_streak_modal:
+		return null
+	_creating_streak_modal = true
+
 	if is_instance_valid(current_streak_modal):
 		close_streak_modal()
 
 	if not streak_modal_scene:
 		push_error("StreakModalController: Streak modal scene is not loaded")
+		_creating_streak_modal = false
+		return null
+
+	await ModalTransitionGate.async_wait_until_settled()
+
+	if Global._signing_out or Global._returning_to_discover or not is_instance_valid(caller):
+		_creating_streak_modal = false
+		return null
+
+	# The gate above can resolve without yielding a single frame (nothing to wait for), which
+	# lands here before caller's own _ready() finishes showing it (e.g. Discover's first-ever
+	# landing: its _ready() calls this before menu.gd selects/shows it a few lines later). Give
+	# the caller a short chance to actually appear before treating it as gone rather than
+	# "not on screen yet".
+	var visible_wait_frames := 0
+	while not caller.is_visible_in_tree() and visible_wait_frames < CALLER_VISIBLE_WAIT_FRAMES:
+		await get_tree().process_frame
+		if not is_instance_valid(caller):
+			_creating_streak_modal = false
+			return null
+		visible_wait_frames += 1
+	if not caller.is_visible_in_tree():
+		_creating_streak_modal = false
 		return null
 
 	var modal = streak_modal_scene.instantiate() as StreakModal
 	if not modal:
 		push_error("StreakModalController: Could not instantiate streak modal")
+		_creating_streak_modal = false
 		return null
 	# Stays hidden through the NodeGuard frames below and async_setup()'s own render/thumbnail
 	# work — otherwise the scene's last-saved look flashes on screen for a couple of frames
@@ -82,6 +160,7 @@ func _async_create_streak_modal() -> StreakModal:
 	var root = get_tree().root
 	if not root:
 		push_error("StreakModalController: Could not get scene tree root")
+		_creating_streak_modal = false
 		return null
 
 	root.add_child(_streak_canvas_layer)
@@ -92,6 +171,8 @@ func _async_create_streak_modal() -> StreakModal:
 
 	await get_tree().process_frame
 	await get_tree().process_frame
+
+	_creating_streak_modal = false
 
 	# Those two frames are a window in which the modal can be freed — see NodeGuard.
 	if not NodeGuard.is_alive(modal, "StreakModalController._async_create_streak_modal"):
@@ -136,6 +217,7 @@ func async_claim_rewards(days: Array[int]) -> bool:
 func _async_claim_direct(day: int) -> bool:
 	var key := "LoginStreakD3" if day == 3 else "LoginStreakD7"
 	var result := await RewardClaimer.async_claim(RewardCampaigns.CAMPAIGNS[key])
+	last_claim_error_reason = "" if result.ok else str(result.reason)
 	_on_streak_claim_resolved(result.ok, day, str(result.get("code", "")))
 	return result.ok
 
