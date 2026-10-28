@@ -4,6 +4,22 @@ pub const BIN_FOLDER: &str = "./.bin/";
 pub const RUST_LIB_PROJECT_FOLDER: &str = "./lib/";
 pub const EXPORTS_FOLDER: &str = "./exports/";
 
+/// Firebase Apple SDK release whose Analytics xcframeworks the iOS plugin links. Bump it and
+/// `FIREBASE_IOS_FRAMEWORKS` together with `dcl_godot_ios.gdip`.
+pub const FIREBASE_IOS_VERSION: &str = "13.1.1";
+pub const FIREBASE_IOS_FOLDER: &str = "./godot/ios/plugins/dcl_godot_ios/firebase";
+pub const FIREBASE_IOS_FRAMEWORKS: [&str; 9] = [
+    "FBLPromises",
+    "FirebaseAnalytics",
+    "FirebaseCore",
+    "FirebaseCoreInternal",
+    "FirebaseInstallations",
+    "GoogleAdsOnDeviceConversion",
+    "GoogleAppMeasurement",
+    "GoogleUtilities",
+    "nanopb",
+];
+
 /// sentry-godot addon release. Bump both together: the installer replaces
 /// `godot/addons/sentry` whenever its `.version` marker differs from this.
 pub const SENTRY_ADDON_VERSION: &str = "2.1.1";

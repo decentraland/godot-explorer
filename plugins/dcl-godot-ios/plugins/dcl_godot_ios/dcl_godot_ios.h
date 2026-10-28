@@ -73,6 +73,14 @@ public:
     // Remote push (APNs). push_service.mm requests the token on every launch; it lands
     // asynchronously, so connect to apns_token_ready and then read the cached value.
     String get_apns_token();
+
+    // Firebase Analytics (firebase_service.mm). All no-ops until the SDK and
+    // GoogleService-Info.plist are in the build; same contract as the Android plugin.
+    bool firebase_is_available();
+    String get_firebase_app_instance_id();
+    bool set_firebase_user_id(String user_id);
+    bool set_firebase_user_property(String name, String value);
+    bool log_firebase_event(String event_name, String params_json);
     bool schedule_local_notification(String notification_id, String title, String body, int delay_seconds);
     bool cancel_local_notification(String notification_id);
     bool cancel_all_local_notifications();
