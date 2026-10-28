@@ -25,6 +25,8 @@ DEFAULT_BASELINE = os.path.join(ROOT, "rn", "visual-baselines")
 # when more than RATIO_THRESHOLD of its pixels differ. Tune here after measuring run-to-run noise.
 CHANNEL_THRESHOLD = 16
 RATIO_THRESHOLD = 0.0005
+# The gesture-bar pill is system UI and its width changes between runs: the bottom rows are not compared.
+NAV_STRIP = 56
 THUMB_HEIGHT = 640
 MARKER = "<!-- rn-visual-snapshots -->"
 LISTED_MAX = 40
@@ -48,7 +50,9 @@ def load_rgb(path):
 def diff_mask(a, b):
     r, g, bl = ImageChops.difference(a, b).split()
     peak = ImageChops.lighter(ImageChops.lighter(r, g), bl)
-    return peak.point(lambda v: 255 if v > CHANNEL_THRESHOLD else 0)
+    mask = peak.point(lambda v: 255 if v > CHANNEL_THRESHOLD else 0)
+    mask.paste(0, (0, mask.height - NAV_STRIP, mask.width, mask.height))
+    return mask
 
 
 def triptych(baseline, new, mask, dest):
