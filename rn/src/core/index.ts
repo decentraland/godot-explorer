@@ -26,6 +26,14 @@ export function core(): CoreApi {
   return current;
 }
 
+/** Dev preview harness: in a build without the engine, the mock core already signed in, so screens that
+ * drive the avatar preview can run. A linked engine is left alone. */
+export function signedInMockCoreForPreviews() {
+  if (!TurboModuleRegistry.get('DclCore')) {
+    current = createMockCore({ signedIn: true });
+  }
+}
+
 /** Replaces the core for a test; pass nothing to restore the default. */
 export function setCoreForTests(replacement?: CoreApi) {
   current = replacement;

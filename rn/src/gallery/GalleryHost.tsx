@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { LayoutChangeEvent, LogBox, StyleSheet, View } from 'react-native';
+import { signedInMockCoreForPreviews } from '../core';
 import { AppText, colors, u } from '../ds';
 import { setOrientation } from '../platform/orientation';
 import { GalleryList } from './GalleryList';
@@ -8,6 +9,7 @@ import { PreviewRoute } from './url';
 
 // The dev warning toast would sit in the corner of every capture.
 LogBox.ignoreAllLogs();
+signedInMockCoreForPreviews();
 
 const SETTLE_MS = 800;
 const ORIENTATION_WAIT_MS = 1500;

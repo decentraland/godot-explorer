@@ -83,6 +83,12 @@ restore_device() {
     adb shell settings put global "$scale" 1
   done
 }
+# A starved emulator makes the launcher ANR, and its dialog covers the screen: close it and retry the id.
+anr_dialog() {
+  adb shell dumpsys window windows 2>/dev/null | grep -q "Application Not Responding" || return 1
+  adb shell am force-stop com.google.android.apps.nexuslauncher
+  adb shell am force-stop com.android.launcher3
+}
 cleanup() {
   adb shell settings put system user_rotation 0
   adb shell settings put system accelerometer_rotation 1
@@ -113,6 +119,8 @@ while read -r id orient source; do
     if adb logcat -d -s ReactNativeJS 2>/dev/null | grep -q "DCL_PREVIEW_WARN $id orientation"; then
       found=""; continue
     fi
+    sleep 0.5
+    if anr_dialog; then found=""; continue; fi
     break
   done
   if [ -n "$found" ]; then
