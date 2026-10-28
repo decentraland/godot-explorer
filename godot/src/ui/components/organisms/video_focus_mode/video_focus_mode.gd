@@ -434,14 +434,15 @@ func _on_chat_enter_write_mode() -> void:
 	if _layout.vertical:
 		return
 	var column_left: float = _chat.global_position.x - global_position.x
-	var input_row: MarginContainer = _chat.get_node("%MarginContainer_LineEditSafeArea")
-	input_row.add_theme_constant_override("margin_left", -roundi(column_left - _inset_left))
-	# No room kept for the navigation bar: it stays hidden while typing here.
-	input_row.add_theme_constant_override("margin_right", 0)
+	_chat.get_node("%MarginContainer_LineEditSafeArea").add_theme_constant_override(
+		"margin_left", -roundi(column_left - _inset_left)
+	)
 
 
 func _on_chat_exit_write_mode() -> void:
+	# Back to the column, with the system bar insets the chat keeps on its input.
 	_chat.reset_safe_area_insets()
+	_chat.async_apply_system_bar_insets()
 	# chat.gd hands focus back to the explorer root (deferred), which re-enables movement
 	# under the overlay; this is queued after it and takes the focus back.
 	_grab_focus_if_active.call_deferred()
@@ -481,22 +482,3 @@ func _on_change_virtual_keyboard(virtual_keyboard_height: int) -> void:
 		_chat.close_write_mode_if_active()
 	else:
 		_chat.scroll_to_bottom_deferred()
-		if not _layout.vertical:
-			_hide_android_navigation_bar()
-
-
-## Android brings the navigation bar back with the keyboard even in immersive mode; in
-## landscape it would sit beside the full-width input. WindowInsetsController needs API 30.
-func _hide_android_navigation_bar() -> void:
-	if OS.get_name() != "Android" or not Engine.has_singleton("AndroidRuntime"):
-		return
-	var android_runtime: Object = Engine.get_singleton("AndroidRuntime")
-	var activity: Object = android_runtime.getActivity()
-	# Window calls must run on the Android UI thread.
-	var hide_bar := func():
-		var controller: Object = activity.getWindow().getInsetsController()
-		if controller == null:
-			return
-		var insets_type: Object = JavaClassWrapper.wrap("android.view.WindowInsets$Type")
-		controller.hide(insets_type.navigationBars())
-	activity.runOnUiThread(android_runtime.createRunnableFromGodotCallable(hide_bar))
