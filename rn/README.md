@@ -96,8 +96,8 @@ the `rn-visual-report` artifact (baseline | new | diff images). It reports only:
   captures repeat; it restores the device on exit. `python3 tools/ui-spec/visual_diff.py compare --new /tmp/shots`
   prints the report.
 
-`tools/ui-spec/ci_capture.sh` is the wrapper CI runs on the booted emulator (Metro, install, capture, quantize to
-256-colour PNGs so the baselines stay small). The runs are debug builds, and debug builds never report to Sentry
+`tools/ui-spec/ci_capture.sh` is the wrapper CI runs on the booted emulator (Metro, install, capture, recompress the PNGs
+losslessly so the baselines stay small). The runs are debug builds, and debug builds never report to Sentry
 (`src/sentry.ts`), so captures leave no events behind.
 
 ## The full app (with Godot)

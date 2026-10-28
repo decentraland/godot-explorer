@@ -33,5 +33,5 @@ fi
 
 status=0
 "$ROOT/tools/ui-spec/rn_capture.sh" "${SELECTION[@]}" --out "$OUT" --normalize --timeout 30 || status=$?
-python3 "$ROOT/tools/ui-spec/visual_diff.py" quantize "$OUT"
+python3 "$ROOT/tools/ui-spec/visual_diff.py" optimize "$OUT"
 exit "$status"

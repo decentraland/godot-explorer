@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Compare RN preview captures with the committed baselines.
 
-  python3 tools/ui-spec/visual_diff.py quantize DIR
+  python3 tools/ui-spec/visual_diff.py optimize DIR
   python3 tools/ui-spec/visual_diff.py compare --new DIR [--baseline rn/visual-baselines] [--out OUT]
   python3 tools/ui-spec/visual_diff.py promote --new DIR [--baseline rn/visual-baselines]
 
-`quantize` rewrites every PNG in DIR as a 256-colour palette image: baselines stay small enough for plain git,
-and the same function runs on baseline and new captures so the comparison sees identical rounding.
+`optimize` rewrites every PNG in DIR as an opaque, losslessly recompressed RGB image (the status bar alpha and
+metadata go), so the baselines stay as small as plain git allows without touching a pixel.
 `compare` walks the ids in rn/src/gallery/ids.json and classifies each: same, changed, new (no baseline) or
 missing (registered but not captured). It writes OUT/report.json, OUT/report.md (the PR comment) and, for each
 changed id, OUT/changed/<id>.png = baseline | new | diff. Exit 1 only when an id is missing: a screen that
@@ -30,11 +30,8 @@ MARKER = "<!-- rn-visual-snapshots -->"
 LISTED_MAX = 40
 
 
-def quantize(path):
-    img = Image.open(path).convert("RGB")
-    img.quantize(colors=256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(
-        path, optimize=True
-    )
+def optimize(path):
+    Image.open(path).convert("RGB").save(path, optimize=True, compress_level=9)
 
 
 def png_files(directory):
@@ -130,7 +127,7 @@ def report_markdown(rows):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     sub = parser.add_subparsers(dest="cmd", required=True)
-    q = sub.add_parser("quantize")
+    q = sub.add_parser("optimize")
     q.add_argument("dir")
     c = sub.add_parser("compare")
     c.add_argument("--new", required=True)
@@ -141,9 +138,9 @@ def main():
     p.add_argument("--baseline", default=DEFAULT_BASELINE)
     args = parser.parse_args()
 
-    if args.cmd == "quantize":
+    if args.cmd == "optimize":
         for path in png_files(args.dir):
-            quantize(path)
+            optimize(path)
     elif args.cmd == "compare":
         os.makedirs(args.out, exist_ok=True)
         rows = compare(args.new, args.baseline, args.out)
