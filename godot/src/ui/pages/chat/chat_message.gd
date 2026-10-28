@@ -174,7 +174,10 @@ func make_urls_clickable(text: String) -> String:
 			escaped_names.append(_regex_escape(match_key))
 
 		var mention_regex = RegEx.new()
-		mention_regex.compile(r"(?i)(?<![\w.-])@(" + "|".join(escaped_names) + r")(?![\w#])")
+		# (*UCP): this fork compiles PCRE2 with SUPPORT_UNICODE but doesn't pass PCRE2_UCP at
+		# compile() (regex.cpp), so plain \w is ASCII-only and would read e.g. "ï" in "Anaïs" as
+		# a word boundary — the (*UCP) verb turns on Unicode-aware \w for this pattern only.
+		mention_regex.compile(r"(*UCP)(?i)(?<![\w.-])@(" + "|".join(escaped_names) + r")(?![\w#])")
 
 		var mention_results = mention_regex.search_all(processed_text)
 		for i in range(mention_results.size() - 1, -1, -1):
