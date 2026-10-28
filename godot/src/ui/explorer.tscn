@@ -32,6 +32,7 @@
 [ext_resource type="Resource" uid="uid://ntu4pnce7xxr" path="res://src/ui/layouts/hud_margins.tres" id="34_hudmg"]
 [ext_resource type="PackedScene" uid="uid://v3ktu5kra0ql" path="res://src/ui/components/organisms/preview_hud_panel/preview_hud_panel.tscn" id="35_prevhud"]
 [ext_resource type="PackedScene" uid="uid://buxjoxmdm2l6v" path="res://src/ui/components/organisms/video_focus_mode/video_focus_mode.tscn" id="36_vfocus"]
+[ext_resource type="Script" uid="uid://fwc0yeqxg4fh" path="res://src/logic/render_ready_probe.gd" id="36_rready"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_c5h7v"]
 
@@ -403,6 +404,9 @@ script = ExtResource("20_064cw")
 [node name="SceneMusicChanger" parent="." unique_id=404245768 instance=ExtResource("26_5hhk2")]
 
 [node name="ChatHandler" parent="." unique_id=440307884 instance=ExtResource("32_cq187")]
+
+[node name="RenderReadyProbe" type="Node" parent="." unique_id=1418390527]
+script = ExtResource("36_rready")
 
 [connection signal="gui_input" from="UI/HudDismissCatcher" to="." method="_on_hud_dismiss_catcher_gui_input"]
 [connection signal="load_scenes_pressed" from="UI/SafeAreaHud/InteractableHUD/ChatPanel" to="." method="_on_button_load_scenes_pressed"]
