@@ -4,9 +4,14 @@ extends SubViewportContainer
 const MIN_CAMERA_SIZE_OVERALL = 2.0
 const MIN_CAMERA_SIZE_PART = 0.8
 const MAX_CAMERA_SIZE = 5.0
-const CAMERA_PAN_SMOOTH = 2.0
-const CAMERA_ZOOM_SMOOTH = 2.0
 const AVATAR_ROTATION_SMOOTH = 15.0
+
+## Higher = the camera reaches its target pan/zoom faster (exponential decay rate, not a
+## duration). Exported so a host that re-fits often — e.g. the Backpack, on every category
+## tap — can speed this up without affecting other hosts (Profile, lobby) still on the
+## original pace.
+@export var camera_pan_smooth: float = 2.0
+@export var camera_zoom_smooth: float = 2.0
 
 @export var hide_name: bool = false
 @export var show_platform: bool = false
@@ -159,10 +164,10 @@ func _process(delta: float) -> void:
 		_target_camera_center_y = clampf(_pinch_start_center_y + pan, limits.x, limits.y)
 		_user_has_panned = true
 	camera_center.position.y = lerpf(
-		camera_center.position.y, _target_camera_center_y, 1.0 - exp(-CAMERA_PAN_SMOOTH * delta)
+		camera_center.position.y, _target_camera_center_y, 1.0 - exp(-camera_pan_smooth * delta)
 	)
 	camera_3d.size = lerpf(
-		camera_3d.size, _target_camera_size, 1.0 - exp(-CAMERA_ZOOM_SMOOTH * delta)
+		camera_3d.size, _target_camera_size, 1.0 - exp(-camera_zoom_smooth * delta)
 	)
 	avatar.rotation.y = lerpf(
 		avatar.rotation.y, _target_avatar_rotation_y, 1.0 - exp(-AVATAR_ROTATION_SMOOTH * delta)
@@ -425,6 +430,24 @@ func _on_resized() -> void:
 		var aabb_key: String = _camera_focus if _camera_focus in _cached_aabbs else "overall"
 		if aabb_key in _cached_aabbs:
 			_fit_camera_to_aabb(_cached_aabbs[aabb_key], _focus_extra_margin())
+
+
+## Public entry point for hosts whose covering panel moves without resizing (e.g. a
+## draggable bottom sheet, which animates position, not size — bottom_node_margin's
+## `resized` signal never fires for that, so nothing else re-fits the camera as it
+## settles). _fit_camera_to_aabb() dedupes on (stable_aabb, extra_margin) alone, which
+## can't tell that the covered area changed while the AABB/margin stayed the same (e.g.
+## re-settling on the same "overall" focus) — reset the dedupe cache first, same as
+## set_bottom_margin_node() does, so this always forces a fresh fit.
+func refresh_fit() -> void:
+	if not is_inside_tree() or size.x <= 0.0 or size.y <= 0.0 or _cached_aabbs.is_empty():
+		_pending_camera_fit = true
+		return
+	var aabb_key: String = _camera_focus if _camera_focus in _cached_aabbs else "overall"
+	if aabb_key in _cached_aabbs:
+		_last_fit_stable_aabb = AABB()
+		_last_fit_extra_margin = -1
+		_fit_camera_to_aabb(_cached_aabbs[aabb_key], _focus_extra_margin())
 
 
 func enable_outline():

@@ -24,6 +24,27 @@ const _PEEK_HEIGHT := 64.0
 ## If true, close button hides the sheet completely and emits close_requested.
 ## If false (default), close button returns to HALF state.
 @export var closeable: bool = false
+## When false, FULL never shows the header/close bar — used when something else (e.g. a
+## page's own top tabs) stays on screen regardless, so the sheet never needs an explicit
+## close affordance; the drag-down gesture is still the only way to collapse it.
+@export var show_close_button: bool = true
+## Card/header background color. Defaults to Profile's own card color, so Profile needs no
+## changes; a host whose content has a differently-toned background (e.g. Backpack's
+## wearables gradient) can override this to match it, so the strip above the content —
+## where the drag handle sits — doesn't show a seam against the content's own color.
+@export var card_color: Color = Color(0.20784314, 0.03137255, 0.32941177, 1)
+## Padding around the drag handle, above and below it. Defaults to Profile's own spacing,
+## so Profile needs no changes; a host that wants a tighter handle zone can override these.
+@export var handle_margin_top: int = 16
+@export var handle_margin_bottom: int = 40
+## The scroll container _is_scrolling() checks to tell "the user is scrolling the content"
+## apart from "the user is dragging the sheet". Defaults to the sheet's own %ScrollContent
+## (Profile's case: its content sits directly inside it). A host whose real scrollable
+## content lives deeper — e.g. Backpack's content_scene has its own inner grid scroll and
+## leaves %ScrollContent's own scrolling disabled — overrides this to point at that inner
+## ScrollContainer instead; otherwise this always reads 0 and every downward drag anywhere
+## on the card collapses the sheet instead of scrolling the content.
+@export var scroll_reference: ScrollContainer
 
 var drag_state := DragState.HALF
 var dragging := false
@@ -52,6 +73,10 @@ func _ready() -> void:
 		_content_instance = content_scene.instantiate()
 		scroll_content.add_child(_content_instance)
 
+	_apply_card_color(panel_container_header)
+	_apply_card_color(panel_container_card)
+	margin_container_show_more.add_theme_constant_override("margin_top", handle_margin_top)
+	margin_container_show_more.add_theme_constant_override("margin_bottom", handle_margin_bottom)
 	panel_container_header.self_modulate = Color.TRANSPARENT
 	panel_container_header.hide()
 
@@ -96,8 +121,10 @@ func reset_to_half() -> void:
 	panel_container_card.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_card_half_position = _get_half_position()
 	scroll_content.scroll_vertical = 0
+	# drag_state_changed fires once the tween lands (_on_tween_to_finished) — not here, since
+	# the card hasn't actually moved yet at this point (see tween_to()'s header-compensation
+	# jump: a listener reacting to this position reads a transient, not-yet-settled value).
 	tween_to(_card_half_position)
-	drag_state_changed.emit(drag_state)
 
 
 func _notification(what: int) -> void:
@@ -154,8 +181,9 @@ func _snap_to_state(state: DragState) -> void:
 			margin_container_show_more.self_modulate = Color.WHITE
 			panel_container_card.position.y = _card_half_position
 		DragState.FULL:
-			panel_container_header.show()
-			panel_container_header.self_modulate = Color.WHITE
+			if show_close_button:
+				panel_container_header.show()
+				panel_container_header.self_modulate = Color.WHITE
 			_set_card_corner_radius(0, 0)
 			margin_container_show_more.hide()
 			panel_container_card.position.y = 0.0
@@ -195,17 +223,19 @@ func _input(event: InputEvent) -> void:
 			if _is_scrolling(event.position, gesture):
 				return
 
+			# drag_state_changed fires once each of these tweens lands (_on_tween_to_finished),
+			# not here — a listener that re-fits against the card's position (e.g. Backpack's
+			# avatar camera) needs the settled position, not the one at the start of the
+			# animation (the header-compensation jump below is a transient, not a rest state).
 			match gesture:
 				DragGesture.UP:
 					match drag_state:
 						DragState.PEEK:
 							drag_state = DragState.HALF
 							tween_to(_card_half_position)
-							drag_state_changed.emit(drag_state)
 						DragState.HALF:
 							drag_state = DragState.FULL
 							tween_to(0.0, Callable(), true)
-							drag_state_changed.emit(drag_state)
 				DragGesture.DOWN:
 					match drag_state:
 						DragState.FULL:
@@ -214,22 +244,18 @@ func _input(event: InputEvent) -> void:
 							_set_card_corner_radius(24, 24)
 							drag_state = DragState.HALF
 							tween_to(_card_half_position)
-							drag_state_changed.emit(drag_state)
 						DragState.HALF:
 							drag_state = DragState.PEEK
 							tween_to(_get_peek_position())
-							drag_state_changed.emit(drag_state)
 
 
 func _on_button_show_more_pressed() -> void:
 	if drag_state == DragState.PEEK:
 		drag_state = DragState.HALF
 		tween_to(_card_half_position)
-		drag_state_changed.emit(drag_state)
 	elif drag_state == DragState.HALF:
 		drag_state = DragState.FULL
 		tween_to(0.0, Callable(), true)
-		drag_state_changed.emit(drag_state)
 
 
 func _on_button_close_pressed() -> void:
@@ -242,15 +268,24 @@ func _on_button_close_pressed() -> void:
 			_set_card_corner_radius(24, 24)
 		drag_state = DragState.HALF
 		tween_to(_card_half_position)
-		drag_state_changed.emit(drag_state)
 
 
 func _is_scrolling(pos: Vector2, gesture: DragGesture) -> bool:
-	var scroll_rect := scroll_content.get_global_rect()
+	var scroller: ScrollContainer = scroll_reference if scroll_reference else scroll_content
+	var scroll_rect := scroller.get_global_rect()
 	if not scroll_rect.has_point(pos):
 		return false
-	if gesture == DragGesture.DOWN and scroll_content.get_v_scroll() > _DRAG_THRESHOLD:
-		return true
+	var v_scroll := scroller.get_v_scroll()
+	if gesture == DragGesture.DOWN:
+		# Still scrolled down from the top — there's room to keep scrolling toward it;
+		# don't let this collapse the sheet.
+		return v_scroll > _DRAG_THRESHOLD
+	if gesture == DragGesture.UP:
+		# Not yet at the bottom of the content — there's more to reveal by scrolling;
+		# don't let this expand the sheet instead.
+		var v_scroll_bar := scroller.get_v_scroll_bar()
+		var max_scroll: float = v_scroll_bar.max_value - v_scroll_bar.page
+		return v_scroll < max_scroll - _DRAG_THRESHOLD
 	return false
 
 
@@ -272,6 +307,7 @@ func tween_to(
 	header_visible: bool = false,
 	target_hidden: bool = false
 ) -> void:
+	header_visible = header_visible and show_close_button
 	if drag_tween and drag_tween.is_running():
 		drag_tween.stop()
 		drag_tween = null
@@ -310,9 +346,22 @@ func _on_tween_to_finished() -> void:
 		margin_container_show_more.hide()
 	if _tween_target_hidden:
 		drag_state = DragState.HIDDEN
-		drag_state_changed.emit(drag_state)
+	# Emitted once the card has actually settled, not when the tween starts — a listener
+	# that re-fits content against the card's position (e.g. Backpack's avatar camera)
+	# needs the final position, not a transient one mid-animation.
+	drag_state_changed.emit(drag_state)
 	if _tween_callback.is_valid():
 		_tween_callback.call()
+
+
+## Duplicates so later style overrides (_set_card_corner_radius) build on this instance's
+## color instead of resetting to the shared base resource's.
+func _apply_card_color(panel: PanelContainer) -> void:
+	var current_style = panel.get_theme_stylebox("panel")
+	if current_style is StyleBoxFlat:
+		var style_box := current_style.duplicate() as StyleBoxFlat
+		style_box.bg_color = card_color
+		panel.add_theme_stylebox_override("panel", style_box)
 
 
 func _set_card_corner_radius(top_left: int, top_right: int) -> void:
@@ -322,6 +371,8 @@ func _set_card_corner_radius(top_left: int, top_right: int) -> void:
 		style_box.corner_radius_top_left = top_left
 		style_box.corner_radius_top_right = top_right
 		var is_full := top_left == 0 and top_right == 0
-		style_box.anti_aliasing = not is_full
+		# anti_aliasing on a StyleBoxFlat with no border draws a stray light seam along the
+		# rounded edge (no border color for the AA blend to land on) — leave it off.
+		style_box.anti_aliasing = false
 		style_box.expand_margin_bottom = 4 if is_full else 0
 		panel_container_card.add_theme_stylebox_override("panel", style_box)

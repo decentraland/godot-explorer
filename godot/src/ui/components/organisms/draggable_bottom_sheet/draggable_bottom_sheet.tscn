@@ -10,6 +10,7 @@ bg_color = Color(0.20784314, 0.03137255, 0.32941177, 1)
 bg_color = Color(0.20784314, 0.03137255, 0.32941177, 1)
 corner_radius_top_left = 24
 corner_radius_top_right = 24
+anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_d6lng"]
 bg_color = Color(0.9882353, 0.9882353, 0.9882353, 0.3019608)

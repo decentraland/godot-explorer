@@ -49,6 +49,26 @@ var avatar_loading_counter: int = 0
 var blacklist_deploy_timer: Timer  # Timer for debounced blacklist changes
 var is_loading_profile: bool = false
 
+# Resolved in _ready() instead of @onready — on portrait these live inside
+# backpack_wearables_content.tscn (see right_editor_container below), and a nested scene
+# instance's nodes keep their own owner, so %unique-name can't reach them from here.
+var color_carrousel
+var carrousel_separator
+var grid_container_wearables_list
+var container_main_categories
+var container_sub_categories
+var vboxcontainer_wearable_selector
+var wearable_editor
+var emote_editor
+var subcategories_container
+var subcategories_separator
+var maincategories_container
+var scroll_container_items: ScrollContainer
+var hseparator_extra_space: HSeparator
+var hseparator_extra_space_b: HSeparator
+var hseparator_size_maintainer: HSeparator
+var margin_container_no_items: MarginContainer
+
 var _ios_marketplace_section: MarketplaceRecommendedSection = null
 var _marketplace_preview_urn: String = ""
 var _marketplace_saved_wearables: PackedStringArray = []
@@ -72,24 +92,19 @@ var _wearable_is_new: Dictionary = {}
 # therefore writes _profile_urn_for(), never the grid key.
 var _wearable_token_urns: Dictionary = {}
 
-@onready var color_carrousel = %ColorCarrousel
-@onready var carrousel_separator = %CarrouselSeparator
-@onready var grid_container_wearables_list = %GridContainer_WearablesList
-
 @onready var avatar_preview: AvatarPreview = %AvatarPreview
 @onready var avatar_loading = %TextureProgressBar_AvatarLoading
 
-@onready var container_main_categories = %HBoxContainer_MainCategories
-@onready var container_sub_categories = %HBoxContainer_SubCategories
-
-@onready var vboxcontainer_wearable_selector = %VBoxContainer_WearableSelector
-
 @onready var backpack_loading = %TextureProgressBar_BackpackLoading
 @onready var container_backpack = %HBoxContainer_Backpack
+## Portrait only (#1935) — lets the player drag the wearables/emotes panel down to see
+## the avatar almost full-screen, same gesture as the Profile page. Null on landscape,
+## where container_backpack is still a plain, non-draggable VBoxContainer.
+@onready var draggable_bottom_sheet: DraggableBottomSheet = (
+	get_node_or_null("%HBoxContainer_Backpack") as DraggableBottomSheet
+)
 @onready var button_back_to_explorer := %Button_BackToExplorer
 
-@onready var wearable_editor = %WearableEditor
-@onready var emote_editor = %EmoteEditor
 @onready var emote_name_anim = get_node_or_null("%EmoteNameAnim")
 @onready var avatar_vfx: AnimatedTextureRect = get_node_or_null("%AvatarVFX")
 
@@ -100,21 +115,15 @@ var _wearable_token_urns: Dictionary = {}
 @onready var texture_rect_background: TextureRect = %TextureRect_Background
 @onready var filter_menu := %FilterMenu
 @onready var filter_indicator := %FilterIndicator
-@onready var subcategories_container := %SubcategoriesContainer
-@onready var subcategories_separator := %SubcategoriesSeparator
-@onready var maincategories_container := %MainCategoriesContainer
 @onready var filters_menu_checkbox := %CheckBox_OnlyCollectibles
-@onready var scroll_container_items: ScrollContainer = %ScrollContainer_Items
-@onready var hseparator_extra_space: HSeparator = %HSeparator_ExtraSpace
-@onready var hseparator_extra_space_b: HSeparator = %HSeparator_ExtraSpaceB
-@onready var hseparator_size_maintainer: HSeparator = get_node_or_null("%HSeparator_SizeMaintainer")
 @onready var control_left_bar: Control = get_node_or_null("%Control_LeftBar")
 @onready var canary_container: Control = get_node_or_null("%ControlContainer_Canary")
 @onready var canary_content: Control = get_node_or_null("%ControlContent_Canary")
 @onready var size_canary: Control = get_node_or_null("%HBoxContainer_SizeCanary")
-@onready var margin_container_no_items: MarginContainer = %MarginContainer_NoItems
 @onready var button_credits: Control = %Button_Credits
 @onready var margin_container_credits: Control = %MarginContainer_Credits
+## Instance root is always reachable via %unique-name (it's placed directly in this scene);
+## only its own internal children are not — see the vars resolved from it in _ready().
 @onready var right_editor_container: MarginContainer = %RightEditorContainer
 
 # "NEW" tag (#2300) session state. Per category ("wearable"/"emote"): the baseline snapshot
@@ -143,8 +152,52 @@ static var _newtag_session_wallet: String = ""
 static var _base_urn_by_lower: Dictionary = {}
 
 
+## Portrait: WearableEditor/EmoteEditor and everything around them live inside
+## backpack_wearables_content.tscn (right_editor_container's own scene) — its nodes keep
+## that scene as their owner, so %unique-name can't reach them from here; read them off
+## the content scene's own script instead. Landscape never extracted this, so it keeps
+## the plain %unique-name lookups it always had.
+func _resolve_wearables_content_nodes() -> void:
+	if draggable_bottom_sheet:
+		var content := right_editor_container as BackpackWearablesContent
+		wearable_editor = content.wearable_editor
+		emote_editor = content.emote_editor
+		color_carrousel = content.color_carrousel
+		carrousel_separator = content.carrousel_separator
+		grid_container_wearables_list = content.grid_container_wearables_list
+		container_main_categories = content.container_main_categories
+		container_sub_categories = content.container_sub_categories
+		vboxcontainer_wearable_selector = content.vboxcontainer_wearable_selector
+		subcategories_container = content.subcategories_container
+		subcategories_separator = content.subcategories_separator
+		maincategories_container = content.maincategories_container
+		scroll_container_items = content.scroll_container_items
+		hseparator_extra_space = content.hseparator_extra_space
+		hseparator_extra_space_b = content.hseparator_extra_space_b
+		hseparator_size_maintainer = content.hseparator_size_maintainer
+		margin_container_no_items = content.margin_container_no_items
+	else:
+		wearable_editor = %WearableEditor
+		emote_editor = %EmoteEditor
+		color_carrousel = %ColorCarrousel
+		carrousel_separator = %CarrouselSeparator
+		grid_container_wearables_list = %GridContainer_WearablesList
+		container_main_categories = %HBoxContainer_MainCategories
+		container_sub_categories = %HBoxContainer_SubCategories
+		vboxcontainer_wearable_selector = %VBoxContainer_WearableSelector
+		subcategories_container = %SubcategoriesContainer
+		subcategories_separator = %SubcategoriesSeparator
+		maincategories_container = %MainCategoriesContainer
+		scroll_container_items = %ScrollContainer_Items
+		hseparator_extra_space = %HSeparator_ExtraSpace
+		hseparator_extra_space_b = %HSeparator_ExtraSpaceB
+		hseparator_size_maintainer = get_node_or_null("%HSeparator_SizeMaintainer")
+		margin_container_no_items = %MarginContainer_NoItems
+
+
 # gdlint:ignore = async-function-name
 func _ready():
+	_resolve_wearables_content_nodes()
 	main_category_selected = default_main_category
 	UiSounds.install_audio_recusirve(self)
 	color_rect_background.visible = !hide_background
@@ -170,9 +223,28 @@ func _ready():
 	if disable_avatar_zoom:
 		avatar_preview.can_drag = false
 
+	if draggable_bottom_sheet:
+		avatar_preview.input_blockers = [
+			draggable_bottom_sheet.panel_container_card,
+			draggable_bottom_sheet.panel_container_header,
+		]
+		draggable_bottom_sheet.drag_state_changed.connect(self._on_sheet_drag_state_changed)
+
 	emote_editor.avatar = avatar_preview.avatar
 	emote_editor.set_new_emotes.connect(self._on_set_new_emotes)
 	emote_editor.emote_equipped.connect(self._on_emote_equipped)
+	# Portrait only: WearableEditor/EmoteEditor now live in their own scene
+	# (backpack_wearables_content.tscn, instanced into the draggable sheet) — a .tscn
+	# connection can't cross a scene-file boundary, so these are wired here instead.
+	# Landscape still has its own static [connection] blocks for the same signals (its
+	# layout wasn't touched), so this must not also run there or they'd double-fire.
+	if draggable_bottom_sheet:
+		color_carrousel.color_picked.connect(self._on_color_picker_panel_pick_color)
+		color_carrousel.color_set.connect(self._on_color_set)
+		color_carrousel.toggle_color_picker.connect(self._on_color_carrousel_toggle_color_picker)
+		if emote_name_anim:
+			emote_editor.emote_equipped.connect(emote_name_anim.set_equipped)
+			emote_editor.emote_grid_selected.connect(emote_name_anim.set_emote_name)
 	wearable_editor.show()
 	emote_editor.hide()
 	filter_menu.hide()
@@ -284,6 +356,8 @@ func _ready():
 
 	request_update_avatar = true
 
+	if draggable_bottom_sheet:
+		draggable_bottom_sheet.reset_to_half()
 	container_backpack.show()
 	right_editor_container.show()
 	backpack_loading.hide()
@@ -928,6 +1002,8 @@ func _on_button_wearables_pressed():
 	emote_editor.hide()
 	if emote_name_anim != null:
 		emote_name_anim.hide()
+	if draggable_bottom_sheet:
+		draggable_bottom_sheet.scroll_reference = scroll_container_items
 
 
 func _on_button_emotes_pressed():
@@ -942,6 +1018,8 @@ func show_emotes() -> void:
 	emote_editor.show()
 	if emote_name_anim != null:
 		emote_name_anim.show()
+	if draggable_bottom_sheet:
+		draggable_bottom_sheet.scroll_reference = emote_editor.scroll_container_grid
 
 
 func press_button_emotes() -> void:
@@ -1300,6 +1378,11 @@ func _on_visibility_changed() -> void:
 		return
 	if is_visible_in_tree():
 		_update_back_to_explorer_visibility()
+		# _ready() only runs once, but the backpack can be hidden/reshown within the same
+		# session (Global.close_menu / open_backpack) without a fresh instantiation — reset
+		# the sheet and re-fit the avatar camera every time it's shown, same as Profile does.
+		if draggable_bottom_sheet:
+			draggable_bottom_sheet.reset_to_half()
 	else:
 		# Leaving backpack — restore avatar preview to real state
 		_marketplace_preview_restore()
@@ -1320,6 +1403,19 @@ func _on_button_back_to_explorer_pressed() -> void:
 	if Global.get_explorer():
 		Global.close_menu.emit()
 		Global.set_orientation_landscape()
+
+
+## The sheet only animates position, never size, so avatar_preview's own resize-based
+## refit never fires as it drags — re-fit explicitly once each drag settles. The avatar is
+## fully covered by the card at FULL anyway, so fade it out there (quick, nothing to see)
+## and back in otherwise (slower, the reveal is what's actually visible here).
+func _on_sheet_drag_state_changed(state: int) -> void:
+	avatar_preview.refresh_fit()
+	var tween := create_tween()
+	if state == DraggableBottomSheet.DragState.FULL:
+		tween.tween_property(avatar_preview, "modulate:a", 0.0, 0.1)
+	else:
+		tween.tween_property(avatar_preview, "modulate:a", 1.0, 0.25)
 
 
 func _on_emote_equipped(equipped: bool) -> void:
