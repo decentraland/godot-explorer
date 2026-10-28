@@ -59,3 +59,8 @@ scripts/bench/.env.bak
 .env*
 !.env.example
 
+
+# RN visual snapshot runs (tools/ui-spec/ci_capture.sh, visual_diff.py)
+/metro.log
+/shots/
+/visual-report/

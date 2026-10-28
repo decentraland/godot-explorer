@@ -77,6 +77,29 @@ Checks (all run in CI): `npx tsc --noEmit`, `npx eslint App.tsx src __tests__`, 
 `npm audit --omit=dev --audit-level=critical`. Dependencies are pinned to exact versions in `package.json`;
 update them on purpose, not through a `^` range.
 
+## Visual snapshots
+
+`.github/workflows/rn_visual.yml` renders every screen of the gallery (`src/gallery/`, one id per Figma frame or
+state) with the no-Godot debug app on an x86_64 Android emulator, then compares the screenshots with
+`rn/visual-baselines/<id>.png`. A PR gets one sticky comment with the changed, new and not-captured screens and
+the `rn-visual-report` artifact (baseline | new | diff images). It reports only: a pixel change does not fail the check.
+
+- **A screen changed on purpose**: add the `update-visual-baselines` label to the PR. The job commits the new
+  screenshots to the branch and removes the label; review the PNGs in the diff. On `2.x` a bot PR does the same.
+- **A new screen**: register it in the gallery (`src/gallery/`) and run `npm run gallery:ids`; it shows up as "new".
+- **A screen that is not stable** (animation, timer): give its registry entry a `settleMs`, or list its id in
+  `tools/ui-spec/visual-ignore.json` (`{"<id>": "reason"}`).
+- **Locally**, on an emulator or phone (`ANDROID_SERIAL` picks the device): start Metro (`npm start`; the app reads
+  it from `localhost:8081`), install the debug build (`DCL_NO_GODOT=1`, then `cd android && ./gradlew
+  :app:assembleDebug -PdclNoGodot=true`), then `tools/ui-spec/rn_capture.sh --ids <id>[,<id>] --out /tmp/shots
+  --normalize`. `--normalize` pins 720x1600 at 320 dpi, turns animations off and fixes the status bar clock so the
+  captures repeat; it restores the device on exit. `python3 tools/ui-spec/visual_diff.py compare --new /tmp/shots`
+  prints the report.
+
+`tools/ui-spec/ci_capture.sh` is the wrapper CI runs on the booted emulator (Metro, install, capture, quantize to
+256-colour PNGs so the baselines stay small). The runs are debug builds, and debug builds never report to Sentry
+(`src/sentry.ts`), so captures leave no events behind.
+
 ## The full app (with Godot)
 
 `cargo run -- export --target android|ios` runs Godot's export and then builds the RN app from it;

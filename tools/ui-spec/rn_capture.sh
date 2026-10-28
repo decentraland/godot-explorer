@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 # Capture registry previews from the connected Android phone into docs/rn-ui-spec/rn-shots/<id>.png.
-#   tools/ui-spec/rn_capture.sh --all | --source backpack | --ids a,b   [--timeout 20] [--compare-sheet]
+#   tools/ui-spec/rn_capture.sh --all | --source backpack[,menu] | --ids a,b
+#       [--timeout 20] [--compare-sheet] [--out DIR] [--normalize]
 # Ids come from rn/src/gallery/ids.json (regenerate: cd rn && npm run gallery:ids).
+# --normalize fixes the device (720x1600 @ 320dpi, no animations, demo-mode status bar) so captures are
+# repeatable; CI always passes it. Local runs restore the device on exit.
 set -u
-# One phone, several agents: serialise whole capture runs.
-exec 9>/tmp/dcl-phone.lock
-flock 9
+# One phone, several agents: serialise whole capture runs (CI has one device per job).
+if [ -z "${CI:-}" ] && command -v flock >/dev/null 2>&1; then
+  exec 9>/tmp/dcl-phone.lock
+  flock 9
+fi
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 ADB_BIN="${ADB:-$HOME/Android/Sdk/platform-tools/adb}"
 [ -x "$ADB_BIN" ] || ADB_BIN="$(command -v adb)"
@@ -14,7 +19,7 @@ PKG="${DCL_PACKAGE:-org.decentraland.godotexplorer}"
 OUT="$ROOT/docs/rn-ui-spec/rn-shots"
 IDS_JSON="$ROOT/rn/src/gallery/ids.json"
 TIMEOUT=20
-MODE="" ; ARG="" ; COMPARE=""
+MODE="" ; ARG="" ; COMPARE="" ; NORMALIZE=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -22,12 +27,14 @@ while [ $# -gt 0 ]; do
     --source) MODE=source; ARG="$2"; shift ;;
     --ids) MODE=ids; ARG="$2"; shift ;;
     --timeout) TIMEOUT="$2"; shift ;;
+    --out) mkdir -p "$2" && OUT="$(cd "$2" && pwd)"; shift ;;
+    --normalize) NORMALIZE=1 ;;
     --compare-sheet) COMPARE=1 ;;
     *) echo "unknown arg $1" >&2; exit 2 ;;
   esac
   shift
 done
-[ -n "$MODE" ] || { echo "usage: $0 --all | --source X | --ids a,b [--timeout s]" >&2; exit 2; }
+[ -n "$MODE" ] || { echo "usage: $0 --all | --source X[,Y] | --ids a,b [--timeout s] [--out DIR] [--normalize]" >&2; exit 2; }
 [ -f "$IDS_JSON" ] || { echo "missing $IDS_JSON (cd rn && npm run gallery:ids)" >&2; exit 1; }
 adb get-state >/dev/null 2>&1 || { echo "no adb device" >&2; exit 1; }
 # adb restarts drop reverse mappings; the app reads Metro from localhost:${METRO_PORT:-8082}.
@@ -37,7 +44,8 @@ adb reverse "tcp:${METRO_PORT:-8082}" "tcp:${METRO_PORT:-8082}" >/dev/null 2>&1
 LIST="$(python3 - "$IDS_JSON" "$MODE" "$ARG" <<'PY'
 import json, sys
 rows = json.load(open(sys.argv[1])); mode, arg = sys.argv[2], sys.argv[3]
-if mode == "source": rows = [r for r in rows if r["source"] == arg]
+if mode == "source":
+    want = arg.split(","); rows = [r for r in rows if r["source"] in want]
 if mode == "ids":
     want = arg.split(","); rows = [r for r in rows if r["id"] in want]
 for r in rows: print(r["id"], r["orientation"], r["source"])
@@ -50,8 +58,37 @@ rotation() {  # 0 portrait, 1 landscape
   adb shell settings put system accelerometer_rotation 0
   adb shell settings put system user_rotation "$1"
 }
-cleanup() { adb shell settings put system user_rotation 0; adb shell settings put system accelerometer_rotation 1; }
+normalize_device() {
+  adb shell wm size 720x1600
+  adb shell wm density 320
+  for scale in window_animation_scale transition_animation_scale animator_duration_scale; do
+    adb shell settings put global "$scale" 0
+  done
+  adb shell settings put system font_scale 1.0
+  adb shell settings put global sysui_demo_allowed 1
+  demo() { adb shell am broadcast -a com.android.systemui.demo -e command "$@" >/dev/null; }
+  demo enter
+  demo clock -e hhmm 1200
+  demo battery -e level 100 -e plugged false
+  demo network -e wifi show -e level 4
+  demo notifications -e visible false
+}
+restore_device() {
+  adb shell am broadcast -a com.android.systemui.demo -e command exit >/dev/null
+  adb shell wm size reset
+  adb shell wm density reset
+  for scale in window_animation_scale transition_animation_scale animator_duration_scale; do
+    adb shell settings put global "$scale" 1
+  done
+}
+cleanup() {
+  adb shell settings put system user_rotation 0
+  adb shell settings put system accelerometer_rotation 1
+  # A CI emulator is thrown away; only a phone someone owns needs its settings back.
+  if [ -n "$NORMALIZE" ] && [ -z "${CI:-}" ]; then restore_device; fi
+}
 trap cleanup EXIT
+[ -z "$NORMALIZE" ] || normalize_device
 
 ok=0; fail=0; failed=""; sources=""
 while read -r id orient source; do

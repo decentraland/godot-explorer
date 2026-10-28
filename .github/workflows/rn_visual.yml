@@ -1,0 +1,245 @@
+name: 📸 RN visual snapshots
+
+# Screenshots of every screen in the RN gallery (rn/src/gallery), rendered by the no-Godot debug app on an
+# Android emulator, compared with rn/visual-baselines. Report only: a pixel change is posted on the PR, it
+# does not fail the check. To refresh the baselines on a PR, add the `update-visual-baselines` label: the
+# `baselines` job commits the new screenshots to the branch and removes the label. On 2.x the same job opens
+# a bot PR instead.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    paths:
+      - 'rn/**'
+      - 'tools/ui-spec/**'
+      - '.github/workflows/rn_visual.yml'
+      - '.github/actions/rn-npm-ci/**'
+  push:
+    branches: [2.x]
+    paths:
+      - 'rn/**'
+      - 'tools/ui-spec/**'
+      - '.github/workflows/rn_visual.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rn-visual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    name: Debug APK (no Godot)
+    # Adding some other label must not re-run the whole pipeline.
+    if: ${{ github.event.action != 'labeled' || github.event.label.name == 'update-visual-baselines' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: ./.github/actions/rn-npm-ci
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Restore the Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-rn-${{ hashFiles('rn/android/**/*.gradle*', 'rn/android/gradle/wrapper/gradle-wrapper.properties', 'rn/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-rn-
+
+      # DCL_NO_GODOT drops the dcl-core native module from autolinking (the mock core runs instead);
+      # x86_64 because the hosted emulator is x86_64.
+      - name: Build the debug APK
+        working-directory: rn/android
+        env:
+          DCL_NO_GODOT: '1'
+        run: ./gradlew :app:assembleDebug -PdclNoGodot=true -PdclAbi=x86_64 -PreactNativeArchitectures=x86_64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rn-debug-apk
+          path: rn/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 1
+          if-no-files-found: error
+
+  capture:
+    name: Capture ${{ matrix.shard }}
+    needs: apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { shard: discover, sources: discover }
+          - { shard: backpack, sources: backpack }
+          - { shard: profile-hud, sources: 'profile,hud,loading' }
+          - { shard: menu, sources: menu }
+          - { shard: settings, sources: 'settings-portrait,settings-revamp' }
+          - { shard: extra, sources: extra }
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: ./.github/actions/rn-npm-ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: rn-debug-apk
+          path: apk
+
+      - name: Python imaging for the capture post-processing
+        run: sudo apt-get install -y --no-install-recommends python3-pil
+
+      - name: Allow the emulator to use KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Capture the previews on an emulator
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        env:
+          DCL_APK: ${{ github.workspace }}/apk/app-debug.apk
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash tools/ui-spec/ci_capture.sh "${{ matrix.sources }}" shots/${{ matrix.shard }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shots-${{ matrix.shard }}
+          path: shots/${{ matrix.shard }}
+          if-no-files-found: warn
+          retention-days: 7
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: metro-log-${{ matrix.shard }}
+          path: metro.log
+          if-no-files-found: ignore
+          retention-days: 3
+
+  compare:
+    name: Compare with the baselines
+    needs: capture
+    if: ${{ !cancelled() && needs.capture.result != 'skipped' && github.event_name != 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - run: sudo apt-get install -y --no-install-recommends python3-pil
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: shots-*
+          merge-multiple: true
+          path: shots
+
+      - name: Compare
+        run: python3 tools/ui-spec/visual_diff.py compare --new shots --out visual-report
+
+      - name: Report
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -f visual-report/report.md ] || exit 0
+          echo "Run: $RUN_URL" >> visual-report/report.md
+          cat visual-report/report.md >> "$GITHUB_STEP_SUMMARY"
+          # A fork's token is read-only: the summary above is the report there.
+          if [ "${{ github.event_name }}" = pull_request ] && \
+             [ "${{ github.event.pull_request.head.repo.full_name }}" = "${{ github.repository }}" ]; then
+            PR=${{ github.event.pull_request.number }}
+            ID=$(gh api "repos/${{ github.repository }}/issues/$PR/comments" --paginate \
+              --jq '.[] | select(.body | contains("<!-- rn-visual-snapshots -->")) | .id' | head -n 1)
+            if [ -n "$ID" ]; then
+              gh api -X PATCH "repos/${{ github.repository }}/issues/comments/$ID" -F body=@visual-report/report.md >/dev/null
+            else
+              gh api "repos/${{ github.repository }}/issues/$PR/comments" -F body=@visual-report/report.md >/dev/null
+            fi
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rn-visual-report
+          path: visual-report
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # On 2.x: a bot PR with the fresh baselines. On a PR with the `update-visual-baselines` label: a commit on its branch.
+  baselines:
+    name: Update the baselines
+    needs: capture
+    if: >-
+      ${{ !cancelled() && needs.capture.result == 'success' && (
+        github.ref == 'refs/heads/2.x' || (
+          github.event_name == 'pull_request'
+          && contains(github.event.pull_request.labels.*.name, 'update-visual-baselines')
+          && github.event.pull_request.head.repo.full_name == github.repository)) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # A PR run checks out the merge commit; the baselines go on the branch itself.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+
+      - run: sudo apt-get install -y --no-install-recommends python3-pil
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: shots-*
+          merge-multiple: true
+          path: shots
+
+      - name: Replace rn/visual-baselines
+        run: python3 tools/ui-spec/visual_diff.py promote --new shots
+
+      - name: Commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          git add -A rn/visual-baselines
+          if git diff --cached --quiet; then
+            echo "Baselines are up to date."
+            [ -z "$PR_NUMBER" ] || gh pr edit "$PR_NUMBER" --remove-label update-visual-baselines
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(rn): refresh visual baselines"
+          if [ "${{ github.ref }}" = refs/heads/2.x ]; then
+            git push --force origin HEAD:refs/heads/bot/rn-visual-baselines
+            gh pr view bot/rn-visual-baselines --json state --jq .state 2>/dev/null | grep -q OPEN \
+              || gh pr create --base 2.x --head bot/rn-visual-baselines \
+                   --title "chore(rn): refresh visual baselines" \
+                   --body "Screenshots of the RN gallery from the latest 2.x. Review the images, then merge."
+          else
+            git push origin "HEAD:refs/heads/$HEAD_REF"
+            gh pr edit "$PR_NUMBER" --remove-label update-visual-baselines
+          fi
