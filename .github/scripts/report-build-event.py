@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 #
-# ⚠️ DUPLICATED FILE — keep in sync with the identical copy in the other repo.
+# ⚠️ DUPLICATED FILE — a copy lives in the other repo.
 # The mobile build pipeline spans two repos, so this script lives in BOTH
-# decentraland/godot-explorer and decentraland/godot-asc-deploy. Edit both copies together.
+# decentraland/godot-explorer and decentraland/godot-asc-deploy. A change to the event contract
+# (env vars, payload fields) must land in both copies. The asc-deploy copy predates the `::warning`
+# annotations below and prints those cases as plain log lines; it behaves the same otherwise.
 #
 """Report one mobile build-pipeline event to the board (mobile-board Cloudflare Worker).
 
