@@ -112,8 +112,8 @@ files about to be deleted. One bounded job, then pure wiring.
 - [ ] **4.14 Android back button, orientation, IME**. Back closes RN sheets, then asks the core
   (`exit_world` confirm); orientation stays RN-owned (portrait before a scene, landscape in it);
   virtual-keyboard height from the host to the core for scene inputs.
-- [x] **4.15 Localization**. `i18n/es` and `i18n/pt_BR` generated from `godot/locale/*.csv`
-  (keys already match `en.csv`); a CI check for missing keys; language switch in Settings (D-26).
+- [x] **4.15 Localization**. `rn/src/i18n` is the single source (en, es, pt_BR); the engine area is exported to
+  `godot/locale/*.csv`; a jest check for hardcoded text and missing keys; language switch in Settings (D-26).
 - [ ] **4.16 Parity checklist**. One table from
   `docs/rn-ui-spec/reports/legacy-godot.md`: every screen, modal, behaviour, persisted key and
   metric name, with its RN location and a pass/fail per platform. It is the feature-complete milestone, half of the full-migration gate, and

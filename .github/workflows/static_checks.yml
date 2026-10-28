@@ -31,9 +31,6 @@ jobs:
           toolchain: "1.94"
           components: rustfmt
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
@@ -51,15 +48,6 @@ jobs:
       - name: Rust dependency licences
         working-directory: lib
         run: cargo deny check licenses
-
-      - name: i18n tooling unit tests
-        run: python3 -m unittest discover -s tools/i18n -p 'test_*.py'
-
-      - name: Check translation catalogues
-        run: python3 tools/i18n/format_csv.py --check
-
-      - name: Check UI strings are keyed
-        run: python3 tools/i18n/extract_strings.py --check
 
       - name: WebSocket JS shim unit tests
         run: node --test lib/crates/dcl_engine/src/dcl/js/js_modules/ws.test.cjs

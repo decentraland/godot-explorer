@@ -93,13 +93,12 @@ Apply this order. Everything below "Correctness" is negotiable; the top tier is 
 
 7. **No GDScript, no new UI scenes.** CI fails on any `.gd` under `godot/src`. `godot/src/ui/` keeps only the in-world controls the engine owns (explorer world, joypad, emote wheel, pointer tooltip, safe-area layouts, avatar preview). Screens, modals and toasts are React Native in `rn/` (`rn/src/modals/` for dialogs). A PR that adds a Control scene or a modal to `godot/src/ui/` is a hold unless it is one of those engine-owned controls.
 
-8. **User-facing text must be a translation key.** Every player-visible string lives in `godot/locale/en.csv` and is translated in `es.csv` / `pt_BR.csv`; `tools/i18n/` fails CI on new hardcoded UI text. The checks have real blind spots, so read the diff rather than trusting the green tick — a string passed as a **function argument** (`_add_row(tpl, "Scene Lights", …)`), held in a **data table**, or used as an **`@export var` default** is invisible to the scanner, and an `@export` default silently clobbers a correct key set in the `.tscn`. Reject:
-   - A new literal shown to a player, anywhere the scanner does not reach.
-   - A raw key assigned to a node with `auto_translate_mode = 2` — mode 2 never looks anything up, so the key is drawn verbatim on screen (this shipped: `EMOTES_EMOTES` on the emote wheel).
-   - Resolved text (`tr(...)`) assigned to an auto-translating node, or assigned from GDScript without a `_notification(NOTIFICATION_TRANSLATION_CHANGED)` hook — both freeze in the old locale on a language change.
-   - Positional `%s` / `%d` in a catalogue entry, or a key concatenated with a literal (`BODY + " Try again."` matches no entry and draws the key).
+8. **User-facing text must come from the RN catalogue.** Every player-visible string lives in `rn/src/i18n/en/<area>.ts` with its `es` and `pt_BR` counterparts beside it; `rn/__tests__/i18n-coverage.test.ts` fails CI on hardcoded JSX text, missing or unused keys and changed placeholders. Text the Godot engine draws itself goes in the `engine` area and reaches `godot/locale/*.csv` through `node scripts/i18n-engine.mjs`, never by editing the CSV. The test cannot see text assembled at runtime, so read the diff. Reject:
+   - A new literal shown to a player (`// i18n-ignore` only for brand names and dev-only text).
+   - A key concatenated with a literal (`t('BODY') + ' Try again.'`) or positional `%s` / `%d` instead of named `{placeholders}`.
+   - A new `es` / `pt_BR` entry that changes the placeholders of the English text, or a hand-edited `godot/locale/*.csv`.
    - Spaces or newlines padded into a label for layout — a translated string re-centres and the padding stops lining up.
-   See the **i18n** skill and `tools/i18n/README.md`.
+   See the **i18n** skill and `rn/src/i18n/GLOSSARY.md`.
 
 9. **Cross-platform regressions.** Touch targets, gestures, virtual keyboard sync on Android/iOS, safe-area insets, landscape vs portrait. `DisplayServer.virtual_keyboard_show()` buffer sync after programmatic text insertion is a known class of bug (#1822). Godot `MOUSE_FILTER` behavior differs between `STOP` / `PASS` / `IGNORE` in non-obvious ways — siblings don't propagate (#1875).
 10. **Mouse/input filter and focus stealing.** Buttons that steal focus from a `LineEdit`, containers with fixed `custom_minimum_size` that silently block scene UI underneath, `ScrollContainer` needing dynamic `mouse_filter` based on whether content overflows. Any new UI overlay on the left / bottom of the screen must be tested against SDK-rendered UI underneath.
