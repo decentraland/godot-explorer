@@ -11,9 +11,9 @@ extends Node
 ## gracefully (e.g. tearing archipelago down while keeping scene rooms alive).
 ##
 ## Fail-open: on timeout, network error or malformed payload every flag keeps
-## its default and the feature stays enabled. Exceptions: `sentry-error-events`
-## and `async-shader-compilation` are fail-closed — they activate only when the
-## payload explicitly enables them (see _apply_flags).
+## its default and the feature stays enabled. Exceptions: `sentry-error-events`,
+## `async-shader-compilation` and `tester-wallets` are fail-closed — they activate
+## only when the payload explicitly enables them.
 
 signal flags_loaded
 
@@ -48,6 +48,10 @@ const FLAG_DAY1_NOTIFICATION := "day1-notification"
 # `force-backface-culling=true/false` win over the flag, so QA can see it without the
 # bff serving it.
 const FLAG_FORCE_BACKFACE_CULLING := "alfa-force-backface-culling"
+# Comma-separated wallet addresses that get Settings → Dev Tools on production builds.
+const FLAG_TESTER_WALLETS := "tester-wallets"
+# The RENDER_READY metric (render_ready_probe.gd). Fail-open kill switch for its Segment volume.
+const FLAG_RENDER_READY_PROBE := "render-ready-probe"
 
 var _flags: Dictionary = {}
 var _loaded := false
@@ -63,6 +67,10 @@ func _ready() -> void:
 
 func is_loaded() -> bool:
 	return _loaded
+
+
+func is_async_shader_compilation_enabled() -> bool:
+	return _async_shaders_enabled
 
 
 # `default_value` is returned while the flags aren't loaded yet or when the
@@ -112,6 +120,20 @@ func is_force_backface_culling_enabled() -> bool:
 	if not local_override.is_empty():
 		return local_override == "true"
 	return is_enabled(FLAG_FORCE_BACKFACE_CULLING, false)
+
+
+# Dev Tools are always on outside production. On production only for a signed-in wallet listed
+# in FLAG_TESTER_WALLETS; an unloaded or missing flag keeps them off.
+func dev_tools_enabled() -> bool:
+	if not Global.is_production():
+		return true
+	var address := String(Global.player_identity.get_address_str()).to_lower()
+	if address.is_empty():
+		return false
+	for wallet in get_text(FLAG_TESTER_WALLETS, "").split(",", false):
+		if wallet.strip_edges().to_lower() == address:
+			return true
+	return false
 
 
 # Extracts the flags dictionary from the mobile-bff response:

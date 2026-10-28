@@ -1700,10 +1700,11 @@ impl MessageProcessor {
                                 })
                                 .await
                             {
-                                tracing::error!("Failed to send profile update: {}", e);
+                                // The adapter was torn down (realm change, disconnect) mid-fetch.
+                                tracing::debug!("Failed to send profile update: {}", e);
                             }
                         } else {
-                            tracing::error!(
+                            tracing::warn!(
                                 "fetch profile lambda > failed to fetch profile from lambda for {:#x}: {:?}",
                                 address,
                                 result

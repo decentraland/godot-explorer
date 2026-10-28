@@ -730,7 +730,8 @@ func get_bounds_top_y() -> float:
 ## avatar only yaws/moves, so the per-frame cost in get_bounds_top_y is just
 ## adding the skeleton's world origin.
 func _recompute_nametag_posed_top() -> void:
-	if not _nametag_gate_visible:
+	# skeleton_updated is deferred and still fires for an avatar removed from the tree.
+	if not _nametag_gate_visible or not is_inside_tree():
 		return
 	var basis := body_shape_skeleton_3d.global_transform.basis
 	var y_row := Vector3(basis[0].y, basis[1].y, basis[2].y)

@@ -535,7 +535,7 @@ fn spawn_livekit_task(
                                 }
                             };
                             let Some(message) = packet.message else {
-                                tracing::warn!("received empty packet body");
+                                tracing::debug!("received unknown rfc4 message");
                                 continue;
                             };
                             if let Err(e) = sender.send(IncomingMessage {

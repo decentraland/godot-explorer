@@ -37,6 +37,13 @@ var bug_report_modal_scene: PackedScene = null
 var code_modal_scene: PackedScene = null
 var reward_modal_scene: PackedScene = null
 var upgrade_modal_scene: PackedScene = null
+## Set by _on_upgrade_modal_loading_started() when Global.loading_started fires while the upgrade
+## modal is being created or is already open — mirrors StreakModalController's
+## last_show_interrupted_by_loading (#2867: a loading screen that starts only after
+## ModalTransitionGate's wait already settled is otherwise invisible to it). Reset at the top of
+## every async_show_upgrade_modal call; UpgradeNudgeCoordinator reads it after awaiting the
+## modal's own tree_exited to decide whether to advance the nudge's cadence.
+var last_upgrade_show_interrupted_by_loading: bool = false
 var ban_pre_check_active: bool = false
 ## Suppresses a stale ban_kicked_modal triggered by comms after a pre-check was already handled.
 var _suppress_ban_kicked: bool = false
@@ -188,6 +195,7 @@ func _ready() -> void:
 		)
 	Global.on_menu_close.connect(_on_menu_close_ban_recheck)
 	Global.loading_finished.connect(_on_loading_finished_clear_suppress)
+	Global.loading_started.connect(_on_upgrade_modal_loading_started)
 
 
 ## Shows an EXTERNAL_LINK type modal
@@ -413,10 +421,7 @@ func async_show_scene_crash_modal(entity_id: String) -> void:
 ## - "CONTINUE ANYWAY": keep the scene; enable verbose memory logging so we can
 ##   observe how far it gets before a possible OOM; stop nagging this session.
 ## - "BACK TO DISCOVER": leave the scene.
-## @param _entity_id: The entity ID of the current scene (unused for now)
-func async_show_low_memory_warning_modal(
-	entity_id: String, footprint_mb: int = -1, available_mb: int = -1
-) -> void:
+func async_show_low_memory_warning_modal() -> void:
 	if not await _async_ensure_modal("ModalManager.async_show_low_memory_warning_modal"):
 		return
 
@@ -432,23 +437,6 @@ func async_show_low_memory_warning_modal(
 	_disconnect_button_signals()
 	current_modal.button_primary.pressed.connect(_on_low_memory_continue)
 	current_modal.button_secondary.pressed.connect(_on_low_memory_back)
-
-	# Measure how often the low-memory warning surfaces, on which scene/device and at
-	# what memory level (issue #2002). Flush eagerly: the app may be jetsam-killed by the
-	# OS shortly after this warning, so we can't rely on the periodic flush to send it.
-	if Global.metrics != null:
-		Global.metrics.track_screen_viewed(
-			"LOW_MEMORY_WARNING",
-			JSON.stringify(
-				{
-					"entity_id": entity_id,
-					"footprint_mb": footprint_mb,
-					"available_mb": available_mb,
-					"platform": OS.get_name()
-				}
-			)
-		)
-		Global.metrics.flush.call_deferred()
 
 
 ## The shape most modals in this file already are: blocker, icon, title, body, one button
@@ -1646,11 +1634,28 @@ func _remove_reward_modal() -> void:
 	_reward_canvas_layer = null
 
 
+## A loading screen starting while the upgrade modal is up always wins — the gate inside
+## _async_create_upgrade_modal only guards one that's already visible when its wait starts, not
+## one that begins afterwards (#2867).
+func _on_upgrade_modal_loading_started() -> void:
+	last_upgrade_show_interrupted_by_loading = true
+	if is_instance_valid(current_upgrade_modal) and current_upgrade_modal.visible:
+		close_upgrade_modal()
+
+
 ## Shows the aspirational guest-upgrade nudge modal (issue #2372). Returns true only if the
-## modal was actually created and opened, so the coordinator advances its cadence only then.
+## modal was actually created and opened, so the coordinator advances its cadence only then —
+## the coordinator still has to await current_upgrade_modal.tree_exited and check
+## last_upgrade_show_interrupted_by_loading afterwards, since a `true` here can still turn into
+## an involuntary close once a loading screen starts (open() itself never yields, so that can't
+## happen inside this call).
 func async_show_upgrade_modal() -> bool:
+	last_upgrade_show_interrupted_by_loading = false
 	var modal = await _async_create_upgrade_modal()
 	if not is_instance_valid(modal):
+		return false
+	if last_upgrade_show_interrupted_by_loading:
+		close_upgrade_modal()
 		return false
 	modal.open()
 	return true
@@ -1668,6 +1673,23 @@ func _async_create_upgrade_modal() -> UpgradeModal:
 
 	if not upgrade_modal_scene:
 		push_error("ModalManager: Upgrade modal scene is not loaded")
+		return null
+
+	await ModalTransitionGate.async_wait_until_settled()
+
+	# The trigger that queued this can go stale during the wait above: a sign-out/return-to-
+	# discover teardown started, the guest finished upgrading through another path (e.g. the
+	# Settings/Discover upgrade card), or the player jumped into a world — this modal is a
+	# portrait-only design and should never land over the in-world landscape view.
+	var guest_already_upgraded := (
+		Global.player_identity != null and Global.player_identity.is_thirdweb_guest_upgraded()
+	)
+	if (
+		Global._signing_out
+		or Global._returning_to_discover
+		or guest_already_upgraded
+		or not Global.is_orientation_portrait()
+	):
 		return null
 
 	var modal = upgrade_modal_scene.instantiate() as UpgradeModal
