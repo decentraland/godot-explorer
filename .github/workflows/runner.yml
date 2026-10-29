@@ -48,7 +48,7 @@ jobs:
       MOBILE_ARTIFACTS_R2_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
       BUILD_NUMBER_SECRET: ${{ secrets.BUILD_NUMBER_SECRET }}
 
-  # Mobile distribution (iOS TestFlight + Android APK-ready Slack notification) is
+  # Mobile distribution (iOS TestFlight + Android APK on the board's build card) is
   # triggered separately via mobile_distribute.yml:
   # - Label 'build' (alias 'build-ios') on PRs
   # - Manual workflow dispatch (ref: main/release)

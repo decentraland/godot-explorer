@@ -76,6 +76,33 @@ const LK_STATE_CONNECTING: u8 = 0;
 const LK_STATE_CONNECTED: u8 = 1;
 const LK_STATE_RECONNECTING: u8 = 2;
 const LK_STATE_DISCONNECTED: u8 = 3;
+const LK_STATE_REMOVED: u8 = 4;
+
+fn mark_disconnected(state: &AtomicU8) {
+    let _ = state.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |value| {
+        (value != LK_STATE_REMOVED).then_some(LK_STATE_DISCONNECTED)
+    });
+}
+
+fn disconnect_reason(
+    reason: livekit::DisconnectReason,
+    room_id: &str,
+) -> super::message_processor::DisconnectReason {
+    use super::message_processor::DisconnectReason;
+    match reason {
+        livekit::DisconnectReason::DuplicateIdentity => DisconnectReason::DuplicateIdentity,
+        livekit::DisconnectReason::RoomClosed | livekit::DisconnectReason::RoomDeleted => {
+            DisconnectReason::RoomClosed
+        }
+        livekit::DisconnectReason::ParticipantRemoved
+            if room_id.starts_with("archipelago-livekit-") =>
+        {
+            DisconnectReason::IslandRemoved
+        }
+        livekit::DisconnectReason::ParticipantRemoved => DisconnectReason::Kicked,
+        _ => DisconnectReason::Other,
+    }
+}
 
 pub struct NetworkMessage {
     pub data: Vec<u8>,
@@ -175,6 +202,7 @@ impl LivekitRoom {
             LK_STATE_CONNECTED => "connected",
             LK_STATE_RECONNECTING => "reconnecting",
             LK_STATE_DISCONNECTED => "disconnected",
+            LK_STATE_REMOVED => "removed",
             _ => "connecting",
         }
     }
@@ -319,7 +347,7 @@ fn spawn_livekit_task(
 ) {
     let Some((address, token)) = parse_conn_string(&remote_address) else {
         tracing::warn!("invalid livekit connection string for room '{}'", room_id);
-        connection_state.store(LK_STATE_DISCONNECTED, Ordering::Relaxed);
+        mark_disconnected(&connection_state);
         return;
     };
 
@@ -350,7 +378,7 @@ fn spawn_livekit_task(
                 // signal), so expired-token detection is NOT done here — ArchipelagoManager
                 // counts consecutive never-connected attempts instead and recycles its WS
                 // session for a fresh island token at the strike limit.
-                connection_state.store(LK_STATE_DISCONNECTED, Ordering::Relaxed);
+                mark_disconnected(&connection_state);
                 return;
             }
         };
@@ -507,7 +535,7 @@ fn spawn_livekit_task(
                                 }
                             };
                             let Some(message) = packet.message else {
-                                tracing::warn!("received empty packet body");
+                                tracing::debug!("received unknown rfc4 message");
                                 continue;
                             };
                             if let Err(e) = sender.send(IncomingMessage {
@@ -827,7 +855,6 @@ fn spawn_livekit_task(
                             connection_state.store(LK_STATE_CONNECTED, Ordering::Relaxed);
                         }
                         livekit::RoomEvent::Disconnected { reason } => {
-                            connection_state.store(LK_STATE_DISCONNECTED, Ordering::Relaxed);
                             // Log LiveKit session end with reason
                             tracing::debug!(
                                 "🔌 LiveKit session ended - room: '{}', reason: {:?}",
@@ -835,15 +862,12 @@ fn spawn_livekit_task(
                                 reason
                             );
 
-                            // Map LiveKit disconnect reason to our DisconnectReason
-                            use super::message_processor::DisconnectReason;
-                            let disconnect_reason = match reason {
-                                livekit::DisconnectReason::DuplicateIdentity => DisconnectReason::DuplicateIdentity,
-                                livekit::DisconnectReason::RoomClosed => DisconnectReason::RoomClosed,
-                                livekit::DisconnectReason::ParticipantRemoved => DisconnectReason::Kicked,
-                                livekit::DisconnectReason::RoomDeleted => DisconnectReason::RoomClosed,
-                                _ => DisconnectReason::Other,
-                            };
+                            let disconnect_reason = disconnect_reason(reason, &room_id);
+                            if disconnect_reason == super::message_processor::DisconnectReason::IslandRemoved {
+                                connection_state.store(LK_STATE_REMOVED, Ordering::Relaxed);
+                            } else {
+                                mark_disconnected(&connection_state);
+                            }
 
                             if let Err(e) = sender.send(IncomingMessage {
                                 message: MessageType::Disconnected(disconnect_reason),
@@ -962,7 +986,7 @@ fn spawn_livekit_task(
         }
 
         tracing::debug!("🔌 LiveKit room closing - room: '{}'", room_id);
-        connection_state.store(LK_STATE_DISCONNECTED, Ordering::Relaxed);
+        mark_disconnected(&connection_state);
         if let Err(e) = room.close().await {
             tracing::warn!("🔌 LiveKit room.close() failed - room: '{}', error: {}", room_id, e);
         }
@@ -970,7 +994,7 @@ fn spawn_livekit_task(
 
     let _ = rt.block_on(task);
     // Covers a panicked/aborted task too — anyone still holding the handle sees disconnected
-    connection_state.store(LK_STATE_DISCONNECTED, Ordering::Relaxed);
+    mark_disconnected(&connection_state);
 }
 
 #[cfg(target_os = "android")]
@@ -1062,5 +1086,44 @@ mod tests {
         assert!(!is_streamer_identity(
             "watch:world-prd-scene-room-gather.dcl.eth-bafkreid:uuid"
         ));
+    }
+}
+
+#[cfg(test)]
+mod disconnect_tests {
+    use super::*;
+    use crate::comms::adapter::message_processor::DisconnectReason;
+
+    #[test]
+    fn only_island_participant_removal_waits_for_pulse() {
+        assert_eq!(
+            disconnect_reason(
+                livekit::DisconnectReason::ParticipantRemoved,
+                "archipelago-livekit-C1"
+            ),
+            DisconnectReason::IslandRemoved
+        );
+        assert_eq!(
+            disconnect_reason(livekit::DisconnectReason::ParticipantRemoved, "scene-test"),
+            DisconnectReason::Kicked
+        );
+        assert_eq!(
+            disconnect_reason(livekit::DisconnectReason::ParticipantRemoved, "main"),
+            DisconnectReason::Kicked
+        );
+        assert_eq!(
+            disconnect_reason(livekit::DisconnectReason::DuplicateIdentity, "scene-test"),
+            DisconnectReason::DuplicateIdentity
+        );
+    }
+
+    #[test]
+    fn removed_state_survives_thread_cleanup() {
+        let state = AtomicU8::new(LK_STATE_REMOVED);
+        mark_disconnected(&state);
+        assert_eq!(state.load(Ordering::Relaxed), LK_STATE_REMOVED);
+        let state = AtomicU8::new(LK_STATE_CONNECTED);
+        mark_disconnected(&state);
+        assert_eq!(state.load(Ordering::Relaxed), LK_STATE_DISCONNECTED);
     }
 }

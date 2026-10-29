@@ -309,7 +309,9 @@ func _ensure_lazy_collider(mesh_instance: MeshInstance3D) -> StaticBody3D:
 		return null
 	# The first instance to need the shape builds it and consumes `dcl_faces`;
 	# every later instance of the same mesh finds it under `dcl_shape`.
-	var shape: ConcavePolygonShape3D = mesh.get_meta("dcl_shape", null)
+	var shape: ConcavePolygonShape3D = (
+		mesh.get_meta("dcl_shape") if mesh.has_meta("dcl_shape") else null
+	)
 	if shape == null:
 		if not mesh.has_meta("dcl_faces"):
 			return null
