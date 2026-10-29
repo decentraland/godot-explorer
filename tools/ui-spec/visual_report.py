@@ -15,7 +15,7 @@ captured: that is an infrastructure problem, a pixel change is only reported.
 import argparse, json, os, shutil, sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-IDS_JSON = os.path.join(ROOT, "rn", "src", "gallery", "ids.json")
+SET_JSON = os.path.join(ROOT, "rn", "src", "gallery", "snapshot-set.json")
 IGNORE_JSON = os.path.join(os.path.dirname(__file__), "visual-ignore.json")
 DEFAULT_BASELINE = os.path.join(ROOT, "rn", "visual-baselines")
 MARKER = "<!-- rn-visual-snapshots -->"
@@ -40,13 +40,14 @@ def ignored_ids():
 
 
 def registered_ids():
-    return [row["id"] for row in json.load(open(IDS_JSON))]
+    """The screens CI snapshots: the main views, not every Figma frame of the gallery."""
+    return json.load(open(SET_JSON))
 
 
-def copy_pngs(src, dest, skip):
+def copy_pngs(src, dest, skip, only):
     for path in png_files(src):
         rel = os.path.relpath(path, src)
-        if rel[: -len(".png")] in skip:
+        if rel[: -len(".png")] in skip or rel[: -len(".png")] not in only:
             continue
         target = os.path.join(dest, rel)
         os.makedirs(os.path.dirname(target), exist_ok=True)
@@ -56,9 +57,9 @@ def copy_pngs(src, dest, skip):
 def prepare(new_dir, baseline_dir, report_dir):
     if os.path.isdir(report_dir):
         shutil.rmtree(report_dir)
-    skip = ignored_ids()
-    copy_pngs(new_dir, os.path.join(report_dir, "actual"), skip)
-    copy_pngs(baseline_dir, os.path.join(report_dir, "expected"), skip)
+    skip, only = ignored_ids(), set(registered_ids())
+    copy_pngs(new_dir, os.path.join(report_dir, "actual"), skip, only)
+    copy_pngs(baseline_dir, os.path.join(report_dir, "expected"), skip, only)
 
 
 def build_summary(report_dir):

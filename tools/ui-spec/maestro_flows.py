@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Writes one Maestro flow per gallery id: cold-start the preview deep link, wait for the screen to settle, screenshot.
 
-  python3 tools/ui-spec/maestro_flows.py FLOW_DIR --source a,b | --ids x,y
+  python3 tools/ui-spec/maestro_flows.py FLOW_DIR --set | --source a,b | --ids x,y
   maestro test --test-output-dir SHOTS_DIR FLOW_DIR
 
 A flow per id (not one long flow) so a screen that never gets ready fails alone and the rest still run.
@@ -10,6 +10,7 @@ import argparse, json, os
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 IDS_JSON = os.path.join(ROOT, "rn", "src", "gallery", "ids.json")
+SET_JSON = os.path.join(ROOT, "rn", "src", "gallery", "snapshot-set.json")
 APP_ID = "org.decentraland.godotexplorer"
 READY_TIMEOUT_MS = 20000
 
@@ -38,12 +39,16 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("flow_dir")
     group = ap.add_mutually_exclusive_group(required=True)
+    group.add_argument("--set", action="store_true", help="the screens CI snapshots (rn/src/gallery/snapshot-set.json)")
     group.add_argument("--source")
     group.add_argument("--ids")
     args = ap.parse_args()
 
     rows = json.load(open(IDS_JSON))
-    if args.ids:
+    if args.set:
+        wanted = set(json.load(open(SET_JSON)))
+        rows = [r for r in rows if r["id"] in wanted]
+    elif args.ids:
         wanted = set(args.ids.split(","))
         rows = [r for r in rows if r["id"] in wanted]
     else:

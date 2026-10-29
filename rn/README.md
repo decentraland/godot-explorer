@@ -93,7 +93,10 @@ by reg-cli with the **official** screenshots of its base branch and sent, with t
 - **Official screenshots**: the accepted set of `2.x`, `main` and `release*`, kept for good. A push to one of those
   branches publishes its capture as the new official set. PR runs and their images are deleted after 14 days.
   Until the first push to a base branch has published one, PRs compare with `rn/visual-baselines` in git.
-- **A new screen**: register it in the gallery (`src/gallery/`) and run `npm run gallery:ids`; it shows up as "new" in the review.
+- **Which screens**: CI snapshots only the main views listed in `src/gallery/snapshot-set.json` (36 of the gallery's 322
+  frames: one per screen, no per-detail Figma copies). The rest stay in the gallery and Storybook for development.
+  To snapshot another screen, add its id to that file.
+- **A new screen**: register it in the gallery (`src/gallery/`) and run `npm run gallery:ids`.
 - **A screen that is not stable** (animation, timer): give its registry entry a `settleMs`, or list its id in
   `tools/ui-spec/visual-ignore.json` (`{"<id>": "reason"}`).
 - **Locally**, on an emulator or phone (`ANDROID_SERIAL` picks the device; needs [Maestro](https://maestro.mobile.dev)):

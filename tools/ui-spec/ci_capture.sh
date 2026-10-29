@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Screenshot gallery stories on a booted Android emulator/device: Metro with Storybook, the debug APK, Maestro.
-#   tools/ui-spec/ci_capture.sh <sources|--ids a,b> <out-dir>
+#   tools/ui-spec/ci_capture.sh <sources|--set|--ids <out-dir> a,b> <out-dir>
 # The gallery is __DEV__-only, so the debug APK (-PdclNoGodot) is served by Metro, as on a developer's phone.
 # DCL_APK overrides the APK path; METRO_PORT defaults to 8081 (the app's built-in default).
 set -euo pipefail
@@ -34,6 +34,8 @@ normalize_device
 
 if [ "$SELECT" = "--ids" ]; then
   python3 "$ROOT/tools/ui-spec/maestro_flows.py" "$WORK/flows" --ids "$3"
+elif [ "$SELECT" = "--set" ]; then
+  python3 "$ROOT/tools/ui-spec/maestro_flows.py" "$WORK/flows" --set
 else
   python3 "$ROOT/tools/ui-spec/maestro_flows.py" "$WORK/flows" --source "$SELECT"
 fi
