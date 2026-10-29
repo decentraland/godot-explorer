@@ -15,9 +15,7 @@ captured: that is an infrastructure problem, a pixel change is only reported.
 `promote` replaces the baselines with the registered screens of DIR.
 """
 import argparse, json, os, shutil, sys
-from PIL import Image
 
-Image.MAX_IMAGE_PIXELS = None
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 IDS_JSON = os.path.join(ROOT, "rn", "src", "gallery", "ids.json")
 IGNORE_JSON = os.path.join(os.path.dirname(__file__), "visual-ignore.json")
@@ -27,6 +25,8 @@ LISTED_MAX = 40
 
 
 def optimize(path):
+    from PIL import Image  # only the capture jobs have Pillow
+
     Image.open(path).convert("RGB").save(path, optimize=True, compress_level=9)
 
 

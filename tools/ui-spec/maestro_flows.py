@@ -11,7 +11,7 @@ import argparse, json, os
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 IDS_JSON = os.path.join(ROOT, "rn", "src", "gallery", "ids.json")
 APP_ID = "org.decentraland.godotexplorer"
-READY_TIMEOUT_MS = 30000
+READY_TIMEOUT_MS = 20000
 
 FLOW = """appId: {app}
 ---
@@ -23,10 +23,13 @@ FLOW = """appId: {app}
       visible: ".*isn't responding.*"
     commands:
       - tapOn: "Wait"
+# Optional: a React Native Modal is its own window, so the marker of a screen drawn in one is never visible.
+# The wait is long enough for those screens to settle by themselves.
 - extendedWaitUntil:
     visible:
       id: preview-ready
     timeout: {timeout}
+    optional: true
 - takeScreenshot: {shot}
 """
 
