@@ -12,11 +12,13 @@ use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use tokio::sync::{mpsc, oneshot};
+use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+use tokio_tungstenite::tungstenite::http::{HeaderName, HeaderValue};
 use tokio_tungstenite::tungstenite::Message;
 use tokio_util::sync::CancellationToken;
 
 use crate::auth::ephemeral_auth_chain::EphemeralAuthChain;
-use crate::social::friends::build_auth_chain;
+use crate::auth::wallet::sign_request;
 
 const CONNECTION_TIMEOUT_SECS: u64 = 10;
 const SUBSCRIBE_TIMEOUT_SECS: u64 = 10;
@@ -251,18 +253,24 @@ async fn connect(
 ) -> Result<Arc<Connection>> {
     let timeout = Duration::from_secs(CONNECTION_TIMEOUT_SECS);
 
-    let (mut socket, _) = tokio::time::timeout(timeout, tokio_tungstenite::connect_async(url))
+    // The upgrade request carries the Signed Fetch headers for `get:/v1/stream`, so the server
+    // verifies them before accepting the socket (401 when rejected) and answers `ready` at once.
+    let mut request = url
+        .into_client_request()
+        .map_err(|e| anyhow!("Invalid social stream URL {url}: {e}"))?;
+    for (key, value) in sign_request("get", request.uri(), wallet, json!({})).await {
+        request.headers_mut().insert(
+            HeaderName::from_bytes(key.as_bytes())?,
+            HeaderValue::from_str(&value)?,
+        );
+    }
+
+    let (mut socket, _) = tokio::time::timeout(timeout, tokio_tungstenite::connect_async(request))
         .await
         .map_err(|_| {
             anyhow!("Timeout connecting to the social stream after {CONNECTION_TIMEOUT_SECS}s")
         })?
         .map_err(|e| anyhow!("Failed to connect to the social stream: {e}"))?;
-
-    // The first frame is the signed auth chain; the server answers `ready`.
-    socket
-        .send(Message::Text(build_auth_chain(wallet).await?))
-        .await
-        .map_err(|e| anyhow!("Failed to send the auth chain: {e}"))?;
 
     tokio::time::timeout(timeout, async {
         while let Some(message) = socket.next().await {
