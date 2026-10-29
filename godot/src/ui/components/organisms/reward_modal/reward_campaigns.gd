@@ -68,6 +68,9 @@ const CAMPAIGNS := {
 		"campaign_id": "34923698-3107-4b0c-8968-2f0d90bcea63",
 		"campaign_key":
 		"tH95hT6uQCWCITnSBLljxDSSNpgxB0sMiWgvDZC86mM=.VLoVqyGRwMLooMysTEz5b1EAe173cCG5i0naKcpzdFA=",
+		# The key doesn't pin an item, so the server rejects a claim that doesn't name one.
+		"assign_target": "0xcb911d51f7d9c470262461935636bd173f1061f5",
+		"assign_value": "0",
 		"urn": "urn:decentraland:matic:collections-v2:0xcb911d51f7d9c470262461935636bd173f1061f5:0",
 	},
 }
@@ -79,3 +82,11 @@ const CAMPAIGNS := {
 ## wearable, which is exactly what we want to verify.
 static func get_rewards_server() -> String:
 	return REWARDS_SERVER_PROD
+
+
+## The CAMPAIGNS key for a campaign id ("" when unknown), for metrics and Sentry.
+static func name_of(campaign_id: String) -> String:
+	for campaign_name in CAMPAIGNS:
+		if str(CAMPAIGNS[campaign_name].get("campaign_id", "")) == campaign_id:
+			return campaign_name
+	return ""
