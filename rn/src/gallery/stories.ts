@@ -1,4 +1,4 @@
-import { toId } from 'storybook/internal/csf';
+import { storyNameFromExport, toId } from 'storybook/internal/csf';
 import type { Orientation } from '../platform/orientation';
 import { getPreview, previewGroup, previewIds } from './registry';
 
@@ -8,9 +8,10 @@ export type StoryPreview = {
   settleMs?: number;
 };
 
-/** `<manifest id>` -> the Storybook story id, `Screens/<group>` being the title of its file. */
+/** `<manifest id>` -> the Storybook story id, `Screens/<group>` being the title of its file. Storybook
+ * derives the id from the export name through `storyNameFromExport` (`equip01` -> `equip 01`). */
 export const storyIdOf = (id: string): string =>
-  toId(`Screens/${previewGroup(id)}`, id);
+  toId(`Screens/${previewGroup(id)}`, storyNameFromExport(id));
 
 /** One story per registered screen of a group, named by its manifest id (the export key). */
 export function screenStories(group: string): Record<string, unknown> {

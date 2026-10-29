@@ -20,5 +20,9 @@ describe('gallery stories', () => {
     expect(storyIdOf('extra/flow-account')).toBe(
       'screens-extra--extra-flow-account',
     );
+    // Letters followed by digits are split by Storybook's export-name rule.
+    expect(storyIdOf('backpack__equip01__373-9823')).toBe(
+      'screens-backpack--backpack-equip-01-373-9823',
+    );
   });
 });
