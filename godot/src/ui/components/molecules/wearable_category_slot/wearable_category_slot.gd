@@ -42,7 +42,7 @@ var _was_pressing := false
 
 @onready var panel_container_card = %PanelContainer_Card
 @onready var panel_container_outline = %PanelContainer_Outline
-@onready var label_category = %Label_Category
+@onready var marquee_label_category: ScrollContainer = %MarqueeLabel_Category
 @onready var texture_rect_equipped_background = %TextureRect_EquippedBackground
 @onready var texture_rect_equipped_thumbnail = %TextureRect_EquippedThumbnail
 @onready var control_empty_icon = %Control_EmptyIcon
@@ -56,21 +56,70 @@ func _apply_category_text(display_text: String) -> void:
 		text = display_text
 		return
 	text = ""
-	label_category.text = display_text
+	marquee_label_category.set_text(display_text)
+	_async_update_category_label_layout()
+
+
+## The slot's own width is 0 while its main-category tab isn't the selected one (it's simply
+## hidden — see backpack.gd's _update_visible_categories), so a check right after _apply_category_
+## text can't tell yet whether the name will fit. Wait a frame for a size the hidden case can't
+## give us; _on_visibility_changed below re-checks for real once the tab is actually selected.
+func _async_update_category_label_layout() -> void:
+	await get_tree().process_frame
+	_update_category_label_layout()
+
+
+## es/pt_BR category names (e.g. "Sobre la cabeza" for "Top Head") can run well past what the
+## slot fits — marquee-scroll it instead of letting it clip. For the common case where it does
+## fit, MarqueeLabel's own idle position is left-aligned (built for a wider name field in
+## Profile); center it here instead so a short name still looks like the single centered word
+## the old plain Label rendered.
+func _update_category_label_layout() -> void:
+	if not is_visible_in_tree():
+		return
+	marquee_label_category.stop_marquee_effect()
+	if marquee_label_category.is_text_overflowing():
+		marquee_label_category.start_marquee_effect()
+	else:
+		var label: Label = marquee_label_category.label
+		label.position.x = maxf((marquee_label_category.size.x - label.size.x) / 2.0, 0.0)
+
+
+## Re-measure when this slot's own tab is selected (backpack.gd flips .visible directly, one
+## event per switch) — not on marquee_label_category's `resized`: writing label.position.x
+## inside that handler re-triggers the ScrollContainer's own layout pass, which re-fires
+## resized and re-enters this same logic with a stale mid-pass size, flapping between the
+## centered offset and a spuriously "overflowing" marquee start.
+func _on_visibility_changed() -> void:
+	if is_visible_in_tree():
+		_async_update_category_label_layout()
 
 
 func _ready() -> void:
 	super._ready()
 	flat = true
-	set_process(true)
+	visibility_changed.connect(_on_visibility_changed)
 	_update_card_visual()
 
 
-func _process(_delta: float) -> void:
-	var pressing := is_pressing and not is_dragging
-	if _was_pressing != pressing:
-		_was_pressing = pressing
-		_update_card_visual()
+## CustomTouchButton only learns a touch was a drag (vs. a tap) at release — polling it
+## per-frame during the hold left the card stuck "pressed" for the whole gesture whenever the
+## subcategory row was scrolled, since is_dragging never goes true until the finger lifts.
+## Watch the drag ourselves instead and drop the pressed look the moment it crosses the
+## threshold, not after the fact.
+func _on_gui_input(event: InputEvent) -> void:
+	super._on_gui_input(event)
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			_was_pressing = true
+			_update_card_visual()
+		elif _was_pressing:
+			_was_pressing = false
+			_update_card_visual()
+	elif event is InputEventScreenDrag and _was_pressing:
+		if press_position.distance_to(event.position) > CustomTouchButton.DRAG_THRESHOLD:
+			_was_pressing = false
+			_update_card_visual()
 
 
 func _on_toggled(_button_pressed: bool) -> void:
@@ -83,13 +132,6 @@ func _on_toggled(_button_pressed: bool) -> void:
 ## directly) — call this instead so the card style doesn't go stale.
 func set_slot_pressed_no_signal(p_pressed: bool) -> void:
 	set_pressed_no_signal(p_pressed)
-	_update_card_visual()
-
-
-## disabled has no overridable setter (it's a native BaseButton property) — go through this
-## so the card style stays in sync instead of freezing on whatever state it last rendered.
-func set_slot_disabled(p_disabled: bool) -> void:
-	disabled = p_disabled
 	_update_card_visual()
 
 
@@ -121,7 +163,7 @@ func _resolve_card_state() -> String:
 	var prefix := "equipped" if is_equipped else "empty"
 	if disabled:
 		return prefix + "_disabled"
-	if is_pressing and not is_dragging:
+	if _was_pressing:
 		return prefix + "_pressed"
 	if button_pressed:
 		return prefix + "_selected"

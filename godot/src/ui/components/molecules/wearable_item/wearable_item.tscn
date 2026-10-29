@@ -77,7 +77,7 @@ corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_newbadge"]
-bg_color = Color(1, 0.4549020, 0.2235294, 1)
+bg_color = Color(1, 0.1764706, 0.33333334, 1)
 corner_radius_top_left = 4
 corner_radius_top_right = 4
 corner_radius_bottom_right = 4

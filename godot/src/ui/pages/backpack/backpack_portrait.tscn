@@ -5,7 +5,7 @@
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_m8ron"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/layouts/safe_margin_container.gd" id="3_0ypv2"]
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/pages/backpack/avatar_preview.tscn" id="4_4kxkq"]
-[ext_resource type="PackedScene" path="res://src/ui/pages/backpack/backpack_wearables_content.tscn" id="41_content"]
+[ext_resource type="PackedScene" uid="uid://bd3qxtakkg2nv" path="res://src/ui/pages/backpack/backpack_wearables_content.tscn" id="41_content"]
 [ext_resource type="PackedScene" uid="uid://bmmj6rsmuc0rq" path="res://src/ui/components/organisms/draggable_bottom_sheet/draggable_bottom_sheet.tscn" id="40_sheet"]
 [ext_resource type="Texture2D" uid="uid://b6ydwqk4yhhcb" path="res://assets/ui/outfits.svg" id="4_8xgft"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/atoms/controls/loading_spinner/loading_spinner.tscn" id="4_saosw"]
@@ -80,7 +80,6 @@ theme = ExtResource("1_0pkvk")
 script = ExtResource("1_a5ql5")
 default_main_category = "body"
 metadata/mobile_preview_orientation = "portrait"
-metadata/_edit_vertical_guides_ = [-28.0, 608.0, -24.0]
 
 [node name="VBoxContainer2" type="VBoxContainer" parent="." unique_id=1104831289]
 layout_mode = 1

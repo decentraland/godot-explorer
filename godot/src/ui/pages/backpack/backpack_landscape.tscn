@@ -18,7 +18,7 @@
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/pages/backpack/avatar_preview.tscn" id="16_hsr60"]
 [ext_resource type="Shader" uid="uid://diwdvth6qfad7" path="res://src/ui/pages/backpack/detail_background.gdshader" id="17_p8a0d"]
 [ext_resource type="PackedScene" uid="uid://wuyfsip50bwb" path="res://src/ui/components/molecules/wearable_button/wearable_filter_button.tscn" id="18_6mqrd"]
-[ext_resource type="PackedScene" path="res://src/ui/components/molecules/wearable_category_slot/wearable_category_slot.tscn" id="90_catslot"]
+[ext_resource type="PackedScene" uid="uid://btgwmmseajpbw" path="res://src/ui/components/molecules/wearable_category_slot/wearable_category_slot.tscn" id="90_catslot"]
 [ext_resource type="PackedScene" uid="uid://cf4f5teas815x" path="res://src/ui/components/molecules/color_carrousel/color_carrousel.tscn" id="19_mndv0"]
 [ext_resource type="PackedScene" uid="uid://2n7qh48sy4i4" path="res://src/ui/pages/backpack/no_items_message.tscn" id="20_noitems"]
 [ext_resource type="PackedScene" uid="uid://cse8fx0ei572e" path="res://src/ui/components/organisms/emote_editor/emote_editor.tscn" id="23_jr70y"]
@@ -674,22 +674,6 @@ theme_override_constants/separation = 32
 visible = false
 custom_minimum_size = Vector2(7, 0)
 layout_mode = 2
-
-[node name="wearable_button_all" parent="RightEditorContainer/HBoxContainer/WearableEditor/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/MarginContainer_Bleed/ScrollContainer/MarginContainer_SlotFrame/HBoxContainer_SubCategories" unique_id=1744768372 instance=ExtResource("90_catslot")]
-layout_mode = 2
-theme_type_variation = &"SubcategoryButton"
-button_pressed = true
-action_mode = 1
-button_mask = 0
-button_group = SubResource("ButtonGroup_meiko")
-
-[node name="wearable_button_all_extras" parent="RightEditorContainer/HBoxContainer/WearableEditor/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/MarginContainer_Bleed/ScrollContainer/MarginContainer_SlotFrame/HBoxContainer_SubCategories" unique_id=1985057381 instance=ExtResource("90_catslot")]
-layout_mode = 2
-theme_type_variation = &"SubcategoryButton"
-action_mode = 1
-button_mask = 0
-button_group = SubResource("ButtonGroup_meiko")
-filter_category = 26
 
 [node name="wearable_button_body" parent="RightEditorContainer/HBoxContainer/WearableEditor/WearableEditor/MarginContainer/VBoxContainer/VBoxContainer_WearableSelector/SubcategoriesContainer/MarginContainer_Bleed/ScrollContainer/MarginContainer_SlotFrame/HBoxContainer_SubCategories" unique_id=1300828216 instance=ExtResource("90_catslot")]
 layout_mode = 2

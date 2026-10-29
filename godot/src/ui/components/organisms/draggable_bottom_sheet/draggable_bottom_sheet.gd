@@ -301,6 +301,11 @@ func _is_scrolling(pos: Vector2, gesture: DragGesture) -> bool:
 	if not scroll_rect.has_point(pos):
 		return false
 	var v_scroll := scroller.get_v_scroll()
+	if not scroll_reference:
+		# Profile's own %ScrollContent: unchanged from the original, DOWN-only threshold
+		# check. Gating the richer logic below behind an explicit scroll_reference keeps
+		# Profile's swipe-up-to-expand working exactly as before — it never sets one.
+		return gesture == DragGesture.DOWN and v_scroll > _DRAG_THRESHOLD
 	# The content actually moved during this touch — it was a scroll, not a sheet-drag,
 	# regardless of how close the release landed to either edge. A fixed "near the edge"
 	# threshold here misfired on a slow scroll that ended within it (e.g. browsing items one

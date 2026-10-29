@@ -167,7 +167,7 @@ func _async_load_remote_emotes(generation: int):
 
 	if not _only_collectibles:
 		_add_default_emotes()
-	_update_grid_equipped_state()
+	_update_grid_equipped_state(true)
 
 
 func _async_load_emotes():
@@ -229,7 +229,11 @@ func _update_empty_state():
 		_ios_marketplace_section.visible = not is_empty
 
 
-func _on_avatar_loaded():
+## reorder_grid defaults to true (a genuine avatar reload, same timing as the grid's own
+## build) but is passed false when this runs as a side effect of equipping/unequipping from
+## the grid itself (see _on_emote_item_equip_emote) — reordering mid-tap would move the item
+## out from under the finger that just equipped it.
+func _on_avatar_loaded(reorder_grid: bool = true):
 	_equipped_emote_urns = avatar.avatar_data.get_emotes()
 
 	for i in range(avatar_emote_items.size()):
@@ -241,7 +245,7 @@ func _on_avatar_loaded():
 		var emote_editor_item: EmoteEditorItem = avatar_emote_items[i]
 		emote_editor_item.async_load_from_urn(_equipped_emote_urns[i], i)  # Forget await
 
-	_update_grid_equipped_state()
+	_update_grid_equipped_state(reorder_grid)
 	_sync_grid_selection()
 
 
@@ -296,7 +300,7 @@ func _on_emote_item_equip_emote(equip: bool, _emote_urn: String, emote_item: Emo
 	avatar.avatar_data.set_emotes(emote_urns)
 	set_new_emotes.emit(emote_urns)
 	last_equipped_emote_urn = _emote_urn
-	_on_avatar_loaded()
+	_on_avatar_loaded(false)
 	emote_equipped.emit(true)
 
 
@@ -318,7 +322,12 @@ func _clear_slot(index: int) -> void:
 	_sync_grid_selection()
 
 
-func _update_grid_equipped_state():
+## reorder only runs when true — called on grid (re)build, where there's no in-progress tap to
+## disrupt (mirrors Wearables, which only sorts equipped-first when its grid is rebuilt too).
+## A live equip/unequip still updates set_equipped's badge/highlight immediately either way;
+## it just leaves the tapped item's position alone instead of moving it out from under the
+## finger that just equipped it.
+func _update_grid_equipped_state(reorder: bool = false):
 	var normalized_equipped: Array[String] = []
 	for urn in _equipped_emote_urns:
 		var normalized := _normalize_emote_urn(urn)
@@ -335,6 +344,8 @@ func _update_grid_equipped_state():
 				equipped_items.push_back(emote_item)
 			else:
 				unequipped_items.push_back(emote_item)
+	if not reorder:
+		return
 	var index := 0
 	for emote_item in equipped_items:
 		container_all_emotes.move_child(emote_item, index)

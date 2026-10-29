@@ -5,119 +5,19 @@
 [ext_resource type="FontFile" uid="uid://cvtogigxks73f" path="res://assets/themes/fonts/inter/Inter-Light.ttf" id="3_h3rxk"]
 [ext_resource type="StyleBox" uid="uid://djfwxvinn75me" path="res://src/ui/components/molecules/wearable_category_slot/style_subcategory_slot_outline_pressed.tres" id="4_outline_p"]
 [ext_resource type="LabelSettings" uid="uid://dk250l1uewhqw" path="res://src/ui/components/molecules/wearable_category_slot/label_settings_subcategory.tres" id="5_slot_lbl"]
-
-[sub_resource type="Shader" id="Shader_4b5mw"]
-code = "shader_type canvas_item;
-
-// Corner radius in actual screen pixels, independent of texture size or aspect ratio
-uniform float corner_radius_px : hint_range(0.0, 512.0, 1.0) = 24.0;
-
-uniform bool round_top_left = true;
-uniform bool round_top_right = true;
-uniform bool round_bottom_left = true;
-uniform bool round_bottom_right = true;
-
-varying vec2 local_pos;
-
-float rounded_box_sdf(vec2 p, vec2 half_size, float r_tl, float r_tr, float r_bl, float r_br) {
-	// Select radius based on quadrant (y increases downward in screen space)
-	float r = p.x > 0.0
-		? (p.y > 0.0 ? r_br : r_tr)
-		: (p.y > 0.0 ? r_bl : r_tl);
-	vec2 q = abs(p) - half_size + r;
-	return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
-}
-
-void vertex() {
-	local_pos = VERTEX;
-}
-
-void fragment() {
-	vec2 rect_size = vec2(
-		abs(dFdx(local_pos.x) / dFdx(UV.x)),
-		abs(dFdy(local_pos.y) / dFdy(UV.y))
-	);
-	vec2 center = rect_size * 0.5;
-
-	float r = corner_radius_px;
-	float dist = rounded_box_sdf(
-		local_pos - center,
-		center,
-		round_top_left     ? r : 0.0,
-		round_top_right    ? r : 0.0,
-		round_bottom_left  ? r : 0.0,
-		round_bottom_right ? r : 0.0
-	);
-
-	float aa = fwidth(dist);
-	// COLOR already holds modulate * texture(TEXTURE, UV); only mask the corners on its alpha — don't
-	// re-sample the texture (that squares it) and don't overwrite (that drops the parent modulate, so
-	// a dimmed read notification would stay solid).
-	COLOR.a *= 1.0 - smoothstep(-aa, aa, dist);
-}
-"
+[ext_resource type="Shader" uid="uid://hm1f1bm7ql4g" path="res://src/ui/components/molecules/button_profile/texture_rect_rounded_px.gdshader" id="6_rounded_px"]
+[ext_resource type="PackedScene" uid="uid://cqsb3na8hoq06" path="res://src/ui/components/atoms/controls/marquee_label/marquee_label.tscn" id="7_marquee"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_h3rxk"]
-shader = SubResource("Shader_4b5mw")
+shader = ExtResource("6_rounded_px")
 shader_parameter/corner_radius_px = 8.0
 shader_parameter/round_top_left = true
 shader_parameter/round_top_right = true
 shader_parameter/round_bottom_left = true
 shader_parameter/round_bottom_right = true
 
-[sub_resource type="Shader" id="Shader_h3rxk"]
-code = "shader_type canvas_item;
-
-// Corner radius in actual screen pixels, independent of texture size or aspect ratio
-uniform float corner_radius_px : hint_range(0.0, 512.0, 1.0) = 24.0;
-
-uniform bool round_top_left = true;
-uniform bool round_top_right = true;
-uniform bool round_bottom_left = true;
-uniform bool round_bottom_right = true;
-
-varying vec2 local_pos;
-
-float rounded_box_sdf(vec2 p, vec2 half_size, float r_tl, float r_tr, float r_bl, float r_br) {
-	// Select radius based on quadrant (y increases downward in screen space)
-	float r = p.x > 0.0
-		? (p.y > 0.0 ? r_br : r_tr)
-		: (p.y > 0.0 ? r_bl : r_tl);
-	vec2 q = abs(p) - half_size + r;
-	return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
-}
-
-void vertex() {
-	local_pos = VERTEX;
-}
-
-void fragment() {
-	vec2 rect_size = vec2(
-		abs(dFdx(local_pos.x) / dFdx(UV.x)),
-		abs(dFdy(local_pos.y) / dFdy(UV.y))
-	);
-	vec2 center = rect_size * 0.5;
-
-	float r = corner_radius_px;
-	float dist = rounded_box_sdf(
-		local_pos - center,
-		center,
-		round_top_left     ? r : 0.0,
-		round_top_right    ? r : 0.0,
-		round_bottom_left  ? r : 0.0,
-		round_bottom_right ? r : 0.0
-	);
-
-	float aa = fwidth(dist);
-	// COLOR already holds modulate * texture(TEXTURE, UV); only mask the corners on its alpha — don't
-	// re-sample the texture (that squares it) and don't overwrite (that drops the parent modulate, so
-	// a dimmed read notification would stay solid).
-	COLOR.a *= 1.0 - smoothstep(-aa, aa, dist);
-}
-"
-
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_hf1hm"]
-shader = SubResource("Shader_h3rxk")
+shader = ExtResource("6_rounded_px")
 shader_parameter/corner_radius_px = 8.0
 shader_parameter/round_top_left = true
 shader_parameter/round_top_right = true
@@ -232,14 +132,10 @@ label_settings = SubResource("LabelSettings_hf1hm")
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Label_Category" type="Label" parent="VBoxContainer" unique_id=2128735119]
+[node name="MarqueeLabel_Category" parent="VBoxContainer" unique_id=2128735119 instance=ExtResource("7_marquee")]
 unique_name_in_owner = true
-auto_translate_mode = 2
 custom_minimum_size = Vector2(0, 45)
 layout_mode = 2
-text = "All"
 label_settings = ExtResource("5_slot_lbl")
-horizontal_alignment = 1
-vertical_alignment = 1
 
 [connection signal="toggled" from="." to="." method="_on_toggled"]

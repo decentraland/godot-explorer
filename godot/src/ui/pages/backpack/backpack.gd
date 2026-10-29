@@ -91,6 +91,12 @@ var _wearable_is_new: Dictionary = {}
 # therefore writes _profile_urn_for(), never the grid key.
 var _wearable_token_urns: Dictionary = {}
 
+# Bumped per category each time _update_subcategory_equipped_slots() re-evaluates it; an
+# in-flight _async_set_slot_thumbnail() fetch compares its own snapshot against this on return
+# and bails if it no longer matches, so a stale fetch (replaced or cleared mid-await) can't
+# overwrite what the category equips to afterward.
+var _slot_thumbnail_epoch: Dictionary = {}
+
 @onready var avatar_preview: AvatarPreview = %AvatarPreview
 @onready var avatar_loading = %TextureProgressBar_AvatarLoading
 
@@ -451,8 +457,7 @@ func _update_visible_categories():
 			main_category_selected, []
 		)
 		var category_is_visible: bool = (
-			filter_categories != null
-			and filter_categories.has(category)
+			filter_categories.has(category)
 			and not (
 				main_category_selected == Wearables.Categories.ALL
 				and category == Wearables.Categories.ALL
@@ -642,11 +647,13 @@ func _show_wearables():
 		wearable_item.set_pressed_no_signal(is_wearable_pressed)
 		wearable_item.set_equiped(is_wearable_pressed)
 
-	# grid_container_wearables_list is SHRINK_CENTER (3 columns), so a 1- or 2-item category
-	# centers its single short row instead of starting at the left. Pad it out to a full row
-	# with untappable placeholders so the real cards land on the left like a full row would.
-	if filtered_data.size() == 1 or filtered_data.size() == 2:
-		for i in range(3 - filtered_data.size()):
+	# grid_container_wearables_list is SHRINK_CENTER, so a short final row (fewer items than
+	# columns) centers instead of starting at the left. Pad it out to a full row with
+	# untappable placeholders so the real cards land on the left like a full row would.
+	# columns is itself dynamic (_update_grid_columns, 2 on narrow/phone, 3 otherwise).
+	var columns: int = grid_container_wearables_list.columns
+	if filtered_data.size() > 0 and filtered_data.size() < columns:
+		for i in range(columns - filtered_data.size()):
 			var ghost_card := Control.new()
 			ghost_card.custom_minimum_size = Vector2(192, 192)
 			ghost_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -670,17 +677,22 @@ func _update_subcategory_equipped_slots() -> void:
 		equipped_by_category[Wearables.Categories.BODY_SHAPE] = body_shape_wearable
 
 	for wearable_filter_button: WearableCategorySlot in wearable_filter_buttons:
-		var wearable: DclItemEntityDefinition = equipped_by_category.get(
-			wearable_filter_button.get_category_name()
-		)
+		var category := wearable_filter_button.get_category_name()
+		var wearable: DclItemEntityDefinition = equipped_by_category.get(category)
+		_slot_thumbnail_epoch[category] = int(_slot_thumbnail_epoch.get(category, 0)) + 1
 		if wearable == null:
 			wearable_filter_button.clear_equipped_texture()
 		else:
-			_async_set_slot_thumbnail(wearable_filter_button, wearable)
+			_async_set_slot_thumbnail(
+				wearable_filter_button, wearable, category, _slot_thumbnail_epoch[category]
+			)
 
 
 func _async_set_slot_thumbnail(
-	wearable_filter_button: WearableCategorySlot, wearable: DclItemEntityDefinition
+	wearable_filter_button: WearableCategorySlot,
+	wearable: DclItemEntityDefinition,
+	category: String,
+	epoch: int
 ) -> void:
 	var dcl_content_mapping = wearable.get_content_mapping()
 	var wearable_thumbnail: String = wearable.get_thumbnail()
@@ -690,6 +702,14 @@ func _async_set_slot_thumbnail(
 		wearable_thumbnail, dcl_content_mapping
 	)
 	var res = await PromiseUtils.async_awaiter(promise)
+	# A later equip/unequip on this category (or the backpack closing) may have already
+	# superseded or invalidated this fetch while it was in flight — don't let a stale result
+	# overwrite what the slot should show now, and don't write into a freed node.
+	if (
+		_slot_thumbnail_epoch.get(category, 0) != epoch
+		or not is_instance_valid(wearable_filter_button)
+	):
+		return
 	if res is PromiseError:
 		printerr("Fetch texture error on ", wearable_thumbnail, ": ", res.get_error())
 		return
