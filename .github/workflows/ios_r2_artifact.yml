@@ -247,6 +247,8 @@ jobs:
 
           # Tar the export TREE (Xcode project + embedded libdclgodot.dylib + assets). The
           # deploy repo untars this and runs xcodebuild archive + manual sign.
+          # visionOS xcframeworks are copied by the exporter but unused by the iOS project.
+          rm -rf exports/libgodot.visionos.*.xcframework
           tar -czf export.tar.gz -C exports .
           echo "Export tarball size: $(du -h export.tar.gz | cut -f1)"
 
@@ -262,7 +264,17 @@ jobs:
           LATEST_KEY="ios/${SAFE_BRANCH}/latest/export.tar.gz"
 
           echo "📤 Uploading export to s3://${AWS_S3_BUCKET}/${KEY}"
-          aws s3 cp export.tar.gz "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+          # R2 occasionally rejects CompleteMultipartUpload with InvalidPart; a fresh attempt
+          # starts a new multipart upload, so retry up to 3 times.
+          for attempt in 1 2 3; do
+            aws s3 cp export.tar.gz "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" && break
+            if [ "$attempt" -eq 3 ]; then
+              echo "❌ export upload failed after 3 attempts"
+              exit 1
+            fi
+            echo "⚠️  upload attempt $attempt/3 failed — retrying in $((attempt * 5))s"
+            sleep $((attempt * 5))
+          done
           # Update the branch 'latest' pointer WITHOUT re-uploading the tarball. The managed
           # `aws s3 cp s3:// s3://` is unusable on R2 (it sends GetObjectTagging / x-amz-tagging-
           # directive, both NotImplemented), so use the low-level copy-object; fall back to a plain

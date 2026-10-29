@@ -23,6 +23,7 @@ const SCREEN_NOTIFIER_AABB: AABB = AABB(Vector3(-1.0, -0.3, -1.0), Vector3(2.0, 
 
 # Fallback nametag height when no meshes are loaded yet (meters above avatar origin).
 const DEFAULT_NAMETAG_HEIGHT := 1.9
+const MASK_MATERIAL = preload("res://assets/avatar/mask_material.tres")
 
 # Maps AvatarAnchorPointType (SDK proto, see avatar_attach.proto) to skeleton
 # bone names. Ids 0 (POSITION) and 1 (NAME_TAG) are non-skeletal and resolved
@@ -120,8 +121,6 @@ var emote_controller: AvatarEmoteController  # Rust binded. Don't change this va
 
 var voice_chat_audio_player: AudioStreamPlayer = null
 var voice_chat_audio_player_gen: AudioStreamGenerator = null
-
-var mask_material = preload("res://assets/avatar/mask_material.tres")
 
 # Signal-based wearable loader for threaded loading
 var wearable_loader: WearableLoader = null
@@ -1241,8 +1240,10 @@ func apply_facial_features_to_meshes(wearable_eyes, wearable_eyebrows, wearable_
 				child.hide()
 
 
-func apply_texture_and_mask(mesh: MeshInstance3D, textures: Array, color: Color, mask_color: Color):
-	var current_material = mask_material.duplicate()
+static func apply_texture_and_mask(
+	mesh: MeshInstance3D, textures: Array, color: Color, mask_color: Color
+):
+	var current_material = MASK_MATERIAL.duplicate()
 	current_material.set_shader_parameter(
 		"base_texture", Global.content_provider.get_texture_from_hash(textures[0])
 	)
@@ -1252,6 +1253,13 @@ func apply_texture_and_mask(mesh: MeshInstance3D, textures: Array, color: Color,
 	if textures.size() > 1:
 		current_material.set_shader_parameter(
 			"mask_texture", Global.content_provider.get_texture_from_hash(textures[1])
+		)
+	elif EyeMasks.BASE_EYE_MASKS.has(textures[0]):
+		current_material.set_shader_parameter(
+			"mask_texture", load(EyeMasks.BASE_EYE_MASKS[textures[0]])
+		)
+		current_material.set_shader_parameter(
+			"mask_replace", 1.0 if textures[0] in EyeMasks.BASE_EYE_MASKS_REPLACE else 0.0
 		)
 	else:
 		current_material.set_shader_parameter("mask_texture", null)
