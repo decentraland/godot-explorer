@@ -48,6 +48,7 @@ pub const RETRY_COOLDOWN: Duration = Duration::from_secs(2);
 pub const HANDSHAKE_RESPONSE_TIMEOUT: Duration = Duration::from_secs(5);
 /// Byte-boundary channel capacity (outbound frames / inbound messages).
 const LINK_CAPACITY: usize = 1024;
+const MAX_RETRY_COOLDOWN: Duration = Duration::from_secs(30);
 
 /// The connection's lifecycle — a single linear progression with two off-ramps (`Down` to
 /// rebuild, `Dead` to give up). The driver/link are live from `Connecting` through `Established`;
@@ -79,7 +80,7 @@ pub enum PulseRoomEvent {
     /// `TeleportRequest` (realm + position) — the mandatory first gameplay message.
     Established,
     /// A connection attempt ended before ever establishing (connect failure, pipe close,
-    /// handshake never acked). Caller counts it toward the session-fallback strike limit.
+    /// handshake never acked). Caller tracks outage diagnostics; retries remain owned by this room.
     AttemptFailed,
     /// Terminal disconnect — the room is parked in `Dead` and will not reconnect. Carries the
     /// server's reason so the caller can decide whether a rebuild is still warranted (e.g. a
@@ -98,8 +99,9 @@ pub struct PulseRoom {
     config: PulseTransportConfig,
     state: Connection,
     /// Whether the current driver attempt ever reached `Established` — a drop before that counts
-    /// as a session-fallback strike.
+    /// as a failed attempt.
     established_this_attempt: bool,
+    retry_cooldown: Duration,
 
     /// Signed handshake bytes arriving from the off-thread signing task.
     handshake_rx: mpsc::Receiver<Result<Vec<u8>, String>>,
@@ -139,6 +141,7 @@ impl PulseRoom {
                 respawn_at: Instant::now(),
             },
             established_this_attempt: false,
+            retry_cooldown: RETRY_COOLDOWN,
             handshake_rx,
             handshake_tx,
             processor_sender,
@@ -180,7 +183,7 @@ impl PulseRoom {
     ) -> Vec<PulseRoomEvent> {
         let mut events = Vec::new();
         self.drain_status(now, &mut events);
-        self.drive_connection(now, identity);
+        self.drive_connection(now, identity, &mut events);
         self.drain_inbound(now, &mut events);
         events
     }
@@ -416,7 +419,7 @@ impl PulseRoom {
         self.state = if retry {
             tracing::info!("pulse: transport dropped — reinitialising after cooldown");
             Connection::Down {
-                respawn_at: now + RETRY_COOLDOWN,
+                respawn_at: self.next_retry_at(now),
             }
         } else {
             tracing::warn!("pulse: terminal disconnect — not reconnecting");
@@ -432,6 +435,7 @@ impl PulseRoom {
         &mut self,
         now: Instant,
         identity: impl FnOnce() -> Option<(EphemeralAuthChain, i32)>,
+        events: &mut Vec<PulseRoomEvent>,
     ) {
         match &self.state {
             Connection::Dead | Connection::Established | Connection::Connecting => {}
@@ -497,22 +501,25 @@ impl PulseRoom {
                 }
                 Ok(Err(err)) => {
                     tracing::warn!("pulse: failed to build handshake, retrying: {err}");
+                    events.push(PulseRoomEvent::AttemptFailed);
                     self.state = Connection::Idle {
-                        retry_after: now + RETRY_COOLDOWN,
+                        retry_after: self.next_retry_at(now),
                     };
                 }
                 Err(mpsc::error::TryRecvError::Empty) => {}
                 Err(mpsc::error::TryRecvError::Disconnected) => {
+                    events.push(PulseRoomEvent::AttemptFailed);
                     self.state = Connection::Idle {
-                        retry_after: now + RETRY_COOLDOWN,
+                        retry_after: self.next_retry_at(now),
                     };
                 }
             },
             Connection::AwaitingResponse { timeout_at } => {
                 if now > *timeout_at {
                     tracing::warn!("pulse: handshake response timed out, retrying");
+                    events.push(PulseRoomEvent::AttemptFailed);
                     self.state = Connection::Idle {
-                        retry_after: now + RETRY_COOLDOWN,
+                        retry_after: self.next_retry_at(now),
                     };
                 }
             }
@@ -624,6 +631,12 @@ impl PulseRoom {
         );
     }
 
+    fn next_retry_at(&mut self, now: Instant) -> Instant {
+        let retry_at = now + self.retry_cooldown;
+        self.retry_cooldown = (self.retry_cooldown * 2).min(MAX_RETRY_COOLDOWN);
+        retry_at
+    }
+
     fn on_handshake_response(
         &mut self,
         now: Instant,
@@ -640,14 +653,16 @@ impl PulseRoom {
                 "pulse: handshake rejected, retrying: {}",
                 error.unwrap_or_default()
             );
+            events.push(PulseRoomEvent::AttemptFailed);
             self.state = Connection::Idle {
-                retry_after: now + RETRY_COOLDOWN,
+                retry_after: self.next_retry_at(now),
             };
             return;
         }
         tracing::info!("pulse: handshake accepted");
         self.state = Connection::Established;
         self.established_this_attempt = true;
+        self.retry_cooldown = RETRY_COOLDOWN;
         events.push(PulseRoomEvent::Established);
     }
 }
@@ -816,7 +831,7 @@ mod tests {
         };
 
         driver.inbound.try_send(handshake_response(false)).unwrap();
-        assert!(room.poll(now, || None).is_empty());
+        assert_eq!(room.poll(now, || None), vec![PulseRoomEvent::AttemptFailed]);
         match room.state {
             Connection::Idle { retry_after } => assert!(retry_after > now),
             _ => panic!("expected Idle"),
@@ -831,8 +846,53 @@ mod tests {
         room.state = Connection::AwaitingResponse {
             timeout_at: now - Duration::from_millis(1),
         };
-        room.poll(now, || None);
+        assert_eq!(room.poll(now, || None), vec![PulseRoomEvent::AttemptFailed]);
         assert!(matches!(room.state, Connection::Idle { .. }));
+    }
+
+    #[test]
+    fn repeated_handshake_failures_back_off_and_establishment_resets_delay() {
+        let (sender, _keep) = processor_channel();
+        let (mut room, _driver) = test_room(sender);
+        let mut now = Instant::now();
+        for seconds in [2, 4, 8, 16, 30, 30, 30] {
+            room.state = Connection::AwaitingResponse { timeout_at: now };
+            let mut events = Vec::new();
+            room.on_handshake_response(now, false, None, &mut events);
+            assert_eq!(events, vec![PulseRoomEvent::AttemptFailed]);
+            let Connection::Idle { retry_after } = room.state else {
+                panic!("expected retry")
+            };
+            assert_eq!(
+                retry_after.duration_since(now),
+                Duration::from_secs(seconds)
+            );
+            now = retry_after;
+        }
+        room.state = Connection::AwaitingResponse { timeout_at: now };
+        room.on_handshake_response(now, true, None, &mut Vec::new());
+        let mut events = Vec::new();
+        room.lost_connection(None, now, &mut events);
+        assert!(events.is_empty());
+        let Connection::Down { respawn_at } = room.state else {
+            panic!("expected reconnect")
+        };
+        assert_eq!(respawn_at.duration_since(now), RETRY_COOLDOWN);
+    }
+
+    #[test]
+    fn signing_failure_is_observable_and_backs_off() {
+        let (sender, _keep) = processor_channel();
+        let (mut room, _driver) = test_room(sender);
+        let now = Instant::now();
+        room.state = Connection::Signing;
+        room.handshake_tx
+            .try_send(Err("test signing failure".to_owned()))
+            .unwrap();
+        assert_eq!(room.poll(now, || None), vec![PulseRoomEvent::AttemptFailed]);
+        assert!(
+            matches!(room.state, Connection::Idle { retry_after } if retry_after == now + RETRY_COOLDOWN)
+        );
     }
 
     #[tokio::test]

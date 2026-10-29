@@ -161,6 +161,7 @@ func _on_button_send_pressed():
 		_close_write_mode()
 	else:
 		line_edit_command.grab_focus()
+		_sync_virtual_keyboard_text()
 
 
 func _on_button_write_pressed():
@@ -566,17 +567,22 @@ func _on_autocomplete_item_pressed(avatar_name: String) -> void:
 	line_edit_command.text = new_text
 	line_edit_command.caret_column = new_caret
 	button_send.disabled = new_text.is_empty()
-	# Sync the OS keyboard/IME text buffer with the new content, otherwise
-	# backspace won't work on programmatically inserted text because the OS
-	# still holds the old buffer. This is what a tap on the LineEdit triggers.
-	if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD):
-		DisplayServer.virtual_keyboard_show(
-			new_text,
-			Rect2i(),
-			DisplayServer.KEYBOARD_TYPE_DEFAULT,
-			line_edit_command.max_length,
-			new_caret,
-			new_caret
-		)
+	_sync_virtual_keyboard_text()
+
+
+# The OS keyboard edits its own copy of the text (the same call a tap on the LineEdit makes);
+# without this, its next keystroke rewrites the LineEdit from that stale copy.
+func _sync_virtual_keyboard_text() -> void:
+	if not DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD):
+		return
+	if not line_edit_command.is_editing():
+		return
+	DisplayServer.virtual_keyboard_show(
+		line_edit_command.text,
+		line_edit_command.get_global_rect(),
+		DisplayServer.KEYBOARD_TYPE_DEFAULT,
+		line_edit_command.max_length,
+		line_edit_command.caret_column
+	)
 
 # endregion
