@@ -79,26 +79,32 @@ update them on purpose, not through a `^` range.
 
 ## Visual snapshots
 
-`.github/workflows/rn_visual.yml` renders every screen of the gallery (`src/gallery/`, one id per Figma frame or
-state) with the no-Godot debug app on an x86_64 Android emulator, then compares the screenshots with
-`rn/visual-baselines/<id>.png`. A PR gets one sticky comment with the changed, new and not-captured screens and
-the `rn-visual-report` artifact (baseline | new | diff images). It reports only: a pixel change does not fail the check.
+Every screen of the gallery (`src/gallery/`, one id per Figma frame or state) is also a Storybook story: the
+`Screens/<group>` stories in `src/gallery/stories/` are generated from the registry, so a screen registered once
+shows up in both. `.github/workflows/rn_visual.yml` runs the no-Godot debug app on an x86_64 Android emulator with
+Storybook enabled, opens each story by deep link, takes a screenshot with Maestro and compares it with
+`rn/visual-baselines/<id>.png` using reg-cli. A PR gets one sticky comment with the changed, new and not-captured
+screens and the `rn-visual-report` artifact (open `index.html`: baseline | new | diff). It reports only: a pixel
+change does not fail the check.
 
 - **A screen changed on purpose**: add the `update-visual-baselines` label to the PR. The job commits the new
   screenshots to the branch and removes the label; review the PNGs in the diff. On `2.x` a bot PR does the same.
 - **A new screen**: register it in the gallery (`src/gallery/`) and run `npm run gallery:ids`; it shows up as "new".
 - **A screen that is not stable** (animation, timer): give its registry entry a `settleMs`, or list its id in
   `tools/ui-spec/visual-ignore.json` (`{"<id>": "reason"}`).
-- **Locally**, on an emulator or phone (`ANDROID_SERIAL` picks the device): start Metro (`npm start`; the app reads
-  it from `localhost:8081`), install the debug build (`DCL_NO_GODOT=1`, then `cd android && ./gradlew
-  :app:assembleDebug -PdclNoGodot=true`), then `tools/ui-spec/rn_capture.sh --ids <id>[,<id>] --out /tmp/shots
-  --normalize`. `--normalize` pins 720x1600 at 320 dpi, turns animations off and fixes the status bar clock so the
-  captures repeat; it restores the device on exit. `python3 tools/ui-spec/visual_diff.py compare --new /tmp/shots`
-  prints the report.
+- **Locally**, on an emulator or phone (`ANDROID_SERIAL` picks the device; needs [Maestro](https://maestro.mobile.dev)):
+  install the debug build (`DCL_NO_GODOT=1`, then `cd android && ./gradlew :app:assembleDebug -PdclNoGodot=true`) and
+  run `tools/ui-spec/ci_capture.sh --ids /tmp/shots <id>[,<id>]` (or `ci_capture.sh <source> /tmp/shots`). It starts
+  Metro with `EXPO_PUBLIC_STORYBOOK_ENABLED=true` (without it Storybook is not in the bundle), pins the device (720x1600
+  at 320 dpi, animations off, fixed status bar clock; `tools/ui-spec/device_normalize.sh`) and writes one PNG per id.
+  `tools/ui-spec/rn_capture.sh` is the same capture through adb alone, with no Storybook or Maestro.
+- **Compare locally**: `python3 tools/ui-spec/visual_report.py prepare --new /tmp/shots`, then `cd rn && npx reg-cli
+  ../visual-report/actual ../visual-report/expected ../visual-report/diff -R ../visual-report/index.html -J
+  ../visual-report/reg.json -M 0.06 -T 0.001 -I`, then `visual_report.py summary`.
 
-`tools/ui-spec/ci_capture.sh` is the wrapper CI runs on the booted emulator (Metro, install, capture, recompress the PNGs
-losslessly so the baselines stay small). The runs are debug builds, and debug builds never report to Sentry
-(`src/sentry.ts`), so captures leave no events behind.
+Storybook's own on-device browser needs `react-native-reanimated` and `react-native-gesture-handler`, which the app
+does not ship; the stories render alone (`onDeviceUI: false`), and `GalleryList` is the in-app index. The runs are
+debug builds, and debug builds never report to Sentry (`src/sentry.ts`), so captures leave no events behind.
 
 ## The full app (with Godot)
 

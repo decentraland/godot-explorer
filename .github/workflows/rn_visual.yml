@@ -1,7 +1,7 @@
 name: 📸 RN visual snapshots
 
-# Screenshots of every screen in the RN gallery (rn/src/gallery), rendered by the no-Godot debug app on an
-# Android emulator, compared with rn/visual-baselines. Report only: a pixel change is posted on the PR, it
+# Screenshots of every screen in the RN gallery (Storybook stories generated from rn/src/gallery), taken by Maestro
+# on an Android emulator running the no-Godot debug app, compared with rn/visual-baselines by reg-cli. Report only: a pixel change is posted on the PR, it
 # does not fail the check. To refresh the baselines on a PR, add the `update-visual-baselines` label: the
 # `baselines` job commits the new screenshots to the branch and removes the label. On 2.x the same job opens
 # a bot PR instead.
@@ -95,8 +95,21 @@ jobs:
           name: rn-debug-apk
           path: apk
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
       - name: Python imaging for the capture post-processing
         run: sudo apt-get install -y --no-install-recommends python3-pil
+
+      - name: Install Maestro
+        env:
+          MAESTRO_VERSION: 2.8.0
+        run: |
+          curl -fsSL -o maestro.zip "https://github.com/mobile-dev-inc/Maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          unzip -q maestro.zip -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/maestro/bin" >> "$GITHUB_PATH"
 
       - name: Allow the emulator to use KVM
         run: |
@@ -148,7 +161,7 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - run: sudo apt-get install -y --no-install-recommends python3-pil
+      - uses: ./.github/actions/rn-npm-ci
 
       - uses: actions/download-artifact@v4
         with:
@@ -156,8 +169,12 @@ jobs:
           merge-multiple: true
           path: shots
 
+      # reg-cli exits 0 when screens changed: this check only reports.
       - name: Compare
-        run: python3 tools/ui-spec/visual_diff.py compare --new shots --out visual-report
+        run: |
+          python3 tools/ui-spec/visual_report.py prepare --new shots
+          cd rn && npx reg-cli ../visual-report/actual ../visual-report/expected ../visual-report/diff \
+            -R ../visual-report/index.html -J ../visual-report/reg.json -M 0.06 -T 0.001 -I
 
       - name: Report
         if: always()
@@ -165,8 +182,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          [ -f visual-report/report.md ] || exit 0
-          echo "Run: $RUN_URL" >> visual-report/report.md
+          [ -f visual-report/reg.json ] || exit 0
+          rc=0
+          python3 tools/ui-spec/visual_report.py summary --run-url "$RUN_URL" || rc=$?
           cat visual-report/report.md >> "$GITHUB_STEP_SUMMARY"
           # A fork's token is read-only: the summary above is the report there.
           if [ "${{ github.event_name }}" = pull_request ] && \
@@ -180,6 +198,7 @@ jobs:
               gh api "repos/${{ github.repository }}/issues/$PR/comments" -F body=@visual-report/report.md >/dev/null
             fi
           fi
+          exit "$rc"
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -219,7 +238,7 @@ jobs:
           path: shots
 
       - name: Replace rn/visual-baselines
-        run: python3 tools/ui-spec/visual_diff.py promote --new shots
+        run: python3 tools/ui-spec/visual_report.py promote --new shots
 
       - name: Commit
         env:
