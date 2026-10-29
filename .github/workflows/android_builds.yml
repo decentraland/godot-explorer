@@ -70,19 +70,13 @@ concurrency:
 jobs:
   build:
     name: Build Android
-    runs-on: warp-ubuntu-latest-x64-4x
+    runs-on: ubuntu-latest
     timeout-minutes: 35
     container:
       # image generated at: https://github.com/decentraland/godot-docker-builder
       image: quay.io/decentraland/dcl-godot-android-builder:394c180223d3e2ad410d191147e9e2ad39884c0b
       volumes:
         - /home/user/.cache/devgodot:/github/home/.cache/devgodot
-      # WarpBuild's cache action authenticates via this token, which exists on the runner
-      # host but is NOT propagated into the container unless forwarded explicitly. Without
-      # it the cache step is a silent no-op ("Authentication token is invalid"). See:
-      # https://github.com/WarpBuilds/cache#running-inside-a-container
-      env:
-        WARPBUILD_RUNNER_VERIFICATION_TOKEN: ${{ env.WARPBUILD_RUNNER_VERIFICATION_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -150,6 +144,7 @@ jobs:
         with:
           cargo-key: ${{ steps.cache.outputs.cargo-key }}
           rust-key: ${{ steps.cache.outputs.rust-key }}
+          rust-hit: ${{ steps.cache.outputs.rust-hit }}
 
       - name: Export Android APK
         run: |

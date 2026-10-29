@@ -621,6 +621,11 @@ jobs:
           INPROG=0
           have=false
           while true; do
+            # PRs have no push-built APK (runner.yml skips Android on pull_request).
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              echo "ℹ️  PR build: no push APK is produced → building here."
+              break
+            fi
             if have_apk; then echo "✅ APK is available in R2."; have=true; break; fi
             CONCLUSION=$(gh run list --repo "${{ github.repository }}" --workflow runner.yml \
               --limit 100 --json headSha,conclusion \

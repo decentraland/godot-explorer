@@ -181,6 +181,7 @@ jobs:
         with:
           cargo-key: ${{ steps.cache.outputs.cargo-key }}
           rust-key: ${{ steps.cache.outputs.rust-key }}
+          rust-hit: ${{ steps.cache.outputs.rust-hit }}
 
       - name: Capture build version
         id: buildver
