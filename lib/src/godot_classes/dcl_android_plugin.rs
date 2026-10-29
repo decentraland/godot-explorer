@@ -27,6 +27,10 @@ pub struct DclAndroidPlugin {
 impl DclAndroidPlugin {
     /// Try to get the dcl-godot-android singleton
     fn try_get_singleton() -> Option<Gd<Object>> {
+        // get_singleton logs an engine error when it's missing (every iOS/desktop call).
+        if !Self::is_available() {
+            return None;
+        }
         let singleton =
             godot::classes::Engine::singleton().get_singleton(&StringName::from(SINGLETON_NAME))?;
         Some(singleton.cast::<Object>())
@@ -384,7 +388,9 @@ impl DclAndroidPlugin {
             "logFirebaseEvent",
             &[event_name.to_variant(), params_json.to_variant()],
         );
-        result.try_to::<bool>().unwrap_or(false)
+        // The Kotlin `Boolean` arrives as an INT Variant (see has_notification_permission);
+        // `try_to::<bool>()` always failed, so one-shot events never saved their flag.
+        result.booleanize()
     }
 
     /// Fetch install referrer data from Google Play.
