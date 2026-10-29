@@ -249,6 +249,7 @@ static func load_bold_font(font_index: int) -> Font:
 ## which Godot can't draw) and CJK as MSDF like the faces, so outlines draw as a ring. The CJK
 ## copy shares the chat font's data; the engine fork fixes its overlapping contours.
 static func _with_glyph_fallbacks(font: Font, bold := false) -> Font:
+	GlyphDiskCache.track(font, font.resource_path.get_file())
 	if font.fallbacks.is_empty():
 		if _glyph_fallbacks.is_empty():
 			var emoji := FontVariation.new()
@@ -258,6 +259,7 @@ static func _with_glyph_fallbacks(font: Font, bold := false) -> Font:
 			cjk.multichannel_signed_distance_field = true
 			cjk.msdf_pixel_range = int(MSDF_PIXEL_RANGE)
 			cjk.msdf_size = int(MSDF_SIZE)
+			GlyphDiskCache.track(cjk, "NotoSansSC-msdf")
 			_glyph_fallbacks = [emoji, _cjk_weight(cjk, 400)]
 			_glyph_fallbacks_bold = [emoji, _cjk_weight(cjk, 700)]
 		font.fallbacks = _glyph_fallbacks_bold if bold else _glyph_fallbacks
