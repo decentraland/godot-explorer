@@ -6,6 +6,10 @@ extends ScrollContainer
 		label_settings = value
 		if is_node_ready():
 			label.label_settings = value
+## When the text fits (no marquee needed), idle at a centered position instead of the left
+## edge. Defaults to false — Profile's own usage (a wide name field) never sets this — so
+## Profile's idle position stays exactly as it always was.
+@export var center_when_idle: bool = false
 
 var is_marquee_active: bool = false
 var marquee_tween: Tween
@@ -59,7 +63,7 @@ func check_and_start_marquee() -> void:
 	if is_text_overflowing():
 		start_marquee_effect()
 	else:
-		label.position.x = 0
+		label.position.x = _idle_position_x()
 
 
 func stop_marquee_effect() -> void:
@@ -72,4 +76,10 @@ func stop_marquee_effect() -> void:
 		marquee_tween.kill()
 		marquee_tween = null
 
-	label.position.x = 0
+	label.position.x = _idle_position_x()
+
+
+func _idle_position_x() -> float:
+	if center_when_idle:
+		return maxf((size.x - label.size.x) / 2.0, 0.0)
+	return 0.0

@@ -137,5 +137,6 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 45)
 layout_mode = 2
 label_settings = ExtResource("5_slot_lbl")
+center_when_idle = true
 
 [connection signal="toggled" from="." to="." method="_on_toggled"]

@@ -647,10 +647,12 @@ func _show_wearables():
 		wearable_item.set_pressed_no_signal(is_wearable_pressed)
 		wearable_item.set_equiped(is_wearable_pressed)
 
-	# grid_container_wearables_list is SHRINK_CENTER, so a short final row (fewer items than
-	# columns) centers instead of starting at the left. Pad it out to a full row with
-	# untappable placeholders so the real cards land on the left like a full row would.
-	# columns is itself dynamic (_update_grid_columns, 2 on narrow/phone, 3 otherwise).
+	# grid_container_wearables_list is SHRINK_CENTER, so when the whole category fits in one
+	# short row (fewer items than columns) that row centers instead of starting at the left —
+	# a full first row already fixes the grid's width, so only this single-row case needs
+	# padding. Pad it out to a full row with untappable placeholders so the real cards land on
+	# the left like a full row would. columns is itself dynamic (_update_grid_columns, 2 on
+	# narrow/phone, 3 otherwise).
 	var columns: int = grid_container_wearables_list.columns
 	if filtered_data.size() > 0 and filtered_data.size() < columns:
 		for i in range(columns - filtered_data.size()):

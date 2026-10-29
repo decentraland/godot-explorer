@@ -66,23 +66,20 @@ func _apply_category_text(display_text: String) -> void:
 ## give us; _on_visibility_changed below re-checks for real once the tab is actually selected.
 func _async_update_category_label_layout() -> void:
 	await get_tree().process_frame
+	if not is_instance_valid(self):
+		return
 	_update_category_label_layout()
 
 
 ## es/pt_BR category names (e.g. "Sobre la cabeza" for "Top Head") can run well past what the
-## slot fits — marquee-scroll it instead of letting it clip. For the common case where it does
-## fit, MarqueeLabel's own idle position is left-aligned (built for a wider name field in
-## Profile); center it here instead so a short name still looks like the single centered word
-## the old plain Label rendered.
+## slot fits — marquee-scroll it instead of letting it clip (MarqueeLabel's center_when_idle
+## is on for this instance, so the common case where it fits still looks like the single
+## centered word the old plain Label rendered).
 func _update_category_label_layout() -> void:
 	if not is_visible_in_tree():
 		return
 	marquee_label_category.stop_marquee_effect()
-	if marquee_label_category.is_text_overflowing():
-		marquee_label_category.start_marquee_effect()
-	else:
-		var label: Label = marquee_label_category.label
-		label.position.x = maxf((marquee_label_category.size.x - label.size.x) / 2.0, 0.0)
+	marquee_label_category.check_and_start_marquee()
 
 
 ## Re-measure when this slot's own tab is selected (backpack.gd flips .visible directly, one
@@ -93,6 +90,11 @@ func _update_category_label_layout() -> void:
 func _on_visibility_changed() -> void:
 	if is_visible_in_tree():
 		_async_update_category_label_layout()
+	else:
+		# Most of these slots are hidden most of the time (only the selected main-category
+		# tab's subcategories are visible) — an active marquee's looping tween would otherwise
+		# keep running for the rest of the session on every tab the player has ever visited.
+		marquee_label_category.stop_marquee_effect()
 
 
 func _ready() -> void:
@@ -100,6 +102,14 @@ func _ready() -> void:
 	flat = true
 	visibility_changed.connect(_on_visibility_changed)
 	_update_card_visual()
+
+
+## If the app backgrounds with a finger still down on this slot, no release event follows —
+## the card would stay visually "pressed" until the next unrelated touch anywhere clears it.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and _was_pressing:
+		_was_pressing = false
+		_update_card_visual()
 
 
 ## CustomTouchButton only learns a touch was a drag (vs. a tap) at release — polling it
@@ -117,7 +127,13 @@ func _on_gui_input(event: InputEvent) -> void:
 			_was_pressing = false
 			_update_card_visual()
 	elif event is InputEventScreenDrag and _was_pressing:
-		if press_position.distance_to(event.position) > CustomTouchButton.DRAG_THRESHOLD:
+		# press_position (set by CustomTouchButton) is in global coordinates; event.position on
+		# a gui_input event is local to this control — comparing them directly made the very
+		# first drag event always exceed DRAG_THRESHOLD, clearing _was_pressing immediately.
+		if (
+			press_position.distance_to(get_global_mouse_position())
+			> CustomTouchButton.DRAG_THRESHOLD
+		):
 			_was_pressing = false
 			_update_card_visual()
 
