@@ -3,8 +3,7 @@
 
   python3 tools/ui-spec/visual_report.py optimize DIR
   python3 tools/ui-spec/visual_report.py prepare --new DIR [--baseline rn/visual-baselines] [--report visual-report]
-  python3 tools/ui-spec/visual_report.py summary [--report visual-report] [--run-url URL]
-  python3 tools/ui-spec/visual_report.py promote --new DIR [--baseline rn/visual-baselines]
+  python3 tools/ui-spec/visual_report.py summary [--report visual-report] [--run-url URL] [--board-url URL]
 
 `optimize` recompresses every PNG in DIR losslessly (opaque RGB, no metadata): baselines stay as small as plain
 git allows without touching a pixel.
@@ -12,7 +11,6 @@ git allows without touching a pixel.
 writes REPORT/index.html, REPORT/reg.json and REPORT/diff.
 `summary` turns reg.json into REPORT/report.md (the PR comment). Exit 1 only when a registered screen was not
 captured: that is an infrastructure problem, a pixel change is only reported.
-`promote` replaces the baselines with the registered screens of DIR.
 """
 import argparse, json, os, shutil, sys
 
@@ -63,20 +61,33 @@ def prepare(new_dir, baseline_dir, report_dir):
     copy_pngs(baseline_dir, os.path.join(report_dir, "expected"), skip)
 
 
-def summary(report_dir, run_url):
+def build_summary(report_dir):
+    """What the board stores for a run: the ids of the changed, new and not-captured screens and the counts."""
     reg = json.load(open(os.path.join(report_dir, "reg.json")))
     skip = ignored_ids()
     captured = {name[: -len(".png")] for name in reg["actualItems"]}
-    missing = [i for i in registered_ids() if i not in skip and i not in captured]
     strip = lambda names: [n[: -len(".png")] for n in names]
-    changed, new = strip(reg["failedItems"]), strip(reg["newItems"])
+    return {
+        "changed": strip(reg["failedItems"]),
+        "new": strip(reg["newItems"]),
+        "missing": [i for i in registered_ids() if i not in skip and i not in captured],
+        "passed": len(reg["passedItems"]),
+        "ignored": len(skip),
+        "captured": len(captured),
+    }
+
+
+def summary(report_dir, run_url, board_url=""):
+    data = build_summary(report_dir)
+    changed, new, missing, skip = data["changed"], data["new"], data["missing"], ignored_ids()
+    captured, passed = range(data["captured"]), range(data["passed"])
     lines = [
         MARKER,
         "### RN visual snapshots",
         "",
         f"{len(captured)} screens: **{len(changed)} changed**, {len(new)} new, {len(missing)} not captured, "
-        f"{len(reg['passedItems'])} unchanged" + (f", {len(skip)} ignored" if skip else "")
-        + ". Report only: this check does not block the PR.",
+        f"{len(passed)} unchanged" + (f", {len(skip)} ignored" if skip else "")
+        + ". The review is set in the board.",
     ]
     if changed:
         lines += ["", "**Changed:** " + ", ".join(f"`{i}`" for i in changed[:LISTED_MAX])]
@@ -86,25 +97,16 @@ def summary(report_dir, run_url):
         lines += ["", f"**New (no baseline yet):** {len(new)} screens."]
     if missing:
         lines += ["", "**Not captured:** " + ", ".join(f"`{i}`" for i in missing[:LISTED_MAX])]
-    lines += ["", "Open `index.html` of the `rn-visual-report` artifact for the baseline | new | diff images."]
+    if board_url:
+        lines += ["", f"Review the images and approve or reject the changes in the [board]({board_url})."]
+    else:
+        lines += ["", "Open `index.html` of the `rn-visual-report` artifact for the baseline | new | diff images."]
     if run_url:
         lines.append(f"Run: {run_url}")
     markdown = "\n".join(lines) + "\n"
     open(os.path.join(report_dir, "report.md"), "w").write(markdown)
     print(markdown)
     return 1 if missing else 0
-
-
-def promote(new_dir, baseline_dir):
-    wanted = {i + ".png" for i in registered_ids()}
-    if os.path.isdir(baseline_dir):
-        shutil.rmtree(baseline_dir)
-    for path in png_files(new_dir):
-        rel = os.path.relpath(path, new_dir)
-        if rel in wanted:
-            dest = os.path.join(baseline_dir, rel)
-            os.makedirs(os.path.dirname(dest), exist_ok=True)
-            shutil.copyfile(path, dest)
 
 
 def main():
@@ -118,9 +120,7 @@ def main():
     s = sub.add_parser("summary")
     s.add_argument("--report", default="visual-report")
     s.add_argument("--run-url", default="")
-    r = sub.add_parser("promote")
-    r.add_argument("--new", required=True)
-    r.add_argument("--baseline", default=DEFAULT_BASELINE)
+    s.add_argument("--board-url", default="")
     args = parser.parse_args()
 
     if args.cmd == "optimize":
@@ -129,9 +129,7 @@ def main():
     elif args.cmd == "prepare":
         prepare(args.new, args.baseline, args.report)
     elif args.cmd == "summary":
-        sys.exit(summary(args.report, args.run_url))
-    elif args.cmd == "promote":
-        promote(args.new, args.baseline)
+        sys.exit(summary(args.report, args.run_url, args.board_url))
 
 
 if __name__ == "__main__":

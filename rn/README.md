@@ -82,14 +82,18 @@ update them on purpose, not through a `^` range.
 Every screen of the gallery (`src/gallery/`, one id per Figma frame or state) is also a Storybook story: the
 `Screens/<group>` stories in `src/gallery/stories/` are generated from the registry, so a screen registered once
 shows up in both. `.github/workflows/rn_visual.yml` runs the no-Godot debug app on an x86_64 Android emulator with
-Storybook enabled, opens each story by deep link, takes a screenshot with Maestro and compares it with
-`rn/visual-baselines/<id>.png` using reg-cli. A PR gets one sticky comment with the changed, new and not-captured
-screens and the `rn-visual-report` artifact (open `index.html`: baseline | new | diff). It reports only: a pixel
-change does not fail the check.
+Storybook enabled, opens each story by deep link and takes a screenshot with Maestro. A PR's screenshots are compared
+by reg-cli with the **official** screenshots of its base branch and sent, with the reg-cli report, to the mobile board
+(Cloudflare R2). The sticky PR comment links to the run there.
 
-- **A screen changed on purpose**: add the `update-visual-baselines` label to the PR. The job commits the new
-  screenshots to the branch and removes the label; review the PNGs in the diff. On `2.x` a bot PR does the same.
-- **A new screen**: register it in the gallery (`src/gallery/`) and run `npm run gallery:ids`; it shows up as "new".
+- **Review**: in the board's *Visual snapshots* tab, approve or reject the changed and new screens. The decision is
+  mirrored on the PR as the commit status `RN visual snapshots` (pending while screens await review, success when
+  approved or when nothing changed, failure when rejected, error when a screen was not captured). Add it as a required
+  check in branch protection to gate merges on it.
+- **Official screenshots**: the accepted set of `2.x`, `main` and `release*`, kept for good. A push to one of those
+  branches publishes its capture as the new official set. PR runs and their images are deleted after 14 days.
+  Until the first push to a base branch has published one, PRs compare with `rn/visual-baselines` in git.
+- **A new screen**: register it in the gallery (`src/gallery/`) and run `npm run gallery:ids`; it shows up as "new" in the review.
 - **A screen that is not stable** (animation, timer): give its registry entry a `settleMs`, or list its id in
   `tools/ui-spec/visual-ignore.json` (`{"<id>": "reason"}`).
 - **Locally**, on an emulator or phone (`ANDROID_SERIAL` picks the device; needs [Maestro](https://maestro.mobile.dev)):
@@ -98,7 +102,9 @@ change does not fail the check.
   Metro with `EXPO_PUBLIC_STORYBOOK_ENABLED=true` (without it Storybook is not in the bundle), pins the device (720x1600
   at 320 dpi, animations off, fixed status bar clock; `tools/ui-spec/device_normalize.sh`) and writes one PNG per id.
   `tools/ui-spec/rn_capture.sh` is the same capture through adb alone, with no Storybook or Maestro.
-- **Compare locally**: `python3 tools/ui-spec/visual_report.py prepare --new /tmp/shots`, then `cd rn && npx reg-cli
+- **Compare locally**: put the expected screenshots in a folder (`tools/ui-spec/board_visual.py fetch-official --ref
+  2.x --out /tmp/expected` with `BUILD_REPORTER_TOKEN` and `BOARD_EVENTS_URL` set), then `python3
+  tools/ui-spec/visual_report.py prepare --new /tmp/shots --baseline /tmp/expected`, `cd rn && npx reg-cli
   ../visual-report/actual ../visual-report/expected ../visual-report/diff -R ../visual-report/index.html -J
   ../visual-report/reg.json -M 0.06 -T 0.001 -I`, then `visual_report.py summary`.
 

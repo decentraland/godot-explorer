@@ -1,20 +1,19 @@
 name: 📸 RN visual snapshots
 
 # Screenshots of every screen in the RN gallery (Storybook stories generated from rn/src/gallery), taken by Maestro
-# on an Android emulator running the no-Godot debug app, compared with rn/visual-baselines by reg-cli. Report only: a pixel change is posted on the PR, it
-# does not fail the check. To refresh the baselines on a PR, add the `update-visual-baselines` label: the
-# `baselines` job commits the new screenshots to the branch and removes the label. On 2.x the same job opens
-# a bot PR instead.
+# on an Android emulator running the no-Godot debug app. A PR's capture is compared by reg-cli with the official
+# screenshots of its base branch and sent to the mobile board (R2), where the changes are reviewed: the review is
+# mirrored to the PR as the commit status "RN visual snapshots". A push to an official branch replaces its set.
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
+    types: [opened, synchronize, reopened]
     paths:
       - 'rn/**'
       - 'tools/ui-spec/**'
       - '.github/workflows/rn_visual.yml'
       - '.github/actions/rn-npm-ci/**'
   push:
-    branches: [2.x]
+    branches: [2.x, main, release, 'release-*']
     paths:
       - 'rn/**'
       - 'tools/ui-spec/**'
@@ -31,8 +30,6 @@ concurrency:
 jobs:
   apk:
     name: Debug APK (no Godot)
-    # Adding some other label must not re-run the whole pipeline.
-    if: ${{ github.event.action != 'labeled' || github.event.label.name == 'update-visual-baselines' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -150,14 +147,18 @@ jobs:
           retention-days: 3
 
   compare:
-    name: Compare with the baselines
+    name: Compare with the official screenshots
     needs: capture
-    if: ${{ !cancelled() && needs.capture.result != 'skipped' && github.event_name != 'workflow_dispatch' }}
+    if: ${{ !cancelled() && needs.capture.result != 'skipped' && github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     permissions:
       contents: read
       pull-requests: write
+    env:
+      BUILD_REPORTER_TOKEN: ${{ secrets.BUILD_REPORTER_TOKEN }}
+      BOARD_EVENTS_URL: ${{ vars.BOARD_EVENTS_URL }}
+      BOARD_URL: https://mobile-board.dclregenesislabs.xyz
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -169,26 +170,54 @@ jobs:
           merge-multiple: true
           path: shots
 
-      # reg-cli exits 0 when screens changed: this check only reports.
+      # The board's official set of the base branch. Until the first push to a base branch has published one,
+      # the screenshots in git (rn/visual-baselines) stand in.
+      - name: Official screenshots of the base branch
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          mkdir -p baseline
+          if ! python3 tools/ui-spec/board_visual.py fetch-official --ref "$BASE_REF" --out baseline; then
+            echo "No official screenshots for $BASE_REF: comparing with rn/visual-baselines."
+            [ ! -d rn/visual-baselines ] || cp -R rn/visual-baselines/. baseline/
+          fi
+
+      # reg-cli exits 0 when screens changed: the review decides, not this step.
       - name: Compare
         run: |
-          python3 tools/ui-spec/visual_report.py prepare --new shots
+          python3 tools/ui-spec/visual_report.py prepare --new shots --baseline baseline
           cd rn && npx reg-cli ../visual-report/actual ../visual-report/expected ../visual-report/diff \
             -R ../visual-report/index.html -J ../visual-report/reg.json -M 0.06 -T 0.001 -I
+
+      - name: Send the report to the board
+        id: board
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          [ -f visual-report/reg.json ] || exit 0
+          RUN=$(python3 tools/ui-spec/board_visual.py open-run --kind pr --sha "$HEAD_SHA" --ref "$HEAD_REF" --base-ref "$BASE_REF" --pr "$PR" | tail -n 1)
+          echo "$RUN" | grep -Eq '^[0-9]+-[0-9]+$' || exit 0
+          python3 tools/ui-spec/board_visual.py upload-report --run "$RUN" --report visual-report
+          python3 tools/ui-spec/board_visual.py complete-run --run "$RUN" --report visual-report
+          echo "run=$RUN" >> "$GITHUB_OUTPUT"
 
       - name: Report
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          BOARD_RUN: ${{ steps.board.outputs.run }}
         run: |
           [ -f visual-report/reg.json ] || exit 0
           rc=0
-          python3 tools/ui-spec/visual_report.py summary --run-url "$RUN_URL" || rc=$?
+          python3 tools/ui-spec/visual_report.py summary --run-url "$RUN_URL" \
+            ${BOARD_RUN:+--board-url "$BOARD_URL/#visual=$BOARD_RUN"} || rc=$?
           cat visual-report/report.md >> "$GITHUB_STEP_SUMMARY"
           # A fork's token is read-only: the summary above is the report there.
-          if [ "${{ github.event_name }}" = pull_request ] && \
-             [ "${{ github.event.pull_request.head.repo.full_name }}" = "${{ github.repository }}" ]; then
+          if [ "${{ github.event.pull_request.head.repo.full_name }}" = "${{ github.repository }}" ]; then
             PR=${{ github.event.pull_request.number }}
             ID=$(gh api "repos/${{ github.repository }}/issues/$PR/comments" --paginate \
               --jq '.[] | select(.body | contains("<!-- rn-visual-snapshots -->")) | .id' | head -n 1)
@@ -208,28 +237,18 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-  # On 2.x: a bot PR with the fresh baselines. On a PR with the `update-visual-baselines` label: a commit on its branch.
-  baselines:
-    name: Update the baselines
+  # A push to an official branch (2.x, main, release*) replaces that branch's official screenshots in the board.
+  official:
+    name: Publish the official screenshots
     needs: capture
-    if: >-
-      ${{ !cancelled() && needs.capture.result == 'success' && (
-        github.ref == 'refs/heads/2.x' || (
-          github.event_name == 'pull_request'
-          && contains(github.event.pull_request.labels.*.name, 'update-visual-baselines')
-          && github.event.pull_request.head.repo.full_name == github.repository)) }}
+    if: ${{ needs.capture.result == 'success' && github.event_name == 'push' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    permissions:
-      contents: write
-      pull-requests: write
+    env:
+      BUILD_REPORTER_TOKEN: ${{ secrets.BUILD_REPORTER_TOKEN }}
+      BOARD_EVENTS_URL: ${{ vars.BOARD_EVENTS_URL }}
     steps:
-      # A PR run checks out the merge commit; the baselines go on the branch itself.
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref || github.ref }}
-
-      - run: sudo apt-get install -y --no-install-recommends python3-pil
 
       - uses: actions/download-artifact@v4
         with:
@@ -237,31 +256,5 @@ jobs:
           merge-multiple: true
           path: shots
 
-      - name: Replace rn/visual-baselines
-        run: python3 tools/ui-spec/visual_report.py promote --new shots
-
-      - name: Commit
-        env:
-          GH_TOKEN: ${{ github.token }}
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          git add -A rn/visual-baselines
-          if git diff --cached --quiet; then
-            echo "Baselines are up to date."
-            [ -z "$PR_NUMBER" ] || gh pr edit "$PR_NUMBER" --remove-label update-visual-baselines
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "chore(rn): refresh visual baselines"
-          if [ "${{ github.ref }}" = refs/heads/2.x ]; then
-            git push --force origin HEAD:refs/heads/bot/rn-visual-baselines
-            gh pr view bot/rn-visual-baselines --json state --jq .state 2>/dev/null | grep -q OPEN \
-              || gh pr create --base 2.x --head bot/rn-visual-baselines \
-                   --title "chore(rn): refresh visual baselines" \
-                   --body "Screenshots of the RN gallery from the latest 2.x. Review the images, then merge."
-          else
-            git push origin "HEAD:refs/heads/$HEAD_REF"
-            gh pr edit "$PR_NUMBER" --remove-label update-visual-baselines
-          fi
+      - name: Publish
+        run: python3 tools/ui-spec/board_visual.py publish-official --ref "${{ github.ref_name }}" --sha "${{ github.sha }}" --dir shots
