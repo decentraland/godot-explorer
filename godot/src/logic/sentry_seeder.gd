@@ -415,7 +415,7 @@ func _setup_android_exit_diagnostics() -> void:
 	for exit_info in exit_infos:
 		var is_newest := int(exit_info.get("timestamp", 0)) == newest_timestamp
 		if is_newest:
-			var footprint := _memory_report.footprint_for_exit(newest_timestamp)
+			var footprint := _memory_report.footprint_for_exit(exit_info)
 			if not footprint.is_empty():
 				exit_info["last_footprint"] = footprint
 				_memory_report.exit_reason = str(exit_info.get("reason", "other"))

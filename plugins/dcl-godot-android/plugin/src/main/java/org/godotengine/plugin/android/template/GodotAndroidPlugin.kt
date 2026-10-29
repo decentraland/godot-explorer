@@ -67,6 +67,10 @@ private const val EXIT_REASONS_PREFS = "dcl_exit_reasons"
 private const val EXIT_REASONS_ACK_KEY = "acked_timestamp_ms"
 private const val EXIT_REASONS_MAX = 16
 private const val GRAPHICS_SAMPLE_INTERVAL_MS = 30_000L
+private const val GRAPHICS_SAMPLER_TAG = "dcl-graphics-mem"
+private val graphicsSamplerStarted = java.util.concurrent.atomic.AtomicBoolean(false)
+@Volatile private var graphicsMemoryMb: Int = -1
+@Volatile private var mainResumed: Boolean = true
 
 class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
@@ -2657,10 +2661,9 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
     // GPU memory (`summary.graphics`) is invisible to RssAnon/VmSwap. Debug.getMemoryInfo
     // takes tens of ms, so it runs on its own thread every 30 s and Godot only reads the cache.
-    @Volatile private var graphicsMemoryMb: Int = -1
-    @Volatile private var mainResumed: Boolean = true
-
+    // Process-wide state: one sampler survives plugin re-instantiation without pinning it.
     private fun startGraphicsMemorySampler() {
+        if (!graphicsSamplerStarted.compareAndSet(false, true)) return
         Thread {
             val info = android.os.Debug.MemoryInfo()
             while (true) {
@@ -2671,14 +2674,18 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                             graphicsMemoryMb = it / 1024
                         }
                     } catch (e: Exception) {
-                        Log.w(pluginName, "graphics memory sample failed: ${e.message}")
+                        Log.w(GRAPHICS_SAMPLER_TAG, "graphics memory sample failed: ${e.message}")
                     }
                 }
-                Thread.sleep(GRAPHICS_SAMPLE_INTERVAL_MS)
+                try {
+                    Thread.sleep(GRAPHICS_SAMPLE_INTERVAL_MS)
+                } catch (_: InterruptedException) {
+                    return@Thread
+                }
             }
         }.apply {
             isDaemon = true
-            name = "dcl-graphics-mem"
+            name = GRAPHICS_SAMPLER_TAG
         }.start()
     }
 
@@ -2716,6 +2723,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                     this["reason_code"] = info.reason
                     this["description"] = info.description ?: ""
                     this["timestamp"] = info.timestamp
+                    this["pid"] = info.pid
                     this["pss_kb"] = info.pss
                     this["rss_kb"] = info.rss
                     this["importance"] = info.importance

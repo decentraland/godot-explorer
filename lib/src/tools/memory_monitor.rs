@@ -209,7 +209,7 @@ fn own_budget_mb(total_mb: i32) -> i32 {
 
 /// Raw (unheld) pressure level. The iOS `phys_footprint` ceiling wins: it sees
 /// GPU memory the headroom signal misses. With an own budget (8 GB+ Android)
-/// the device-wide headroom is ignored.
+/// the device-wide headroom is ignored, unless the own footprint is unreadable.
 #[cfg(any(test, target_os = "ios", target_os = "android"))]
 fn raw_level(
     available_mb: i32,
@@ -222,10 +222,7 @@ fn raw_level(
         return LEVEL_CRITICAL;
     }
 
-    if own_budget_mb > 0 {
-        if own_footprint_mb < 0 {
-            return LEVEL_OK;
-        }
+    if own_budget_mb > 0 && own_footprint_mb >= 0 {
         let pct = own_footprint_mb as i64 * 100 / own_budget_mb as i64;
         return if pct >= OWN_BUDGET_CRITICAL_PCT {
             LEVEL_CRITICAL
@@ -250,55 +247,48 @@ fn raw_level(
     }
 }
 
-/// Publishes a raw level only once it has held: raising needs
-/// `LEVEL_RAISE_SAMPLES` consecutive samples above the current level, lowering
-/// `LEVEL_LOWER_SAMPLES` below it. The new level is the least extreme one seen
-/// during the streak.
+/// Publishes a raw level only once it has held: a higher level once the raw
+/// level stayed at or above it for `LEVEL_RAISE_SAMPLES` samples, a lower one
+/// once it stayed at or below it for `LEVEL_LOWER_SAMPLES`. Each level counts
+/// its own streak, so a ramp through WARNING reaches CRITICAL in one hold.
 #[cfg(any(test, target_os = "ios", target_os = "android"))]
 #[derive(Default)]
 struct LevelHold {
     held: u8,
-    up_streak: u32,
-    up_min: u8,
-    down_streak: u32,
-    down_max: u8,
+    at_least: [u32; 3],
+    at_most: [u32; 3],
 }
 
 #[cfg(any(test, target_os = "ios", target_os = "android"))]
 impl LevelHold {
     /// Feeds one raw sample; returns true when the held level changed.
     fn update(&mut self, raw: u8) -> bool {
-        if raw > self.held {
-            self.down_streak = 0;
-            self.up_min = if self.up_streak == 0 {
-                raw
+        for level in LEVEL_OK..=LEVEL_CRITICAL {
+            let i = level as usize;
+            self.at_least[i] = if raw >= level {
+                self.at_least[i].saturating_add(1)
             } else {
-                self.up_min.min(raw)
+                0
             };
-            self.up_streak += 1;
-            if self.up_streak >= LEVEL_RAISE_SAMPLES {
-                self.held = self.up_min;
-                self.up_streak = 0;
-                return true;
-            }
-        } else if raw < self.held {
-            self.up_streak = 0;
-            self.down_max = if self.down_streak == 0 {
-                raw
+            self.at_most[i] = if raw <= level {
+                self.at_most[i].saturating_add(1)
             } else {
-                self.down_max.max(raw)
+                0
             };
-            self.down_streak += 1;
-            if self.down_streak >= LEVEL_LOWER_SAMPLES {
-                self.held = self.down_max;
-                self.down_streak = 0;
-                return true;
-            }
-        } else {
-            self.up_streak = 0;
-            self.down_streak = 0;
         }
-        false
+        let next = (self.held + 1..=LEVEL_CRITICAL)
+            .rev()
+            .find(|&l| self.at_least[l as usize] >= LEVEL_RAISE_SAMPLES)
+            .or_else(|| {
+                (LEVEL_OK..self.held).find(|&l| self.at_most[l as usize] >= LEVEL_LOWER_SAMPLES)
+            });
+        match next {
+            Some(level) => {
+                self.held = level;
+                true
+            }
+            None => false,
+        }
     }
 }
 
@@ -361,11 +351,6 @@ pub fn start(record_path: String) {
             return;
         }
 
-        // The previous session's record is moved aside before this session's
-        // first sample overwrites it; GDScript reports and deletes the `.prev`.
-        if std::path::Path::new(&record_path).exists() {
-            let _ = std::fs::rename(&record_path, format!("{record_path}.prev"));
-        }
         let _ = RECORD_PATH.set(record_path);
 
         #[cfg(target_os = "ios")]
@@ -742,6 +727,7 @@ fn monitor_loop() {
                 let record = serde_json::json!({
                     "v": 1,
                     "written_ms": now_ms,
+                    "pid": std::process::id(),
                     "session_id": SESSION_ID.lock().map(|id| id.clone()).unwrap_or_default(),
                     "total_ram_mb": TOTAL_RAM_MB.load(Ordering::Relaxed),
                     "rss_anon_mb": rss_anon,
@@ -962,7 +948,8 @@ mod tests {
         assert_eq!(raw_level(291, 2112, 0, 2450, 5120), LEVEL_OK);
         assert_eq!(raw_level(291, 2112, 0, 4352, 5120), LEVEL_WARNING);
         assert_eq!(raw_level(900, 2112, 0, 5120, 5120), LEVEL_CRITICAL);
-        assert_eq!(raw_level(291, 2112, 0, -1, 5120), LEVEL_OK);
+        // Unreadable own footprint: fall back to the headroom bands.
+        assert_eq!(raw_level(291, 2112, 0, -1, 5120), LEVEL_CRITICAL);
     }
 
     #[test]
@@ -1000,7 +987,18 @@ mod tests {
     }
 
     #[test]
-    fn mixed_streak_raises_to_least_extreme_level() {
+    fn ramp_through_warning_reaches_critical_in_one_hold() {
+        let mut hold = LevelHold::default();
+        hold.update(LEVEL_WARNING);
+        hold.update(LEVEL_WARNING);
+        for _ in 0..LEVEL_RAISE_SAMPLES {
+            hold.update(LEVEL_CRITICAL);
+        }
+        assert_eq!(hold.held, LEVEL_CRITICAL);
+    }
+
+    #[test]
+    fn mixed_streak_raises_only_to_the_level_held_throughout() {
         let mut hold = LevelHold::default();
         for i in 0..LEVEL_RAISE_SAMPLES {
             hold.update(if i % 3 == 0 {

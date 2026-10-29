@@ -741,7 +741,7 @@ impl Metrics {
             record
                 .get(key)
                 .and_then(serde_json::Value::as_i64)
-                .filter(|v| *v > 0)
+                .filter(|v| *v >= 0)
                 .map(|v| v as i32)
         };
         let event = SegmentEvent::MemorySessionReport(SegmentEventMemorySessionReport {
@@ -754,11 +754,7 @@ impl Metrics {
             peak_footprint_mb: int("peak_footprint_mb"),
             footprint_mb: int("footprint_mb"),
             rss_anon_mb: int("rss_anon_mb"),
-            swap_mb: record
-                .get("swap_mb")
-                .and_then(serde_json::Value::as_i64)
-                .filter(|v| *v >= 0)
-                .map(|v| v as i32),
+            swap_mb: int("swap_mb"),
             graphics_mb: int("graphics_mb"),
             budget_mb: int("budget_mb"),
             level: record
