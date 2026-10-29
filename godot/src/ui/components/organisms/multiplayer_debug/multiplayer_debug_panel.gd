@@ -134,8 +134,6 @@ func _on_timer_timeout():
 	lines.append("Scene room: %s %s" % [scene_label, _colored_state(scene_room_state)])
 
 	lines.append(_build_pulse_line(info))
-	if info.get("pulse_disabled_for_session", false):
-		lines.append("[color=red]Pulse disabled for session[/color]")
 
 	lines.append_array(_peer_lines())
 
@@ -147,14 +145,14 @@ func _on_timer_timeout():
 
 func _build_pulse_line(info: Dictionary) -> String:
 	if not info.get("pulse_available", false):
-		return "Pulse: [color=gray]not in build[/color]"
+		return "Pulse: [color=gray]not in build — no island[/color]"
 	if not info.get("pulse_enabled", false):
-		return "Pulse: [color=gray]OFF[/color]"
+		return "Pulse: [color=gray]OFF — no island[/color]"
 
 	var pulse_state: String = info.get("pulse_state", "unavailable")
 	var pulse_endpoint: String = info.get("pulse_endpoint", "")
 	var pulse_failures: int = info.get("pulse_failures", 0)
-	var dual_channel_label: String = "ON" if info.get("dual_channel", true) else "OFF"
+	var dual_channel_label: String = "ON" if info.get("dual_channel", false) else "OFF"
 	# The realm is matched exactly and never exchanged, so a wrong one looks identical to an
 	# empty world — worth reading off the panel before debugging anything else.
 	var pulse_realm: String = info.get("pulse_realm", "")
