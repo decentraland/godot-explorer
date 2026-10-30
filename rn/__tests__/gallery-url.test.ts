@@ -38,4 +38,13 @@ describe('parsePreviewUrl', () => {
       id: null,
     });
   });
+
+  it('reads a web url with the id in the query', () => {
+    expect(
+      parsePreviewUrl(
+        'http://localhost:8765/?preview=extra%2Fflow-account&orientation=landscape#x',
+      ),
+    ).toEqual({ id: 'extra/flow-account', orientation: 'landscape' });
+    expect(parsePreviewUrl('http://localhost:8765/')).toBeNull();
+  });
 });

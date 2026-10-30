@@ -1,6 +1,8 @@
 // On-device check of the core binding (3.1): the module loads, an async call returns a promise,
 // and a JS listener receives events fired from a tokio thread. Logged as [CoreSelfTest] and run
 // only in dev builds, where the native module exists (the no-engine builds have none).
+import { hasNativeCore } from './hasNativeCore';
+
 type CoreModule = typeof import('dcl-core');
 
 const EVENTS = 1000;
@@ -17,13 +19,12 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 
 export async function runCoreSelfTest(): Promise<void> {
   const log = (...args: unknown[]) => console.info('[CoreSelfTest]', ...args);
-  let core: CoreModule;
-  try {
-    core = require('dcl-core');
-  } catch {
+  // Checked before `require`: Metro reports a throwing module load as a fatal error even when caught.
+  if (!hasNativeCore()) {
     log('no native core in this build');
     return;
   }
+  const core: CoreModule = require('dcl-core');
 
   try {
     log('installs', core.installs(), 'state', core.state().tag);

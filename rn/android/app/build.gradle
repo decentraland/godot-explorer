@@ -100,7 +100,8 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode buildNumber
         versionName cargoVersion
-        ndk { abiFilters "arm64-v8a" }
+        // -PdclAbi=x86_64 (with -PreactNativeArchitectures=x86_64) is for the CI emulator only.
+        ndk { abiFilters(project.findProperty("dclAbi") ?: "arm64-v8a") }
         // Godot build: the engine rotates the activity itself. No-godot: follow the device rotation
         // so the gallery capture script can set it with adb.
         manifestPlaceholders += [screenOrientation: withGodot ? "portrait" : "unspecified"]
