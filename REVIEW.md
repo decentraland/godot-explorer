@@ -356,6 +356,12 @@ Length:
 - Feature PR (200+ lines, multiple dirs): full structured review with findings sections is expected.
 - Refactors / cross-cutting changes: open with the architectural read before individual findings.
 
+Where the review goes (Slack vs GitHub):
+- **The full review lives on GitHub only** — the structured review, findings, severity labels, file/line citations, fixes and the `Approving` / `Requesting changes` / `Commenting` recommendation are posted as a PR review. Never paste the full review into Slack.
+- **Slack gets a brief** when you are asked in Slack (e.g. mentioned as `@clawtonio` on the PR-state message): 2–5 short bullets with only the important topics — the verdict, each blocker in a few words, and the one or two things the author must act on. No file paths, line numbers, code, rationale or nit-level items. End with a link to the GitHub review (`Full review: <PR review URL>`).
+- Post the GitHub review first so the link exists, then reply in Slack. If there is nothing to flag, the Slack reply is one line (e.g. "Approved — nothing blocking. Full review: <url>").
+- Keep the two consistent: every blocker named in Slack must appear in the GitHub review, and Slack must never state a verdict the GitHub review does not.
+
 ---
 
 ## 7. Quick red flags — scan for these first
