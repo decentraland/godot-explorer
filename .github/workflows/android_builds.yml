@@ -71,9 +71,11 @@ jobs:
   build:
     name: Build Android
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 50
     container:
       # image generated at: https://github.com/decentraland/godot-docker-builder
+      # Mirror of quay.io/decentraland/dcl-godot-android-builder (5 GB: ~5 min from quay, ~1 on ghcr).
+      # After bumping the tag, copy it: skopeo copy docker://quay.io/<image>:<tag> docker://ghcr.io/<image>:<tag>
       image: ghcr.io/decentraland/dcl-godot-android-builder:394c180223d3e2ad410d191147e9e2ad39884c0b
       credentials:
         username: ${{ github.actor }}
@@ -145,7 +147,7 @@ jobs:
       # Persist the freshly built target/ — no-op off main (see save-warp-cache). Placed right
       # after the build so a later export/sign failure can't lose a valid cache.
       - name: Save build cache (main only)
-        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/pull/3182/merge') && steps.cache.outputs.cache-hit != 'true'
+        if: github.ref == 'refs/heads/main' && steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: |
