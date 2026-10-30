@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://d17pifom6euye"]
+
+[ext_resource type="Script" uid="uid://bthq44anhbb18" path="res://src/test/ui/test_video_focus_mode.gd" id="1_vfocus"]
+
+[node name="TestVideoFocusMode" type="Node"]
+script = ExtResource("1_vfocus")

@@ -29,15 +29,14 @@ use crate::scene_runner::scene::Scene;
 
 // Re-export public types
 pub use material::{update_modifier_textures, update_modifier_video_textures};
+pub use mesh_utils::{find_node_by_path, get_gltf_container};
 pub use state::{GltfNodeModifierState, ModifierMaterialItem};
 
 use material::{
     apply_material_to_mesh, apply_shadow_to_mesh, capture_original_materials,
     restore_original_materials,
 };
-use mesh_utils::{
-    collect_all_mesh_instances, collect_paths_with_meshes, find_node_by_path, get_gltf_container,
-};
+use mesh_utils::{collect_all_mesh_instances, collect_paths_with_meshes};
 use path_matching::{resolve_modifiers, ModifierKey};
 use state::ModifierMaterialItem as MaterialItem;
 

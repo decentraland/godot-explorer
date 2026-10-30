@@ -16,7 +16,7 @@ use crate::{
         common::{SceneLogMessage, SceneTestResult},
         components::{
             internal_player_data::InternalPlayerData,
-            material::DclMaterial,
+            material::{DclMaterial, DclSourceTex},
             proto_components::sdk::components::{
                 common::RaycastHit, PbAnimator, PbAvatarBase, PbAvatarEmoteCommand,
                 PbAvatarEquippedData, PbPlayerIdentityData, PbPointerEventsResult,
@@ -372,6 +372,173 @@ static SCENE_ID_MONOTONIC_COUNTER: once_cell::sync::Lazy<std::sync::atomic::Atom
 impl Scene {
     pub fn new_id() -> SceneId {
         SceneId(SCENE_ID_MONOTONIC_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
+    }
+
+    /// The video player a screen entity shows: through its Material on a MeshRenderer, or
+    /// through a GltfNodeModifiers material on one of its glTF nodes (the Genesis Plaza
+    /// theatre). The source kind does not matter here: LiveKit streams, HLS/MP4 URLs and
+    /// local files all end in one DclVideoPlayer per video entity.
+    pub fn video_player_for_entity(&self, entity_id: &SceneEntityId) -> Option<Gd<DclVideoPlayer>> {
+        if let Some(video_player) = self
+            .materials
+            .get(entity_id)
+            .and_then(|item| self.video_player_for_dcl_material(&item.dcl_mat))
+        {
+            return Some(video_player);
+        }
+        // Video materials never leave `pending_materials`: they are re-bound every frame.
+        self.gltf_node_modifier_states
+            .get(entity_id)?
+            .pending_materials
+            .values()
+            .find_map(|item| self.video_player_for_dcl_material(&item.dcl_material))
+    }
+
+    /// Nearest video screen along the ray, by its mesh bounds rather than a collider (most
+    /// screens have none). Returns the distance from `ray_from` and the screen's player.
+    pub fn video_screen_along_ray(
+        &self,
+        ray_from: godot::builtin::Vector3,
+        ray_dir: godot::builtin::Vector3,
+    ) -> Option<(f32, SceneEntityId, Gd<DclVideoPlayer>)> {
+        use super::components::gltf_node_modifiers::{find_node_by_path, get_gltf_container};
+
+        // Runs every physics tick: most scenes have no video, so they cost one check.
+        if self.video_players.is_empty() {
+            return None;
+        }
+        let mut nearest: Option<(f32, SceneEntityId, Gd<DclVideoPlayer>)> = None;
+        let mut consider =
+            |mesh: &Gd<godot::classes::MeshInstance3D>, entity_id: &SceneEntityId, video_player| {
+                let Some(distance) = Self::mesh_bounds_hit_distance(mesh, ray_from, ray_dir) else {
+                    return;
+                };
+                if nearest.as_ref().is_none_or(|(best, _, _)| distance < *best) {
+                    nearest = Some((distance, *entity_id, video_player));
+                }
+            };
+
+        for (entity_id, item) in self.materials.iter() {
+            let Some(video_player) = self.video_player_for_dcl_material(&item.dcl_mat) else {
+                continue;
+            };
+            let Some(node) = self.godot_dcl_scene.get_node_or_null_3d(entity_id) else {
+                continue;
+            };
+            if let Some(mesh) =
+                node.try_get_node_as::<godot::classes::MeshInstance3D>("MeshRenderer")
+            {
+                consider(&mesh, entity_id, video_player);
+            }
+        }
+
+        for (entity_id, state) in self.gltf_node_modifier_states.iter() {
+            let video_materials: Vec<(&String, Gd<DclVideoPlayer>)> = state
+                .pending_materials
+                .iter()
+                .filter_map(|(key, item)| {
+                    self.video_player_for_dcl_material(&item.dcl_material)
+                        .map(|video_player| (key, video_player))
+                })
+                .collect();
+            if video_materials.is_empty() {
+                continue;
+            }
+            let Some(gltf_root) = self
+                .godot_dcl_scene
+                .get_node_or_null_3d(entity_id)
+                .and_then(get_gltf_container)
+                .and_then(|container| container.bind().get_gltf_resource())
+            else {
+                continue;
+            };
+            for (key, video_player) in video_materials {
+                // Per-surface entries are keyed "<node path>:<surface index>".
+                let node_path = match key.rsplit_once(':') {
+                    Some((path, surface)) if surface.parse::<u32>().is_ok() => path,
+                    _ => key.as_str(),
+                };
+                let Some(mesh) = find_node_by_path(&gltf_root, node_path)
+                    .and_then(|node| node.try_cast::<godot::classes::MeshInstance3D>().ok())
+                else {
+                    continue;
+                };
+                consider(&mesh, entity_id, video_player);
+            }
+        }
+        nearest
+    }
+
+    /// Whether `collider` is the click box of the video screen `screen`: a child or parent
+    /// of it at any depth, or a sibling under a shared parent. Siblings directly under the
+    /// scene root do not count, or any top-level door would claim a distant screen.
+    pub fn is_click_box_of(&self, collider: &SceneEntityId, screen: &SceneEntityId) -> bool {
+        let (Some(collider), Some(screen)) = (
+            self.godot_dcl_scene.get_node_or_null_3d(collider),
+            self.godot_dcl_scene.get_node_or_null_3d(screen),
+        ) else {
+            return false;
+        };
+        let collider = collider.clone().upcast::<godot::classes::Node>();
+        let screen = screen.clone().upcast::<godot::classes::Node>();
+        if collider.is_ancestor_of(&screen) || screen.is_ancestor_of(&collider) {
+            return true;
+        }
+        let root = self
+            .godot_dcl_scene
+            .root_node_3d
+            .clone()
+            .upcast::<godot::classes::Node>();
+        match (collider.get_parent(), screen.get_parent()) {
+            (Some(a), Some(b)) => a == b && a != root,
+            _ => false,
+        }
+    }
+
+    /// Distance from `ray_from` to where the ray enters the mesh's bounds, if it does so
+    /// ahead of the origin. gdext's `Aabb::intersect_ray` is a line test: a box behind the
+    /// camera still returns its (negative) intersection, which `distance_to` would turn
+    /// into a positive hit, so the hit is projected onto the ray instead.
+    fn mesh_bounds_hit_distance(
+        mesh: &Gd<godot::classes::MeshInstance3D>,
+        ray_from: godot::builtin::Vector3,
+        ray_dir: godot::builtin::Vector3,
+    ) -> Option<f32> {
+        if !mesh.is_visible_in_tree() {
+            return None;
+        }
+        let transform = mesh.get_global_transform();
+        let inverse = transform.affine_inverse();
+        let local_hit = mesh
+            .get_aabb()
+            .intersect_ray(inverse * ray_from, inverse.basis * ray_dir)?;
+        let along_ray = (transform * local_hit - ray_from).dot(ray_dir);
+        (along_ray > 0.0).then_some(along_ray)
+    }
+
+    /// Every texture slot can carry a video (albedo, alpha, emissive, normal). Only a playing
+    /// video counts: a paused screen keeps the scene's own prompt (typically "Play Video").
+    fn video_player_for_dcl_material(&self, material: &DclMaterial) -> Option<Gd<DclVideoPlayer>> {
+        let textures = match material {
+            DclMaterial::Unlit(unlit) => vec![&unlit.texture, &unlit.alpha_texture],
+            DclMaterial::Pbr(pbr) => vec![
+                &pbr.texture,
+                &pbr.alpha_texture,
+                &pbr.emissive_texture,
+                &pbr.bump_texture,
+            ],
+        };
+        textures
+            .into_iter()
+            .flatten()
+            .find_map(|texture| match &texture.source {
+                DclSourceTex::VideoTexture(video_entity_id) => self
+                    .video_players
+                    .get(video_entity_id)
+                    .filter(|video_player| video_player.bind().is_playing())
+                    .cloned(),
+                _ => None,
+            })
     }
 
     pub fn new(
