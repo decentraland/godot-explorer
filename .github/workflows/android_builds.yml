@@ -128,13 +128,14 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.head_ref }}
 
-      # Allocate the store build number (Cloudflare Worker, idempotent per commit SHA). MUST run
+      # Allocate the store build number (Cloudflare Worker, idempotent per commit SHA + flavor). MUST run
       # BEFORE the lib build so build.rs bakes it into the version string (GODOT_EXPLORER_VERSION),
       # and so the APK + AAB exports below stamp the same versionCode for this commit.
       - name: Compute build number
         uses: ./.github/actions/compute-build-number
         with:
           sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}
+          flavor: ${{ env.BUILD_FLAVOR }}
           secret: ${{ secrets.BUILD_NUMBER_SECRET }}
           allocated-by: android
 
