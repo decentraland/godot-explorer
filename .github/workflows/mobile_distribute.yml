@@ -361,7 +361,7 @@ jobs:
   ios-build:
     name: 🍏 iOS → R2 (unsigned export)
     needs: [prepare, ios-resolve]
-    if: needs.prepare.outputs.should_build == 'true' && needs.ios-resolve.outputs.reuse == 'false'
+    if: false && needs.prepare.outputs.should_build == 'true' && needs.ios-resolve.outputs.reuse == 'false'  # TEMP: Android-only cache test
     uses: ./.github/workflows/ios_r2_artifact.yml
     with:
       ref: ${{ needs.prepare.outputs.ref }}
