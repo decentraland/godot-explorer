@@ -192,6 +192,10 @@ bypasses that check for local debugging only. The baked files live in
    - Use `--strip-ios` to strip debug symbols and save disk space (~2.1GB -> ~234MB)
    - Use `--cache` to reuse previously downloaded files instead of re-downloading
    - The strip command auto-detects already-stripped templates (< 1GB) and skips
+   - `install --targets ios` also fetches the pinned Firebase Analytics xcframeworks into
+     `godot/ios/plugins/dcl_godot_ios/firebase/` (gitignored); `export --target ios` refuses to run without them
+   - Firebase is configured only if `godot/ios/GoogleService-Info.plist` exists (the iOS counterpart of
+     `godot/google-services.json`); without it the build works and Firebase reports unavailable
 
 5. **Android APK hosting & mobile distribution**:
    Every Android CI build (`android_builds.yml`, on every push/PR) uploads the signed
