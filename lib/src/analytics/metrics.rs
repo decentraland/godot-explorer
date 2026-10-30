@@ -27,6 +27,7 @@ use crate::{
 };
 
 use super::{
+    attribution::Attribution,
     data_definition::{
         build_segment_event_batch_item, build_segment_identify_body, PushIdentifyTraits,
         PushPlatform, SegmentEvent, SegmentEventAcceptFriend, SegmentEventAppOpened,
@@ -95,6 +96,8 @@ pub struct Metrics {
     install_attribution: Option<InstallAttribution>,
     // Campaign token the attribution resolved to, read by GDScript after the event fires
     resolved_campaign_token: String,
+    // Tenjin: funnel events out, install attribution in
+    attribution: Attribution,
 
     // Consent gate. While the user has not accepted the EULA, events are queued in `self.events`
     // but never serialized or shipped (neither to Segment nor to Firebase).
@@ -162,6 +165,7 @@ impl INode for Metrics {
             device_info: None,
             debug_level: 0,
             install_attribution: None,
+            attribution: Attribution::default(),
             resolved_campaign_token: String::new(),
             eula_accepted: false,
             firebase_init_queued: false,
@@ -458,6 +462,7 @@ impl Metrics {
         // nothing leaves the device until the gated send below. Behind the gate the sources
         // would go unread until the user taps through and their own deadlines had expired.
         self.poll_install_attribution();
+        self.poll_tenjin_attribution();
 
         // Consent gate: never ship anything until the user has accepted the EULA. Events keep
         // accumulating in `self.events` and will flow through once the gate opens.
@@ -493,6 +498,19 @@ impl Metrics {
         }
     }
 
+    /// Queues Tenjin's attribution once it settles. Same as above: queuing is not sending.
+    fn poll_tenjin_attribution(&mut self) {
+        let Some(result) = self.attribution.poll() else {
+            return;
+        };
+        if self.resolved_campaign_token.is_empty() {
+            if let Some(token) = result.campaign_token {
+                self.resolved_campaign_token = token;
+            }
+        }
+        self.queue_event("Attribution Init", result.event);
+    }
+
     /// Adjust the periodic auto-flush interval. Restarts the timer so the new cadence takes effect
     /// immediately instead of waiting out the current cycle. Values below MIN_FLUSH_INTERVAL_SECONDS
     /// are clamped to avoid hammering the network from a misconfiguration.
@@ -513,6 +531,7 @@ impl Metrics {
     /// GDScript should call this only once per install (gated by a config flag).
     #[func]
     pub fn track_install_referrer(&mut self) {
+        self.attribution.request_attribution();
         if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
             return;
         }
@@ -534,7 +553,7 @@ impl Metrics {
     /// full timeout.
     #[func]
     pub fn is_install_attribution_pending(&self) -> bool {
-        self.install_attribution.is_some()
+        self.install_attribution.is_some() || self.attribution.is_pending()
     }
 
     #[func]
@@ -551,6 +570,7 @@ impl Metrics {
             device_info: None,
             debug_level: 0,
             install_attribution: None,
+            attribution: Attribution::default(),
             resolved_campaign_token: String::new(),
             eula_accepted: false,
             firebase_init_queued: false,
@@ -1064,6 +1084,7 @@ impl Metrics {
         self.eula_accepted = accepted;
         tracing::info!("Metrics EULA gate set to {}", accepted);
         if accepted {
+            self.attribution.start(&self.user_id);
             self.flush();
         }
     }
@@ -1081,6 +1102,7 @@ impl Metrics {
         if !self.eula_accepted {
             return;
         }
+        self.attribution.track_event("eula_accepted");
         if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
             return;
         }
@@ -1098,6 +1120,7 @@ impl Metrics {
         if !self.eula_accepted {
             return;
         }
+        self.attribution.track_event("login_success");
         if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
             return;
         }
@@ -1125,8 +1148,9 @@ impl Metrics {
         if !self.eula_accepted {
             return false;
         }
+        let tenjin_sent = self.attribution.track_event("first_move_in_world");
         if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
-            return false;
+            return tenjin_sent;
         }
         let params = serde_json::json!({
             "position": self.common.position,
@@ -1155,8 +1179,9 @@ impl Metrics {
         if !self.eula_accepted {
             return false;
         }
+        let tenjin_sent = self.attribution.track_event("first_social_action");
         if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
-            return false;
+            return tenjin_sent;
         }
         let params = serde_json::json!({
             "action": action,

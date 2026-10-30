@@ -240,6 +240,44 @@ pub fn download_and_extract_zip(
     Ok(())
 }
 
+/// Whether the Tenjin iOS SDK pinned by `TENJIN_IOS_VERSION` is already in the project.
+pub fn tenjin_ios_installed() -> bool {
+    fs::read_to_string(Path::new(TENJIN_IOS_FOLDER).join(".version"))
+        .map(|v| v.trim() == TENJIN_IOS_VERSION)
+        .unwrap_or(false)
+}
+
+/// Downloads the Tenjin xcframework the iOS plugin embeds (see `dcl_godot_ios.gdip`).
+pub fn install_tenjin_ios(use_cache: bool) -> Result<(), anyhow::Error> {
+    if tenjin_ios_installed() {
+        print_message(
+            MessageType::Success,
+            &format!("Tenjin iOS SDK {TENJIN_IOS_VERSION} already installed"),
+        );
+        return Ok(());
+    }
+
+    print_section("Installing Tenjin iOS SDK");
+
+    let folder = Path::new(TENJIN_IOS_FOLDER);
+    if folder.exists() {
+        fs::remove_dir_all(folder)?;
+    }
+
+    let url = format!(
+        "https://github.com/tenjin/tenjin-ios-sdk/releases/download/{TENJIN_IOS_VERSION}/TenjinSDK.xcframework.zip"
+    );
+    let cache_key = use_cache.then(|| format!("tenjin-ios-{TENJIN_IOS_VERSION}.zip"));
+    download_and_extract_zip(&url, TENJIN_IOS_FOLDER, cache_key)?;
+
+    fs::write(folder.join(".version"), TENJIN_IOS_VERSION)?;
+    print_message(
+        MessageType::Success,
+        &format!("Tenjin iOS SDK {TENJIN_IOS_VERSION} installed"),
+    );
+    Ok(())
+}
+
 fn get_godot_url(branch: Option<&str>) -> Option<String> {
     let os = env::consts::OS;
     let arch = env::consts::ARCH;
@@ -746,6 +784,10 @@ pub fn install(
         }
         _ => (),
     };
+
+    if platforms.iter().any(|p| p == "ios") {
+        install_tenjin_ios(use_cache)?;
+    }
 
     if !skip_download_templates {
         prepare_templates(platforms, use_cache, strip_ios, branch)?;
