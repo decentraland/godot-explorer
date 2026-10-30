@@ -1,0 +1,19 @@
+name: TEMP mirror android builder image
+on:
+  pull_request:
+    paths:
+      - .github/workflows/TEMP_mirror_android_image.yml
+permissions:
+  contents: read
+  packages: write
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Copy quay.io -> ghcr.io
+        run: |
+          TAG=394c180223d3e2ad410d191147e9e2ad39884c0b
+          skopeo copy --retry-times 3 \
+            --dest-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
+            docker://quay.io/decentraland/dcl-godot-android-builder:$TAG \
+            docker://ghcr.io/decentraland/dcl-godot-android-builder:$TAG
