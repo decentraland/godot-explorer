@@ -23,7 +23,7 @@ gdlint godot/
 
 ## Format Rust
 
-Format rust
+Format the Rust code with rustfmt and clippy:
 ```bash
 cd lib
 cargo fmt --all
