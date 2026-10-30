@@ -9,21 +9,32 @@ export type PreviewRoute = {
 
 const PREFIX = 'dclrn://preview';
 
-/** Parses `dclrn://preview[/<id>][?orientation=landscape|portrait&state=..]`; null for any other url. */
+/**
+ * Parses `dclrn://preview[/<id>][?orientation=landscape|portrait&state=..]`, or on web
+ * `http(s)://host/?preview=<id>[&orientation=..&state=..]`; null for any other url.
+ */
 export function parsePreviewUrl(url: string): PreviewRoute | null {
+  let id = '';
+  let query: string;
   if (
-    url !== PREFIX &&
-    !url.startsWith(`${PREFIX}/`) &&
-    !url.startsWith(`${PREFIX}?`)
+    url === PREFIX ||
+    url.startsWith(`${PREFIX}/`) ||
+    url.startsWith(`${PREFIX}?`)
   ) {
+    const [path, rest = ''] = url.slice(PREFIX.length).split('?');
+    id = path.replace(/^\/+|\/+$/g, '');
+    query = rest;
+  } else if (/^https?:\/\/[^?#]*\?(.*&)?preview=/.test(url)) {
+    query = url.split('#')[0].split('?')[1];
+  } else {
     return null;
   }
-  const [path, query = ''] = url.slice(PREFIX.length).split('?');
-  const id = path.replace(/^\/+|\/+$/g, '');
-  const route: PreviewRoute = { id: id === '' ? null : decodeURIComponent(id) };
+  const route: PreviewRoute = { id: null };
   query.split('&').forEach(pair => {
     const [key, value = ''] = pair.split('=');
-    if (
+    if (key === 'preview') {
+      id = value;
+    } else if (
       key === 'orientation' &&
       (value === 'landscape' || value === 'portrait')
     ) {
@@ -32,6 +43,7 @@ export function parsePreviewUrl(url: string): PreviewRoute | null {
       route.state = decodeURIComponent(value);
     }
   });
+  route.id = id === '' ? null : decodeURIComponent(id);
   return route;
 }
 

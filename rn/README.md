@@ -79,41 +79,40 @@ update them on purpose, not through a `^` range.
 
 ## Visual snapshots
 
-Every screen of the gallery (`src/gallery/`, one id per Figma frame or state) is also a Storybook story: the
-`Screens/<group>` stories in `src/gallery/stories/` are generated from the registry, so a screen registered once
-shows up in both. `.github/workflows/rn_visual.yml` runs the no-Godot debug app on an x86_64 Android emulator with
-Storybook enabled, opens each story by deep link and takes a screenshot with Maestro. A PR's screenshots are compared
-by reg-cli with the **official** screenshots of its base branch and sent, with the reg-cli report, to the mobile board
-(Cloudflare R2). The sticky PR comment links to the run there.
+Every screen of the gallery (`src/gallery/`, one id per Figma frame or state) also runs on react-native-web
+(`index.web.js`, the mock core, no Godot): `?preview=<id>` renders it full-bleed, and `tools/ui-spec/web_capture.mjs`
+screenshots it in Chromium at 360x800 dp, 2x (800x360 for a landscape screen). `.github/workflows/rn_visual.yml` does that on
+every PR touching `rn/`; the capture is compared by reg-cli with the **official** screenshots of the PR's base branch and sent,
+with the reg-cli report, to the mobile board (Cloudflare R2). The sticky PR comment links to the run there. Web has no status
+bar, gesture pill, system fonts or Android `Modal` windows to move a capture; the previews use a fixed phone inset instead.
+What web cannot show (a native module, an Android-only rendering difference) is checked on a device.
 
 - **Review**: in the board's *Visual snapshots* tab, approve or reject the changed and new screens. The decision is
   mirrored on the PR as the commit status `RN visual snapshots` (pending while screens await review, success when
   approved or when nothing changed, failure when rejected, error when a screen was not captured). Add it as a required
   check in branch protection to gate merges on it.
 - **Official screenshots**: the accepted set of `2.x`, `main` and `release*`, kept for good. A push to one of those
-  branches publishes its capture as the new official set. PR runs and their images are deleted after 14 days.
-  Until the first push to a base branch has published one, PRs compare with `rn/visual-baselines` in git.
+  branches publishes its capture as the new official set. PR runs and their images are deleted after 14 days. Until the
+  first push to a base branch has published one, every screen of a PR shows as new.
 - **Which screens**: CI snapshots only the main views listed in `src/gallery/snapshot-set.json` (36 of the gallery's 322
-  frames: one per screen, no per-detail Figma copies). The rest stay in the gallery and Storybook for development.
-  To snapshot another screen, add its id to that file.
+  frames: one per screen, no per-detail Figma copies). The rest stay in the gallery for development. To snapshot another
+  screen, add its id to that file.
 - **A new screen**: register it in the gallery (`src/gallery/`) and run `npm run gallery:ids`.
 - **A screen that is not stable** (animation, timer): give its registry entry a `settleMs`, or list its id in
   `tools/ui-spec/visual-ignore.json` (`{"<id>": "reason"}`).
-- **Locally**, on an emulator or phone (`ANDROID_SERIAL` picks the device; needs [Maestro](https://maestro.mobile.dev)):
-  install the debug build (`DCL_NO_GODOT=1`, then `cd android && ./gradlew :app:assembleDebug -PdclNoGodot=true`) and
-  run `tools/ui-spec/ci_capture.sh --ids /tmp/shots <id>[,<id>]` (or `ci_capture.sh <source> /tmp/shots`). It starts
-  Metro with `EXPO_PUBLIC_STORYBOOK_ENABLED=true` (without it Storybook is not in the bundle), pins the device (720x1600
-  at 320 dpi, animations off, fixed status bar clock; `tools/ui-spec/device_normalize.sh`) and writes one PNG per id.
-  `tools/ui-spec/rn_capture.sh` is the same capture through adb alone, with no Storybook or Maestro.
+- **Locally**: `npx playwright-core install chromium` once (or `CHANNEL=chrome` to use the installed Chrome), then
+  `tools/ui-spec/ci_capture.sh /tmp/shots --ids <id>[,<id>]` (or `--source <group>`, `--set`). It exports the web bundle in dev
+  mode and writes one PNG per id. Local fonts and antialiasing can differ from CI's Linux, so compare with the official set
+  only from CI. To look at a screen live: `cd rn && npx expo start --web`, then open `/?preview=<id>`.
+- **On a device**: `tools/ui-spec/rn_capture.sh` captures the gallery through adb on an emulator or phone (the debug build
+  served by Metro, `dclrn://preview/<id>`), pinned to 720x1600 at 320 dpi by `tools/ui-spec/device_normalize.sh`.
 - **Compare locally**: put the expected screenshots in a folder (`tools/ui-spec/board_visual.py fetch-official --ref
   2.x --out /tmp/expected` with `BUILD_REPORTER_TOKEN` and `BOARD_EVENTS_URL` set), then `python3
   tools/ui-spec/visual_report.py prepare --new /tmp/shots --baseline /tmp/expected`, `cd rn && npx reg-cli
   ../visual-report/actual ../visual-report/expected ../visual-report/diff -R ../visual-report/index.html -J
   ../visual-report/reg.json -M 0.06 -T 0.001 -I`, then `visual_report.py summary`.
 
-Storybook's own on-device browser needs `react-native-reanimated` and `react-native-gesture-handler`, which the app
-does not ship; the stories render alone (`onDeviceUI: false`), and `GalleryList` is the in-app index. The runs are
-debug builds, and debug builds never report to Sentry (`src/sentry.ts`), so captures leave no events behind.
+Debug builds never report to Sentry (`src/sentry.ts`), so previews leave no events behind.
 
 ## The full app (with Godot)
 

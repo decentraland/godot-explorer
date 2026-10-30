@@ -1,4 +1,4 @@
-# Sourced by rn_capture.sh and ci_capture.sh: pins the device so captures repeat (720x1600 at 320 dpi, no
+# Sourced by rn_capture.sh: pins the device so captures repeat (720x1600 at 320 dpi, no
 # animations, fixed status bar clock). Needs `adb` to point at one device (ANDROID_SERIAL).
 normalize_device() {
   adb shell wm size 720x1600

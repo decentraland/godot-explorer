@@ -1,6 +1,7 @@
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { LayoutChangeEvent, LogBox, StyleSheet, View } from 'react-native';
 import { signedInMockCoreForPreviews } from '../core';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { colors } from '../ds';
 import { Orientation, setOrientation } from '../platform/orientation';
 
@@ -8,12 +9,16 @@ import { Orientation, setOrientation } from '../platform/orientation';
 LogBox.ignoreAllLogs();
 signedInMockCoreForPreviews();
 
+// A phone's status bar and gesture pill, the same on every device and browser; a scene has neither.
+const PORTRAIT_INSETS = { top: 24, bottom: 16, left: 0, right: 0 };
+const LANDSCAPE_INSETS = { top: 0, bottom: 0, left: 0, right: 0 };
+
 const SETTLE_MS = 800;
 const ORIENTATION_WAIT_MS = 1500;
 
 /**
  * Renders one screen full-bleed in its own orientation. Once laid out and settled it logs
- * DCL_PREVIEW_READY (the adb capture script) and mounts the `preview-ready` element (Maestro).
+ * DCL_PREVIEW_READY (the adb capture script) and mounts the `preview-ready` element (the web capture).
  */
 export function PreviewFrame({
   id,
@@ -69,12 +74,16 @@ export function PreviewFrame({
   };
 
   return (
-    <View style={styles.root} testID="gallery-host" onLayout={onLayout}>
-      {children}
-      {ready ? (
-        <View accessible testID="preview-ready" style={styles.flag} />
-      ) : null}
-    </View>
+    <SafeAreaInsetsContext.Provider
+      value={orientation === 'landscape' ? LANDSCAPE_INSETS : PORTRAIT_INSETS}
+    >
+      <View style={styles.root} testID="gallery-host" onLayout={onLayout}>
+        {children}
+        {ready ? (
+          <View accessible testID="preview-ready" style={styles.flag} />
+        ) : null}
+      </View>
+    </SafeAreaInsetsContext.Provider>
   );
 }
 

@@ -1,4 +1,4 @@
-import { TurboModuleRegistry } from 'react-native';
+import { hasNativeCore } from './hasNativeCore';
 import type { CoreApi } from './api';
 import { createMockCore } from './mock';
 
@@ -11,7 +11,7 @@ let current: CoreApi | undefined;
 function load(): CoreApi {
   // Checked first: a throwing `require` is reported as a fatal error by Metro's module guard (a
   // red box in debug builds) before the catch below runs.
-  if (!TurboModuleRegistry.get('DclCore')) {
+  if (!hasNativeCore()) {
     return createMockCore();
   }
   try {
@@ -29,7 +29,7 @@ export function core(): CoreApi {
 /** Dev preview harness: in a build without the engine, the mock core already signed in, so screens that
  * drive the avatar preview can run. A linked engine is left alone. */
 export function signedInMockCoreForPreviews() {
-  if (!TurboModuleRegistry.get('DclCore')) {
+  if (!hasNativeCore()) {
     current = createMockCore({ signedIn: true });
   }
 }

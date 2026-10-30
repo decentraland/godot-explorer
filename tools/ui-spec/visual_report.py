@@ -2,7 +2,7 @@
 """Plumbing around reg-cli for the RN visual snapshots (the comparison itself is `reg-cli`, see rn_visual.yml).
 
   python3 tools/ui-spec/visual_report.py optimize DIR
-  python3 tools/ui-spec/visual_report.py prepare --new DIR [--baseline rn/visual-baselines] [--report visual-report]
+  python3 tools/ui-spec/visual_report.py prepare --new DIR --baseline DIR [--report visual-report]
   python3 tools/ui-spec/visual_report.py summary [--report visual-report] [--run-url URL] [--board-url URL]
 
 `optimize` recompresses every PNG in DIR losslessly (opaque RGB, no metadata): baselines stay as small as plain
@@ -17,7 +17,6 @@ import argparse, json, os, shutil, sys
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 SET_JSON = os.path.join(ROOT, "rn", "src", "gallery", "snapshot-set.json")
 IGNORE_JSON = os.path.join(os.path.dirname(__file__), "visual-ignore.json")
-DEFAULT_BASELINE = os.path.join(ROOT, "rn", "visual-baselines")
 MARKER = "<!-- rn-visual-snapshots -->"
 LISTED_MAX = 40
 
@@ -116,7 +115,7 @@ def main():
     sub.add_parser("optimize").add_argument("dir")
     p = sub.add_parser("prepare")
     p.add_argument("--new", required=True)
-    p.add_argument("--baseline", default=DEFAULT_BASELINE)
+    p.add_argument("--baseline", required=True)
     p.add_argument("--report", default="visual-report")
     s = sub.add_parser("summary")
     s.add_argument("--report", default="visual-report")

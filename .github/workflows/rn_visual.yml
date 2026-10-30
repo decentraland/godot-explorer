@@ -1,7 +1,7 @@
 name: 📸 RN visual snapshots
 
-# Screenshots of every screen in the RN gallery (Storybook stories generated from rn/src/gallery), taken by Maestro
-# on an Android emulator running the no-Godot debug app. A PR's capture is compared by reg-cli with the official
+# Screenshots of the main screens of the RN gallery (rn/src/gallery/snapshot-set.json), taken in Chromium from the
+# react-native-web build of the app with the mock core: no emulator, no Godot. A PR's capture is compared by reg-cli with the official
 # screenshots of its base branch and sent to the mobile board (R2), where the changes are reviewed: the review is
 # mirrored to the PR as the commit status "RN visual snapshots". A push to an official branch replaces its set.
 on:
@@ -28,118 +28,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  apk:
-    name: Debug APK (no Godot)
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-
-      - uses: ./.github/actions/rn-npm-ci
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - name: Restore the Gradle cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-rn-${{ hashFiles('rn/android/**/*.gradle*', 'rn/android/gradle/wrapper/gradle-wrapper.properties', 'rn/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-rn-
-
-      # DCL_NO_GODOT drops the dcl-core native module from autolinking (the mock core runs instead);
-      # x86_64 because the hosted emulator is x86_64.
-      - name: Build the debug APK
-        working-directory: rn/android
-        env:
-          DCL_NO_GODOT: '1'
-        run: ./gradlew :app:assembleDebug -PdclNoGodot=true -PdclAbi=x86_64 -PreactNativeArchitectures=x86_64
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: rn-debug-apk
-          path: rn/android/app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 1
-          if-no-files-found: error
-
   capture:
-    name: Capture ${{ matrix.shard }}
-    needs: apk
+    name: Capture the screens
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { shard: screens, sources: '--set' }
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - uses: ./.github/actions/rn-npm-ci
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: rn-debug-apk
-          path: apk
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
 
       - name: Python imaging for the capture post-processing
         run: sudo apt-get install -y --no-install-recommends python3-pil
 
-      - name: Install Maestro
-        env:
-          MAESTRO_VERSION: 2.8.0
-        run: |
-          curl -fsSL -o maestro.zip "https://github.com/mobile-dev-inc/Maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
-          unzip -q maestro.zip -d "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/maestro/bin" >> "$GITHUB_PATH"
+      - name: Install Chromium
+        working-directory: rn
+        run: npx playwright-core install --with-deps chromium
 
-      - name: Allow the emulator to use KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
-      - name: Capture the previews on an emulator
-        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
-        env:
-          DCL_APK: ${{ github.workspace }}/apk/app-debug.apk
-        with:
-          api-level: 34
-          target: google_apis
-          arch: x86_64
-          profile: pixel_6
-          cores: 4
-          ram-size: 4096M
-          heap-size: 576M
-          disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: bash tools/ui-spec/ci_capture.sh "${{ matrix.sources }}" shots/${{ matrix.shard }}
+      - name: Capture the screens
+        run: bash tools/ui-spec/ci_capture.sh shots/screens --set
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: shots-${{ matrix.shard }}
-          path: shots/${{ matrix.shard }}
+          name: shots-screens
+          path: shots/screens
           if-no-files-found: warn
           retention-days: 7
-
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: metro-log-${{ matrix.shard }}
-          path: metro.log
-          if-no-files-found: ignore
-          retention-days: 3
 
   compare:
     name: Compare with the official screenshots
@@ -165,16 +79,18 @@ jobs:
           merge-multiple: true
           path: shots
 
-      # The board's official set of the base branch. Until the first push to a base branch has published one,
-      # the screenshots in git (rn/visual-baselines) stand in.
+      # The board's official set of the base branch; until a push has published one, every screen shows as new.
       - name: Official screenshots of the base branch
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
           mkdir -p baseline
-          if ! python3 tools/ui-spec/board_visual.py fetch-official --ref "$BASE_REF" --out baseline; then
-            echo "No official screenshots for $BASE_REF: comparing with rn/visual-baselines."
-            [ ! -d rn/visual-baselines ] || cp -R rn/visual-baselines/. baseline/
+          rc=0
+          python3 tools/ui-spec/board_visual.py fetch-official --ref "$BASE_REF" --out baseline || rc=$?
+          if [ "$rc" = 3 ]; then
+            echo "No official screenshots for $BASE_REF yet."
+          elif [ "$rc" != 0 ]; then
+            exit "$rc"
           fi
 
       # reg-cli exits 0 when screens changed: the review decides, not this step.

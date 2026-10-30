@@ -1,7 +1,7 @@
 // On-device check of the core binding (3.1): the module loads, an async call returns a promise,
 // and a JS listener receives events fired from a tokio thread. Logged as [CoreSelfTest] and run
 // only in dev builds, where the native module exists (the no-engine builds have none).
-import { TurboModuleRegistry } from 'react-native';
+import { hasNativeCore } from './hasNativeCore';
 
 type CoreModule = typeof import('dcl-core');
 
@@ -20,7 +20,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 export async function runCoreSelfTest(): Promise<void> {
   const log = (...args: unknown[]) => console.info('[CoreSelfTest]', ...args);
   // Checked before `require`: Metro reports a throwing module load as a fatal error even when caught.
-  if (!TurboModuleRegistry.get('DclCore')) {
+  if (!hasNativeCore()) {
     log('no native core in this build');
     return;
   }

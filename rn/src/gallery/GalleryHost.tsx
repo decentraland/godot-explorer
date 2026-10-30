@@ -5,12 +5,6 @@ import { PreviewFrame } from './PreviewFrame';
 import { getPreview } from './registry';
 import { PreviewRoute } from './url';
 
-// Metro inlines the flag and drops the Storybook modules from builds that do not set it.
-const StorybookStory: typeof import('./StorybookStory').StorybookStory | null =
-  process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === 'true'
-    ? require('./StorybookStory').StorybookStory
-    : null;
-
 /** Renders one registered screen full-bleed, or the list when no id is given. */
 export function GalleryHost({
   id,
@@ -20,9 +14,6 @@ export function GalleryHost({
   const entry = id ? getPreview(id) : undefined;
   if (!id) {
     return <GalleryList />;
-  }
-  if (StorybookStory) {
-    return <StorybookStory id={id} />;
   }
   if (!entry) {
     return (
