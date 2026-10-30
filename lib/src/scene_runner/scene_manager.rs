@@ -1820,6 +1820,9 @@ impl SceneManager {
         apply_only: bool,
         force_complete: bool,
     ) -> bool {
+        // Resolved before borrowing the scene: the nametag state needs it, and binding
+        // the SceneManager from inside its own update panics.
+        let player_avatar_node = self.get_player_avatar_node();
         let Some(scene) = self.scenes.get_mut(scene_id) else {
             return false;
         };
@@ -1840,6 +1843,7 @@ impl SceneManager {
             apply_only,
             self.bench_disable_tweens,
             self.bench_disable_transforms,
+            player_avatar_node.as_ref(),
         )
     }
 

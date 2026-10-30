@@ -10,12 +10,14 @@ use crate::{
         },
         SceneId,
     },
-    godot_classes::dcl_global::DclGlobal,
     scene_runner::scene::{Scene, SceneType},
 };
 use std::time::{Duration, Instant};
 
-use godot::{classes::Node, prelude::*};
+use godot::{
+    classes::{Node, Node3D},
+    prelude::*,
+};
 
 /// Text color of this client's native nametag (`nickname_ui.tscn`), used when the
 /// scene omits `label_color`.
@@ -75,7 +77,14 @@ pub fn is_nametag_target(entity: SceneEntityId, has_avatar_shape: bool) -> bool 
 }
 
 /// Avatar node a plate is drawn on, if this entity can back one right now.
-fn resolve_target_node(scene: &Scene, entity: &SceneEntityId) -> Option<Gd<Node>> {
+///
+/// The caller passes the player avatar because binding the SceneManager from inside its
+/// own update panics (`already bound`), and that panic kills the scene.
+fn resolve_target_node(
+    scene: &Scene,
+    entity: &SceneEntityId,
+    player_avatar_node: Option<&Gd<Node3D>>,
+) -> Option<Gd<Node>> {
     let avatar_shape = scene
         .godot_dcl_scene
         .get_node_or_null_3d(entity)
@@ -86,16 +95,10 @@ fn resolve_target_node(scene: &Scene, entity: &SceneEntityId) -> Option<Gd<Node>
     }
 
     if *entity == SceneEntityId::PLAYER {
-        player_avatar_node()
+        player_avatar_node.map(|node| node.clone().upcast::<Node>())
     } else {
         avatar_shape
     }
-}
-
-fn player_avatar_node() -> Option<Gd<Node>> {
-    let scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-    let node = scene_runner.bind().get_player_avatar_node()?;
-    Some(node.upcast::<Node>())
 }
 
 fn current_component_value(
@@ -114,6 +117,7 @@ pub fn update_avatar_nametag(
     scene: &mut Scene,
     crdt_state: &mut SceneCrdtState,
     current_parcel_scene_id: &SceneId,
+    player_avatar_node: Option<&Gd<Node3D>>,
 ) {
     let user_in_scene = match scene.scene_type {
         SceneType::Parcel => scene.scene_id == *current_parcel_scene_id,
@@ -129,7 +133,7 @@ pub fn update_avatar_nametag(
             .lww_components
             .remove(&SceneComponentId::AVATAR_NAMETAG);
         scene.avatar_nametags_synced = false;
-        clear_plates(scene);
+        clear_plates(scene, player_avatar_node);
         return;
     }
 
@@ -141,7 +145,7 @@ pub fn update_avatar_nametag(
         scene.avatar_nametags_synced = true;
         let entities: Vec<SceneEntityId> = nametag_component.values.keys().copied().collect();
         for entity in entities {
-            apply_entity(scene, nametag_component, &entity);
+            apply_entity(scene, nametag_component, &entity, player_avatar_node);
         }
     }
 
@@ -152,24 +156,25 @@ pub fn update_avatar_nametag(
 
     if let Some(dirty) = dirty {
         for entity in dirty.iter() {
-            apply_entity(scene, nametag_component, entity);
+            apply_entity(scene, nametag_component, entity, player_avatar_node);
         }
     }
 
-    retry_pending(scene, nametag_component);
+    retry_pending(scene, nametag_component, player_avatar_node);
 }
 
 fn apply_entity(
     scene: &mut Scene,
     component: &LastWriteWins<PbAvatarNametag>,
     entity: &SceneEntityId,
+    player_avatar_node: Option<&Gd<Node3D>>,
 ) {
     let Some(value) = current_component_value(component, entity) else {
-        clear_plate(scene, entity);
+        clear_plate(scene, entity, player_avatar_node);
         return;
     };
 
-    match resolve_target_node(scene, entity) {
+    match resolve_target_node(scene, entity, player_avatar_node) {
         Some(mut node) => {
             apply_plate(&mut node, &NametagPlate::from_proto(&value));
             scene.avatar_nametags.insert(*entity);
@@ -196,28 +201,32 @@ fn apply_plate(node: &mut Gd<Node>, plate: &NametagPlate) {
     );
 }
 
-fn clear_plate(scene: &mut Scene, entity: &SceneEntityId) {
+fn clear_plate(scene: &mut Scene, entity: &SceneEntityId, player_avatar_node: Option<&Gd<Node3D>>) {
     scene.pending_avatar_nametags.remove(entity);
     if !scene.avatar_nametags.remove(entity) {
         return;
     }
-    if let Some(mut node) = resolve_target_node(scene, entity) {
+    if let Some(mut node) = resolve_target_node(scene, entity, player_avatar_node) {
         node.call("clear_scene_nametag", &[]);
     }
 }
 
-fn clear_plates(scene: &mut Scene) {
+fn clear_plates(scene: &mut Scene, player_avatar_node: Option<&Gd<Node3D>>) {
     scene.pending_avatar_nametags.clear();
     let applied = std::mem::take(&mut scene.avatar_nametags);
     for entity in applied.iter() {
-        if let Some(mut node) = resolve_target_node(scene, entity) {
+        if let Some(mut node) = resolve_target_node(scene, entity, player_avatar_node) {
             node.call("clear_scene_nametag", &[]);
         }
     }
 }
 
 /// Plates whose target avatar did not exist when the scene wrote the component.
-fn retry_pending(scene: &mut Scene, component: &LastWriteWins<PbAvatarNametag>) {
+fn retry_pending(
+    scene: &mut Scene,
+    component: &LastWriteWins<PbAvatarNametag>,
+    player_avatar_node: Option<&Gd<Node3D>>,
+) {
     if scene.pending_avatar_nametags.is_empty() {
         return;
     }
@@ -233,7 +242,7 @@ fn retry_pending(scene: &mut Scene, component: &LastWriteWins<PbAvatarNametag>) 
             continue;
         };
 
-        match resolve_target_node(scene, &entity) {
+        match resolve_target_node(scene, &entity, player_avatar_node) {
             Some(mut node) => {
                 apply_plate(&mut node, &NametagPlate::from_proto(&value));
                 scene.avatar_nametags.insert(entity);

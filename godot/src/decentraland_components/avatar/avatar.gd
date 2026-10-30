@@ -850,8 +850,10 @@ func _apply_nickname_visibility() -> void:
 	if _use_2d_nameplate:
 		# _update_nameplate_2d() positions/shows when allowed; hide now if gated off.
 		_nametag_gate_visible = not should_hide
+		# A scene plate is the player's own label on their own avatar (it is local-only),
+		# so it survives the native name being hidden by the `show_own_nametag` toggle.
 		_nametag_plate_gate_visible = not (
-			hide_name or _force_hide_name or far_lod or nametag_hidden or hidden or own_nametag_off
+			hide_name or _force_hide_name or far_lod or nametag_hidden or hidden
 		)
 		if should_hide and nickname_ui != null:
 			# Hard reset alpha too: NameplateLayer.update() recomputes visibility from

@@ -6,8 +6,9 @@ use std::{
 };
 
 use godot::{
+    classes::Node3D,
     obj::Singleton,
-    prelude::{varray, Callable, ToGodot, Transform3D},
+    prelude::{varray, Callable, Gd, ToGodot, Transform3D},
 };
 
 /// Per-state cumulative CPU timing across all scene threads. Read+reset from
@@ -207,6 +208,7 @@ pub fn _process_scene(
     apply_only: bool,
     bench_disable_tweens: bool,
     bench_disable_transforms: bool,
+    player_avatar_node: Option<&Gd<Node3D>>,
 ) -> bool {
     let crdt = scene.dcl_scene.scene_crdt.clone();
 
@@ -501,7 +503,12 @@ pub fn _process_scene(
                     false
                 }
                 SceneUpdateState::AvatarNametag => {
-                    update_avatar_nametag(scene, crdt_state, current_parcel_scene_id);
+                    update_avatar_nametag(
+                        scene,
+                        crdt_state,
+                        current_parcel_scene_id,
+                        player_avatar_node,
+                    );
                     false
                 }
                 SceneUpdateState::Raycasts => {
