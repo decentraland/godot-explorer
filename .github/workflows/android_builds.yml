@@ -90,21 +90,23 @@ jobs:
           toolchain: "1.90"
           components: clippy, rustfmt
 
-      # Cache the Rust build (host + Android target) so the dep tree isn't recompiled from
-      # scratch every push. Use the WarpBuild-native cache (raw target/, NO cleaning): the v8
-      # crate's prebuilt static lib (librusty_v8.a) lives under target/.../build/v8-*/out, and
-      # rust-cache's cleanup strips it while keeping v8's fingerprint → warm builds then fail to
-      # link. set-up-warp-cache keeps the full target/, so the lib survives (matches the iOS leg).
-      # Restore runs on every branch; the save (below) only writes on main, so PRs restore from
-      # main's cache without paying the multi-minute save on each push.
-      # WarpBuild's cache action shells out to wget; the builder image may not ship it.
-      - name: Ensure wget (WarpCache dependency)
-        run: command -v wget >/dev/null 2>&1 || (apt-get update && apt-get install -y wget)
-      - name: Set up build cache
+      # Raw target/ (NO cleaning, unlike rust-cache): the v8 crate's prebuilt static lib lives under
+      # target/.../build/v8-*/out, and cleaning it strips the lib while keeping v8's fingerprint, so
+      # warm builds then fail to link. Restore runs on every branch; the save only on main, so PRs
+      # restore main's cache without paying the multi-minute save on each push.
+      - name: Restore build cache
         id: cache
-        uses: ./.github/actions/set-up-warp-cache
+        uses: actions/cache/restore@v4
         with:
-          cache-name: android-build
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+            lib/target/
+          key: android-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: android-build-
 
       - name: Install Android targets
         run: |
@@ -140,11 +142,17 @@ jobs:
       # Persist the freshly built target/ — no-op off main (see save-warp-cache). Placed right
       # after the build so a later export/sign failure can't lose a valid cache.
       - name: Save build cache (main only)
-        uses: ./.github/actions/save-warp-cache
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/pull/3182/merge') && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
         with:
-          cargo-key: ${{ steps.cache.outputs.cargo-key }}
-          rust-key: ${{ steps.cache.outputs.rust-key }}
-          rust-hit: ${{ steps.cache.outputs.rust-hit }}
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+            lib/target/
+          key: ${{ steps.cache.outputs.cache-primary-key }}
 
       - name: Export Android APK
         run: |
