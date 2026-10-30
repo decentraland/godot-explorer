@@ -11,7 +11,7 @@ use crate::auth::ephemeral_auth_chain::EphemeralAuthChain;
 use crate::auth::wallet::sign_request;
 
 use super::types::{
-    BlockedUser, BlockingStatus, FriendProfile, FriendshipRequest, FriendshipStatusResponse,
+    BlockedUserEntry, BlockingStatus, Friend, FriendshipRequestEntry, FriendshipStatusResponse,
     Paginated,
 };
 
@@ -92,20 +92,17 @@ impl SocialApiClient {
         }
     }
 
-    pub async fn get_friends(
-        &self,
-        pagination: Option<Pagination>,
-    ) -> Result<Paginated<FriendProfile>> {
-        self.get("/v1/friends", &pagination_query(pagination)).await
+    pub async fn get_friends(&self, pagination: Option<Pagination>) -> Result<Paginated<Friend>> {
+        self.get("/v2/friends", &pagination_query(pagination)).await
     }
 
     pub async fn get_mutual_friends(
         &self,
         address: &str,
         pagination: Option<Pagination>,
-    ) -> Result<Paginated<FriendProfile>> {
+    ) -> Result<Paginated<Friend>> {
         self.get(
-            &format!("/v1/users/{address}/mutual-friends"),
+            &format!("/v2/users/{address}/mutual-friends"),
             &pagination_query(pagination),
         )
         .await
@@ -115,10 +112,10 @@ impl SocialApiClient {
         &self,
         direction: RequestsDirection,
         pagination: Option<Pagination>,
-    ) -> Result<Paginated<FriendshipRequest>> {
+    ) -> Result<Paginated<FriendshipRequestEntry>> {
         let mut query = pagination_query(pagination);
         query.push(("direction", direction.as_str().to_string()));
-        self.get("/v1/friendship-requests", &query).await
+        self.get("/v2/friendship-requests", &query).await
     }
 
     pub async fn get_friendship_status(&self, address: &str) -> Result<FriendshipStatusResponse> {
@@ -130,7 +127,7 @@ impl SocialApiClient {
         &self,
         address: &str,
         message: Option<String>,
-    ) -> Result<FriendshipRequest> {
+    ) -> Result<FriendshipRequestEntry> {
         let mut body = json!({ "address": address });
         if let Some(message) = message {
             body["message"] = Value::String(message);
@@ -163,8 +160,8 @@ impl SocialApiClient {
     pub async fn get_blocked_users(
         &self,
         pagination: Option<Pagination>,
-    ) -> Result<Paginated<BlockedUser>> {
-        self.get("/v1/blocks", &pagination_query(pagination)).await
+    ) -> Result<Paginated<BlockedUserEntry>> {
+        self.get("/v2/blocks", &pagination_query(pagination)).await
     }
 
     pub async fn block_user(&self, address: &str) -> Result<()> {

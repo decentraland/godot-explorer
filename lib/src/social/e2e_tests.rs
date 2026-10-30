@@ -68,18 +68,14 @@ async fn friends_and_blocks_work_over_http_and_the_stream() {
         .send_friend_request(&bob_address, Some("hi bob".to_string()))
         .await
         .unwrap();
-    assert_eq!(request.friend.address, bob_address);
+    assert_eq!(request.address, bob_address);
 
     match next_matching(&mut bob_updates, |_| true).await {
         FriendshipStreamEvent::Request {
-            address,
-            message,
-            friend,
-            ..
+            address, message, ..
         } => {
             assert_eq!(address, alice_address);
             assert_eq!(message.as_deref(), Some("hi bob"));
-            assert_eq!(friend.address, alice_address);
         }
         other => panic!("expected a request, got {other:?}"),
     }
@@ -178,7 +174,7 @@ async fn friends_and_blocks_work_over_http_and_the_stream() {
     assert!(block.is_blocked);
 
     let blocked = alice.get_blocked_users(None).await.unwrap();
-    assert_eq!(blocked.results[0].address, bob_address);
+    assert_eq!(blocked.results[0].profile.address, bob_address);
     assert!(blocked.results[0].blocked_at.is_some());
     assert_eq!(
         alice.get_blocking_status().await.unwrap().blocked_users,

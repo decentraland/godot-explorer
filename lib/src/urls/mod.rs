@@ -181,7 +181,7 @@ pub fn social_api() -> String {
     url_override(&SOCIAL_API_URL_OVERRIDE).unwrap_or_else(|| {
         format!(
             "https://social-api.decentraland.{}",
-            suffix(ServiceGroup::Comms)
+            suffix(ServiceGroup::Social)
         )
     })
 }
@@ -190,7 +190,7 @@ pub fn social_service_stream() -> String {
     url_override(&SOCIAL_STREAM_URL_OVERRIDE).unwrap_or_else(|| {
         format!(
             "wss://rpc-social-service-ea.decentraland.{}/v1/stream",
-            suffix(ServiceGroup::Comms)
+            suffix(ServiceGroup::Social)
         )
     })
 }

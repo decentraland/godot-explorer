@@ -1,40 +1,69 @@
 //! JSON shapes of the social service HTTP API and of its `/v1/stream` WebSocket events.
 //! See `docs/openapi.yaml` and `docs/websocket-stream-protocol.md` in social-service-ea.
+//!
+//! The API and the stream identify users by address only; [`FriendProfile`] and the types that
+//! embed it are built on the client by resolving those addresses (see `profiles.rs`).
 
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
+/// A user plus the profile fields the UI shows. `name` falls back to the address when the
+/// profile could not be resolved.
+#[derive(Debug, Clone)]
 pub struct FriendProfile {
     pub address: String,
-    #[serde(default)]
     pub name: String,
-    #[serde(default)]
     pub has_claimed_name: bool,
-    #[serde(default)]
     pub profile_picture_url: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
+impl FriendProfile {
+    pub fn without_profile(address: String) -> Self {
+        Self {
+            name: address.clone(),
+            address,
+            has_claimed_name: false,
+            profile_picture_url: String::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct FriendshipRequest {
     pub id: String,
     pub friend: FriendProfile,
+    pub created_at: i64,
+    pub message: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct BlockedUser {
+    pub profile: FriendProfile,
+    pub blocked_at: Option<i64>,
+}
+
+/// `GET /v2/friends` and `GET /v2/users/:address/mutual-friends` entry.
+#[derive(Debug, Clone, Deserialize)]
+pub struct Friend {
+    pub address: String,
+}
+
+/// `GET /v2/friendship-requests` entry and `POST /v1/friendship-requests` response.
+/// `address` is the other user.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FriendshipRequestEntry {
+    pub id: String,
+    pub address: String,
     pub created_at: i64,
     #[serde(default)]
     pub message: Option<String>,
 }
 
+/// `GET /v2/blocks` entry.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct BlockedUser {
+pub struct BlockedUserEntry {
     pub address: String,
-    #[serde(default)]
-    pub name: String,
-    #[serde(default)]
-    pub has_claimed_name: bool,
-    #[serde(default)]
-    pub profile_picture_url: String,
     #[serde(default)]
     pub blocked_at: Option<i64>,
 }
@@ -72,7 +101,6 @@ pub enum FriendshipStreamEvent {
         created_at: i64,
         #[serde(default)]
         message: Option<String>,
-        friend: FriendProfile,
     },
     Accept {
         address: String,
@@ -113,7 +141,7 @@ impl ConnectivityStatus {
 /// `friend_connectivity_updates` stream event.
 #[derive(Debug, Clone, Deserialize)]
 pub struct FriendConnectivityStreamEvent {
-    pub friend: FriendProfile,
+    pub address: String,
     pub status: ConnectivityStatus,
 }
 
@@ -132,8 +160,7 @@ mod tests {
     #[test]
     fn parses_a_friendship_request_event() {
         let event: FriendshipStreamEvent = serde_json::from_str(
-            r#"{"action":"request","id":"r1","address":"0xabc","createdAt":1000,"message":"hi",
-                "friend":{"address":"0xabc","name":"Abc","hasClaimedName":true,"profilePictureUrl":"u"}}"#,
+            r#"{"action":"request","id":"r1","address":"0xabc","createdAt":1000,"message":"hi"}"#,
         )
         .unwrap();
 
@@ -143,13 +170,11 @@ mod tests {
                 address,
                 created_at,
                 message,
-                friend,
             } => {
                 assert_eq!(id, "r1");
                 assert_eq!(address, "0xabc");
                 assert_eq!(created_at, 1000);
                 assert_eq!(message.as_deref(), Some("hi"));
-                assert!(friend.has_claimed_name);
             }
             other => panic!("unexpected event {other:?}"),
         }
@@ -165,11 +190,10 @@ mod tests {
 
     #[test]
     fn maps_connectivity_to_the_ui_status_codes() {
-        let event: FriendConnectivityStreamEvent = serde_json::from_str(
-            r#"{"friend":{"address":"0xabc","name":"","hasClaimedName":false,"profilePictureUrl":""},"status":"away"}"#,
-        )
-        .unwrap();
+        let event: FriendConnectivityStreamEvent =
+            serde_json::from_str(r#"{"address":"0xabc","status":"away"}"#).unwrap();
 
+        assert_eq!(event.address, "0xabc");
         assert_eq!(event.status.as_i32(), 2);
     }
 

@@ -8,11 +8,13 @@ use crate::auth::ephemeral_auth_chain::EphemeralAuthChain;
 use crate::urls;
 
 use super::api::{FriendshipRequestIntention, Pagination, RequestsDirection, SocialApiClient};
+use super::profiles::ProfileResolver;
 pub use super::stream::ConnectionState;
 use super::stream::SocialStream;
 use super::types::{
     BlockStreamEvent, BlockedUser, BlockingStatus, FriendConnectivityStreamEvent, FriendProfile,
-    FriendshipRequest, FriendshipStatusResponse, FriendshipStreamEvent, Paginated,
+    FriendshipRequest, FriendshipRequestEntry, FriendshipStatusResponse, FriendshipStreamEvent,
+    Paginated,
 };
 
 const FRIENDSHIP_UPDATES: &str = "friendship_updates";
@@ -21,9 +23,11 @@ const BLOCK_UPDATES: &str = "block_updates";
 
 /// Social service client: plain signed HTTP for requests and the `/v1/stream` WebSocket for
 /// real-time updates. The WebSocket is opened on the first subscription; requests never need it.
+/// The service answers with addresses only, so the lists resolve their profiles here.
 pub struct SocialServiceManager {
     api: SocialApiClient,
     stream: SocialStream,
+    profiles: ProfileResolver,
 }
 
 impl SocialServiceManager {
@@ -35,6 +39,7 @@ impl SocialServiceManager {
         Self {
             api: SocialApiClient::new(api_url, wallet.clone()),
             stream: SocialStream::new(stream_url, wallet),
+            profiles: ProfileResolver::new(),
         }
     }
 
@@ -51,7 +56,12 @@ impl SocialServiceManager {
         &self,
         pagination: Option<Pagination>,
     ) -> Result<Paginated<FriendProfile>> {
-        self.api.get_friends(pagination).await
+        let page = self.api.get_friends(pagination).await?;
+        let addresses: Vec<String> = page.results.into_iter().map(|f| f.address).collect();
+        Ok(Paginated {
+            results: self.profiles.resolve(&addresses).await,
+            total: page.total,
+        })
     }
 
     pub async fn get_mutual_friends(
@@ -59,32 +69,44 @@ impl SocialServiceManager {
         user_address: &str,
         pagination: Option<Pagination>,
     ) -> Result<Paginated<FriendProfile>> {
-        self.api.get_mutual_friends(user_address, pagination).await
+        let page = self
+            .api
+            .get_mutual_friends(user_address, pagination)
+            .await?;
+        let addresses: Vec<String> = page.results.into_iter().map(|f| f.address).collect();
+        Ok(Paginated {
+            results: self.profiles.resolve(&addresses).await,
+            total: page.total,
+        })
     }
 
     pub async fn get_pending_friendship_requests(
         &self,
         pagination: Option<Pagination>,
     ) -> Result<Paginated<FriendshipRequest>> {
-        self.api
+        let page = self
+            .api
             .get_friendship_requests(RequestsDirection::Received, pagination)
-            .await
+            .await?;
+        Ok(self.with_profiles(page).await)
     }
 
     pub async fn get_sent_friendship_requests(
         &self,
         pagination: Option<Pagination>,
     ) -> Result<Paginated<FriendshipRequest>> {
-        self.api
+        let page = self
+            .api
             .get_friendship_requests(RequestsDirection::Sent, pagination)
-            .await
+            .await?;
+        Ok(self.with_profiles(page).await)
     }
 
     pub async fn send_friend_request(
         &self,
         user_address: &str,
         message: Option<String>,
-    ) -> Result<FriendshipRequest> {
+    ) -> Result<FriendshipRequestEntry> {
         self.api
             .send_friendship_request(user_address, message)
             .await
@@ -135,11 +157,47 @@ impl SocialServiceManager {
         &self,
         pagination: Option<Pagination>,
     ) -> Result<Paginated<BlockedUser>> {
-        self.api.get_blocked_users(pagination).await
+        let page = self.api.get_blocked_users(pagination).await?;
+        let addresses: Vec<String> = page.results.iter().map(|b| b.address.clone()).collect();
+        let profiles = self.profiles.resolve(&addresses).await;
+        Ok(Paginated {
+            results: page
+                .results
+                .into_iter()
+                .zip(profiles)
+                .map(|(entry, profile)| BlockedUser {
+                    profile,
+                    blocked_at: entry.blocked_at,
+                })
+                .collect(),
+            total: page.total,
+        })
     }
 
     pub async fn get_blocking_status(&self) -> Result<BlockingStatus> {
         self.api.get_blocking_status().await
+    }
+
+    async fn with_profiles(
+        &self,
+        page: Paginated<FriendshipRequestEntry>,
+    ) -> Paginated<FriendshipRequest> {
+        let addresses: Vec<String> = page.results.iter().map(|r| r.address.clone()).collect();
+        let profiles = self.profiles.resolve(&addresses).await;
+        Paginated {
+            results: page
+                .results
+                .into_iter()
+                .zip(profiles)
+                .map(|(entry, friend)| FriendshipRequest {
+                    id: entry.id,
+                    friend,
+                    created_at: entry.created_at,
+                    message: entry.message,
+                })
+                .collect(),
+            total: page.total,
+        }
     }
 
     // ========================================

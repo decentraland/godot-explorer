@@ -923,7 +923,7 @@ impl DclSocialService {
                                 "emit_signal",
                                 &[
                                     "friend_connectivity_updated".to_variant(),
-                                    update.friend.address.to_variant(),
+                                    update.address.to_variant(),
                                     update.status.as_i32().to_variant(),
                                 ],
                             );
@@ -1136,13 +1136,13 @@ impl DclSocialService {
         let blocked_users: Vec<BlockedUserData> = response
             .results
             .into_iter()
-            .map(|profile| {
+            .map(|blocked| {
                 (
-                    profile.address,
-                    profile.name,
-                    profile.has_claimed_name,
-                    profile.profile_picture_url,
-                    profile.blocked_at.unwrap_or(0),
+                    blocked.profile.address,
+                    blocked.profile.name,
+                    blocked.profile.has_claimed_name,
+                    blocked.profile.profile_picture_url,
+                    blocked.blocked_at.unwrap_or(0),
                 )
             })
             .collect();
