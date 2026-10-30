@@ -16,6 +16,10 @@ outputs:
     description: Primary key for the rust-build cache. Feed to save-warp-cache.
     value: ${{ steps.rust.outputs.cache-primary-key }}
 
+  rust-hit:
+    description: "'true' when the rust-build cache matched its primary key exactly (nothing new to save)."
+    value: ${{ steps.rust.outputs.cache-hit }}
+
 runs:
   using: composite
   steps:
@@ -41,7 +45,7 @@ runs:
           lib/target/
         # *.rs is hashed BEFORE the build, so generated .rs under target/ can't pollute the
         # key. Off-main builds miss the exact key and fall back to main's cache via restore-keys.
-        key: ${{ runner.os }}-rust-build-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('**/*.rs') }}
+        key: ${{ runner.os }}-rust-build-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: |
           ${{ runner.os }}-rust-build-${{ hashFiles('**/Cargo.lock') }}-
           ${{ runner.os }}-rust-build-

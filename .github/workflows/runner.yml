@@ -30,9 +30,11 @@ jobs:
   #   needs: static-checks
   #   uses: ./.github/workflows/coverage.yml
 
+  # PRs build Android only through the `build` label (mobile_distribute.yml).
   android-build:
     name: 🤖 Android
     needs: static-checks
+    if: github.event_name != 'pull_request'
     uses: ./.github/workflows/android_builds.yml
     secrets:
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
