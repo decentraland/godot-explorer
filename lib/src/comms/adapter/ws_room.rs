@@ -407,8 +407,13 @@ impl WebSocketRoom {
                             continue;
                         }
                     };
+                    // A oneof variant our protocol pin doesn't know (e.g. Bevy's private
+                    // field 10001) decodes as None; Unity and web drop it too.
                     let Some(message) = packet.message else {
-                        error!("comms > empty data packet {:?}", update);
+                        tracing::debug!(
+                            "comms > unknown rfc4 message from alias {}",
+                            update.from_alias
+                        );
                         continue;
                     };
 
