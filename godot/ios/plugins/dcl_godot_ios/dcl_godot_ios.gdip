@@ -7,13 +7,21 @@ deinitialization="unregister_dcl_godot_ios_types"
 
 [dependencies]
 linked=[]
-embedded=[]
+embedded=["tenjin/TenjinSDK.xcframework"]
 system=["SafariServices", "AuthenticationServices", "Network", "EventKit", "EventKitUI", "DeviceCheck", "Photos", "PhotosUI"]
 
 capabilities=[]
+
+; Tenjin is only reached through the Obj-C runtime: -ObjC keeps the linker from dropping its classes.
+linker_flags=["-ObjC"]
 
 files=[]
 
 [plist]
 NSCalendarsUsageDescription="This app needs to add events to your calendar for events and places"
 NSPhotoLibraryUsageDescription="Decentraland needs access to your photos so you can attach screenshots to a bug report."
+
+; Tenjin receives the SKAdNetwork postbacks for installs it attributes.
+NSAdvertisingAttributionReportEndpoint="https://tenjin-skan.com"
+; Ad network SKAdNetwork ids: Google Ads, Meta, TikTok.
+SKAdNetworkItems:raw="<array><dict><key>SKAdNetworkIdentifier</key><string>cstr6suwn9.skadnetwork</string></dict><dict><key>SKAdNetworkIdentifier</key><string>v9wttpbfk9.skadnetwork</string></dict><dict><key>SKAdNetworkIdentifier</key><string>n38lu8286q.skadnetwork</string></dict><dict><key>SKAdNetworkIdentifier</key><string>22mmun2rn5.skadnetwork</string></dict><dict><key>SKAdNetworkIdentifier</key><string>238da6jt44.skadnetwork</string></dict></array>"

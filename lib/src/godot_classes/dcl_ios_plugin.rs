@@ -229,6 +229,41 @@ impl DclIosPlugin {
         result.booleanize()
     }
 
+    /// Starts the Tenjin SDK (idempotent) and sets the customer user id.
+    #[func]
+    pub fn tenjin_start(sdk_key: GString, user_id: GString) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        singleton
+            .call(
+                "tenjin_start",
+                &[sdk_key.to_variant(), user_id.to_variant()],
+            )
+            .booleanize()
+    }
+
+    /// Sends a Tenjin custom event. `value` 0 sends the event without a value.
+    #[func]
+    pub fn tenjin_event(name: GString, value: i32) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        singleton
+            .call("tenjin_event", &[name.to_variant(), value.to_variant()])
+            .booleanize()
+    }
+
+    /// Tenjin attribution info. The first call starts the fetch and returns
+    /// `{status: "pending"}`; later calls return the cached `ok` / `error` result.
+    pub(crate) fn tenjin_get_attribution_internal() -> Option<VarDictionary> {
+        let mut singleton = Self::try_get_singleton()?;
+        singleton
+            .call("tenjin_get_attribution", &[])
+            .try_to::<VarDictionary>()
+            .ok()
+    }
+
     /// Check if the iOS plugin is available
     #[func]
     pub fn is_available() -> bool {
