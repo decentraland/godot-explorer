@@ -155,7 +155,7 @@ jobs:
           echo "DEVELOPER_DIR=$XCODE_APP/Contents/Developer" >> "$GITHUB_ENV"
           "$XCODE_APP/Contents/Developer/usr/bin/xcodebuild" -version
 
-      # Allocate the store build number from the Cloudflare Worker (idempotent per commit SHA, so it
+      # Allocate the store build number from the Cloudflare Worker (idempotent per commit SHA + flavor, so it
       # matches the Android versionCode for the same commit). MUST run BEFORE the lib build so build.rs
       # bakes it into the version string (GODOT_EXPLORER_VERSION) — which the "Capture build version"
       # step below forwards to godot-asc-deploy — and so the iOS export stamps it into CFBundleVersion
@@ -164,6 +164,7 @@ jobs:
         uses: ./.github/actions/compute-build-number
         with:
           sha: ${{ inputs.sha || github.sha }}
+          flavor: ${{ env.BUILD_FLAVOR }}
           secret: ${{ secrets.BUILD_NUMBER_SECRET }}
           allocated-by: ios
 
