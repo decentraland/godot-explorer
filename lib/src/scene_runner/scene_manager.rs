@@ -1820,6 +1820,9 @@ impl SceneManager {
         apply_only: bool,
         force_complete: bool,
     ) -> bool {
+        // Resolved before borrowing the scene: the nametag state needs it, and binding
+        // the SceneManager from inside its own update panics.
+        let player_avatar_node = self.get_player_avatar_node();
         let Some(scene) = self.scenes.get_mut(scene_id) else {
             return false;
         };
@@ -1840,6 +1843,7 @@ impl SceneManager {
             apply_only,
             self.bench_disable_tweens,
             self.bench_disable_transforms,
+            player_avatar_node.as_ref(),
         )
     }
 
@@ -2759,6 +2763,15 @@ impl SceneManager {
             return;
         };
         let signal_data = (*scene_id, scene.scene_entity_definition.id.clone());
+
+        // Scene plates are local-only and the player avatar outlives the scene: without
+        // this the last scene's plate stays on screen after it is gone.
+        if !scene.avatar_nametags.is_empty() {
+            if let Some(mut player_avatar) = self.get_player_avatar_node() {
+                player_avatar.call("clear_scene_nametag", &[]);
+            }
+            scene.avatar_nametags.clear();
+        }
 
         // Drop the scene's external-content bookkeeping so a reload restarts
         // its counters from zero.
