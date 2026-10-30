@@ -39,6 +39,21 @@ jobs:
         working-directory: lib
         run: cargo clippy -- -D warnings
 
+      - name: cargo clippy (enable_inspector)
+        working-directory: lib
+        run: cargo clippy --features enable_inspector -- -D warnings
+
+      - name: TLS crates in the lockfiles
+        # rustls < 0.23 and rustls-webpki < 0.103 get no security fixes (e.g. the eMudhra distrust).
+        run: |
+          old=$(awk '/^name = "(rustls|rustls-webpki)"$/ { name = $3; getline; print FILENAME, name, $3 }' Cargo.lock lib/Cargo.lock \
+            | grep -v -E '"rustls" "0\.23\.|"rustls-webpki" "0\.103\.' || true)
+          if [ -n "$old" ]; then
+            echo "::error::Unsupported rustls / rustls-webpki in a lockfile:"
+            echo "$old"
+            exit 1
+          fi
+
       - name: Version check
         run: cargo run -- version-check
 
