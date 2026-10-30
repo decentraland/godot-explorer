@@ -18,8 +18,7 @@ const ALREADY_CLAIMED_WINDOW_SEC := 120.0
 @export var managed_by_modal_manager := true
 @export var guests_must_upgrade := false
 
-var _campaign_id: String = ""
-var _campaign_key: String = ""
+var _campaign: Dictionary = {}
 var _claiming: bool = false
 var _claimed: bool = false
 
@@ -33,10 +32,9 @@ var animation_player: AnimationPlayer = $VBoxContainer/PanelContainer/MarginCont
 
 
 ## Configures the modal for a campaign and reveals it.
-## @param campaign: { campaign_id, campaign_key } — see RewardCampaigns.CAMPAIGNS.
+## @param campaign: a RewardCampaigns.CAMPAIGNS entry, passed whole to the claim.
 func async_setup(campaign: Dictionary) -> void:
-	_campaign_id = str(campaign.get("campaign_id", ""))
-	_campaign_key = str(campaign.get("campaign_key", ""))
+	_campaign = campaign
 	_claiming = false
 	_claimed = false
 	# The reward art is a FIXED baked asset (dog-reward.png in the scene) — intentionally NOT
@@ -69,88 +67,43 @@ func _on_gui_input(event: InputEvent) -> void:
 				dismissed.emit()
 
 
+# gdlint:ignore = async-function-name
 func _on_button_claim_pressed() -> void:
-	var identity := Global.player_identity
-	if (
-		guests_must_upgrade
-		and identity.is_thirdweb_guest()
-		and not identity.is_thirdweb_guest_upgraded()
-	):
-		upgrade_required.emit()
+	if _claiming or _claimed:
 		return
+	if guests_must_upgrade:
+		# Spinner while thirdweb is asked: an upgraded guest's cached flag can still read "guest".
+		_start_processing()
+		var must_upgrade := await RewardClaimer.async_is_unlinked_guest()
+		if not is_instance_valid(self):
+			return
+		_stop_processing()
+		if must_upgrade:
+			upgrade_required.emit()
+			return
 	_async_claim()
 
 
-## Reduces a URL to its origin (scheme://host), dropping any path/query. The rewards server's
-## catalyst allow-list matches by origin, so a trailing "/main/" or "/content/" gets rejected.
-## Returns "" for an empty input so the caller's fallback chain keeps working.
-func _catalyst_origin(url: String) -> String:
-	if url.is_empty():
-		return ""
-	var scheme := "https://"
-	var rest := url
-	if url.begins_with("https://"):
-		rest = url.substr(scheme.length())
-	elif url.begins_with("http://"):
-		scheme = "http://"
-		rest = url.substr(scheme.length())
-	var slash := rest.find("/")
-	if slash != -1:
-		rest = rest.substr(0, slash)
-	if rest.is_empty():
-		return ""
-	return scheme + rest
-
-
-## Performs the real claim (client-side equivalent of Genesis' claimToken/requestToken):
-## a signed POST to the rewards server that assigns the wearable to the player's wallet.
+## Performs the real claim via the shared RewardClaimer (client-side equivalent of Genesis'
+## claimToken/requestToken) and drives this modal's own visuals off the result.
 func _async_claim() -> void:
 	if _claiming or _claimed:
 		return
 
-	# Rewards need a wallet address to sign the request and receive the item. An upgraded
-	# thirdweb guest keeps is_guest = true (immutable), so we must NOT gate on is_guest here
-	# — a non-empty address plus the signed fetch is what actually matters.
-	var beneficiary := Global.player_identity.get_address_str()
-	if beneficiary.is_empty():
-		_show_error(tr("REWARD_ERROR_WALLET_REQUIRED"))
-		return
-
-	if _campaign_id.is_empty() or _campaign_key.is_empty():
-		_show_error(tr("REWARD_NOT_AVAILABLE"))
-		return
-
 	_start_processing()
-
-	# The rewards server matches `catalyst` by ORIGIN (scheme://host) against the DAO catalyst
-	# allow-list AND then actually reaches it, so we must send the origin of a REAL, reachable
-	# catalyst peer — NOT the realm-provider load balancer:
-	#   - content_base_url = /about content.publicUrl → the resolved peer we're connected to
-	#     (e.g. https://peer-ec1.decentraland.org/content/ → https://peer-ec1.decentraland.org ✓).
-	#     Genesis' claim.ts sends realmInfo.baseUrl, which is likewise the resolved catalyst.
-	#   - fallback (claiming outside a realm — post-upgrade from Discover / the dev-tools button):
-	#     a concrete DAO catalyst peer. We must NOT fall back to main_realm(): its origin
-	#     (realm-provider-ea…) passes the allow-list but is "catalyst_unreachable" at the bare
-	#     origin — the load balancer only responds under a /main path we can't include here.
-	var catalyst := _catalyst_origin(str(Global.realm.content_base_url))
-	if catalyst.is_empty():
-		catalyst = _catalyst_origin(Realm.DAO_SERVERS[0])
-	var url := RewardCampaigns.get_rewards_server() + "/api/rewards?campaign_id=" + _campaign_id
-	var body_dict := {
-		"campaign_key": _campaign_key,
-		"catalyst": catalyst,
-		"beneficiary": beneficiary,
-	}
-	var body := JSON.stringify(body_dict)
-	print("[RewardModal] claim POST ", url, " catalyst=", catalyst, " beneficiary=", beneficiary)
-
-	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_POST, body)
+	var result := await RewardClaimer.async_claim(_campaign)
 	# The modal can be force-closed (close_reward_modal) while the request is in flight; bail out
 	# before touching any node so we never operate on a freed instance.
 	if not is_instance_valid(self):
 		return
 
-	_process_claim_response(response)
+	if not result.ok:
+		_show_error(result.error_message)
+		return
+	if result.already_owned:
+		_show_already_claimed()
+	else:
+		_show_success()
 
 
 ## Enters the "claiming" visual (design: the OTP-Claimed middle state). The signed POST is ~2s of
@@ -164,69 +117,6 @@ func _start_processing() -> void:
 		loading_spinner.visible = true
 	if is_instance_valid(texture_rect_reward):
 		texture_rect_reward.visible = false
-
-
-## Interprets the rewards-server response, mirroring claim.ts `processResponse`.
-func _process_claim_response(response) -> void:
-	var json
-	if response is PromiseError:
-		# request_json rejects on any non-2xx, but the rewards server still returns a JSON error
-		# body (e.g. {"ok":false,"code":"campaign_disabled"}). Parse it so business errors get a
-		# friendly message instead of raw JSON; a non-JSON reason is a real transport error.
-		var reason := str(response.get_error())
-		printerr("RewardModal: claim failed — ", reason)
-		json = JSON.parse_string(reason)
-		if not (json is Dictionary):
-			_show_error(tr("REWARD_ERROR_SERVER_UNREACHABLE"))
-			return
-	else:
-		json = response.get_string_response_as_json()
-		if not (json is Dictionary):
-			_show_error(tr("REWARD_ERROR_INVALID_RESPONSE"))
-			return
-
-	_handle_claim_json(json)
-
-
-## Interprets a parsed rewards-server JSON body, mirroring claim.ts `processResponse`.
-func _handle_claim_json(json: Dictionary) -> void:
-	var ok = json.get("ok", null)
-	var code := str(json.get("code", ""))
-
-	# Campaign not currently active (uninitiated / disabled / finished).
-	if (
-		ok == false
-		and code in ["campaign_key_uninitiated", "campaign_disabled", "campaign_finished"]
-	):
-		_show_error(tr("REWARD_NOT_AVAILABLE"))
-		return
-
-	# Any other non-ok response: friendly copy, never the raw code (already logged above).
-	if ok == false:
-		_show_error(_friendly_claim_error(code))
-		return
-
-	var data = json.get("data", [])
-	# ok but nothing granted → out of stock.
-	if not (data is Array) or data.is_empty():
-		_show_error(tr("REWARD_OUT_OF_STOCK"))
-		return
-
-	# Already owned: assigned more than the window ago (a fresh claim echoes back a recent date).
-	# The visual is the SAME either way (see _reveal_claimed) — only the copy differs.
-	var item = data[0]
-	var assigned_at = item.get("assigned_at", null)
-	if assigned_at != null:
-		# Godot's ISO parser chokes on fractional seconds / trailing 'Z'; keep YYYY-MM-DDTHH:MM:SS.
-		var assigned_unix := Time.get_unix_time_from_datetime_string(str(assigned_at).substr(0, 19))
-		if (
-			assigned_unix > 0
-			and assigned_unix < Time.get_unix_time_from_system() - ALREADY_CLAIMED_WINDOW_SEC
-		):
-			_show_already_claimed()
-			return
-
-	_show_success()
 
 
 ## Fresh grant: reveal the reward with the celebratory rays animation.
@@ -259,24 +149,13 @@ func _reveal_claimed() -> void:
 	animation_player.play("claim")
 
 
-## Maps a rewards-server error code to user-facing copy. Unknown codes fall through to a
-## generic message so a raw code (e.g. "catalyst_unreachable") never reaches the UI — the
-## real code is still logged by _process_claim_response for debugging.
-func _friendly_claim_error(code: String) -> String:
-	match code:
-		"campaign_not_found", "campaign_key_not_found", "campaign_not_owner":
-			return tr("REWARD_NOT_AVAILABLE")
-		"already_claimed", "user_already_claimed":
-			return tr("REWARD_ALREADY_OWNED")
-		"supply_reached", "out_of_stock":
-			return tr("REWARD_OUT_OF_STOCK")
-		"catalyst_invalid", "catalyst_unreachable", "user_address_not_connected", "user_address_position":
-			return tr("REWARD_SESSION_UNVERIFIED")
-	return tr("REWARD_CLAIM_FAILED")
-
-
 func _show_error(message: String) -> void:
-	# Roll back the processing visual so the reward art is visible again and the user can retry.
+	_stop_processing()
+	label_text.text = message
+
+
+# Rolls back the processing visual so the reward art is visible again and the user can retry.
+func _stop_processing() -> void:
 	_claiming = false
 	if is_instance_valid(loading_spinner):
 		loading_spinner.visible = false
@@ -284,4 +163,3 @@ func _show_error(message: String) -> void:
 		texture_rect_reward.visible = true
 	button_claim.disabled = false
 	button_claim.text = tr("REWARD_MODAL_CLAIM_REWARD")
-	label_text.text = message

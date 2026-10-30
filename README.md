@@ -158,19 +158,23 @@ links it from the PR build-report comment (served at
 `https://mobile-artifacts.dclregenesislabs.xyz/`).
 
 The `build` label (or the legacy alias `build-ios`) triggers `mobile_distribute.yml`:
-iOS → TestFlight, plus a Slack "🤖 Android Build Ready" notification once the commit's
-APK is in R2. It does not rebuild Android or push to a store.
+iOS → TestFlight, and the commit's APK (already in R2) is linked from the build card. It does
+not rebuild Android or push to a store.
 
-Progress is reported in two places that mirror each other: a live Slack root card (+ threaded
-replies) and a single **📱 Mobile build pipeline** comment on the PR, kept current by every
-leg via `.github/scripts/pr-card.py` — build number/version, per-platform state (iOS →
-TestFlight, Android → APK/AAB links) and a collapsed timeline. The TestFlight result comes
-from the `ios-wait` job, which watches the `godot-asc-deploy` run it dispatched (matched by
-that workflow's `run-name`, `🍏 <branch> @ <sha>`) with the existing `ASC_DEPLOY_DISPATCH_TOKEN`
-— the private repo holds no token for this one.
+Progress is reported to the mobile board (`https://mobile-board.dclregenesislabs.xyz`): every leg
+POSTs a small build event with `.github/scripts/report-build-event.py` (secret
+`BUILD_REPORTER_TOKEN`; the board URL is the `BOARD_EVENTS_URL` repository variable — the Worker's
+`workers.dev` host, because the custom domain's Bot Fight Mode returns 403 to GitHub runners), and the board renders a live Slack root card (+ threaded replies) and a
+single **📱 Mobile build pipeline** comment on the PR — build number/version, per-platform state
+(iOS → TestFlight, Android → APK/AAB links) and a collapsed timeline. CI itself no longer talks
+to Slack or writes PR comments. `godot-asc-deploy` reports the iOS signing and upload itself
+(events keyed by commit SHA); the `ios-wait` job also reports the TestFlight result as a fallback,
+watching the run it dispatched (matched by that workflow's `run-name`, `🍏 <branch> @ <sha>`) with
+the existing `ASC_DEPLOY_DISPATCH_TOKEN` — the private repo holds no token for this one. Build state is also queryable at
+`/api/builds/pipelines/<run_id>`.
 
 ```bash
-# On a PR: add the build label (iOS TestFlight + Android Slack notification)
+# On a PR: add the build label (iOS TestFlight + Android APK on the build card)
 gh pr edit --add-label "build"
 
 # Manual trigger on main/release (GitHub Actions UI or gh CLI)

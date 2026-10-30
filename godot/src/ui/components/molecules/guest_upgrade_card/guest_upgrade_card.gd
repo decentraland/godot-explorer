@@ -225,7 +225,7 @@ func _async_on_add_email_pressed() -> void:
 		await _async_wait_for_portrait()
 	# The full Add Email → OTP → reward flow lives in the modal manager so this notice and the
 	# aspirational upgrade modal share one identical experience (issues #2377 / #2372).
-	await Global.modal_manager.async_start_add_email_flow()
+	await Global.add_email_flow.async_start_add_email_flow()
 
 
 # Discover switches the app to portrait asynchronously; wait a few frames so the Add Email modal is

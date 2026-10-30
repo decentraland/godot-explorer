@@ -34,10 +34,10 @@ use super::{
         SegmentEventBlockUser, SegmentEventChatMessageSent, SegmentEventClickButton,
         SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
         SegmentEventFirebaseInit, SegmentEventGuestWalletCreation,
-        SegmentEventIosStoreKitEnvironment, SegmentEventLoading, SegmentEventPushOpened,
-        SegmentEventRequestFriend, SegmentEventRequestResult, SegmentEventReviewPrompted,
-        SegmentEventSceneLocaleRequested, SegmentEventScreenViewed, SegmentEventSystemInfoReport,
-        SegmentEventUnfriend,
+        SegmentEventIosStoreKitEnvironment, SegmentEventLoading, SegmentEventLoginStreakClaim,
+        SegmentEventLoginStreakDayCounted, SegmentEventPushOpened, SegmentEventRequestFriend,
+        SegmentEventRequestResult, SegmentEventReviewPrompted, SegmentEventSceneLocaleRequested,
+        SegmentEventScreenViewed, SegmentEventSystemInfoReport, SegmentEventUnfriend,
     },
     frame::Frame,
     install_attribution::InstallAttribution,
@@ -728,6 +728,41 @@ impl Metrics {
         self.queue_event("review_prompted", event);
     }
 
+    /// A day was credited to the 7-day login streak (issue #3018). Called from
+    /// StreakManager.credit_jump_in().
+    #[func]
+    pub fn track_login_streak_day_counted(&mut self, day: i32, is_guest: bool) {
+        let event = SegmentEvent::LoginStreakDayCounted(SegmentEventLoginStreakDayCounted {
+            day: day.max(0) as u32,
+            is_guest,
+        });
+        self.queue_event("LOGIN_STREAK_DAY_COUNTED", event);
+    }
+
+    /// A D3 or D7 login-streak reward claim resolved (issue #3018). `reward` is "d3" or "d7",
+    /// `result` is "success" or "error"; `error_code` is the raw rewards-server code (empty on
+    /// success). Called from StreakModalController._on_streak_claim_resolved() once the claim
+    /// request actually resolves (not when the modal is merely shown).
+    #[func]
+    pub fn track_login_streak_claim(&mut self, reward: String, result: String, error_code: String) {
+        // Low-frequency event (at most a couple per day per player) — info-level is fine,
+        // unlike a per-frame log; added to confirm this call actually reaches Rust after
+        // LOGIN_STREAK_CLAIM was never once observed in the warehouse despite surrounding
+        // click_button/screen_viewed events from the same tap landing fine.
+        tracing::info!(
+            "[Metrics] track_login_streak_claim reward={} result={} error_code={}",
+            reward,
+            result,
+            error_code
+        );
+        let event = SegmentEvent::LoginStreakClaim(SegmentEventLoginStreakClaim {
+            reward,
+            result,
+            error_code,
+        });
+        self.queue_event("LOGIN_STREAK_CLAIM", event);
+    }
+
     #[func]
     pub fn track_screen_viewed(&mut self, screen_name: String, extra_properties: String) {
         let event = SegmentEvent::ScreenViewed(SegmentEventScreenViewed {
@@ -1107,6 +1142,36 @@ impl Metrics {
         }
         DclAndroidPlugin::log_firebase_event(
             GString::from("first_move_in_world"),
+            GString::from(&params_str),
+        )
+    }
+
+    /// Fire the `first_social_action` Firebase event (Android only). `action` is one of `emote`,
+    /// `friend_request`, `friend_accept`, `chat`. Once per install is the caller's job: persist
+    /// its flag ONLY on `true`, same contract as `track_first_move_in_world`. `is_guest` comes
+    /// from the caller because `common.dcl_is_guest` is false for thirdweb (Play-as-Guest) guests.
+    #[func]
+    pub fn track_first_social_action(&mut self, action: String, is_guest: bool) -> bool {
+        if !self.eula_accepted {
+            return false;
+        }
+        if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
+            return false;
+        }
+        let params = serde_json::json!({
+            "action": action,
+            "is_guest": is_guest,
+            "dcl_eth_address": self.common.dcl_eth_address,
+        });
+        let params_str = params.to_string();
+        if self.debug_level > 0 {
+            tracing::debug!(
+                "[Metrics] Firebase event 'first_social_action': {}",
+                params_str
+            );
+        }
+        DclAndroidPlugin::log_firebase_event(
+            GString::from("first_social_action"),
             GString::from(&params_str),
         )
     }

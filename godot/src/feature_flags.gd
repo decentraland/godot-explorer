@@ -11,9 +11,9 @@ extends Node
 ## gracefully (e.g. tearing archipelago down while keeping scene rooms alive).
 ##
 ## Fail-open: on timeout, network error or malformed payload every flag keeps
-## its default and the feature stays enabled. Exceptions: `pulse`,
-## `sentry-error-events` and `async-shader-compilation` are fail-closed — they
-## activate only when the payload explicitly enables them (see _apply_flags).
+## its default and the feature stays enabled. Exceptions: `sentry-error-events`,
+## `async-shader-compilation` and `tester-wallets` are fail-closed — they activate
+## only when the payload explicitly enables them.
 
 signal flags_loaded
 
@@ -21,8 +21,6 @@ const TIMEOUT_SECONDS := 5.0
 
 # Flag names exactly as served by the mobile-bff payload.
 const FLAG_ARCHIPELAGO := "archipielago"
-const FLAG_PULSE := "pulse"
-const FLAG_DUAL_CHANNEL := "dual-channel"
 # Sentry error-event sampling, served as a number in [0, 1].
 const FLAG_SENTRY_SAMPLE_RATE := "sentry-sample-rate"
 # Report ERROR-level Sentry events (the engine/Rust error firehose). Fail-closed:
@@ -50,6 +48,10 @@ const FLAG_DAY1_NOTIFICATION := "day1-notification"
 # `force-backface-culling=true/false` win over the flag, so QA can see it without the
 # bff serving it.
 const FLAG_FORCE_BACKFACE_CULLING := "alfa-force-backface-culling"
+# Comma-separated wallet addresses that get Settings → Dev Tools on production builds.
+const FLAG_TESTER_WALLETS := "tester-wallets"
+# The RENDER_READY metric (render_ready_probe.gd). Fail-open kill switch for its Segment volume.
+const FLAG_RENDER_READY_PROBE := "render-ready-probe"
 
 var _flags: Dictionary = {}
 var _loaded := false
@@ -65,6 +67,10 @@ func _ready() -> void:
 
 func is_loaded() -> bool:
 	return _loaded
+
+
+func is_async_shader_compilation_enabled() -> bool:
+	return _async_shaders_enabled
 
 
 # `default_value` is returned while the flags aren't loaded yet or when the
@@ -116,6 +122,20 @@ func is_force_backface_culling_enabled() -> bool:
 	return is_enabled(FLAG_FORCE_BACKFACE_CULLING, false)
 
 
+# Dev Tools are always on outside production. On production only for a signed-in wallet listed
+# in FLAG_TESTER_WALLETS; an unloaded or missing flag keeps them off.
+func dev_tools_enabled() -> bool:
+	if not Global.is_production():
+		return true
+	var address := String(Global.player_identity.get_address_str()).to_lower()
+	if address.is_empty():
+		return false
+	for wallet in get_text(FLAG_TESTER_WALLETS, "").split(",", false):
+		if wallet.strip_edges().to_lower() == address:
+			return true
+	return false
+
+
 # Extracts the flags dictionary from the mobile-bff response:
 # `{"ok": true, "data": {"flags": {"archipielago": true, ...}}}`.
 # Returns an empty dictionary on any shape mismatch (fail-open).
@@ -159,22 +179,8 @@ func _async_load() -> void:
 # Applies the comms-affecting flags. `archipielago=false` skips the archipelago
 # connection while scene rooms (and Pulse) keep working — see
 # CommunicationManager::set_archipelago_enabled on the Rust side.
-# `pulse` is the fail-closed exception: the transport activates only when the
-# payload explicitly enables it — a fetch failure or an absent flag reports
-# `false` and Pulse stays off (LiveKit avatar sync covers everything). The flag
-# only decides the default: explicit local opt-ins (deeplink `pulse=true` /
-# `pulse-server=`, CLI `--pulse`) and opt-outs (`--no-pulse`, `pulse=false`)
-# always win — see CommunicationManager::pulse_enabled on the Rust side.
-# `dual-channel` is the rollout control for avatar sync: while it is true (the
-# default, and today's behaviour) movement and emotes keep going over LiveKit
-# even when Pulse is established. Flipping it false hands them to Pulse alone —
-# only safe once the deployment's authoritative servers ingest Pulse as scene
-# listeners, which is a property of the deployment, not of this client. Local
-# `--livekit-movement` / `--no-livekit-movement` / `dual-channel=` still win.
 func _apply_flags() -> void:
 	Global.comms.set_archipelago_enabled(is_enabled(FLAG_ARCHIPELAGO, true))
-	Global.comms.set_pulse_flag_enabled(is_enabled(FLAG_PULSE, false))
-	Global.comms.set_dual_channel_flag_enabled(is_enabled(FLAG_DUAL_CHANNEL, true))
 
 	# SentrySDK.init runs at process start (before this fetch resolves), so the
 	# remote rate is enforced through the _before_send gate, not the init option.

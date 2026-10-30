@@ -126,6 +126,9 @@ var locations: Node
 var modal_manager: ModalManager
 var upgrade_nudge_coordinator: UpgradeNudgeCoordinator
 var review_prompt_coordinator: ReviewPromptCoordinator
+var streak_manager: StreakManager
+var streak_modal_controller: StreakModalController
+var add_email_flow: AddEmailFlow
 var controls_ftue_coordinator: ControlsFtueCoordinator
 var ftue_tutorial_coordinator: FtueTutorialCoordinator
 
@@ -174,6 +177,8 @@ var attestation: AttestationService = null
 # `Global.feature_flags.is_enabled("flag-name")`; comms-affecting flags are
 # applied automatically when the response arrives — see feature_flags.gd.
 var feature_flags: FeatureFlags = null
+# Seasonal Discover reskin (issue #3025) — see seasonal_skin_manager.gd.
+var seasonal_skin_manager: SeasonalSkinManager = null
 
 # Ad/referrer campaign map fetched from the mobile-bff at startup. Resolves the `?c=`
 # token captured at boot into a personalized FTUE or a direct boot into the target scene
@@ -692,6 +697,17 @@ func _ready():
 	self.review_prompt_coordinator = load("res://src/review_prompt_coordinator.gd").new()
 	self.review_prompt_coordinator.set_name("review_prompt_coordinator")
 
+	self.streak_manager = load("res://src/logic/streak_manager.gd").new()
+	self.streak_manager.set_name("streak_manager")
+
+	self.streak_modal_controller = (
+		load("res://src/ui/components/organisms/streak_modal/streak_modal_controller.gd").new()
+	)
+	self.streak_modal_controller.set_name("streak_modal_controller")
+
+	self.add_email_flow = load("res://src/ui/components/organisms/modal/add_email_flow.gd").new()
+	self.add_email_flow.set_name("add_email_flow")
+
 	self.controls_ftue_coordinator = load("res://src/controls_ftue_coordinator.gd").new()
 	self.controls_ftue_coordinator.set_name("controls_ftue_coordinator")
 
@@ -706,6 +722,9 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.modal_manager)
 	get_tree().root.add_child.call_deferred(self.upgrade_nudge_coordinator)
 	get_tree().root.add_child.call_deferred(self.review_prompt_coordinator)
+	get_tree().root.add_child.call_deferred(self.streak_manager)
+	get_tree().root.add_child.call_deferred(self.streak_modal_controller)
+	get_tree().root.add_child.call_deferred(self.add_email_flow)
 	get_tree().root.add_child.call_deferred(self.controls_ftue_coordinator)
 	get_tree().root.add_child.call_deferred(self.ftue_tutorial_coordinator)
 	get_tree().root.add_child.call_deferred(self.content_provider)
@@ -748,6 +767,10 @@ func _ready():
 	self.feature_flags = FeatureFlags.new()
 	self.feature_flags.set_name("feature_flags")
 	add_child(self.feature_flags)
+	# Reads off the flags above once they arrive — see seasonal_skin_manager.gd.
+	self.seasonal_skin_manager = SeasonalSkinManager.new()
+	self.seasonal_skin_manager.set_name("seasonal_skin_manager")
+	add_child(self.seasonal_skin_manager)
 	# Campaign resolver. Unlike the flags above it does NOT fetch on _ready: the map is only
 	# requested once a token actually needs resolving, so an install with no campaign — the
 	# large majority — never touches the endpoint. What starts here is the watcher that
@@ -1671,8 +1694,7 @@ func _apply_comms_deeplink_params(deep_link) -> void:
 	if not pulse_value.is_empty():
 		print("[DEEPLINK] pulse=", pulse_value)
 		comms.set_pulse_enabled(pulse_value.to_lower() in ["true", "1", "yes"])
-	# `dual-channel=true/false`: whether movement and emotes keep going over LiveKit while
-	# Pulse is established. Overrides the deployment's `dual-channel` flag (default true) for this run.
+	# `dual-channel=true/false`: explicit developer override for LiveKit avatar duplication.
 	var dual_channel_value = deep_link.params.get("dual-channel", "")
 	if not dual_channel_value.is_empty():
 		print("[DEEPLINK] dual-channel=", dual_channel_value)

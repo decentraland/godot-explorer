@@ -89,6 +89,7 @@ var _custom_max_lights_spin: SpinBox = null
 
 @onready
 var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMessageClosesChat
+@onready var check_button_show_own_nametag: CheckButton = %CheckButton_ShowOwnNametag
 @onready var dropdown_list_camera_mode: DropdownList = %DropdownList_CameraMode
 @onready var camera_mode_warning: Control = %CameraModeWarning
 @onready var check_button_hide_explorer_ui: CheckButton = %CheckButton_HideExplorerUI
@@ -163,6 +164,7 @@ func _ready():
 	check_button_submit_message_closes_chat.button_pressed = (
 		Global.get_config().submit_message_closes_chat
 	)
+	check_button_show_own_nametag.button_pressed = Global.get_config().show_own_nametag
 	_populate_camera_mode_items()
 	dropdown_list_camera_mode.item_selected.connect(_on_dropdown_list_camera_mode_item_selected)
 	_refresh_camera_mode_row()
@@ -194,6 +196,7 @@ func _ready():
 	_setup_dynamic_graphics()
 	_update_dynamic_graphics_status()
 	_setup_impostor_benchmark_button()
+	_setup_streak_debug_button()
 	_setup_fast_day_cycle_toggle()
 	_setup_light_debug_controls()
 	_setup_custom_profile_controls()
@@ -377,7 +380,8 @@ func _find_section(key: String) -> Dictionary:
 
 
 ## Build the section registry and the left-menu rows. Order matches the design; Developer is
-## appended only outside production. Rows share a ButtonGroup so exactly one stays highlighted.
+## appended outside production or for a tester wallet (FeatureFlags.dev_tools_enabled). Rows
+## share a ButtonGroup so exactly one stays highlighted.
 ## Section title keys live in the data table below, invisible to the i18n scanner:
 # i18n-keys: SETTINGS_GRAPHICS, SETTINGS_AUDIO, SETTINGS_GAMEPLAY, SETTINGS_LANGUAGE_SECTION
 # i18n-keys: SETTINGS_ACCOUNT, SETTINGS_HELP_SUPPORT, SETTINGS_STORAGE, SETTINGS_DEV_TOOLS
@@ -419,7 +423,7 @@ func _build_section_list() -> void:
 			]
 		)
 	)
-	if not Global.is_production():
+	if Global.feature_flags.dev_tools_enabled():
 		_sections.append(
 			{"key": "developer", "title_key": "SETTINGS_DEV_TOOLS", "container": container_advanced}
 		)
@@ -701,6 +705,16 @@ func _on_check_button_submit_message_closes_chat_toggled(toggled_on: bool) -> vo
 		Global.get_config().save_to_settings_file()
 
 
+func _on_check_button_show_own_nametag_toggled(toggled_on: bool) -> void:
+	if Global.get_config().show_own_nametag == toggled_on:
+		return
+	Global.get_config().show_own_nametag = toggled_on
+	Global.get_config().save_to_settings_file()
+	var player = Global.scene_runner.player_avatar_node if Global.scene_runner else null
+	if is_instance_valid(player):
+		player.refresh_nametag_visibility()
+
+
 # Camera mode (first/third person) is runtime-only state, not persisted config: the
 # dropdown just drives Global.set_camera_mode(), reusing the logic the removed HUD
 # camera button used. The camera only exists inside the explorer; before entering a
@@ -939,9 +953,9 @@ func _on_button_report_content_pressed() -> void:
 
 func _setup_impostor_benchmark_button() -> void:
 	# Benchmark scene fetches 200 catalyst profiles and runs a 30s+ stress
-	# pass — gate it behind the developer tab (which is itself hidden in
-	# production builds) so end users don't trip it from the graphics tab.
-	if Global.is_production():
+	# pass — gate it behind the developer tab so end users don't trip it
+	# from the graphics tab.
+	if not Global.feature_flags.dev_tools_enabled():
 		return
 	var bench_button := Button.new()
 	bench_button.name = "Button_RunImpostorBenchmark"
@@ -953,10 +967,45 @@ func _setup_impostor_benchmark_button() -> void:
 	container_advanced.add_child(bench_button)
 
 
+## Scene-authored (settings.tscn's StreakDayDebug row, not built here) — only the production
+## gate and the four button handlers live in code. Advances/rewinds/resets/credits the 7-day login
+## streak on demand (issue #3018), for exercising each day's modal/widget state without waiting
+## for a real jump-in. Not session-scoped — it writes through the same save path a real credit does
+## (see StreakManager.debug_advance_day).
+func _setup_streak_debug_button() -> void:
+	if not Global.feature_flags.dev_tools_enabled():
+		%StreakDayDebug.hide()
+
+
+func _on_button_streak_advance_day_pressed() -> void:
+	Global.streak_manager.debug_advance_day()
+	print("[StreakDebug] advanced to day %d" % Global.streak_manager.get_progress_day())
+
+
+func _on_button_streak_rewind_day_pressed() -> void:
+	Global.streak_manager.debug_rewind_day()
+	print("[StreakDebug] rewound to day %d" % Global.streak_manager.get_progress_day())
+
+
+func _on_button_streak_reset_pressed() -> void:
+	Global.streak_manager.debug_reset_streak()
+	print("[StreakDebug] reset to day %d" % Global.streak_manager.get_progress_day())
+
+
+func _on_button_streak_jump_in_pressed() -> void:
+	Global.streak_manager.debug_simulate_jump_in()
+	print(
+		(
+			"[StreakDebug] simulated jump-in, progress day %d"
+			% Global.streak_manager.get_progress_day()
+		)
+	)
+
+
 func _setup_light_debug_controls() -> void:
 	# Scene-authored dynamic light controls (Dev Tools only). Rows are cloned
 	# from an existing settings row so they match the style; no .tscn edits.
-	if Global.is_production():
+	if not Global.feature_flags.dev_tools_enabled():
 		return
 	var template_row := (
 		container_advanced.find_child("SceneLogsEnabled", true, false) as HBoxContainer
@@ -1031,7 +1080,7 @@ func _setup_fast_day_cycle_toggle() -> void:
 	# Fast day/night cycle (10s per full day) to verify skybox lighting
 	# transitions without waiting (issue #2516). Developer tab only, added at
 	# the top cloning an existing row so it matches the settings style.
-	if Global.is_production():
+	if not Global.feature_flags.dev_tools_enabled():
 		return
 	var template_row := (
 		container_advanced.find_child("SceneLogsEnabled", true, false) as HBoxContainer
