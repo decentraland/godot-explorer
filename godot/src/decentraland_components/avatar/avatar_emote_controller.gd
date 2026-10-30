@@ -1365,3 +1365,5 @@ func _track_emote(id: String, owner_scene_id: int) -> void:
 	var screen_name := "SCENE" if source == "scene" else "EMOTE_WHEEL"
 	var payload = JSON.stringify({"emote_urn": id, "is_base": is_base, "source": source})
 	Global.metrics.track_click_button("USED EMOTE", screen_name, payload)
+	if source == "user":
+		Global.analytics_controller.track_first_social_action("emote")

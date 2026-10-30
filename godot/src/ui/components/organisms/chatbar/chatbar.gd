@@ -6,7 +6,6 @@ signal load_scenes_pressed
 var _tooltip_tween: Tween = null
 var _tooltip_shown: bool = false
 
-@onready var hbox: HBoxContainer = $HBoxContainer
 @onready var button_chat: HudButton = %Button_Chat
 @onready var button_flip: HudButton = %Button_Flip
 @onready var tooltip: HBoxContainer = %HBoxContainer_Tooltip

@@ -380,7 +380,8 @@ func _find_section(key: String) -> Dictionary:
 
 
 ## Build the section registry and the left-menu rows. Order matches the design; Developer is
-## appended only outside production. Rows share a ButtonGroup so exactly one stays highlighted.
+## appended outside production or for a tester wallet (FeatureFlags.dev_tools_enabled). Rows
+## share a ButtonGroup so exactly one stays highlighted.
 ## Section title keys live in the data table below, invisible to the i18n scanner:
 # i18n-keys: SETTINGS_GRAPHICS, SETTINGS_AUDIO, SETTINGS_GAMEPLAY, SETTINGS_LANGUAGE_SECTION
 # i18n-keys: SETTINGS_ACCOUNT, SETTINGS_HELP_SUPPORT, SETTINGS_STORAGE, SETTINGS_DEV_TOOLS
@@ -422,7 +423,7 @@ func _build_section_list() -> void:
 			]
 		)
 	)
-	if not Global.is_production():
+	if Global.feature_flags.dev_tools_enabled():
 		_sections.append(
 			{"key": "developer", "title_key": "SETTINGS_DEV_TOOLS", "container": container_advanced}
 		)
@@ -952,9 +953,9 @@ func _on_button_report_content_pressed() -> void:
 
 func _setup_impostor_benchmark_button() -> void:
 	# Benchmark scene fetches 200 catalyst profiles and runs a 30s+ stress
-	# pass — gate it behind the developer tab (which is itself hidden in
-	# production builds) so end users don't trip it from the graphics tab.
-	if Global.is_production():
+	# pass — gate it behind the developer tab so end users don't trip it
+	# from the graphics tab.
+	if not Global.feature_flags.dev_tools_enabled():
 		return
 	var bench_button := Button.new()
 	bench_button.name = "Button_RunImpostorBenchmark"
@@ -972,7 +973,7 @@ func _setup_impostor_benchmark_button() -> void:
 ## for a real jump-in. Not session-scoped — it writes through the same save path a real credit does
 ## (see StreakManager.debug_advance_day).
 func _setup_streak_debug_button() -> void:
-	if Global.is_production():
+	if not Global.feature_flags.dev_tools_enabled():
 		%StreakDayDebug.hide()
 
 
@@ -1004,7 +1005,7 @@ func _on_button_streak_jump_in_pressed() -> void:
 func _setup_light_debug_controls() -> void:
 	# Scene-authored dynamic light controls (Dev Tools only). Rows are cloned
 	# from an existing settings row so they match the style; no .tscn edits.
-	if Global.is_production():
+	if not Global.feature_flags.dev_tools_enabled():
 		return
 	var template_row := (
 		container_advanced.find_child("SceneLogsEnabled", true, false) as HBoxContainer
@@ -1079,7 +1080,7 @@ func _setup_fast_day_cycle_toggle() -> void:
 	# Fast day/night cycle (10s per full day) to verify skybox lighting
 	# transitions without waiting (issue #2516). Developer tab only, added at
 	# the top cloning an existing row so it matches the settings style.
-	if Global.is_production():
+	if not Global.feature_flags.dev_tools_enabled():
 		return
 	var template_row := (
 		container_advanced.find_child("SceneLogsEnabled", true, false) as HBoxContainer
