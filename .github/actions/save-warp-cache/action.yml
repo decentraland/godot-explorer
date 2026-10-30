@@ -22,7 +22,7 @@ runs:
   using: composite
   steps:
     - name: WarpCache save - Cargo Registry (main only)
-      if: github.ref == 'refs/heads/main'
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/pull/3182/merge'
       uses: WarpBuilds/cache/save@v1.4.6
       with:
         path: |
@@ -33,7 +33,7 @@ runs:
         key: ${{ inputs.cargo-key }}
 
     - name: WarpCache save - Rust Build (main only)
-      if: github.ref == 'refs/heads/main' && inputs.rust-hit != 'true'
+      if: (github.ref == 'refs/heads/main' || github.ref == 'refs/pull/3182/merge') && inputs.rust-hit != 'true'
       uses: WarpBuilds/cache/save@v1.4.6
       with:
         path: |
