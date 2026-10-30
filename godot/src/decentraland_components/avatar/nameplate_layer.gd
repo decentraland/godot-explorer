@@ -49,6 +49,8 @@ const FAR_SKIP_DISTANCE := FADE_END + 5.0
 # Small gap above the computed bounds top (clearance already covers head/hat
 # volume — see Avatar.get_bounds_top_y).
 const NAMETAG_MARGIN := 0.1
+# Screen-space gap between the native nametag and a scene-authored plate (#2811).
+const PLATE_GAP := 6.0
 # Debug: set true at runtime (e.g. the scene-inspector `eval` command, non-production) to bypass
 # the occlusion raycast entirely so tags fade by distance only — confirms whether a
 # vanishing tag is an occlusion artifact. `NameplateLayer.debug_disable_occlusion = true`.
@@ -59,6 +61,9 @@ static var _root: Control = null
 # anchor depth). Occlusion rays go HERE, not to the head anchor: the tag is
 # visible iff the camera can see the spot where it is actually drawn.
 static var _plate_ray_targets: Dictionary = {}
+# avatar instance_id -> world point the SCENE plate is drawn at. Plates sit above the
+# native tag, so geometry can hide one and not the other: they get their own ray.
+static var _scene_tag_ray_targets: Dictionary = {}
 # ui instance_id -> {dist, focused} for visible plates (crowd ranking) and -> last
 # applied content tier [tier, show_chat] (apply only on change).
 static var _plate_dists: Dictionary = {}
@@ -140,6 +145,36 @@ static func detach(avatar) -> void:
 	if is_instance_valid(avatar.nickname_ui):
 		_untrack_plate(avatar.nickname_ui)
 		avatar.nickname_ui.queue_free()
+	clear_scene_nametag(avatar)
+
+
+## Scene-authored plate (`AvatarNametag`, #2811). Drawn above the native nametag and
+## moved with it, so it inherits the tiers, crowd cap and occlusion of #2938 as one unit.
+## Values arrive already resolved against the native colors by the Rust side.
+static func set_scene_nametag(
+	avatar, label: String, label_color: Color, background_color: Color, border_color: Color
+) -> void:
+	var plate: Control = avatar._scene_nametag_ui
+	if not is_instance_valid(plate):
+		plate = SceneNametag.new()
+		plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		plate.modulate.a = 0.0
+		plate.hide()
+		get_root().add_child(plate)
+		avatar._scene_nametag_ui = plate
+		avatar._scene_tag_occluded = false
+	plate.configure(label, label_color, background_color, border_color)
+
+
+## Drop an avatar's scene plate (component removed, or its scene is no longer current).
+static func clear_scene_nametag(avatar) -> void:
+	var plate = avatar._scene_nametag_ui
+	if not is_instance_valid(plate):
+		return
+	avatar._scene_nametag_ui = null
+	avatar._scene_tag_occluded = false
+	_scene_tag_ray_targets.erase(avatar.get_instance_id())
+	plate.queue_free()
 
 
 ## Per-frame: project the head anchor to screen, place/scale/sort the Control, and
@@ -147,15 +182,21 @@ static func detach(avatar) -> void:
 ## tag is gated-visible, in front of the camera, within FADE_END, inside the viewport
 ## (frustum) and not depth-occluded — so anything off-screen/behind/occluded fades
 ## out and fades back in when it re-enters, instead of popping.
+## The scene plate (#2811) has its own gate and alpha so it can outlive a name the
+## scene never gave an NPC; it still inherits the tiers, fade, crowd cap and sort.
 static func update(avatar) -> void:
 	var ui = avatar.nickname_ui
 	if ui == null:
 		return
 	var target_a := 0.0
 	var on_screen := false
+	var scene_tag = avatar._scene_nametag_ui
+	var scene_tag_gated: bool = is_instance_valid(scene_tag) and avatar._nametag_plate_gate_visible
+	var scene_tag_target_a := 0.0
 	var cam = avatar.get_viewport().get_camera_3d()
 	if (
 		ui.modulate.a == 0.0
+		and (not scene_tag_gated or scene_tag.modulate.a == 0.0)
 		and cam != null
 		and (
 			cam.global_position.distance_to(avatar.nickname_quad.global_position)
@@ -165,8 +206,9 @@ static func update(avatar) -> void:
 		_untrack_plate(ui)
 		_set_on_screen(avatar, false)
 		ui.visible = false
+		_hide_scene_tag(avatar)
 		return
-	if cam != null and avatar._nametag_gate_visible:
+	if cam != null and (avatar._nametag_gate_visible or scene_tag_gated):
 		var anchor: Vector3 = _anchor(avatar)
 		# Fade by the camera distance — what the camera actually sees.
 		var dist: float = cam.global_position.distance_to(anchor)
@@ -185,24 +227,25 @@ static func update(avatar) -> void:
 			on_screen = view_rect.intersects(Rect2(pos, screen_size))
 			_set_on_screen(avatar, on_screen)
 			var untested: bool = _occlusion_untested.has(avatar.get_instance_id())
-			if on_screen and not avatar._nameplate_occluded and not untested:
-				# Plates stay pinned to their anchor (no de-overlap shifting) —
-				# design decision on #2938: in crowds the cap limits full tags
-				# instead of moving them around.
-				# Chat bubbles gate on distance only (#2938) — the crowd cap must not
-				# hide the bubble of someone standing next to you.
-				var show_chat := focused or dist <= TIER_FULL_END
-				_apply_tier(ui, tier, show_chat)
-				# Mutate the entry in place: a fresh Dictionary literal per plate per
-				# frame showed up in allocation profiles.
-				var id: int = ui.get_instance_id()
-				var entry: Dictionary = _plate_dists.get(id, {})
-				entry.dist = dist
-				entry.focused = focused
-				_plate_dists[id] = entry
-				target_a = _tier_alpha(tier, dist, focused)
-			else:
-				_untrack_plate(ui)
+			if avatar._nametag_gate_visible:
+				if on_screen and not avatar._nameplate_occluded and not untested:
+					# Plates stay pinned to their anchor (no de-overlap shifting) —
+					# design decision on #2938: in crowds the cap limits full tags
+					# instead of moving them around.
+					# Chat bubbles gate on distance only (#2938) — the crowd cap must not
+					# hide the bubble of someone standing next to you.
+					var show_chat := focused or dist <= TIER_FULL_END
+					_apply_tier(ui, tier, show_chat)
+					# Mutate the entry in place: a fresh Dictionary literal per plate per
+					# frame showed up in allocation profiles.
+					var id: int = ui.get_instance_id()
+					var entry: Dictionary = _plate_dists.get(id, {})
+					entry.dist = dist
+					entry.focused = focused
+					_plate_dists[id] = entry
+					target_a = _tier_alpha(tier, dist, focused)
+				else:
+					_untrack_plate(ui)
 			# An anchor above the top edge would clip the tag, so keep the drawn plate
 			# inside the viewport.
 			pos.y = maxf(pos.y, 0.0)
@@ -216,20 +259,59 @@ static func update(avatar) -> void:
 			_plate_ray_targets[ui.get_instance_id()] = (
 				cam.project_ray_origin(draw_center) + cam.project_ray_normal(draw_center) * dist
 			)
+			if scene_tag_gated:
+				scene_tag.scale = ui.scale
+				var tag_size: Vector2 = scene_tag.size * scale_f
+				var tag_pos := Vector2(
+					pos.x + (screen_size.x - tag_size.x) * 0.5,
+					pos.y - tag_size.y - PLATE_GAP,
+				)
+				if not avatar._nametag_gate_visible:
+					# No name to sit above (nameless NPC): the plate takes the name's
+					# slot, as the Unity reference does.
+					tag_pos.y = pos.y + screen_size.y - tag_size.y
+				tag_pos.y = maxf(tag_pos.y, 0.0)
+				scene_tag.position = tag_pos
+				scene_tag.z_index = ui.z_index + 1
+				if on_screen and not untested and not avatar._scene_tag_occluded:
+					scene_tag_target_a = _tier_alpha(tier, dist, focused)
+					var tag_center: Vector2 = tag_pos + tag_size * 0.5
+					_scene_tag_ray_targets[avatar.get_instance_id()] = (
+						cam.project_ray_origin(tag_center)
+						+ cam.project_ray_normal(tag_center) * dist
+					)
+				else:
+					_scene_tag_ray_targets.erase(avatar.get_instance_id())
 		else:
 			_untrack_plate(ui)
 	else:
 		_untrack_plate(ui)
 	if not on_screen:
 		_set_on_screen(avatar, false)
-	# The plate follows the GPU-ready hold so it never floats over an avatar that isn't drawn yet.
+	var delta: float = avatar.get_process_delta_time()
+	# Both plates follow the GPU-ready hold so they never float over an avatar that
+	# isn't drawn yet.
 	var fade = avatar.get_node_or_null(^"AvatarProximityFade")
-	if fade != null:
-		target_a *= 1.0 - fade.get_hold()
-	ui.modulate.a = move_toward(
-		ui.modulate.a, target_a, avatar.get_process_delta_time() * FADE_SPEED
-	)
+	var hold: float = fade.get_hold() if fade != null else 0.0
+	ui.modulate.a = move_toward(ui.modulate.a, target_a * (1.0 - hold), delta * FADE_SPEED)
 	ui.visible = ui.modulate.a > 0.01
+	if is_instance_valid(scene_tag):
+		scene_tag.modulate.a = move_toward(
+			scene_tag.modulate.a, scene_tag_target_a * (1.0 - hold), delta * FADE_SPEED
+		)
+		scene_tag.visible = scene_tag.modulate.a > 0.01
+		if not scene_tag.visible:
+			_scene_tag_ray_targets.erase(avatar.get_instance_id())
+
+
+## Hide the scene plate now (gate closed, avatar out of tree) and zero its alpha so
+## it fades back in from scratch instead of popping.
+static func _hide_scene_tag(avatar) -> void:
+	var scene_tag = avatar._scene_nametag_ui
+	if is_instance_valid(scene_tag):
+		scene_tag.modulate.a = 0.0
+		scene_tag.hide()
+	_scene_tag_ray_targets.erase(avatar.get_instance_id())
 
 
 ## Crosshair-hovered avatar always gets the full tag (#2938).
@@ -318,10 +400,13 @@ static func _set_tier_nodes(ui: Control, tier: int, show_chat: bool) -> void:
 ## Occlusion raycast for one plate. MUST run from _physics_process — direct_space_state
 ## crashes when queried from _process (idle frame). Throttling is the driver's job.
 static func update_occlusion(avatar) -> void:
+	avatar._scene_tag_occluded = false
 	if debug_disable_occlusion:
 		avatar._nameplate_occluded = false
 		return
-	if not avatar._nametag_gate_visible:
+	var scene_tag = avatar._scene_nametag_ui
+	var tests_scene_tag: bool = is_instance_valid(scene_tag) and avatar._nametag_plate_gate_visible
+	if not avatar._nametag_gate_visible and not tests_scene_tag:
 		return
 	var cam = avatar.get_viewport().get_camera_3d()
 	if cam == null:
@@ -331,10 +416,16 @@ static func update_occlusion(avatar) -> void:
 		return
 	# Occlusion is evaluated against the tag's DRAWN position, falling
 	# back to the head anchor before the first placement.
-	var target: Vector3 = anchor
-	if avatar.nickname_ui != null:
-		target = _plate_ray_targets.get(avatar.nickname_ui.get_instance_id(), anchor)
-	avatar._nameplate_occluded = _occluded(avatar, cam.global_position, target)
+	if avatar._nametag_gate_visible:
+		var target: Vector3 = anchor
+		if avatar.nickname_ui != null:
+			target = _plate_ray_targets.get(avatar.nickname_ui.get_instance_id(), anchor)
+		avatar._nameplate_occluded = _occluded(avatar, cam.global_position, target)
+	# A scene plate sits above the tag, so geometry can hide it and not the tag:
+	# it is tested at its own drawn position (kuruk-mm, #2811), never as a box.
+	if tests_scene_tag:
+		var tag_target: Vector3 = _scene_tag_ray_targets.get(avatar.get_instance_id(), anchor)
+		avatar._scene_tag_occluded = _occluded(avatar, cam.global_position, tag_target)
 
 
 ## One physics step of the central driver: the current bucket's on-screen plates plus the
@@ -347,6 +438,7 @@ static func _occlusion_step() -> void:
 		for bucket in _occlusion_buckets:
 			for avatar in bucket:
 				avatar._nameplate_occluded = false
+				avatar._scene_tag_occluded = false
 		return
 	var due: Array = _occlusion_untested.values()
 	_occlusion_untested.clear()

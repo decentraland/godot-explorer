@@ -174,7 +174,14 @@ var _lod_distance := 0.0  # to the view camera, refreshed with the LOD state
 # NameplateLayer; these cache the hide-flag/FAR gate and the depth-occlusion result.
 var _use_2d_nameplate: bool = false
 var _nametag_gate_visible: bool = true
+# The scene plate hides on every explicit hide but NOT when a nameless NPC simply
+# has no name box to draw: the plate is the only thing the scene painted.
+var _nametag_plate_gate_visible: bool = true
 var _nameplate_occluded: bool = false
+# Scene-authored plate (`AvatarNametag`, #2811) and whether geometry hides the spot
+# it is drawn at. The Control lives in NameplateLayer, not under this avatar.
+var _scene_nametag_ui: Control = null
+var _scene_tag_occluded: bool = false
 # False until a real profile has been applied (async_update_avatar_from_profile). Until
 # then a remote avatar still shows the NicknameUI scene-default placeholder
 # ("nickname#xxxx"), which is replaced with the profile request status.
@@ -369,6 +376,7 @@ func _exit_tree() -> void:
 		NameplateLayer._untrack_plate(nickname_ui)
 		nickname_ui.modulate.a = 0.0
 		nickname_ui.hide()
+		NameplateLayer._hide_scene_tag(self)
 
 	# For local player and remote avatars, trigger detection is setup later via setup_trigger_detection()
 	# For AvatarShapes (scene NPCs), remove_trigger_detection() is called from avatar_shape.rs
@@ -795,6 +803,22 @@ func refresh_nametag_visibility() -> void:
 	_apply_nickname_visibility()
 
 
+## Scene-authored plate drawn above the native nametag (#2811). Colors arrive already
+## resolved by the Rust side; an empty label draws the plate without text.
+func set_scene_nametag(
+	label: String, label_color: Color, background_color: Color, border_color: Color
+) -> void:
+	if not _use_2d_nameplate:
+		return
+	NameplateLayer.set_scene_nametag(self, label, label_color, background_color, border_color)
+
+
+func clear_scene_nametag() -> void:
+	if not _use_2d_nameplate:
+		return
+	NameplateLayer.clear_scene_nametag(self)
+
+
 func _apply_nickname_visibility() -> void:
 	if nickname_quad == null:
 		return
@@ -826,6 +850,9 @@ func _apply_nickname_visibility() -> void:
 	if _use_2d_nameplate:
 		# _update_nameplate_2d() positions/shows when allowed; hide now if gated off.
 		_nametag_gate_visible = not should_hide
+		_nametag_plate_gate_visible = not (
+			hide_name or _force_hide_name or far_lod or nametag_hidden or hidden or own_nametag_off
+		)
 		if should_hide and nickname_ui != null:
 			# Hard reset alpha too: NameplateLayer.update() recomputes visibility from
 			# move_toward()'d alpha every frame, so a plain hide() would be undone and the
@@ -833,6 +860,7 @@ func _apply_nickname_visibility() -> void:
 			# instant; the gate reopening fades it back in cleanly from 0.
 			nickname_ui.modulate.a = 0.0
 			nickname_ui.hide()
+			NameplateLayer._hide_scene_tag(self)
 		return
 	if should_hide:
 		nickname_quad.hide()
