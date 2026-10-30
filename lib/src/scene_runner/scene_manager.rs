@@ -2760,6 +2760,15 @@ impl SceneManager {
         };
         let signal_data = (*scene_id, scene.scene_entity_definition.id.clone());
 
+        // Scene plates are local-only and the player avatar outlives the scene: without
+        // this the last scene's plate stays on screen after it is gone.
+        if !scene.avatar_nametags.is_empty() {
+            if let Some(mut player_avatar) = self.get_player_avatar_node() {
+                player_avatar.call("clear_scene_nametag", &[]);
+            }
+            scene.avatar_nametags.clear();
+        }
+
         // Drop the scene's external-content bookkeeping so a reload restarts
         // its counters from zero.
         crate::content::external_content::clear_scene(&scene.scene_entity_definition.id);

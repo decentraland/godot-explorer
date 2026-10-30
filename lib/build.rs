@@ -384,6 +384,7 @@ fn main() -> io::Result<()> {
 
     let mut proto_components = vec![];
     let mut proto_files = vec![];
+    let mut has_avatar_nametag = false;
     let dir_path = Path::new(COMPONENT_BASE_DIR);
     for entry in fs::read_dir(dir_path)
         .expect("Failed to read directory")
@@ -399,11 +400,27 @@ fn main() -> io::Result<()> {
                     == Some("avatar_emote_command.proto")
                 {
                     proto_files.push(patched_avatar_emote_command_proto());
-                } else {
-                    proto_files.push(entry.path());
+                    continue;
                 }
+
+                if entry.path().file_name().and_then(|n| n.to_str()) == Some("avatar_nametag.proto")
+                {
+                    has_avatar_nametag = true;
+                }
+
+                proto_files.push(entry.path());
             }
         }
+    }
+
+    // Not in the pinned @dcl/protocol build yet (see `patched_avatar_nametag_proto`).
+    if !has_avatar_nametag {
+        proto_components.push(Component {
+            id: 1221,
+            pascal_name: String::from("AvatarNametag"),
+            snake_name: String::from("avatar_nametag"),
+        });
+        proto_files.push(patched_avatar_nametag_proto());
     }
 
     proto_files.push(
@@ -624,6 +641,40 @@ fn patched_avatar_emote_command_proto() -> std::path::PathBuf {
         .join(REL);
     fs::create_dir_all(dest.parent().unwrap()).expect("create proto_patched dir");
     fs::write(&dest, source).expect("write patched avatar_emote_command.proto");
+    dest
+}
+
+/// The pinned @dcl/protocol build (commit 0ff6038) predates protocol#474, which adds
+/// `PBAvatarNametag` (component 1221). Same idiom as `patched_avatar_emote_command_proto`:
+/// write the file under OUT_DIR/proto_patched/ so `cargo run -- install` cannot drop it.
+/// No-ops once the pinned build ships the file, which then compiles from the npm tree.
+fn patched_avatar_nametag_proto() -> std::path::PathBuf {
+    const REL: &str = "decentraland/sdk/components/avatar_nametag.proto";
+    let dest = patched_proto_root().join(REL);
+
+    let source = concat!(
+        "syntax = \"proto3\";\n",
+        "package decentraland.sdk.components;\n",
+        "import \"decentraland/common/colors.proto\";\n",
+        "import \"decentraland/sdk/components/common/id.proto\";\n",
+        "option (common.ecs_component_id) = 1221;\n",
+        "// A scene-authored plate drawn above an avatar's nametag. Valid only on the local\n",
+        "// player, a remote player entity or any entity with an AvatarShape; elsewhere the\n",
+        "// write is ignored. Local-only: it is never relayed to other players.\n",
+        "message PBAvatarNametag {\n",
+        "  // Single line. Empty draws the plate without text; spaces widen a text-less plate.\n",
+        "  string label = 1;\n",
+        "  optional decentraland.common.Color3 label_color = 2; // default: native nametag text color\n",
+        "  optional decentraland.common.Color3 background_color = 3; // default: native nametag background\n",
+        "  optional decentraland.common.Color3 border_color = 4; // default: background_color\n",
+        "}\n",
+    );
+
+    fs::create_dir_all(dest.parent().unwrap()).expect("create proto_patched dir");
+    fs::write(&dest, source).expect("write patched avatar_nametag.proto");
+    println!(
+        "cargo:rerun-if-changed={PROTO_FILES_BASE_DIR}decentraland/sdk/components/avatar_nametag.proto"
+    );
     dest
 }
 

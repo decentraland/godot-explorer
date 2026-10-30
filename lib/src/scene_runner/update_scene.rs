@@ -92,6 +92,7 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
         S::AvatarShape => "AvatarShape",
         S::AvatarShapeEmoteCommand => "AvatarShapeEmoteCommand",
         S::Raycasts => "Raycasts",
+        S::AvatarNametag => "AvatarNametag",
         S::AvatarAttach => "AvatarAttach",
         S::SceneUi => "SceneUi",
         S::VideoPlayer => "VideoPlayer",
@@ -175,7 +176,8 @@ use crate::{
     },
     godot_classes::dcl_global::DclGlobal,
     scene_runner::components::{
-        audio_stream::update_audio_stream, avatar_shape::update_avatar_shape_emote_command,
+        audio_stream::update_audio_stream, avatar_nametag::update_avatar_nametag,
+        avatar_shape::update_avatar_shape_emote_command,
         virtual_cameras::update_main_and_virtual_cameras,
     },
 };
@@ -496,6 +498,10 @@ pub fn _process_scene(
                 }
                 SceneUpdateState::AvatarShapeEmoteCommand => {
                     update_avatar_shape_emote_command(scene, crdt_state);
+                    false
+                }
+                SceneUpdateState::AvatarNametag => {
+                    update_avatar_nametag(scene, crdt_state, current_parcel_scene_id);
                     false
                 }
                 SceneUpdateState::Raycasts => {
