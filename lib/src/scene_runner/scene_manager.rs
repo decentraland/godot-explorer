@@ -3577,6 +3577,18 @@ impl SceneManager {
         crate::tools::memory_monitor::set_verbose(on);
     }
 
+    /// Session id the memory monitor writes into `user://memory_footprint.json`.
+    #[func]
+    fn set_memory_report_session(&self, session_id: GString) {
+        crate::tools::memory_monitor::set_session_id(&session_id.to_string());
+    }
+
+    /// GPU memory (MB) sampled by the Android plugin, kept in the footprint record.
+    #[func]
+    fn set_graphics_memory_mb(&self, mb: i32) {
+        crate::tools::memory_monitor::set_graphics_mb(mb);
+    }
+
     /// The user chose "Continue anyway" on the low-memory warning (issue #2002):
     /// stop warning for the rest of the session and keep the scene running.
     #[func]
@@ -3775,7 +3787,11 @@ impl INode for SceneManager {
 
         // Start the background memory-pressure monitor (issue #2002). Idempotent
         // and a no-op on platforms without an OOM killer to anticipate.
-        crate::tools::memory_monitor::start();
+        crate::tools::memory_monitor::start(
+            godot::classes::ProjectSettings::singleton()
+                .globalize_path("user://memory_footprint.json")
+                .to_string(),
+        );
 
         let mut base_ui = DclUiControl::new_alloc();
         base_ui.set_anchors_preset(LayoutPreset::FULL_RECT);

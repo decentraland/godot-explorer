@@ -43,10 +43,18 @@
 //! * `/proc/vmstat` (direct-reclaim / allocstall counters) — denied.
 //! * `/proc/zoneinfo` (the kernel watermarks lmkd compares against) — denied.
 //!
-//! `ComponentCallbacks2.onTrimMemory`, the framework's own way of telling an app
-//! memory is tight, does reach the process (HWUI trims on it) but Godot 4.6.2
-//! does not forward it to `NOTIFICATION_OS_MEMORY_WARNING`, so it is not
-//! reachable from here either without an engine change.
+//! `ComponentCallbacks2.onTrimMemory` reaches GDScript through the Android
+//! plugin's `memory_trim` signal, but since Android 14 the system no longer
+//! delivers the `TRIM_MEMORY_RUNNING_*` levels, so it cannot warn of a kill.
+//! `ActivityManager.getMemoryInfo()` was measured too: its `availMem` is
+//! `MemAvailable` again, and `lowMemory` only compares that to a fixed line.
+//!
+//! So on 8 GB+ devices the level comes from our *own* footprint
+//! (`RssAnon + VmSwap`, the figure Android 17's Memory Limiter caps) against
+//! that tier's limit, and `MemAvailable` is ignored: on those phones it sits
+//! under 300 MB for minutes while lmkd still has gigabytes of cached apps to
+//! kill first (issue #3150). Smaller tiers keep the headroom bands below, as
+//! they are the ones that really get killed.
 //!
 //! What is left to us is `/proc/meminfo` and our own `/proc/self/status`. That
 //! is enough to see *our own* growth honestly — the case this monitor exists for
@@ -67,6 +75,7 @@
 //! started and both readers return -1.
 
 use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicU8, Ordering};
+use std::sync::Mutex;
 
 /// Available headroom in MB (bytes the app can still allocate before the OS
 /// kills it). -1 when unknown / not yet sampled.
@@ -99,6 +108,25 @@ pub static VERBOSE: AtomicBool = AtomicBool::new(false);
 /// UNRESPONSIVE" for as long as the screen stays off (measured: ~321 s on a
 /// Galaxy A54, reported every 2 s).
 pub static APP_PAUSED: AtomicBool = AtomicBool::new(false);
+
+/// Our own footprint in MB: `RssAnon + VmSwap` on Android, `phys_footprint` on
+/// iOS. Drives the 8 GB+ budget and the footprint record. -1 elsewhere.
+pub static OWN_FOOTPRINT_MB: AtomicI32 = AtomicI32::new(-1);
+
+/// GPU memory in MB as last sampled by the Android plugin (`summary.graphics`).
+/// Recorded for telemetry only; -1 until set.
+pub static GRAPHICS_MB: AtomicI32 = AtomicI32::new(-1);
+
+/// Total device RAM in MB, read once at [`start`]. -1 when unknown.
+pub static TOTAL_RAM_MB: AtomicI32 = AtomicI32::new(-1);
+
+/// Session id written into the footprint record, so the next launch can tie
+/// the record to the session that produced it.
+static SESSION_ID: Mutex<String> = Mutex::new(String::new());
+
+/// Set when a field the throttle does not watch changed (the session id), so
+/// the next allowed write happens even without a footprint move.
+static RECORD_DIRTY: AtomicBool = AtomicBool::new(false);
 
 /// `phys_footprint` ceiling in MB above which we force CRITICAL, computed at
 /// [`start`] from device RAM so it scales across devices. 0 = disabled (unknown
@@ -138,17 +166,192 @@ const FOOTPRINT_CRITICAL_FRACTION: f32 = 0.50;
 #[cfg(target_os = "android")]
 const ANDROID_BUDGET_FRACTION: f32 = 0.55;
 
+/// Smallest `MemTotal` (MB) of the 8 GB tier in Android 17's Memory Limiter
+/// table. From here up the level follows our own footprint.
+#[cfg(any(test, target_os = "android"))]
+const OWN_BUDGET_MIN_TOTAL_MB: i32 = 6800;
+
+/// Own-footprint percentage of the budget at which WARNING / CRITICAL fire.
+#[cfg(any(test, target_os = "ios", target_os = "android"))]
+const OWN_BUDGET_WARNING_PCT: i64 = 85;
+#[cfg(any(test, target_os = "ios", target_os = "android"))]
+const OWN_BUDGET_CRITICAL_PCT: i64 = 100;
+
+/// Samples a higher raw level must hold before it is published (3 s at
+/// POLL_MS): a single load spike must not raise the modal.
+#[cfg(any(test, target_os = "ios", target_os = "android"))]
+const LEVEL_RAISE_SAMPLES: u32 = 12;
+/// Samples a lower raw level must hold before it is published (2 s), so a
+/// level hovering on a band edge cannot drop to OK and re-arm the modal.
+#[cfg(any(test, target_os = "ios", target_os = "android"))]
+const LEVEL_LOWER_SAMPLES: u32 = 8;
+
+/// The footprint record is rewritten only when the footprint or the peak moved
+/// this much since the last write, or the level changed…
+#[cfg(any(test, target_os = "ios", target_os = "android"))]
+const RECORD_MIN_DELTA_MB: i32 = 32;
+/// …and never more often than this. The file is overwritten, never appended.
+#[cfg(any(test, target_os = "ios", target_os = "android"))]
+const RECORD_MIN_INTERVAL_MS: u64 = 5000;
+
+/// Own-footprint budget in MB for a device with `total_mb` of RAM: the visible
+/// app limit of Android 17's Memory Limiter (`memory-limiter-config.xml`).
+/// 0 below the 8 GB tier, where the headroom bands decide instead.
+#[cfg(any(test, target_os = "android"))]
+fn own_budget_mb(total_mb: i32) -> i32 {
+    match total_mb {
+        t if t >= 14336 => 10240,
+        t if t >= 9216 => 8192,
+        t if t >= OWN_BUDGET_MIN_TOTAL_MB => 5120,
+        _ => 0,
+    }
+}
+
+/// Raw (unheld) pressure level. The iOS `phys_footprint` ceiling wins: it sees
+/// GPU memory the headroom signal misses. With an own budget (8 GB+ Android)
+/// the device-wide headroom is ignored, unless the own footprint is unreadable.
+#[cfg(any(test, target_os = "ios", target_os = "android"))]
+fn raw_level(
+    available_mb: i32,
+    footprint_mb: i32,
+    footprint_ceiling_mb: i32,
+    own_footprint_mb: i32,
+    own_budget_mb: i32,
+) -> u8 {
+    if footprint_ceiling_mb > 0 && footprint_mb >= 0 && footprint_mb >= footprint_ceiling_mb {
+        return LEVEL_CRITICAL;
+    }
+
+    if own_budget_mb > 0 && own_footprint_mb >= 0 {
+        let pct = own_footprint_mb as i64 * 100 / own_budget_mb as i64;
+        return if pct >= OWN_BUDGET_CRITICAL_PCT {
+            LEVEL_CRITICAL
+        } else if pct >= OWN_BUDGET_WARNING_PCT {
+            LEVEL_WARNING
+        } else {
+            LEVEL_OK
+        };
+    }
+
+    if available_mb < 0 {
+        // Headroom unknown and footprint below ceiling (or unavailable): can't
+        // assert pressure.
+        return LEVEL_OK;
+    }
+    if available_mb <= CRITICAL_MB {
+        LEVEL_CRITICAL
+    } else if available_mb <= WARNING_MB {
+        LEVEL_WARNING
+    } else {
+        LEVEL_OK
+    }
+}
+
+/// Publishes a raw level only once it has held: a higher level once the raw
+/// level stayed at or above it for `LEVEL_RAISE_SAMPLES` samples, a lower one
+/// once it stayed at or below it for `LEVEL_LOWER_SAMPLES`. Each level counts
+/// its own streak, so a ramp through WARNING reaches CRITICAL in one hold.
+#[cfg(any(test, target_os = "ios", target_os = "android"))]
+#[derive(Default)]
+struct LevelHold {
+    held: u8,
+    at_least: [u32; 3],
+    at_most: [u32; 3],
+}
+
+#[cfg(any(test, target_os = "ios", target_os = "android"))]
+impl LevelHold {
+    /// Feeds one raw sample; returns true when the held level changed.
+    fn update(&mut self, raw: u8) -> bool {
+        for level in LEVEL_OK..=LEVEL_CRITICAL {
+            let i = level as usize;
+            self.at_least[i] = if raw >= level {
+                self.at_least[i].saturating_add(1)
+            } else {
+                0
+            };
+            self.at_most[i] = if raw <= level {
+                self.at_most[i].saturating_add(1)
+            } else {
+                0
+            };
+        }
+        let next = (self.held + 1..=LEVEL_CRITICAL)
+            .rev()
+            .find(|&l| self.at_least[l as usize] >= LEVEL_RAISE_SAMPLES)
+            .or_else(|| {
+                (LEVEL_OK..self.held).find(|&l| self.at_most[l as usize] >= LEVEL_LOWER_SAMPLES)
+            });
+        match next {
+            Some(level) => {
+                self.held = level;
+                true
+            }
+            None => false,
+        }
+    }
+}
+
+/// Decides when the footprint record is rewritten (see `RECORD_MIN_*`).
+#[cfg(any(test, target_os = "ios", target_os = "android"))]
+#[derive(Default)]
+struct RecordThrottle {
+    last_write_ms: Option<u64>,
+    footprint_mb: i32,
+    peak_mb: i32,
+    level: u8,
+}
+
+#[cfg(any(test, target_os = "ios", target_os = "android"))]
+impl RecordThrottle {
+    fn should_write(
+        &self,
+        now_ms: u64,
+        footprint_mb: i32,
+        peak_mb: i32,
+        level: u8,
+        dirty: bool,
+    ) -> bool {
+        let Some(last) = self.last_write_ms else {
+            return footprint_mb >= 0;
+        };
+        if now_ms.saturating_sub(last) < RECORD_MIN_INTERVAL_MS {
+            return false;
+        }
+        dirty
+            || (footprint_mb - self.footprint_mb).abs() >= RECORD_MIN_DELTA_MB
+            || peak_mb >= self.peak_mb + RECORD_MIN_DELTA_MB
+            || level != self.level
+    }
+
+    fn written(&mut self, now_ms: u64, footprint_mb: i32, peak_mb: i32, level: u8) {
+        self.last_write_ms = Some(now_ms);
+        self.footprint_mb = footprint_mb;
+        self.peak_mb = peak_mb;
+        self.level = level;
+    }
+}
+
+/// Absolute path of the footprint record, set by [`start`].
+#[cfg(any(target_os = "ios", target_os = "android"))]
+static RECORD_PATH: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+
 /// Start the background monitor (idempotent). No-op on platforms without an OOM
-/// killer we need to anticipate.
-pub fn start() {
+/// killer we need to anticipate. `record_path` is where the footprint record is
+/// kept (an absolute path: the monitor thread cannot resolve `user://`).
+pub fn start(record_path: String) {
     // Whole body is mobile-only: on desktop there is no OOM killer to anticipate,
     // so `start()` is a no-op. Keeping the mobile logic inside one cfg block also
     // keeps the idempotency early-return from becoming a trailing no-op on desktop.
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    let _ = record_path;
     #[cfg(any(target_os = "ios", target_os = "android"))]
     {
         if MONITOR_STARTED.swap(true, Ordering::SeqCst) {
             return;
         }
+
+        let _ = RECORD_PATH.set(record_path);
 
         #[cfg(target_os = "ios")]
         {
@@ -158,6 +361,7 @@ pub fn start() {
             let total_ram_mb =
                 crate::godot_classes::dcl_ios_plugin::DclIosPlugin::get_total_ram_mb();
             if total_ram_mb > 0 {
+                TOTAL_RAM_MB.store(total_ram_mb, Ordering::Relaxed);
                 let ceiling = (total_ram_mb as f32 * FOOTPRINT_CRITICAL_FRACTION) as i32;
                 FOOTPRINT_CRITICAL_MB.store(ceiling, Ordering::Relaxed);
                 emit_log(&format!(
@@ -174,12 +378,14 @@ pub fn start() {
             // each level fires at. Reading /proc is safe from any thread.
             let total_ram_mb = read_meminfo_mb("MemTotal:");
             if total_ram_mb > 0 {
+                TOTAL_RAM_MB.store(total_ram_mb, Ordering::Relaxed);
                 emit_log(&format!(
-                    "[MemMonitor] total_ram={}MB app_budget={}MB WARNING<={}MB CRITICAL<={}MB swap_total={}MB",
+                    "[MemMonitor] total_ram={}MB app_budget={}MB WARNING<={}MB CRITICAL<={}MB own_budget={}MB swap_total={}MB",
                     total_ram_mb,
                     (total_ram_mb as f32 * ANDROID_BUDGET_FRACTION) as i32,
                     WARNING_MB,
                     CRITICAL_MB,
+                    own_budget_mb(total_ram_mb),
                     read_meminfo_mb("SwapTotal:")
                 ));
             }
@@ -199,6 +405,19 @@ pub fn set_verbose(on: bool) {
         "[MemMonitor] verbose logging {}",
         if on { "ON" } else { "off" }
     ));
+}
+
+/// Session id stored in the footprint record.
+pub fn set_session_id(session_id: &str) {
+    if let Ok(mut id) = SESSION_ID.lock() {
+        *id = session_id.to_string();
+    }
+    RECORD_DIRTY.store(true, Ordering::Relaxed);
+}
+
+/// GPU memory sampled by the Android plugin, stored in the footprint record.
+pub fn set_graphics_mb(mb: i32) {
+    GRAPHICS_MB.store(mb, Ordering::Relaxed);
 }
 
 /// Current available headroom in MB, or -1 when it cannot be determined.
@@ -370,34 +589,18 @@ pub fn emit_log(line: &str) {
     }
 }
 
-/// Compute the pressure level from the two metrics. The `phys_footprint`
-/// hard-stop takes precedence: it sees GPU memory the headroom signal misses.
+/// Own-footprint budget for this device (0 = headroom bands decide).
 #[cfg(any(target_os = "ios", target_os = "android"))]
-fn level_for(available_mb: i32, footprint_mb: i32) -> u8 {
-    let ceiling = FOOTPRINT_CRITICAL_MB.load(Ordering::Relaxed);
-    if ceiling > 0 && footprint_mb >= 0 && footprint_mb >= ceiling {
-        return LEVEL_CRITICAL;
+fn current_own_budget_mb() -> i32 {
+    #[cfg(target_os = "android")]
+    {
+        own_budget_mb(TOTAL_RAM_MB.load(Ordering::Relaxed))
     }
-
-    if available_mb < 0 {
-        // Headroom unknown and footprint below ceiling (or unavailable): can't
-        // assert pressure.
-        return LEVEL_OK;
-    }
-    if available_mb <= CRITICAL_MB {
-        LEVEL_CRITICAL
-    } else if available_mb <= WARNING_MB {
-        LEVEL_WARNING
-    } else {
-        LEVEL_OK
+    #[cfg(target_os = "ios")]
+    {
+        0
     }
 }
-
-/// Consecutive samples a new pressure level must hold before it is reported
-/// through `tracing` (1s at POLL_MS). The bands have no hysteresis, so a
-/// process hovering on a boundary would otherwise flip every sample.
-#[cfg(any(target_os = "ios", target_os = "android"))]
-const LEVEL_TRANSITION_SAMPLES: u32 = 4;
 
 #[cfg(any(target_os = "ios", target_os = "android"))]
 fn level_name(level: u8) -> &'static str {
@@ -406,6 +609,24 @@ fn level_name(level: u8) -> &'static str {
         LEVEL_WARNING => "warning",
         _ => "ok",
     }
+}
+
+/// Replace the footprint record in one step: a kill mid-write leaves the
+/// previous record intact instead of a truncated one.
+#[cfg(any(target_os = "ios", target_os = "android"))]
+fn write_record(path: &str, contents: &str) -> std::io::Result<()> {
+    let tmp = format!("{path}.tmp");
+    std::fs::write(&tmp, contents)?;
+    std::fs::rename(&tmp, path)
+}
+
+/// Wall-clock ms since the epoch, comparable to `ApplicationExitInfo` timestamps.
+#[cfg(any(target_os = "ios", target_os = "android"))]
+fn epoch_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0)
 }
 
 #[cfg(any(target_os = "ios", target_os = "android"))]
@@ -419,54 +640,112 @@ fn monitor_loop() {
     let mut stall_reported = false;
     let mut last_report_ms: u64 = 0;
 
-    // Pressure level as last reported through `tracing`. Transitions (and only
-    // transitions) go through `tracing::warn!` so they reach Godot's warning
-    // stream and become Sentry breadcrumbs: the memory trajectory in the
-    // minutes before a crash. `emit_log` below stays the per-sample record.
-    let mut logged_level: u8 = LEVEL_OK;
-    let mut level_streak: u32 = 0;
+    // Held level changes (and only those) go through `tracing::warn!` so they
+    // reach Godot's warning stream and become Sentry breadcrumbs: the memory
+    // trajectory in the minutes before a crash.
+    let mut hold = LevelHold::default();
+    let mut throttle = RecordThrottle::default();
+    let mut peak_mb: i32 = -1;
+    let mut peak_ms: u64 = 0;
+    let started = std::time::Instant::now();
 
     loop {
         let available = read_available_mb();
         let footprint = read_footprint_mb();
-        let level = level_for(available, footprint);
 
         #[cfg(target_os = "android")]
-        SWAPPED_MB.store(read_self_status_mb("VmSwap:"), Ordering::Relaxed);
+        let (rss_anon, swap) = (
+            read_self_status_mb("RssAnon:"),
+            read_self_status_mb("VmSwap:"),
+        );
+        #[cfg(target_os = "android")]
+        let own = if rss_anon >= 0 {
+            rss_anon + swap.max(0)
+        } else {
+            -1
+        };
+        #[cfg(target_os = "ios")]
+        let (rss_anon, swap, own) = (-1, -1, footprint);
+
+        #[cfg(target_os = "android")]
+        SWAPPED_MB.store(swap, Ordering::Relaxed);
+
+        let budget = current_own_budget_mb();
+        let raw = raw_level(
+            available,
+            footprint,
+            FOOTPRINT_CRITICAL_MB.load(Ordering::Relaxed),
+            own,
+            budget,
+        );
+        let previous = hold.held;
+        let changed = hold.update(raw);
+        let level = hold.held;
 
         AVAILABLE_MB.store(available, Ordering::Relaxed);
         FOOTPRINT_MB.store(footprint, Ordering::Relaxed);
+        OWN_FOOTPRINT_MB.store(own, Ordering::Relaxed);
         PRESSURE_LEVEL.store(level, Ordering::Relaxed);
 
-        if level != logged_level {
-            level_streak += 1;
-            if level_streak >= LEVEL_TRANSITION_SAMPLES {
-                tracing::warn!(
-                    "[MemMonitor] pressure {} -> {} (available={}MB footprint={}MB)",
-                    level_name(logged_level),
-                    level_name(level),
-                    available,
-                    footprint
-                );
-                logged_level = level;
-                level_streak = 0;
-            }
-        } else {
-            level_streak = 0;
+        if changed {
+            tracing::warn!(
+                "[MemMonitor] pressure {} -> {} (available={}MB footprint={}MB own={}MB budget={}MB)",
+                level_name(previous),
+                level_name(level),
+                available,
+                footprint,
+                own,
+                budget
+            );
         }
 
-        // Log every sample under pressure or when verbose; otherwise ~every 2s,
-        // so we can watch the trajectory right up to (and through) a main-thread
-        // freeze or an eventual OOM after "Continue anyway".
-        if level > 0 || VERBOSE.load(Ordering::Relaxed) || tick % 8 == 0 {
+        // ~Every 2s at any level, at once on a held change, and every sample
+        // only after "Continue anyway" (VERBOSE): a CRITICAL session no longer
+        // floods the log with four lines a second.
+        if changed || VERBOSE.load(Ordering::Relaxed) || tick % 8 == 0 {
             #[cfg(target_os = "android")]
-            let swap_note = format!(" swap={}MB", SWAPPED_MB.load(Ordering::Relaxed));
+            let detail =
+                format!(" swap={swap}MB rss_anon={rss_anon}MB own={own}MB budget={budget}MB");
             #[cfg(not(target_os = "android"))]
-            let swap_note = "";
+            let detail = "";
             emit_log(&format!(
-                "[MemMonitor] available={}MB footprint={}MB{} level={}",
-                available, footprint, swap_note, level
+                "[MemMonitor] available={}MB footprint={}MB{} level={} raw={}",
+                available, footprint, detail, level, raw
             ));
+        }
+
+        let now_ms = epoch_ms();
+        if own > peak_mb {
+            peak_mb = own;
+            peak_ms = now_ms;
+        }
+        let since_start_ms = started.elapsed().as_millis() as u64;
+        if let Some(path) = RECORD_PATH.get() {
+            let dirty = RECORD_DIRTY.load(Ordering::Relaxed);
+            if throttle.should_write(since_start_ms, own, peak_mb, level, dirty) {
+                RECORD_DIRTY.store(false, Ordering::Relaxed);
+                let record = serde_json::json!({
+                    "v": 1,
+                    "written_ms": now_ms,
+                    "pid": std::process::id(),
+                    "session_id": SESSION_ID.lock().map(|id| id.clone()).unwrap_or_default(),
+                    "total_ram_mb": TOTAL_RAM_MB.load(Ordering::Relaxed),
+                    "rss_anon_mb": rss_anon,
+                    "swap_mb": swap,
+                    "graphics_mb": GRAPHICS_MB.load(Ordering::Relaxed),
+                    "footprint_mb": own,
+                    "peak_footprint_mb": peak_mb,
+                    "peak_ms": peak_ms,
+                    "level": level,
+                    "budget_mb": budget,
+                });
+                if let Err(e) = write_record(path, &record.to_string()) {
+                    emit_log(&format!("[MemMonitor] footprint record write failed: {e}"));
+                }
+                // Marked written even on failure so a broken path retries at
+                // the throttled rate, not every sample.
+                throttle.written(since_start_ms, own, peak_mb, level);
+            }
         }
 
         // Main-thread stall detection: independent of memory, since the Genesis
@@ -646,4 +925,160 @@ fn read_kb_field_mb(path: &str, key: &str) -> i32 {
         }
     }
     -1
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn own_budget_follows_memory_limiter_tiers() {
+        assert_eq!(own_budget_mb(3725), 0);
+        assert_eq!(own_budget_mb(6799), 0);
+        assert_eq!(own_budget_mb(6800), 5120);
+        assert_eq!(own_budget_mb(7468), 5120);
+        assert_eq!(own_budget_mb(9216), 8192);
+        assert_eq!(own_budget_mb(14336), 10240);
+        assert_eq!(own_budget_mb(24000), 10240);
+    }
+
+    #[test]
+    fn eight_gb_ignores_device_headroom() {
+        // Pixel 7 at the #3150 popup: 291MB available, own footprint ~2.4GB.
+        assert_eq!(raw_level(291, 2112, 0, 2450, 5120), LEVEL_OK);
+        assert_eq!(raw_level(291, 2112, 0, 4352, 5120), LEVEL_WARNING);
+        assert_eq!(raw_level(900, 2112, 0, 5120, 5120), LEVEL_CRITICAL);
+        // Unreadable own footprint: fall back to the headroom bands.
+        assert_eq!(raw_level(291, 2112, 0, -1, 5120), LEVEL_CRITICAL);
+    }
+
+    #[test]
+    fn small_tiers_keep_headroom_bands() {
+        assert_eq!(raw_level(1109, 569, 0, 600, 0), LEVEL_OK);
+        assert_eq!(raw_level(493, 801, 0, 900, 0), LEVEL_WARNING);
+        assert_eq!(raw_level(295, 880, 0, 950, 0), LEVEL_CRITICAL);
+        assert_eq!(raw_level(-1, 880, 0, 950, 0), LEVEL_OK);
+    }
+
+    #[test]
+    fn ios_footprint_ceiling_wins() {
+        assert_eq!(raw_level(2400, 2900, 2843, 2900, 0), LEVEL_CRITICAL);
+        assert_eq!(raw_level(2400, 1700, 2843, 1700, 0), LEVEL_OK);
+    }
+
+    #[test]
+    fn single_spike_does_not_raise() {
+        let mut hold = LevelHold::default();
+        // run 3 on the Pixel: 484 -> 177 -> 212 -> 311MB within 0.5s
+        for raw in [LEVEL_WARNING, LEVEL_CRITICAL, LEVEL_CRITICAL, LEVEL_WARNING] {
+            assert!(!hold.update(raw));
+        }
+        assert_eq!(hold.held, LEVEL_OK);
+    }
+
+    #[test]
+    fn sustained_level_raises_after_hold() {
+        let mut hold = LevelHold::default();
+        for _ in 0..LEVEL_RAISE_SAMPLES - 1 {
+            assert!(!hold.update(LEVEL_CRITICAL));
+        }
+        assert!(hold.update(LEVEL_CRITICAL));
+        assert_eq!(hold.held, LEVEL_CRITICAL);
+    }
+
+    #[test]
+    fn ramp_through_warning_reaches_critical_in_one_hold() {
+        let mut hold = LevelHold::default();
+        hold.update(LEVEL_WARNING);
+        hold.update(LEVEL_WARNING);
+        for _ in 0..LEVEL_RAISE_SAMPLES {
+            hold.update(LEVEL_CRITICAL);
+        }
+        assert_eq!(hold.held, LEVEL_CRITICAL);
+    }
+
+    #[test]
+    fn mixed_streak_raises_only_to_the_level_held_throughout() {
+        let mut hold = LevelHold::default();
+        for i in 0..LEVEL_RAISE_SAMPLES {
+            hold.update(if i % 3 == 0 {
+                LEVEL_WARNING
+            } else {
+                LEVEL_CRITICAL
+            });
+        }
+        assert_eq!(hold.held, LEVEL_WARNING);
+    }
+
+    #[test]
+    fn flicker_between_warning_and_critical_never_reaches_ok() {
+        let mut hold = LevelHold::default();
+        for _ in 0..LEVEL_RAISE_SAMPLES {
+            hold.update(LEVEL_CRITICAL);
+        }
+        for i in 0..200 {
+            hold.update(if i % 2 == 0 {
+                LEVEL_WARNING
+            } else {
+                LEVEL_CRITICAL
+            });
+            assert_ne!(hold.held, LEVEL_OK);
+        }
+    }
+
+    #[test]
+    fn recovery_lowers_after_hold() {
+        let mut hold = LevelHold::default();
+        for _ in 0..LEVEL_RAISE_SAMPLES {
+            hold.update(LEVEL_CRITICAL);
+        }
+        for _ in 0..LEVEL_LOWER_SAMPLES - 1 {
+            assert!(!hold.update(LEVEL_OK));
+        }
+        assert!(hold.update(LEVEL_OK));
+        assert_eq!(hold.held, LEVEL_OK);
+    }
+
+    #[test]
+    fn record_first_write_needs_a_footprint() {
+        let t = RecordThrottle::default();
+        assert!(!t.should_write(0, -1, -1, LEVEL_OK, false));
+        assert!(t.should_write(0, 1500, 1500, LEVEL_OK, false));
+    }
+
+    #[test]
+    fn record_is_throttled_and_needs_a_real_change() {
+        let mut t = RecordThrottle::default();
+        t.written(0, 1500, 1500, LEVEL_OK);
+        // Big move, but too soon.
+        assert!(!t.should_write(RECORD_MIN_INTERVAL_MS - 1, 2000, 2000, LEVEL_OK, false));
+        // Late enough, but too small a move.
+        assert!(!t.should_write(
+            60_000,
+            1500 + RECORD_MIN_DELTA_MB - 1,
+            1500,
+            LEVEL_OK,
+            false
+        ));
+        // Late enough and a real move, a new peak, or a level change.
+        assert!(t.should_write(60_000, 1500 + RECORD_MIN_DELTA_MB, 1500, LEVEL_OK, false));
+        assert!(t.should_write(60_000, 1500, 1500 + RECORD_MIN_DELTA_MB, LEVEL_OK, false));
+        assert!(t.should_write(60_000, 1500, 1500, LEVEL_WARNING, false));
+    }
+
+    #[test]
+    fn deferred_level_change_is_written_once_the_interval_passes() {
+        let mut t = RecordThrottle::default();
+        t.written(0, 1500, 1500, LEVEL_OK);
+        assert!(!t.should_write(1000, 1500, 1500, LEVEL_CRITICAL, false));
+        assert!(t.should_write(RECORD_MIN_INTERVAL_MS, 1500, 1500, LEVEL_CRITICAL, false));
+    }
+
+    #[test]
+    fn dirty_record_is_written_without_a_footprint_move_but_still_throttled() {
+        let mut t = RecordThrottle::default();
+        t.written(0, 1500, 1500, LEVEL_OK);
+        assert!(!t.should_write(1000, 1500, 1500, LEVEL_OK, true));
+        assert!(t.should_write(RECORD_MIN_INTERVAL_MS, 1500, 1500, LEVEL_OK, true));
+    }
 }
