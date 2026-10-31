@@ -42,6 +42,17 @@ on:
         type: string
         default: ''
 
+# One distribution at a time: the store build number is allocated in `prepare` and Apple rejects an
+# upload that is not above TestFlight's latest, so a later allocation must not finish first.
+# GitHub keeps ONE waiting run per group and cancels older waiting ones (a label added while two
+# others are queued is dropped: re-add it). Labels other than `build` get their own group so they
+# can never evict a waiting build.
+concurrency:
+  group: >-
+    ${{ (github.event_name != 'pull_request' || github.event.label.name == 'build' || github.event.label.name == 'build-ios')
+        && 'mobile-distribute-store-order' || format('mobile-distribute-noop-{0}', github.run_id) }}
+  cancel-in-progress: false
+
 permissions:
   pull-requests: write
   contents: read
@@ -488,6 +499,16 @@ jobs:
                 echo "▶️  found run ${URL} (${STATUS})"; SEEN=1
                 IOS_LINE="🔏 signing & uploading to TestFlight…" python3 .github/scripts/report-build-event.py
               fi
+              # The upload is what fixes the build number's place in TestFlight: stop at the
+              # `Sign & upload` job, not at the end of the run (asc-deploy's follow-up jobs, e.g.
+              # the "What to Test" notes, wait on Apple's processing and would hold the queue).
+              RUN_ID=$(echo "$RUN" | jq -r .databaseId)
+              SHIP=$(gh run view "$RUN_ID" --repo "$DEPLOY_REPO" --json jobs \
+                       --jq '.jobs[] | select(.name == "Sign & upload to TestFlight") | "\(.status) \(.conclusion)"' \
+                     2>/dev/null || true)
+              case "$SHIP" in
+                "completed "*) CONCLUSION="${SHIP#completed }"; break ;;
+              esac
               if [ "$STATUS" = "completed" ]; then
                 CONCLUSION=$(echo "$RUN" | jq -r '.conclusion // "unknown"'); break
               fi
