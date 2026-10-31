@@ -42,17 +42,6 @@ on:
         type: string
         default: ''
 
-# One distribution at a time: the store build number is allocated in `prepare` and Apple rejects an
-# upload that is not above TestFlight's latest, so a later allocation must not finish first.
-# GitHub keeps ONE waiting run per group and cancels older waiting ones (a label added while two
-# others are queued is dropped: re-add it). Labels other than `build` get their own group so they
-# can never evict a waiting build.
-concurrency:
-  group: >-
-    ${{ (github.event_name != 'pull_request' || github.event.label.name == 'build' || github.event.label.name == 'build-ios')
-        && 'mobile-distribute-store-order' || format('mobile-distribute-noop-{0}', github.run_id) }}
-  cancel-in-progress: false
-
 permissions:
   pull-requests: write
   contents: read
@@ -180,6 +169,7 @@ jobs:
           flavor: ${{ env.BUILD_FLAVOR }}
           secret: ${{ secrets.BUILD_NUMBER_SECRET }}
           allocated-by: mobile
+          track-order: 'true'
 
       - name: Compose build number + version string
         id: buildnum
@@ -460,7 +450,7 @@ jobs:
       always() && needs.prepare.outputs.should_build == 'true' &&
       (needs.ios-build.result == 'success' || needs.ios-dispatch.result == 'success')
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 130
     env:
       BUILD_REPORTER_TOKEN: ${{ secrets.BUILD_REPORTER_TOKEN }}
       BOARD_EVENTS_URL: ${{ vars.BOARD_EVENTS_URL }}
@@ -483,8 +473,9 @@ jobs:
           # Must match `run-name` in godot-asc-deploy/.github/workflows/deploy_testflight.yml.
           export TITLE="🍏 ${SAFE_BRANCH} @ ${SHA}"
           echo "Watching ${DEPLOY_REPO} for a deploy_testflight.yml run titled '${TITLE}' created after ${SINCE}"
-          # asc-deploy's own timeout is 45 min; the run can also sit queued for a macOS runner.
-          DEADLINE=$(( $(date +%s) + 50 * 60 ))
+          # asc-deploy's own timeout is 45 min, and its gate job can wait up to 120 min for lower
+          # build numbers to reach TestFlight first; the run can also sit queued for a macOS runner.
+          DEADLINE=$(( $(date +%s) + 125 * 60 ))
           SEEN=0; CONCLUSION=""; URL=""
           while true; do
             # TITLE/SINCE are read by jq from the environment (env.*) — no shell interpolation
@@ -588,6 +579,20 @@ jobs:
             export STATUS="failed" IOS_LINE="❌ build/handoff failed" LOG="❌ iOS — build/handoff failed — ${RUN_URL}"
           fi
           python3 .github/scripts/report-build-event.py
+
+      # asc-deploy never ran, so nothing will upload this number: free the ones queued behind it.
+      # Best effort — the allocator also drops an unresolved number after 2 h.
+      - name: Release the build number
+        if: needs.prepare.outputs.build_number != ''
+        env:
+          BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
+          BUILD_NUMBER_SECRET: ${{ secrets.BUILD_NUMBER_SECRET }}
+        run: |
+          echo "::add-mask::${BUILD_NUMBER_SECRET}"
+          curl -sS -m 20 -X POST "https://godot-build-number-allocator.mateo-a2b.workers.dev/build-numbers/abandon" \
+            -H 'content-type: application/json' -H "authorization: Bearer ${BUILD_NUMBER_SECRET}" \
+            -d "{\"buildNumber\":${BUILD_NUMBER}}" || true
+          echo
 
   # Android leg, step 1 (mirrors ios-resolve): the signed APK for this commit is normally produced by
   # the push CI (runner.yml → android_builds.yml) and uploaded to R2. Wait for it, then apply the SAME
