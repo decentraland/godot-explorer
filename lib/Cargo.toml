@@ -25,13 +25,12 @@ futures-lite = "1.12.0"
 hyper = { version = "1.0.0-rc.3", features = ["full"] }
 hyper-util = { version = "0.1.0-rc.1", features = ["tokio"], optional = true }
 http-body-util = "0.1.0-rc.2"
-reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls", "blocking", "stream", "gzip", "brotli"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "blocking", "stream", "gzip", "brotli"] }
 regex = "*"
 urn = "0.7.0"
 
 ethers-core = { version = "2.0" }
 ethers-signers = { version = "2.0" }
-ethers-providers = { version = "2.0", features = ["ws","rustls"] }
 
 async-trait = "0.1.68"
 
@@ -53,7 +52,7 @@ hyper1 = { package = "hyper", version = "0.14.26", features = ["server","runtime
 num-traits = "0.2"
 num-derive = "0.4"
 num = "0.4"
-http = "0.2.9"
+http = "1"
 bytes = "1.4.0"
 url = "2.5"
 
@@ -61,10 +60,10 @@ url = "2.5"
 # change what runs alongside the signing/ASC secrets. Bump deliberately when needed.
 dcl-rpc = { git = "https://github.com/decentraland/rpc-rust", rev = "aa2302d6918e2d1c7f2e298aa972d8a6bba6c389", features=["client", "websockets", "codegen", "server", "tungstenite-rustls"] }
 
-tokio-tungstenite = "0.20.1"
+tokio-tungstenite = { version = "0.24", features = ["rustls-tls-webpki-roots"] }
 futures-util = "0.3.30"
 
-livekit = { git = "https://github.com/robtfm/client-sdk-rust", rev="c59f7e4693579dc137dba72153a0e995079305c6", features=["rustls-tls-webpki-roots"], optional = true }
+livekit = { git = "https://github.com/dcl-regenesislabs/rust-sdks", rev="3e9bb45d4f5f9dd8e22d59b29ae6d9c223ffd858", features=["rustls-tls-webpki-roots"], optional = true }
 
 # Pulse (ENet/UDP avatar-state relay). MUST be this fork: it's a pure-Rust ENet retargeted to
 # the nxrighthere ENet-CSharp "modified protocol" the Pulse server runs — stock lsalzman ENet
@@ -131,7 +130,7 @@ disable_telemetry = []
 enable_inspector = ["use_deno", "dep:fastwebsockets", "dep:hyper1"]
 
 [build-dependencies]
-webrtc-sys-build = { git = "https://github.com/robtfm/client-sdk-rust", rev="c59f7e4693579dc137dba72153a0e995079305c6", optional = true }
+webrtc-sys-build = { git = "https://github.com/dcl-regenesislabs/rust-sdks", rev="3e9bb45d4f5f9dd8e22d59b29ae6d9c223ffd858", optional = true }
 prost-build = "0.11.8"
 # Reads the Pulse quantization field options out of the FileDescriptorSet (build_quant.rs).
 # 0.11.x pairs with prost 0.11 (same pairing bevy-explorer uses).

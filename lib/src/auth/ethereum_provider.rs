@@ -1,10 +1,23 @@
-use ethers_providers::{Provider, Ws};
-use tokio::sync::Mutex;
+use std::{
+    sync::atomic::{AtomicU64, Ordering},
+    time::Duration,
+};
+
+use futures_util::{SinkExt, StreamExt};
+use tokio::{net::TcpStream, sync::Mutex};
+use tokio_tungstenite::{tungstenite::Message, MaybeTlsStream, WebSocketStream};
 
 use crate::urls;
 
+type RpcSocket = WebSocketStream<MaybeTlsStream<TcpStream>>;
+
+const RPC_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// JSON-RPC client for the Ethereum node behind `urls::ethereum_rpc`, used by scenes'
+/// `sendAsync`. Requests are serialized on one lazily opened WebSocket.
 pub struct EthereumProvider {
-    provider: Mutex<Option<Provider<Ws>>>,
+    socket: Mutex<Option<RpcSocket>>,
+    next_id: AtomicU64,
 }
 
 impl Default for EthereumProvider {
@@ -16,7 +29,8 @@ impl Default for EthereumProvider {
 impl EthereumProvider {
     pub fn new() -> Self {
         Self {
-            provider: Mutex::new(None),
+            socket: Mutex::new(None),
+            next_id: AtomicU64::new(1),
         }
     }
 
@@ -25,24 +39,67 @@ impl EthereumProvider {
         method: &str,
         params: &[serde_json::Value],
     ) -> Result<serde_json::Value, anyhow::Error> {
-        let mut this_provider = self.provider.lock().await;
+        let mut socket = self.socket.lock().await;
+        let id = self.next_id.fetch_add(1, Ordering::Relaxed);
 
-        if this_provider.is_none() {
-            let provider_url = urls::ethereum_rpc_with_project("kernel-local");
-            let provider = Provider::<Ws>::connect(&provider_url).await?;
-            this_provider.replace(provider);
-        }
-
-        // TODO: check if the connection is missing
-        let provider = this_provider.as_ref().unwrap();
-        let result = provider.request(method, params).await;
-
-        match result {
-            Err(e) => {
-                this_provider.take();
-                Err(anyhow::Error::new(e))
+        // The socket is out of the Option while in use, so a timed-out or cancelled request
+        // drops it and the next call reconnects instead of reading a stale reply.
+        let call = async {
+            let mut stream = match socket.take() {
+                Some(stream) => stream,
+                None => {
+                    let provider_url = urls::ethereum_rpc_with_project("kernel-local");
+                    tokio_tungstenite::connect_async(provider_url).await?.0
+                }
+            };
+            let result = request(&mut stream, id, method, params).await;
+            if result.is_ok() {
+                socket.replace(stream);
             }
-            Ok(result) => Ok(result),
-        }
+            result
+        };
+
+        tokio::time::timeout(RPC_TIMEOUT, call)
+            .await
+            .unwrap_or_else(|_| Err(anyhow::anyhow!("{method}: Ethereum RPC request timed out")))
     }
+}
+
+async fn request(
+    socket: &mut RpcSocket,
+    id: u64,
+    method: &str,
+    params: &[serde_json::Value],
+) -> Result<serde_json::Value, anyhow::Error> {
+    let body = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": id,
+        "method": method,
+        "params": params,
+    });
+    socket.send(Message::Text(body.to_string())).await?;
+
+    while let Some(message) = socket.next().await {
+        let Message::Text(text) = message? else {
+            continue;
+        };
+        let mut response: serde_json::Value = serde_json::from_str(&text)?;
+        if response["id"] != id {
+            continue;
+        }
+        if let Some(error) = response.get("error").filter(|error| !error.is_null()) {
+            let mut message = format!(
+                "{method} failed (code: {}, message: {}",
+                error["code"],
+                error["message"].as_str().unwrap_or_default()
+            );
+            if !error["data"].is_null() {
+                message.push_str(&format!(", data: {}", error["data"]));
+            }
+            anyhow::bail!("{message})");
+        }
+        return Ok(response["result"].take());
+    }
+
+    anyhow::bail!("Ethereum RPC connection closed")
 }
