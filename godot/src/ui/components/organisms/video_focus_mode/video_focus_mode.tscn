@@ -1,0 +1,310 @@
+[gd_scene load_steps=18 format=3 uid="uid://buxjoxmdm2l6v"]
+
+[ext_resource type="Script" uid="uid://dtrv82krgoek8" path="res://src/ui/components/organisms/video_focus_mode/video_focus_mode.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://drjenu4ayufgu" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-exit-focus.svg" id="2_exit"]
+[ext_resource type="Texture2D" uid="uid://btkyyrt63j7tv" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-flip-orientation.svg" id="3_rotate"]
+[ext_resource type="Texture2D" uid="uid://dspgk3lpv8o7j" path="res://src/ui/components/organisms/video_focus_mode/icons/members.svg" id="4_members"]
+[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="5_font"]
+[ext_resource type="Texture2D" uid="uid://bjbfujytp6lmu" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-chevron-down.svg" id="6_chevron"]
+[ext_resource type="PackedScene" uid="uid://bdlssvxebe4kt" path="res://src/ui/components/atoms/buttons/hud_button/hud_button.tscn" id="7_hud"]
+[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/layouts/safe_margin_container.gd" id="8_safe"]
+[ext_resource type="Resource" path="res://src/ui/components/organisms/video_focus_mode/video_focus_margins.tres" id="9_margins"]
+[ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="10_font_regular"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_chat"]
+bg_color = Color(0.0682353, 0.0658824, 0.0752941, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_header"]
+resource_local_to_scene = true
+content_margin_left = 16.0
+content_margin_right = 16.0
+bg_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_header"]
+resource_local_to_scene = true
+font = ExtResource("5_font")
+font_size = 24
+font_color = Color(0.988235, 0.988235, 0.988235, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_count"]
+resource_local_to_scene = true
+font = ExtResource("10_font_regular")
+font_size = 24
+font_color = Color(0.92549, 0.921569, 0.929412, 1)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_flat"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_exit"]
+resource_local_to_scene = true
+bg_color = Color(0.196078, 0.164706, 0.258824, 0.72)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 0.1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_exit_pressed"]
+resource_local_to_scene = true
+bg_color = Color(0.164706, 0.12549, 0.235294, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.462745, 0.431373, 0.529412, 0.9)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="VideoFocusMode" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 2
+script = ExtResource("1_script")
+metadata/mobile_preview_orientation = "both"
+
+[node name="ColorRect_Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
+[node name="SafeMarginContainer_Root" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+editor_description = "Device safe area (notch, home indicator) in both orientations, as SafeAreaHud does for the HUD chat; no side insets so the landscape video stays full-bleed. The bottom inset is applied inside the chat column (SafeMarginContainer_ChatBottom) so the chat background reaches the bottom edge. The background ColorRect behind it paints the inset bands."
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("8_safe")
+use_left = false
+use_right = false
+use_bottom = false
+margin_profile = ExtResource("9_margins")
+
+[node name="VBoxContainer_Root" type="VBoxContainer" parent="SafeMarginContainer_Root"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="BoxContainer_Layout" type="BoxContainer" parent="SafeMarginContainer_Root/VBoxContainer_Root"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Control_Video" type="Control" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 1
+mouse_filter = 2
+
+[node name="TextureRect_Video" type="TextureRect" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/Control_Video"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="MarginContainer_Controls" type="MarginContainer" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/Control_Video"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 24
+
+[node name="HBoxContainer_Controls" type="HBoxContainer" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/Control_Video/MarginContainer_Controls"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="Button_Exit" type="Button" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/Control_Video/MarginContainer_Controls/HBoxContainer_Controls"]
+unique_name_in_owner = true
+editor_description = "Disc with the HudButton disc's fill and pressed colours, sized like the HUD chat discs per orientation from code."
+custom_minimum_size = Vector2(66, 66)
+layout_mode = 2
+size_flags_vertical = 0
+focus_mode = 0
+theme_override_constants/icon_max_width = 46
+theme_override_styles/focus = SubResource("StyleBoxFlat_exit")
+theme_override_styles/hover = SubResource("StyleBoxFlat_exit")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_exit_pressed")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_exit_pressed")
+theme_override_styles/normal = SubResource("StyleBoxFlat_exit")
+icon = ExtResource("2_exit")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Label_Exit" type="Label" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/Control_Video/MarginContainer_Controls/HBoxContainer_Controls"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 66)
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("5_font")
+theme_override_font_sizes/font_size = 22
+text = "VIDEO_FOCUS_EXIT"
+vertical_alignment = 1
+
+[node name="Control_Spacer" type="Control" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/Control_Video/MarginContainer_Controls/HBoxContainer_Controls"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Button_Rotate" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/Control_Video/MarginContainer_Controls/HBoxContainer_Controls" instance=ExtResource("7_hud")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+icon = ExtResource("3_rotate")
+icon_normal = ExtResource("3_rotate")
+
+[node name="Button_ExpandChat" type="Button" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/Control_Video"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(66, 66)
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -90.0
+offset_top = -33.0
+offset_right = -24.0
+offset_bottom = 33.0
+grow_horizontal = 0
+grow_vertical = 2
+pivot_offset = Vector2(33, 33)
+focus_mode = 0
+theme_override_constants/icon_max_width = 48
+theme_override_styles/focus = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/normal = SubResource("StyleBoxEmpty_flat")
+icon = ExtResource("6_chevron")
+icon_alignment = 1
+expand_icon = true
+
+[node name="PanelContainer_Chat" type="PanelContainer" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(430, 0)
+layout_mode = 2
+size_flags_horizontal = 1
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_chat")
+
+[node name="SafeMarginContainer_ChatBottom" type="MarginContainer" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat"]
+unique_name_in_owner = true
+editor_description = "Bottom safe area of the chat column: the device inset, with video_focus_margins.tres adding the HUD's 45 px floor so the chat input clears the home indicator by the same margin as the HUD chat."
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("8_safe")
+use_left = false
+use_right = false
+use_top = false
+margin_profile = ExtResource("9_margins")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/SafeMarginContainer_ChatBottom"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="PanelContainer_Header" type="PanelContainer" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/SafeMarginContainer_ChatBottom/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_header")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/SafeMarginContainer_ChatBottom/VBoxContainer/PanelContainer_Header"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Label_Nearby" type="Label" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/SafeMarginContainer_ChatBottom/VBoxContainer/PanelContainer_Header/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "COMMON_NEARBY"
+label_settings = SubResource("LabelSettings_header")
+vertical_alignment = 1
+
+[node name="TextureRect_Members" type="TextureRect" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/SafeMarginContainer_ChatBottom/VBoxContainer/PanelContainer_Header/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("4_members")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label_Members" type="Label" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/SafeMarginContainer_ChatBottom/VBoxContainer/PanelContainer_Header/HBoxContainer"]
+unique_name_in_owner = true
+auto_translate_mode = 2
+layout_mode = 2
+text = "1"
+label_settings = SubResource("LabelSettings_count")
+vertical_alignment = 1
+
+[node name="Control_CollapseSlot" type="Control" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/SafeMarginContainer_ChatBottom/VBoxContainer/PanelContainer_Header/HBoxContainer"]
+unique_name_in_owner = true
+editor_description = "Plain Control between the header HBox and the chevron: a Container resets its children's rotation on every sort, so the rotated chevron cannot be a direct child of the HBox."
+custom_minimum_size = Vector2(66, 66)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="Button_CollapseChat" type="Button" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/SafeMarginContainer_ChatBottom/VBoxContainer/PanelContainer_Header/HBoxContainer/Control_CollapseSlot"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_right = 66.0
+offset_bottom = 66.0
+pivot_offset = Vector2(33, 33)
+focus_mode = 0
+theme_override_constants/icon_max_width = 48
+theme_override_styles/focus = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/normal = SubResource("StyleBoxEmpty_flat")
+icon = ExtResource("6_chevron")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Control_ChatSlot" type="Control" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/SafeMarginContainer_ChatBottom/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Control_KeyboardMargin" type="Control" parent="SafeMarginContainer_Root/VBoxContainer_Root"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2

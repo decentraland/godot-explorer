@@ -175,6 +175,10 @@ pub struct SceneManager {
 
     // Track when pointer was pressed on avatar for click-and-release mechanism
     avatar_pointer_press_time: Option<Instant>,
+    // Same press→release window as the passport, for a video screen under the crosshair.
+    video_pointer_press_time: Option<Instant>,
+    // Origin and unit direction of this tick's pointer ray, for the video-screen bounds test.
+    pointer_ray: Option<(Vector3, Vector3)>,
 
     // Global pool manager for all scene resources (physics areas, etc.)
     // Uses RefCell because we need interior mutability while iterating scenes
@@ -247,6 +251,16 @@ const MIN_TIME_TO_PROCESS_SCENE_US: i64 = 2083; // 25% of max_time_per_scene_tic
 // 60fps), so the scene thread can tear down and Godot/GPU memory is reclaimed
 // before we measure pressure again. See `handle_memory_pressure`.
 const MEMORY_SETTLE_FRAMES: i32 = 90;
+/// Reach of the crosshair/cursor ray, for both the physics raycast and the video-screen test.
+const POINTER_RAY_LENGTH: f32 = 100.0;
+/// How far a video screen can be for the focus-mode prompt. Wider than the 10 m passport
+/// range because event screens are large and watched from a distance.
+const VIDEO_FOCUS_MAX_DISTANCE: f32 = 30.0;
+/// A pointer collider this close in front of a video screen's surface is its click box
+/// (scenes size the collider separately when the model is scaled), so it is claimed too.
+/// A deeper box is claimed when its entity is related to the screen's
+/// (`Scene::is_click_box_of`).
+const VIDEO_CLICK_BOX_TOLERANCE: f32 = 0.25;
 
 const EXIT_WITHOUT_KILL_SIGNAL: &str = "scene thread exited without kill signal";
 const CRDT_STATE_POISONED: &str = "scene CRDT state poisoned by a renderer panic";
@@ -3015,11 +3029,13 @@ impl SceneManager {
     }
 
     fn get_current_mouse_entity(&mut self) -> Option<RaycastResult> {
-        const RAY_LENGTH: f32 = 100.0;
         const CL_POINTER: u32 = 1;
         const CL_AVATAR: u32 = 536870912; // Layer 30 for avatars
 
-        let camera_node = self.base().get_viewport().and_then(|x| x.get_camera_3d())?;
+        let Some(camera_node) = self.base().get_viewport().and_then(|x| x.get_camera_3d()) else {
+            self.pointer_ray = None;
+            return None;
+        };
 
         // Outside tap-cursor mode, aim where the crosshair is drawn (mobile sets
         // it per-frame); desktop keeps the viewport center. The ray ALWAYS starts
@@ -3033,7 +3049,9 @@ impl SceneManager {
         };
 
         let raycast_from = camera_node.project_ray_origin(screen_point);
-        let raycast_to = raycast_from + camera_node.project_ray_normal(screen_point) * RAY_LENGTH;
+        let raycast_dir = camera_node.project_ray_normal(screen_point);
+        let raycast_to = raycast_from + raycast_dir * POINTER_RAY_LENGTH;
+        self.pointer_ray = Some((raycast_from, raycast_dir));
         let mut space = camera_node.get_world_3d()?.get_direct_space_state()?;
 
         // Update the cached raycast query parameters
@@ -3138,8 +3156,83 @@ impl SceneManager {
         None
     }
 
+    /// Most screens have no collider, so the physics ray passes through them: test the video
+    /// screens' mesh bounds along the same ray, within VIDEO_FOCUS_MAX_DISTANCE and not behind
+    /// the pointer collider it did hit. Scenes without video players are skipped, so the scan
+    /// only runs where a screen exists.
+    fn video_screen_along_pointer_ray(
+        &self,
+        physics_hit: &Option<GodotDclRaycastResult>,
+    ) -> Option<(
+        f32,
+        SceneId,
+        SceneEntityId,
+        Gd<crate::godot_classes::dcl_video_player::DclVideoPlayer>,
+    )> {
+        let (ray_from, ray_dir) = self.pointer_ray?;
+        let max_distance = physics_hit
+            .as_ref()
+            .map_or(VIDEO_FOCUS_MAX_DISTANCE, |hit| {
+                hit.hit.length.min(VIDEO_FOCUS_MAX_DISTANCE)
+            });
+        let (distance, scene_id, entity_id, video_player) = self
+            .scenes
+            .iter()
+            .filter_map(|(scene_id, scene)| {
+                scene.video_screen_along_ray(ray_from, ray_dir).map(
+                    |(distance, entity_id, video_player)| {
+                        (distance, *scene_id, entity_id, video_player)
+                    },
+                )
+            })
+            .filter(|(distance, _, _, _)| *distance <= max_distance)
+            .min_by(|a, b| a.0.total_cmp(&b.0))?;
+        // Only the nearest candidate is tested: a screen hidden behind a wall in front of a
+        // visible one would need a raycast per candidate, for a layout that does not occur.
+        if self.is_pointer_ray_occluded(ray_from, ray_from + ray_dir * distance) {
+            return None;
+        }
+        Some((distance, scene_id, entity_id, video_player))
+    }
+
+    /// Whether physics-only geometry (a wall whose collider is not on the pointer layer)
+    /// stands between the camera and `to`. Only called once a screen is within reach, so
+    /// this second raycast is rare.
+    fn is_pointer_ray_occluded(&self, from: Vector3, to: Vector3) -> bool {
+        const CL_POINTER_OR_PHYSICS: u32 = 3;
+        // A screen's own collider sits on the surface the bounds test hit; ignore that.
+        const SURFACE_TOLERANCE: f32 = 0.05;
+        let Some(mut space) = self
+            .base()
+            .get_viewport()
+            .and_then(|viewport| viewport.get_camera_3d())
+            .and_then(|camera| camera.get_world_3d())
+            .and_then(|mut world| world.get_direct_space_state())
+        else {
+            return false;
+        };
+        let Some(mut query) = PhysicsRayQueryParameters3D::create(from, to) else {
+            return false;
+        };
+        query.set_collision_mask(CL_POINTER_OR_PHYSICS);
+        query.set_exclude(&self.pointer_raycast_exclude);
+        let result = space.intersect_ray(&query);
+        let Some(position) = result.get("position") else {
+            return false;
+        };
+        let hit_distance = position.to::<Vector3>().distance_to(from);
+        hit_distance + SURFACE_TOLERANCE < to.distance_to(from)
+    }
+
     #[signal]
     fn pointer_tooltip_changed();
+
+    /// A short ia_pointer press→release on a video screen (issue #1381). The explorer's
+    /// VideoFocusMode overlay opens on it with the screen's player.
+    #[signal]
+    fn open_video_focus_mode(
+        video_player: Gd<crate::godot_classes::dcl_video_player::DclVideoPlayer>,
+    );
 
     fn create_ui_canvas_information(&self) -> PbUiCanvasInformation {
         let canvas_size = self.base_ui.get_size();
@@ -3833,6 +3926,8 @@ impl INode for SceneManager {
             cached_raycast_query: PhysicsRayQueryParameters3D::new_gd(),
             last_avatar_under_crosshair: None,
             avatar_pointer_press_time: None,
+            video_pointer_press_time: None,
+            pointer_ray: None,
             pool_manager: RefCell::new(PoolManager::new()),
             current_loading_session: None,
             next_session_id: 0,
@@ -4028,6 +4123,57 @@ impl INode for SceneManager {
             }
         }
 
+        // A video screen is an entity whose material samples a VideoPlayer. A short
+        // ia_pointer press→release on one opens the focus mode, like the passport above.
+        let raycast_screen = current_pointer_raycast_result.as_ref().and_then(|raycast| {
+            self.scenes
+                .get(&raycast.scene_id)?
+                .video_player_for_entity(&raycast.entity_id)
+        });
+        let bounds_screen = match raycast_screen {
+            Some(_) => None,
+            None => self.video_screen_along_pointer_ray(&current_pointer_raycast_result),
+        };
+        // The client claims IA_POINTER on a playing screen under the crosshair, whether the
+        // collider hit is the screen itself or its click box (an entity related to the
+        // screen, or any collider on its surface): the scene keeps hover and the other
+        // buttons, but a tap means focus mode even where the scene bound its own handler to
+        // the pointer (the Genesis Plaza theatre's camera mode).
+        let claimed_pointer = raycast_screen.is_some()
+            || match (
+                current_pointer_raycast_result.as_ref(),
+                bounds_screen.as_ref(),
+            ) {
+                (Some(hit), Some((distance, scene_id, screen_entity, _))) => {
+                    (hit.hit.length - distance).abs() <= VIDEO_CLICK_BOX_TOLERANCE
+                        || (hit.scene_id == *scene_id
+                            && self.scenes.get(scene_id).is_some_and(|scene| {
+                                scene.is_click_box_of(&hit.entity_id, screen_entity)
+                            }))
+                }
+                _ => false,
+            };
+        let hovered_video_player =
+            raycast_screen.or_else(|| bounds_screen.map(|(_, _, _, video_player)| video_player));
+        match hovered_video_player.as_ref() {
+            Some(video_player) => {
+                if changed_inputs.contains(&(InputAction::IaPointer, true)) {
+                    self.video_pointer_press_time = Some(Instant::now());
+                }
+                if changed_inputs.contains(&(InputAction::IaPointer, false)) {
+                    if let Some(press_time) = self.video_pointer_press_time.take() {
+                        let ui_has_focus = DclGlobal::try_singleton()
+                            .is_none_or(|global| global.bind().ui_has_focus());
+                        if press_time.elapsed() < Duration::from_secs(1) && ui_has_focus {
+                            self.base_mut()
+                                .emit_signal("open_video_focus_mode", &[video_player.to_variant()]);
+                        }
+                    }
+                }
+            }
+            None => self.video_pointer_press_time = None,
+        }
+
         let player_position = player_avatar.get_global_position();
         let camera_and_viewport = self.base().get_viewport().and_then(|viewport| {
             let size = viewport.get_visible_rect().size;
@@ -4048,6 +4194,7 @@ impl INode for SceneManager {
             &camera_and_viewport,
             &mut self.last_proximity_entity,
             &mut self.last_hover_entity,
+            claimed_pointer,
         );
 
         let mut tooltips = VarArray::new();
@@ -4092,6 +4239,14 @@ impl INode for SceneManager {
                         let input_action =
                             InputAction::from_i32(*info.button.as_ref().unwrap_or(&0))
                                 .unwrap_or(InputAction::IaAny);
+                        // The pointer prompt on a claimed screen is the client's (below); an
+                        // IA_ANY handler stays reachable through the other buttons but its
+                        // prompt would read as a second pointer prompt.
+                        if claimed_pointer
+                            && matches!(input_action, InputAction::IaPointer | InputAction::IaAny)
+                        {
+                            continue;
+                        }
 
                         let is_pet_up = pointer_event.event_type == PointerEventType::PetUp as i32;
                         let is_pet_down =
@@ -4206,6 +4361,14 @@ impl INode for SceneManager {
                 profile_dict.set("action", "ia_pointer");
                 tooltips.push(&profile_dict.to_variant());
             }
+        }
+
+        if hovered_video_player.is_some() {
+            let mut focus_dict = VarDictionary::new();
+            // A translation key resolved in tooltip_label.gd, like TOOLTIP_VIEW_PROFILE.
+            focus_dict.set("text_pet_down", "TOOLTIP_FOCUS_MODE");
+            focus_dict.set("action", "ia_pointer");
+            tooltips.push(&focus_dict.to_variant());
         }
 
         let tooltips_changed = self.pointer_tooltips != tooltips;

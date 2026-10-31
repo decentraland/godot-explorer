@@ -293,6 +293,7 @@ pub fn find_active_proximity_entity(
     best_entity
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn pointer_events_system(
     scenes: &mut HashMap<SceneId, Scene>,
     changed_inputs: &HashSet<(InputAction, bool)>,
@@ -304,6 +305,7 @@ pub fn pointer_events_system(
     )>,
     last_proximity_entity: &mut Option<(SceneId, SceneEntityId)>,
     last_hover_entity: &mut Option<GodotDclRaycastResult>,
+    claimed_pointer: bool,
 ) {
     let global_tick_number = GLOBAL_TICK_NUMBER.load(Ordering::Relaxed);
 
@@ -329,6 +331,7 @@ pub fn pointer_events_system(
         player_position,
         last_hover_entity,
         global_tick_number,
+        claimed_pointer,
     );
 }
 
@@ -440,6 +443,10 @@ fn pointer_events_system_without_proximity(
     player_position: godot::prelude::Vector3,
     last_hover_entity: &mut Option<GodotDclRaycastResult>,
     global_tick_number: u32,
+    // The client owns IA_POINTER on the hovered entity (a playing video screen, see
+    // scene_manager.rs): the scene still gets hover and every other button, but the
+    // pointer press reaches it without the hit and never as an entity event.
+    claimed_pointer: bool,
 ) {
     // Effective hover target this frame: the raycast entity, but only while it has a
     // (non-proximity) hover event AND is within its interaction range right now.
@@ -530,7 +537,8 @@ fn pointer_events_system_without_proximity(
             } as i32;
 
             // Just send the raycast data if we hit something of that scene
-            let raycast_hit = if current_raycast_scene_id == *scene_id {
+            let claimed = claimed_pointer && *input_action == InputAction::IaPointer;
+            let raycast_hit = if current_raycast_scene_id == *scene_id && !claimed {
                 raycast_hit.clone()
             } else {
                 None
@@ -604,6 +612,9 @@ fn pointer_events_system_without_proximity(
         }
 
         for (input_action, state) in changed_inputs {
+            if claimed_pointer && *input_action == InputAction::IaPointer {
+                continue;
+            }
             if *input_action == InputAction::IaAny // FIX: Is this possible? :S
                 || *input_action as i32 == event_info.button.unwrap_or(InputAction::IaAny as i32)
                 || pointer_event_button == InputAction::IaAny as i32
