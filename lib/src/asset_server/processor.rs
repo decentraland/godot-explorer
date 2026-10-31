@@ -11,6 +11,7 @@ use tokio::sync::Semaphore;
 
 use crate::content::content_mapping::{ContentMappingAndUrl, ContentMappingAndUrlRef};
 use crate::content::content_provider::SceneGltfContext;
+use crate::content::file_string::resolve_dependency_path;
 use crate::content::gltf::{
     get_dependencies, load_and_save_emote_gltf, load_and_save_scene_gltf_ex,
     load_and_save_wearable_gltf,
@@ -722,12 +723,8 @@ async fn extract_gltf_texture_dependencies(
                 return None;
             }
 
-            // Build full path (same logic as in gltf/common.rs)
-            let full_path = if base_path.is_empty() {
-                dep.clone()
-            } else {
-                format!("{}/{}", base_path, dep)
-            };
+            // Same join + normalization as the runtime loader in gltf/common.rs.
+            let full_path = resolve_dependency_path(base_path, &dep)?;
 
             // Look up hash in content mapping
             content_mapping.get_hash(&full_path).cloned()
