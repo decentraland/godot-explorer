@@ -23,6 +23,7 @@ use crate::{
         SceneId,
     },
     scene_runner::{
+        components::physics_layers,
         pool_manager::PoolManager,
         scene::{Scene, SceneType},
     },
@@ -605,7 +606,8 @@ fn create_or_update_trigger_area(
 
         // Configure collision layer/mask
         physics_server.area_set_collision_layer(area_rid, collision_mask);
-        physics_server.area_set_collision_mask(area_rid, collision_mask);
+        physics_server
+            .area_set_collision_mask(area_rid, physics_layers::query_mask(collision_mask));
         physics_server.area_set_monitorable(area_rid, true);
 
         // Register in global monitor for callback routing
@@ -640,7 +642,10 @@ fn create_or_update_trigger_area(
         // Update collision mask in both instance and global registry
         if instance.collision_mask != collision_mask {
             instance.collision_mask = collision_mask;
-            physics_server.area_set_collision_mask(instance.area_rid, collision_mask);
+            physics_server.area_set_collision_mask(
+                instance.area_rid,
+                physics_layers::query_mask(collision_mask),
+            );
             register_trigger_area(instance.area_rid, scene_id, *entity, collision_mask);
         }
     }
