@@ -35,6 +35,10 @@ jobs:
     name: 🤖 Android
     needs: static-checks
     if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+      packages: write
     uses: ./.github/workflows/android_builds.yml
     secrets:
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
