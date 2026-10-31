@@ -170,6 +170,7 @@ jobs:
           flavor: ${{ env.BUILD_FLAVOR }}
           secret: ${{ secrets.BUILD_NUMBER_SECRET }}
           allocated-by: mobile
+          track-order: 'true'
 
       - name: Compose build number + version string
         id: buildnum
@@ -450,7 +451,7 @@ jobs:
       always() && needs.prepare.outputs.should_build == 'true' &&
       (needs.ios-build.result == 'success' || needs.ios-dispatch.result == 'success')
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 130
     env:
       BUILD_REPORTER_TOKEN: ${{ secrets.BUILD_REPORTER_TOKEN }}
       BOARD_EVENTS_URL: ${{ vars.BOARD_EVENTS_URL }}
@@ -473,8 +474,9 @@ jobs:
           # Must match `run-name` in godot-asc-deploy/.github/workflows/deploy_testflight.yml.
           export TITLE="🍏 ${SAFE_BRANCH} @ ${SHA}"
           echo "Watching ${DEPLOY_REPO} for a deploy_testflight.yml run titled '${TITLE}' created after ${SINCE}"
-          # asc-deploy's own timeout is 45 min; the run can also sit queued for a macOS runner.
-          DEADLINE=$(( $(date +%s) + 50 * 60 ))
+          # asc-deploy's own timeout is 45 min, and its gate job can wait up to 120 min for lower
+          # build numbers to reach TestFlight first; the run can also sit queued for a macOS runner.
+          DEADLINE=$(( $(date +%s) + 125 * 60 ))
           SEEN=0; CONCLUSION=""; URL=""
           while true; do
             # TITLE/SINCE are read by jq from the environment (env.*) — no shell interpolation
@@ -489,6 +491,16 @@ jobs:
                 echo "▶️  found run ${URL} (${STATUS})"; SEEN=1
                 IOS_LINE="🔏 signing & uploading to TestFlight…" python3 .github/scripts/report-build-event.py
               fi
+              # The upload is what fixes the build number's place in TestFlight: stop at the
+              # `Sign & upload` job, not at the end of the run (asc-deploy's follow-up jobs, e.g.
+              # the "What to Test" notes, wait on Apple's processing and would hold the queue).
+              RUN_ID=$(echo "$RUN" | jq -r .databaseId)
+              SHIP=$(gh run view "$RUN_ID" --repo "$DEPLOY_REPO" --json jobs \
+                       --jq '.jobs[] | select(.name == "Sign & upload to TestFlight") | "\(.status) \(.conclusion)"' \
+                     2>/dev/null || true)
+              case "$SHIP" in
+                "completed "*) CONCLUSION="${SHIP#completed }"; break ;;
+              esac
               if [ "$STATUS" = "completed" ]; then
                 CONCLUSION=$(echo "$RUN" | jq -r '.conclusion // "unknown"'); break
               fi
@@ -568,6 +580,20 @@ jobs:
             export STATUS="failed" IOS_LINE="❌ build/handoff failed" LOG="❌ iOS — build/handoff failed — ${RUN_URL}"
           fi
           python3 .github/scripts/report-build-event.py
+
+      # asc-deploy never ran, so nothing will upload this number: free the ones queued behind it.
+      # Best effort — the allocator also drops an unresolved number after 2 h.
+      - name: Release the build number
+        if: needs.prepare.outputs.build_number != ''
+        env:
+          BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
+          BUILD_NUMBER_SECRET: ${{ secrets.BUILD_NUMBER_SECRET }}
+        run: |
+          echo "::add-mask::${BUILD_NUMBER_SECRET}"
+          curl -sS -m 20 -X POST "https://godot-build-number-allocator.mateo-a2b.workers.dev/build-numbers/abandon" \
+            -H 'content-type: application/json' -H "authorization: Bearer ${BUILD_NUMBER_SECRET}" \
+            -d "{\"buildNumber\":${BUILD_NUMBER}}" || true
+          echo
 
   # Android leg, step 1 (mirrors ios-resolve): the signed APK for this commit is normally produced by
   # the push CI (runner.yml → android_builds.yml) and uploaded to R2. Wait for it, then apply the SAME

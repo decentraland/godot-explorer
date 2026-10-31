@@ -35,6 +35,13 @@ inputs:
     description: Provenance label recorded with the allocation (e.g. android, ios).
     required: false
     default: ''
+  track-order:
+    description: >
+      'true' when this distribution will upload to TestFlight: the allocator keeps the number pending
+      until the upload (or an abandon) so deploys reach the store in build-number order. An allocator
+      without the feature ignores it.
+    required: false
+    default: 'false'
 
 outputs:
   build-number:
@@ -52,6 +59,7 @@ runs:
         SECRET: ${{ inputs.secret }}
         ENDPOINT: ${{ inputs.endpoint }}
         ALLOCATED_BY: ${{ inputs.allocated-by }}
+        TRACK_ORDER: ${{ inputs.track-order }}
       run: |
         set -eu
         if [ -z "${SECRET:-}" ]; then
@@ -76,7 +84,8 @@ runs:
         # Build the JSON payload without jq — the Android build runs inside a Docker
         # container that doesn't ship jq. The key (git hex + flavor) and allocated-by (a
         # literal label like "android"/"ios") are controlled values, so a printf is safe.
-        PAYLOAD=$(printf '{"sha":"%s","allocatedBy":"%s"}' "$KEY" "$ALLOCATED_BY")
+        TRACK=false; [ "${TRACK_ORDER:-}" = "true" ] && TRACK=true
+        PAYLOAD=$(printf '{"sha":"%s","allocatedBy":"%s","trackOrder":%s}' "$KEY" "$ALLOCATED_BY" "$TRACK")
         # Retry with exponential backoff to ride out transient Cloudflare Durable Object
         # blips (the allocator is a single global DO; a regional incident makes it flap
         # 500 "object reset" bursts interleaved with 200s — see the 2026-07-03 writeup).
