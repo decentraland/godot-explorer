@@ -1,0 +1,20 @@
+name: TEMP inspect android image
+on:
+  pull_request:
+    paths:
+      - .github/workflows/TEMP_inspect_image.yml
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/decentraland/dcl-godot-android-builder:394c180223d3e2ad410d191147e9e2ad39884c0b
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - run: |
+          echo "== top-level sizes"; du -xsm /opt/* /usr /root /var /home 2>/dev/null | sort -rn | head -12
+          echo "== android sdk"; du -sm /opt/android-sdk-linux/* 2>/dev/null | sort -rn | head -15
+          echo "== ndk/ffmpeg"; du -sm /opt/android-sdk-linux/ndk/* /opt/ffmpeg-kit /opt/ffmpeg-kit/* 2>/dev/null | sort -rn | head -10
+          echo "== build-tools/platforms"; ls /opt/android-sdk-linux/build-tools /opt/android-sdk-linux/platforms /opt/android-sdk-linux/system-images/* 2>&1
+          echo "== installed"; /opt/android-sdk-linux/cmdline-tools/latest/bin/sdkmanager --list_installed 2>/dev/null | head -40
