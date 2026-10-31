@@ -15,6 +15,8 @@ use crate::{
 
 pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
+    let content_mapping = &scene.content_mapping;
+    let ui_results = godot_dcl_scene.ui_results.clone();
     let dirty_lww_components = &scene.current_dirty.lww_components;
     let ui_text_component = SceneCrdtStateProtoComponents::get_ui_text(crdt_state);
 
@@ -75,6 +77,7 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         new_node.set_name("text");
                         new_node
                             .set_anchors_preset(godot::classes::control::LayoutPreset::FULL_RECT);
+                        new_node.bind_mut().set_ui_result(ui_results.clone());
                         existing_ui_text
                             .base_control
                             .add_child(&new_node.clone().upcast::<Node>());
@@ -87,9 +90,11 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     };
 
                     // Update the DclRichUiText with converted text
-                    rich_text_control
-                        .bind_mut()
-                        .change_value(value, &converted_text);
+                    rich_text_control.bind_mut().change_value(
+                        value,
+                        &converted_text,
+                        content_mapping,
+                    );
                     existing_ui_text.text_size = Some(rich_text_control.get_minimum_size());
                 }
                 ConversionResult::NonModified => {
@@ -99,13 +104,17 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         Some(node) => {
                             // Reuse existing node, whether it's DclUiText or DclRichUiText
                             if let Ok(mut ui_text) = node.clone().try_cast::<DclUiText>() {
-                                ui_text.bind_mut().change_value(value);
+                                ui_text.bind_mut().change_value(value, content_mapping);
                                 existing_ui_text.text_size = Some(ui_text.get_minimum_size());
                             } else if let Ok(mut rich_ui_text) =
                                 node.clone().try_cast::<DclRichUiText>()
                             {
                                 // Use the plain text (not converted) for RichTextLabel
-                                rich_ui_text.bind_mut().change_value(value, text_str);
+                                rich_ui_text.bind_mut().change_value(
+                                    value,
+                                    text_str,
+                                    content_mapping,
+                                );
                                 existing_ui_text.text_size = Some(rich_ui_text.get_minimum_size());
                             }
                         }
@@ -116,13 +125,14 @@ pub fn update_ui_text(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             new_node.set_anchors_preset(
                                 godot::classes::control::LayoutPreset::FULL_RECT,
                             );
+                            new_node.bind_mut().set_ui_result(ui_results.clone());
                             existing_ui_text
                                 .base_control
                                 .add_child(&new_node.clone().upcast::<Node>());
                             existing_ui_text
                                 .base_control
                                 .move_child(&new_node.clone().upcast::<Node>(), 1);
-                            new_node.bind_mut().change_value(value);
+                            new_node.bind_mut().change_value(value, content_mapping);
                             existing_ui_text.text_size = Some(new_node.get_minimum_size());
                         }
                     }

@@ -72,6 +72,15 @@ func setup(font: Font, bold_font: Font = null) -> void:
 func apply(resolved: Dictionary) -> void:
 	if _label == null:
 		setup(_font)
+	var fonts := [_font]
+	if resolved.raw_text.to_lower().contains("<b>"):
+		fonts.append(_bold_font)
+	GlyphPrewarm.request(
+		self, fonts, resolved.plain_text, resolved.godot_font_size, _apply_now.bind(resolved)
+	)
+
+
+func _apply_now(resolved: Dictionary) -> void:
 	_label.pixel_size = resolved.pixel_size
 	var sp: int = resolved.get("glyph_spacing_px", 0)
 	if _font != null:
