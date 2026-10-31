@@ -34,8 +34,8 @@ pub const MAX_FONT_BYTES: usize = 16 * 1024 * 1024;
 const TRUETYPE_SFNT_VERSION: [u8; 4] = [0x00, 0x01, 0x00, 0x00];
 
 // Match the .import settings of the bundled TextShape fonts.
-const MSDF_PIXEL_RANGE: i32 = 32;
-const MSDF_SIZE: i32 = 48;
+pub const MSDF_PIXEL_RANGE: i32 = 32;
+pub const MSDF_SIZE: i32 = 48;
 
 const FONTSOURCE_API: &str = "https://api.fontsource.org/v1/fonts/";
 const FONTSOURCE_CDN: &str = "https://cdn.jsdelivr.net/fontsource/fonts/";

@@ -166,7 +166,7 @@ impl SceneFont {
             let Some(failed) = self.promise.as_ref().filter(|p| p.bind().is_rejected()) else {
                 return false;
             };
-            let retry = fetch_font(src.as_deref().unwrap_or_default(), content_mapping);
+            let retry = fetch_font(src.as_deref().unwrap_or_default(), content_mapping, false);
             if retry == *failed {
                 return false;
             }
@@ -178,7 +178,7 @@ impl SceneFont {
         self.promise = self
             .src
             .as_deref()
-            .map(|src| fetch_font(src, content_mapping));
+            .map(|src| fetch_font(src, content_mapping, false));
         true
     }
 
@@ -206,7 +206,12 @@ impl SceneFont {
     }
 }
 
-fn fetch_font(src: &str, content_mapping: &ContentMappingAndUrlRef) -> Gd<Promise> {
+/// The shared promise of a `font_src` load; `msdf` for 3D text, which renders from MSDF atlases.
+pub(crate) fn fetch_font(
+    src: &str,
+    content_mapping: &ContentMappingAndUrlRef,
+    msdf: bool,
+) -> Gd<Promise> {
     DclGlobal::singleton()
         .bind()
         .get_content_provider()
@@ -214,7 +219,7 @@ fn fetch_font(src: &str, content_mapping: &ContentMappingAndUrlRef) -> Gd<Promis
         .fetch_font(
             src.to_godot(),
             DclContentMappingAndUrl::from_ref(content_mapping.clone()),
-            false,
+            msdf,
         )
 }
 
@@ -238,7 +243,7 @@ fn pick_face(faces: &VarDictionary, style: FontStyle) -> Option<(Gd<FontFile>, F
     })
 }
 
-fn custom_font_variation(
+pub(crate) fn custom_font_variation(
     custom: Gd<FontFile>,
     faux: FontStyle,
     fallback: Gd<godot::classes::Font>,

@@ -49,7 +49,7 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                 text_shape_node
                     .bind_mut()
-                    .apply(&text_shape_params(&new_value));
+                    .apply(&text_shape_params(&new_value), &scene.content_mapping);
             }
         }
     }
@@ -62,6 +62,7 @@ fn text_shape_params(
     TextShapeParams {
         text: value.text.clone(),
         font: value.font,
+        font_src: value.font_src.clone(),
         font_size: value.font_size,
         font_auto_size: value.font_auto_size,
         text_align: value.text_align,
