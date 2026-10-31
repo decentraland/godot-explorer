@@ -11,17 +11,16 @@ use godot::{
 use crate::engine::local_task::defer;
 use crate::godot_classes::dcl_global::DclGlobal;
 use crate::{
+    content::content_mapping::ContentMappingAndUrlRef,
     dcl::components::{
         proto_components::{
-            sdk::components::{
-                common::{Font, TextAlignMode},
-                PbUiInput, PbUiInputResult,
-            },
+            sdk::components::{common::TextAlignMode, PbUiInput, PbUiInputResult},
             WrapToGodot,
         },
         SceneEntityId,
     },
     engine::DclEngine,
+    godot_classes::font::{FontStyle, SceneFont},
     scene_runner::components::ui::scene_ui::UiResults,
 };
 
@@ -30,7 +29,7 @@ use crate::{
 pub struct DclUiInput {
     base: Base<LineEdit>,
 
-    current_font: Font,
+    scene_font: SceneFont,
 
     #[export]
     #[var(pub)]
@@ -44,7 +43,7 @@ impl ILineEdit for DclUiInput {
     fn init(base: Base<LineEdit>) -> Self {
         Self {
             base,
-            current_font: Font::FSansSerif,
+            scene_font: SceneFont::default(),
             ui_result: None,
             dcl_entity_id: SceneEntityId::ROOT,
         }
@@ -52,9 +51,7 @@ impl ILineEdit for DclUiInput {
 
     fn ready(&mut self) {
         let style_box_empty: Gd<godot::classes::StyleBox> = StyleBoxEmpty::new_gd().upcast();
-        let new_font_resource = self.current_font.get_font_resource();
-        self.base_mut()
-            .add_theme_font_override("font", &new_font_resource);
+        self.apply_font();
         self.base_mut()
             .add_theme_stylebox_override("normal", &style_box_empty.clone());
         self.base_mut()
@@ -157,7 +154,16 @@ impl DclUiInput {
             .done();
     }
 
-    pub fn change_value(&mut self, new_value: &PbUiInput) {
+    fn apply_font(&mut self) {
+        let font = self.scene_font.get(FontStyle::Regular);
+        self.base_mut().add_theme_font_override("font", &font);
+    }
+
+    pub fn change_value(
+        &mut self,
+        new_value: &PbUiInput,
+        content_mapping: &ContentMappingAndUrlRef,
+    ) {
         self.base_mut()
             .set_placeholder(&new_value.placeholder.to_godot());
 
@@ -212,11 +218,19 @@ impl DclUiInput {
 
         self.base_mut().set_horizontal_alignment(hor_align);
 
-        if new_value.font() != self.current_font {
-            self.current_font = new_value.font();
-            let new_font_resource = self.current_font.get_font_resource();
-            self.base_mut()
-                .add_theme_font_override("font", &new_font_resource);
+        if self.scene_font.update(
+            new_value.font(),
+            new_value.font_src.as_deref(),
+            content_mapping,
+        ) {
+            self.apply_font();
+            // No relayout: the size comes from UiTransform, not the text.
+            if let Some(promise) = self.scene_font.loading() {
+                promise
+                    .signals()
+                    .on_resolved()
+                    .connect_other(&self.to_gd(), Self::apply_font);
+            }
         }
     }
 

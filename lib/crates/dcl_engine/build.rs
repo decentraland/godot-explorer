@@ -395,10 +395,18 @@ fn main() -> io::Result<()> {
                 // the compiled source may be swapped for a patched copy below.
                 proto_components.push(get_component_id_and_name(entry.path().to_str().unwrap()));
 
-                if entry.path().file_name().and_then(|n| n.to_str())
-                    == Some("avatar_emote_command.proto")
-                {
+                let file_name = entry
+                    .path()
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .map(str::to_owned);
+                let font_src_patch = FONT_SRC_PATCHES
+                    .iter()
+                    .find(|(file, _, _)| Some(*file) == file_name.as_deref());
+                if file_name.as_deref() == Some("avatar_emote_command.proto") {
                     proto_files.push(patched_avatar_emote_command_proto());
+                } else if let Some((_, message, field)) = font_src_patch {
+                    proto_files.push(patched_font_src_proto(&entry.path(), message, field));
                 } else {
                     proto_files.push(entry.path());
                 }
@@ -618,14 +626,58 @@ fn patched_avatar_emote_command_proto() -> std::path::PathBuf {
     dest
 }
 
+/// The pinned @dcl/protocol build predates protocol#489 (`font_src` on the four text
+/// components). Same idiom as `patched_avatar_emote_command_proto`; no-ops once the
+/// pinned build ships the field.
+const FONT_SRC_PATCHES: &[(&str, &str, &str)] = &[
+    (
+        "text_shape.proto",
+        "message PBTextShape {",
+        "  optional string font_src = 22;\n",
+    ),
+    (
+        "ui_text.proto",
+        "message PBUiText {",
+        "  optional string font_src = 9;\n",
+    ),
+    (
+        "ui_input.proto",
+        "message PBUiInput {",
+        "  optional string font_src = 16;\n",
+    ),
+    (
+        "ui_dropdown.proto",
+        "message PBUiDropdown {",
+        "  optional string font_src = 13;\n",
+    ),
+];
+
+fn patched_font_src_proto(path: &Path, message: &str, field: &str) -> std::path::PathBuf {
+    let rel = path
+        .strip_prefix(PROTO_FILES_BASE_DIR)
+        .expect("proto under PROTO_FILES_BASE_DIR");
+    let file = rel.display();
+    let mut source = fs::read_to_string(path)
+        .unwrap_or_else(|_| panic!("read {file} (run `cargo run -- install` to fetch protos)"));
+
+    if !source.contains("font_src") {
+        source = insert_fields_before_message_close(&source, message, field);
+    }
+
+    let dest = patched_proto_root().join(rel);
+    fs::create_dir_all(dest.parent().unwrap()).expect("create proto_patched dir");
+    fs::write(&dest, source).unwrap_or_else(|_| panic!("write patched {file}"));
+    dest
+}
+
 fn insert_fields_before_message_close(source: &str, marker: &str, fields: &str) -> String {
     let start = source.find(marker).unwrap_or_else(|| {
-        panic!("rfc4 comms.proto: `{marker}` not found — update the patch in build.rs")
+        panic!("proto patch: `{marker}` not found — update the patch in build.rs")
     });
     let close = source[start..]
         .find('}')
         .map(|offset| start + offset)
-        .unwrap_or_else(|| panic!("rfc4 comms.proto: closing brace for `{marker}` not found"));
+        .unwrap_or_else(|| panic!("proto patch: closing brace for `{marker}` not found"));
     format!("{}{}{}", &source[..close], fields, &source[close..])
 }
 

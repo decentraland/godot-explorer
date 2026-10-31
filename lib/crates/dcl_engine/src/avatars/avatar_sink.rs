@@ -43,9 +43,8 @@ impl AvatarSink for Gd<AvatarScene> {
         self.bind_mut().update_avatar_by_alias(alias, profile);
     }
 
-    fn set_profile_fetch_state(&mut self, alias: u32, failures: i32, banned: bool) {
-        self.bind_mut()
-            .set_avatar_profile_fetch_state(alias, failures, banned);
+    fn set_profile_status(&mut self, alias: u32, status: &str) {
+        self.bind_mut().set_avatar_profile_status(alias, status);
     }
 
     fn set_blocked(&mut self, alias: u32, blocked: bool) {

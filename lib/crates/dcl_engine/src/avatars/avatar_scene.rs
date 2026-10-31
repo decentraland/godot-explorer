@@ -102,6 +102,7 @@ struct PendingAvatar {
     alias: AvatarAlias,
     address: GString,
     profile: Option<UserProfile>,
+    profile_status: String,
     transform: Option<DclTransformAndParent>,
     blocked: bool,
     voice: Option<(u32, u32, u32)>,
@@ -1446,6 +1447,7 @@ impl AvatarScene {
             alias,
             address,
             profile: None,
+            profile_status: String::new(),
             transform: None,
             blocked: false,
             voice: None,
@@ -1493,6 +1495,7 @@ impl AvatarScene {
         if let Some(profile) = pending.profile {
             self.update_avatar_by_alias(alias, &profile);
         }
+        self.set_avatar_profile_status(alias, &pending.profile_status);
         if let Some(transform) = pending.transform {
             let entity_id = self.avatar_entity.get(&alias).copied();
             self.apply_avatar_transform(alias, entity_id, transform, true);
@@ -1958,15 +1961,13 @@ impl AvatarScene {
         }
     }
 
-    /// Forward the comms-side profile-fetch state to the avatar so a pending nameplate
-    /// can show "Loading"/"Failed" in dev (see avatar.gd `set_profile_request_state`).
-    pub fn set_avatar_profile_fetch_state(&mut self, alias: u32, failures: i32, banned: bool) {
+    pub fn set_avatar_profile_status(&mut self, alias: u32, status: &str) {
         if let Some(entity_id) = self.avatar_entity.get(&alias) {
             if let Some(avatar) = self.avatar_godot_scene.get_mut(entity_id) {
-                avatar
-                    .bind_mut()
-                    .set_profile_request_state(failures, banned);
+                avatar.bind_mut().set_profile_status(status.into());
             }
+        } else if let Some(pending) = self.pending_avatar_mut(alias) {
+            pending.profile_status = status.to_owned();
         }
     }
 

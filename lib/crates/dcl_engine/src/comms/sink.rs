@@ -11,7 +11,7 @@ pub trait AvatarSink {
     fn remove_avatar(&mut self, alias: u32);
     fn clean(&mut self);
     fn update_profile(&mut self, alias: u32, profile: &UserProfile);
-    fn set_profile_fetch_state(&mut self, alias: u32, failures: i32, banned: bool);
+    fn set_profile_status(&mut self, alias: u32, status: &str);
     fn set_blocked(&mut self, alias: u32, blocked: bool);
     /// Shown as a label on non-production builds only; the sink decides.
     fn set_version(&mut self, address: &H160, version: &str);

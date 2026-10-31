@@ -64,6 +64,7 @@ pub async fn update_from_profile(avatar: Gd<DclAvatar>, profile: Gd<DclUserProfi
         let mut avatar = avatar.clone();
         let mut this = avatar.bind_mut();
         this.nametag.profile_ready = true;
+        this.nametag.profile_status.clear();
         // The reveal waits for the body and the ground too: the give-up clock restarts here.
         this.spawn_reveal.born_ms = godot::classes::Time::singleton().get_ticks_msec();
         if let Some(nodes) = this.nodes.as_mut() {

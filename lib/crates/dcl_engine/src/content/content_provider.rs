@@ -36,6 +36,7 @@ use super::{
     audio::load_audio,
     cache_file_name::{cache_file_name, cache_file_path},
     crash_context,
+    font::fetch_font,
     gltf::{
         build_dcl_emote_gltf, get_last_16_alphanumeric, load_and_save_emote_gltf,
         load_and_save_scene_gltf, load_and_save_wearable_gltf, process_emote_animations,
@@ -156,8 +157,8 @@ pub struct ContentProvider {
     download_speed_mbs: f64,
     network_speed_peak_mbs: f64,
     network_download_history_mb: VecDeque<f64>, // Last 60 seconds of download sizes in MB
-    loading_resources: Arc<AtomicU64>,
-    loaded_resources: Arc<AtomicU64>,
+    pub(crate) loading_resources: Arc<AtomicU64>,
+    pub(crate) loaded_resources: Arc<AtomicU64>,
     optimized_scene_count: Arc<AtomicU64>,
     runtime_scene_count: Arc<AtomicU64>,
     optimized_wearable_count: Arc<AtomicU64>,
@@ -1690,6 +1691,19 @@ impl ContentProvider {
         promise
     }
 
+    /// Loads the scene TTF or font family a scene's `font_src` names; rejects (with a
+    /// warning) anything else, so callers keep the built-in font.
+    #[func]
+    pub fn fetch_font(
+        &mut self,
+        font_src: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+        msdf: bool,
+    ) -> Gd<Promise> {
+        let content_mapping = content_mapping.bind().get_content_mapping();
+        fetch_font(self, font_src.to_string(), &content_mapping, msdf)
+    }
+
     #[func]
     pub fn fetch_texture(
         &mut self,
@@ -2817,7 +2831,7 @@ impl ContentProvider {
 }
 
 impl ContentProvider {
-    fn get_context(&self) -> ContentProviderContext {
+    pub(crate) fn get_context(&self) -> ContentProviderContext {
         ContentProviderContext {
             content_folder: self.content_folder.clone(),
             http_queue_requester: self.http_queue_requester.clone(),
@@ -2828,7 +2842,7 @@ impl ContentProvider {
     }
 
     /// Get a promise from the cache if it still exists (InstanceId is valid)
-    fn get_cached_promise(&self, key: &str) -> Option<Gd<Promise>> {
+    pub(crate) fn get_cached_promise(&self, key: &str) -> Option<Gd<Promise>> {
         let instance_id = self.promises.get(key)?;
         Gd::<Promise>::try_from_instance_id(*instance_id).ok()
     }

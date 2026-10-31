@@ -8,9 +8,15 @@ use godot::{
     prelude::*,
 };
 
-use crate::dcl::components::proto_components::sdk::components::{
-    common::{Font, TextAlignMode},
-    PbUiText, TextWrap,
+use std::{cell::RefCell, rc::Rc};
+
+use crate::{
+    content::content_mapping::ContentMappingAndUrlRef,
+    dcl::components::proto_components::sdk::components::{
+        common::TextAlignMode, PbUiText, TextWrap,
+    },
+    godot_classes::font::{FontStyle, SceneFont},
+    scene_runner::components::ui::scene_ui::UiResults,
 };
 
 #[derive(GodotClass)]
@@ -18,7 +24,8 @@ use crate::dcl::components::proto_components::sdk::components::{
 pub struct DclRichUiText {
     base: Base<RichTextLabel>,
 
-    current_font: Font,
+    scene_font: SceneFont,
+    ui_result: Option<Rc<RefCell<UiResults>>>,
 }
 
 #[godot_api]
@@ -26,21 +33,13 @@ impl IRichTextLabel for DclRichUiText {
     fn init(base: Base<RichTextLabel>) -> Self {
         Self {
             base,
-            current_font: Font::FSansSerif,
+            scene_font: SceneFont::default(),
+            ui_result: None,
         }
     }
 
     fn ready(&mut self) {
-        let font = self.current_font;
-
-        self.base_mut()
-            .add_theme_font_override("normal_font", &font.get_font_resource());
-        self.base_mut()
-            .add_theme_font_override("bold_font", &font.get_font_bold_resource());
-        self.base_mut()
-            .add_theme_font_override("italics_font", &font.get_font_italic_resource());
-        self.base_mut()
-            .add_theme_font_override("bold_italics_font", &font.get_font_bold_italic_resource());
+        self.apply_font();
         self.base_mut().set_use_bbcode(true);
 
         // Configure to behave like Label in terms of layout:
@@ -68,7 +67,38 @@ impl IRichTextLabel for DclRichUiText {
 
 #[godot_api]
 impl DclRichUiText {
-    pub fn change_value(&mut self, new_value: &PbUiText, converted_text: &str) {
+    fn on_font_loaded(&mut self) {
+        if !self.scene_font.is_loaded() {
+            return;
+        }
+        self.apply_font();
+        if let Some(ui_result) = self.ui_result.as_ref() {
+            ui_result.borrow_mut().relayout_requested = true;
+        }
+    }
+
+    fn apply_font(&mut self) {
+        for (name, style) in [
+            ("normal_font", FontStyle::Regular),
+            ("bold_font", FontStyle::Bold),
+            ("italics_font", FontStyle::Italic),
+            ("bold_italics_font", FontStyle::BoldItalic),
+        ] {
+            let font = self.scene_font.get(style);
+            self.base_mut().add_theme_font_override(name, &font);
+        }
+    }
+
+    pub fn set_ui_result(&mut self, ui_result: Rc<RefCell<UiResults>>) {
+        self.ui_result = Some(ui_result);
+    }
+
+    pub fn change_value(
+        &mut self,
+        new_value: &PbUiText,
+        converted_text: &str,
+        content_mapping: &ContentMappingAndUrlRef,
+    ) {
         self.base_mut()
             .add_theme_font_size_override("normal_font_size", new_value.font_size.unwrap_or(10));
         self.base_mut()
@@ -155,17 +185,18 @@ impl DclRichUiText {
         // Set the BBCode text with converted Unity tags to Godot BBCode
         self.base_mut().set_text(converted_text);
 
-        if new_value.font() != self.current_font {
-            self.current_font = new_value.font();
-            let new_font_resource = self.current_font.get_font_resource();
-            self.base_mut()
-                .add_theme_font_override("normal_font", &new_font_resource.clone());
-            self.base_mut()
-                .add_theme_font_override("bold_font", &new_font_resource.clone());
-            self.base_mut()
-                .add_theme_font_override("italics_font", &new_font_resource.clone());
-            self.base_mut()
-                .add_theme_font_override("bold_italics_font", &new_font_resource);
+        if self.scene_font.update(
+            new_value.font(),
+            new_value.font_src.as_deref(),
+            content_mapping,
+        ) {
+            self.apply_font();
+            if let Some(promise) = self.scene_font.loading() {
+                promise
+                    .signals()
+                    .on_resolved()
+                    .connect_other(&self.to_gd(), Self::on_font_loaded);
+            }
         }
 
         if new_value.text_wrap_compat() == TextWrap::TwWrap {
