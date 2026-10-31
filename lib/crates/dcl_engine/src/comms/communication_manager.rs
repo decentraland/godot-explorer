@@ -1231,10 +1231,10 @@ impl CommunicationManager {
     pub fn disconnected(reason: i32);
 
     #[signal]
-    fn pulse_recovered();
+    pub fn pulse_recovered();
 
     #[func]
-    fn retry_pulse(&mut self) {
+    pub fn retry_pulse(&mut self) {
         self.retry_pulse_connection();
     }
 
