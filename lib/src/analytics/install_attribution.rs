@@ -218,7 +218,7 @@ fn read_status(dict: Option<VarDictionary>) -> Option<(VarDictionary, String)> {
     Some((dict, status))
 }
 
-fn get_string(dict: &VarDictionary, key: &str) -> String {
+pub(super) fn get_string(dict: &VarDictionary, key: &str) -> String {
     dict.get(key)
         .and_then(|v| v.try_to::<GString>().ok())
         .unwrap_or_default()
@@ -242,7 +242,7 @@ fn get_bool(dict: &VarDictionary, key: &str) -> bool {
 /// Both are handled by the same code on purpose: a referrer *is* a bare query string, and a
 /// deep link is one with a scheme and path in front of it. Anything that is not a valid
 /// token is dropped rather than forwarded, so a malformed link cannot become a lookup.
-fn extract_token(input: &str) -> Option<String> {
+pub(super) fn extract_token(input: &str) -> Option<String> {
     let query = input.split_once('?').map_or(input, |(_, q)| q);
     let query = query.split('#').next().unwrap_or(query);
 
