@@ -7,15 +7,15 @@ This writes one mask per base-avatar eye, keyed by the texture's content hash:
 - Most eyes: the mask is the texture's own darkness, so every iris (drawn in greys) is tinted while
   the white of the eye, the catch-lights and the eyeliner keep their art.
 - A couple of eyes draw the iris as a solid black disc with no shading to tint. Multiplying black by
-  the eye colour stays black, so those get an ellipse over the disc and `BASE_EYE_MASKS_REPLACE`,
+  the eye colour stays black, so those get an ellipse over the disc and `MASK_REPLACE`,
   which makes the shader paint the iris with the picked colour instead of multiplying it.
 
 Mask convention matches a wearable `_mask.png` for eyes: black = tinted, white = untouched.
-`avatar.gd` looks the mask up by the eye texture's content hash, so a redeployed texture simply
+`avatars/eye_masks.rs` looks the mask up by the eye texture's content hash, so a redeployed texture simply
 stops matching instead of getting a misaligned mask.
 
 Usage: python3 tools/eye_masks/generate.py   (needs numpy + Pillow and network access)
-It prints the GDScript tables to paste into `godot/src/decentraland_components/avatar/avatar.gd`.
+It prints the Rust tables to paste into `lib/crates/dcl_engine/src/avatars/eye_masks.rs`.
 """
 
 import io
@@ -128,15 +128,15 @@ def main() -> None:
         print(f"{name} -> {os.path.relpath(path)}")
 
     content_hash = {name: hashes[name].rsplit("/", 1)[-1] for name in hashes}
-    print("\nconst BASE_EYE_MASKS: Dictionary[String, String] = {")
-    for name in sorted(content_hash):
-        print(f'\t"{content_hash[name]}":')
-        print(f'\t"res://assets/avatar/eye_masks/{name}_mask.png",')
-    print("}\n")
-    print("const BASE_EYE_MASKS_REPLACE: PackedStringArray = [")
+    print(f"\nconst MASK_REPLACE: [&str; {len(SOLID_BLACK_IRIS)}] = [")
     for name in SOLID_BLACK_IRIS:
-        print(f'\t"{content_hash[name]}",')
-    print("]")
+        print(f'    "{content_hash[name]}",')
+    print("];\n")
+    print(f"const BASE_EYE_MASKS: [(&str, &str); {len(content_hash)}] = [")
+    for name in sorted(content_hash):
+        print(f'    (\n        "{content_hash[name]}",')
+        print(f'        "res://assets/avatar/eye_masks/{name}_mask.png",\n    ),')
+    print("];")
 
 
 if __name__ == "__main__":
