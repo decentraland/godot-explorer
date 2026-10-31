@@ -1,16 +1,20 @@
 name: Compute build number
 description: >
   Allocate the monotonic store build number for this commit from the Cloudflare Worker allocator
-  (idempotent per commit SHA) and export it as the DCL_BUILD_NUMBER environment variable. Every
-  `cargo run -- export` later
-  in the job reads DCL_BUILD_NUMBER and stamps the same Android versionCode / iOS CFBundleVersion, so
-  the same commit converges on both stores. When no API key is provided (fork PRs / local), the step
+  (idempotent per commit SHA + flavor) and export it as the DCL_BUILD_NUMBER environment variable.
+  Every `cargo run -- export` later in the job reads DCL_BUILD_NUMBER and stamps the same Android
+  versionCode / iOS CFBundleVersion, so the same commit converges on both stores. A staging and a
+  prod build of the same commit get different numbers, so a staging upload can never take the prod
+  one's number on TestFlight. When no API key is provided (fork PRs / local), the step
   is skipped and the committed placeholder versionCode / CFBundleVersion is kept (never shipped to a
   store). Also exposes the value as a step output.
 
 inputs:
   sha:
-    description: Commit SHA to bind the build number to (idempotency key).
+    description: Commit SHA to bind the build number to (idempotency key, together with flavor).
+    required: true
+  flavor:
+    description: Build flavor, `prod` or `staging` (BUILD_FLAVOR from set-prod-flag).
     required: true
   secret:
     description: >
@@ -31,6 +35,13 @@ inputs:
     description: Provenance label recorded with the allocation (e.g. android, ios).
     required: false
     default: ''
+  track-order:
+    description: >
+      'true' when this distribution will upload to TestFlight: the allocator keeps the number pending
+      until the upload (or an abandon) so deploys reach the store in build-number order. An allocator
+      without the feature ignores it.
+    required: false
+    default: 'false'
 
 outputs:
   build-number:
@@ -44,9 +55,11 @@ runs:
       shell: bash
       env:
         SHA: ${{ inputs.sha }}
+        FLAVOR: ${{ inputs.flavor }}
         SECRET: ${{ inputs.secret }}
         ENDPOINT: ${{ inputs.endpoint }}
         ALLOCATED_BY: ${{ inputs.allocated-by }}
+        TRACK_ORDER: ${{ inputs.track-order }}
       run: |
         set -eu
         if [ -z "${SECRET:-}" ]; then
@@ -60,17 +73,25 @@ runs:
           echo "❌ compute-build-number: 'sha' input is empty"
           exit 1
         fi
+        case "${FLAVOR:-}" in
+          prod|staging) ;;
+          *) echo "❌ compute-build-number: 'flavor' must be prod or staging (got '${FLAVOR:-}')"
+             exit 1 ;;
+        esac
+        # The allocator's idempotency key; it accepts any string up to 64 chars.
+        KEY="${SHA}-${FLAVOR}"
         URL="${ENDPOINT%/}/build-numbers/allocate"
         # Build the JSON payload without jq — the Android build runs inside a Docker
-        # container that doesn't ship jq. sha (git hex) and allocated-by (a literal
-        # label like "android"/"ios") are controlled values, so a printf is safe.
-        PAYLOAD=$(printf '{"sha":"%s","allocatedBy":"%s"}' "$SHA" "$ALLOCATED_BY")
+        # container that doesn't ship jq. The key (git hex + flavor) and allocated-by (a
+        # literal label like "android"/"ios") are controlled values, so a printf is safe.
+        TRACK=false; [ "${TRACK_ORDER:-}" = "true" ] && TRACK=true
+        PAYLOAD=$(printf '{"sha":"%s","allocatedBy":"%s","trackOrder":%s}' "$KEY" "$ALLOCATED_BY" "$TRACK")
         # Retry with exponential backoff to ride out transient Cloudflare Durable Object
         # blips (the allocator is a single global DO; a regional incident makes it flap
         # 500 "object reset" bursts interleaved with 200s — see the 2026-07-03 writeup).
         # -sS but NOT -f: keep the Worker's error body so a 500/1101 reaches the CI log
         # instead of <empty>; we gate on the HTTP status ourselves. Retrying is safe: the
-        # allocator is idempotent per SHA. Non-transient 4xx (e.g. a bad bearer) fail fast.
+        # allocator is idempotent per key. Non-transient 4xx (e.g. a bad bearer) fail fast.
         RESP=""; HTTP_CODE=""; ATTEMPTS=5; BACKOFF=2
         for attempt in $(seq 1 "$ATTEMPTS"); do
           RESP=$(curl -sS -m 20 -w $'\n%{http_code}' -X POST "$URL" \
@@ -104,4 +125,4 @@ runs:
         esac
         echo "DCL_BUILD_NUMBER=$BUILD" >> "$GITHUB_ENV"
         echo "build_number=$BUILD" >> "$GITHUB_OUTPUT"
-        echo "🔢 build number $BUILD for $SHA"
+        echo "🔢 build number $BUILD for $KEY"

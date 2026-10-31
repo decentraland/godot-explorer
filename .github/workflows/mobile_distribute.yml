@@ -148,33 +148,41 @@ jobs:
             echo "🆕 main changed (last=${LAST_SHA:-none} current=$CURRENT_SHA) — building."
           fi
 
-      # Allocate the authoritative store build number for this commit ONCE (idempotent per SHA), up
-      # front, so both mobile legs bake/compare the SAME number and can never diverge. The build jobs
-      # (ios_r2_artifact / android_builds) still run compute-build-number themselves — needed so
-      # build.rs sees DCL_BUILD_NUMBER at build time — but it's idempotent and returns this same
-      # number. Gated to skip on the cron no-op; empty on fork PRs (no secret) → guards skip.
+      # Same flavor resolution as the build jobs, so prepare allocates under the same key they do.
+      - name: Set prod flag
+        if: steps.changes.outputs.should_build != 'false'
+        uses: ./.github/actions/set-prod-flag
+        with:
+          ref: ${{ steps.ctx.outputs.ref }}
+
+      # Allocate the authoritative store build number for this commit ONCE (idempotent per SHA +
+      # flavor), up front, so both mobile legs bake/compare the SAME number and can never diverge.
+      # The build jobs (ios_r2_artifact / android_builds) still run compute-build-number themselves —
+      # needed so build.rs sees DCL_BUILD_NUMBER at build time — but it's idempotent and returns this
+      # same number. Gated to skip on the cron no-op; empty on fork PRs (no secret) → guards skip.
       - name: Allocate build number
         id: compute
         if: steps.changes.outputs.should_build != 'false'
         uses: ./.github/actions/compute-build-number
         with:
           sha: ${{ steps.ctx.outputs.sha }}
+          flavor: ${{ env.BUILD_FLAVOR }}
           secret: ${{ secrets.BUILD_NUMBER_SECRET }}
           allocated-by: mobile
+          track-order: 'true'
 
       - name: Compose build number + version string
         id: buildnum
         if: steps.changes.outputs.should_build != 'false'
         env:
           BUILD_NUMBER: ${{ steps.compute.outputs.build-number }}
-          REF: ${{ steps.ctx.outputs.ref }}
           SHA: ${{ steps.ctx.outputs.sha }}
         run: |
           # Full baked version string, matching lib/build.rs:
           #   {marketing-version}{.build-number}-{short-sha}-{prod|staging}
-          # CI builds release (no -debug); set-prod-flag maps release* → prod, else staging.
+          # CI builds release (no -debug); BUILD_FLAVOR comes from set-prod-flag above.
           LIB_VERSION=$(grep -m1 '^version' lib/Cargo.toml | sed -E 's/.*"([^"]+)".*/\1/')
-          case "$REF" in release*) SUFFIX="prod";; *) SUFFIX="staging";; esac
+          SUFFIX="$BUILD_FLAVOR"
           BUILD_SEGMENT=""
           [ -n "$BUILD_NUMBER" ] && BUILD_SEGMENT=".${BUILD_NUMBER}"
           BUILD_VERSION="${LIB_VERSION}${BUILD_SEGMENT}-${SHA:0:7}-${SUFFIX}"
@@ -442,7 +450,7 @@ jobs:
       always() && needs.prepare.outputs.should_build == 'true' &&
       (needs.ios-build.result == 'success' || needs.ios-dispatch.result == 'success')
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 130
     env:
       BUILD_REPORTER_TOKEN: ${{ secrets.BUILD_REPORTER_TOKEN }}
       BOARD_EVENTS_URL: ${{ vars.BOARD_EVENTS_URL }}
@@ -465,8 +473,9 @@ jobs:
           # Must match `run-name` in godot-asc-deploy/.github/workflows/deploy_testflight.yml.
           export TITLE="🍏 ${SAFE_BRANCH} @ ${SHA}"
           echo "Watching ${DEPLOY_REPO} for a deploy_testflight.yml run titled '${TITLE}' created after ${SINCE}"
-          # asc-deploy's own timeout is 45 min; the run can also sit queued for a macOS runner.
-          DEADLINE=$(( $(date +%s) + 50 * 60 ))
+          # asc-deploy's own timeout is 45 min, and its gate job can wait up to 120 min for lower
+          # build numbers to reach TestFlight first; the run can also sit queued for a macOS runner.
+          DEADLINE=$(( $(date +%s) + 125 * 60 ))
           SEEN=0; CONCLUSION=""; URL=""
           while true; do
             # TITLE/SINCE are read by jq from the environment (env.*) — no shell interpolation
@@ -481,6 +490,16 @@ jobs:
                 echo "▶️  found run ${URL} (${STATUS})"; SEEN=1
                 IOS_LINE="🔏 signing & uploading to TestFlight…" python3 .github/scripts/report-build-event.py
               fi
+              # The upload is what fixes the build number's place in TestFlight: stop at the
+              # `Sign & upload` job, not at the end of the run (asc-deploy's follow-up jobs, e.g.
+              # the "What to Test" notes, wait on Apple's processing and would hold the queue).
+              RUN_ID=$(echo "$RUN" | jq -r .databaseId)
+              SHIP=$(gh run view "$RUN_ID" --repo "$DEPLOY_REPO" --json jobs \
+                       --jq '.jobs[] | select(.name == "Sign & upload to TestFlight") | "\(.status) \(.conclusion)"' \
+                     2>/dev/null || true)
+              case "$SHIP" in
+                "completed "*) CONCLUSION="${SHIP#completed }"; break ;;
+              esac
               if [ "$STATUS" = "completed" ]; then
                 CONCLUSION=$(echo "$RUN" | jq -r '.conclusion // "unknown"'); break
               fi
@@ -561,6 +580,20 @@ jobs:
           fi
           python3 .github/scripts/report-build-event.py
 
+      # asc-deploy never ran, so nothing will upload this number: free the ones queued behind it.
+      # Best effort — the allocator also drops an unresolved number after 2 h.
+      - name: Release the build number
+        if: needs.prepare.outputs.build_number != ''
+        env:
+          BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
+          BUILD_NUMBER_SECRET: ${{ secrets.BUILD_NUMBER_SECRET }}
+        run: |
+          echo "::add-mask::${BUILD_NUMBER_SECRET}"
+          curl -sS -m 20 -X POST "https://godot-build-number-allocator.mateo-a2b.workers.dev/build-numbers/abandon" \
+            -H 'content-type: application/json' -H "authorization: Bearer ${BUILD_NUMBER_SECRET}" \
+            -d "{\"buildNumber\":${BUILD_NUMBER}}" || true
+          echo
+
   # Android leg, step 1 (mirrors ios-resolve): the signed APK for this commit is normally produced by
   # the push CI (runner.yml → android_builds.yml) and uploaded to R2. Wait for it, then apply the SAME
   # monotonic guard as iOS. reuse=true → surface the existing APK (android-notify); reuse=false
@@ -621,6 +654,11 @@ jobs:
           INPROG=0
           have=false
           while true; do
+            # PRs have no push-built APK (runner.yml skips Android on pull_request).
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              echo "ℹ️  PR build: no push APK is produced → building here."
+              break
+            fi
             if have_apk; then echo "✅ APK is available in R2."; have=true; break; fi
             CONCLUSION=$(gh run list --repo "${{ github.repository }}" --workflow runner.yml \
               --limit 100 --json headSha,conclusion \

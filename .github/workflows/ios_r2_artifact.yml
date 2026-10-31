@@ -155,7 +155,7 @@ jobs:
           echo "DEVELOPER_DIR=$XCODE_APP/Contents/Developer" >> "$GITHUB_ENV"
           "$XCODE_APP/Contents/Developer/usr/bin/xcodebuild" -version
 
-      # Allocate the store build number from the Cloudflare Worker (idempotent per commit SHA, so it
+      # Allocate the store build number from the Cloudflare Worker (idempotent per commit SHA + flavor, so it
       # matches the Android versionCode for the same commit). MUST run BEFORE the lib build so build.rs
       # bakes it into the version string (GODOT_EXPLORER_VERSION) — which the "Capture build version"
       # step below forwards to godot-asc-deploy — and so the iOS export stamps it into CFBundleVersion
@@ -164,6 +164,7 @@ jobs:
         uses: ./.github/actions/compute-build-number
         with:
           sha: ${{ inputs.sha || github.sha }}
+          flavor: ${{ env.BUILD_FLAVOR }}
           secret: ${{ secrets.BUILD_NUMBER_SECRET }}
           allocated-by: ios
 
@@ -181,6 +182,7 @@ jobs:
         with:
           cargo-key: ${{ steps.cache.outputs.cargo-key }}
           rust-key: ${{ steps.cache.outputs.rust-key }}
+          rust-hit: ${{ steps.cache.outputs.rust-hit }}
 
       - name: Capture build version
         id: buildver
@@ -248,7 +250,8 @@ jobs:
           # deploy repo untars this and runs xcodebuild archive + manual sign.
           # visionOS xcframeworks are copied by the exporter but unused by the iOS project.
           rm -rf exports/libgodot.visionos.*.xcframework
-          tar -czf export.tar.gz -C exports .
+          # gzip -1: the export is mostly already-compressed assets, -6 spends ~100 s for few bytes.
+          tar -cf - -C exports . | gzip -1 > export.tar.gz
           echo "Export tarball size: $(du -h export.tar.gz | cut -f1)"
 
           # The macOS runner may not ship the AWS CLI — install it on demand via Homebrew.
@@ -274,15 +277,11 @@ jobs:
             echo "⚠️  upload attempt $attempt/3 failed — retrying in $((attempt * 5))s"
             sleep $((attempt * 5))
           done
-          # Update the branch 'latest' pointer WITHOUT re-uploading the tarball. The managed
-          # `aws s3 cp s3:// s3://` is unusable on R2 (it sends GetObjectTagging / x-amz-tagging-
-          # directive, both NotImplemented), so use the low-level copy-object; fall back to a plain
-          # re-upload if R2 ever rejects the copy, so the build never breaks. asc-deploy's manual
-          # dispatch defaults to ios/<branch>/latest, so this key must stay populated.
+          # The branch 'latest' pointer is a plain second upload (~15 s): R2's copy-object on a
+          # ~1 GB object hits the CLI read timeout after 3 min before any fallback could run.
+          # asc-deploy's manual dispatch defaults to ios/<branch>/latest, so it must stay populated.
           echo "🔗 Updating latest pointer s3://${AWS_S3_BUCKET}/${LATEST_KEY}"
-          aws s3api copy-object --bucket "$AWS_S3_BUCKET" --key "$LATEST_KEY" \
-            --copy-source "${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null \
-            || aws s3 cp export.tar.gz "s3://${AWS_S3_BUCKET}/${LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+          aws s3 cp export.tar.gz "s3://${AWS_S3_BUCKET}/${LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
 
           # Sidecar: record the build number this export was BAKED with, right next to the tarball.
           # The deploy orchestrator (mobile_distribute ios-resolve) compares it against a fresh
