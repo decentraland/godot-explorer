@@ -46,6 +46,7 @@ permissions:
   pull-requests: write
   contents: read
   actions: write
+  packages: write   # android_builds.yml pushes the builder image when its Dockerfile changed
   id-token: write   # OIDC token for keyless Google Cloud auth (Firebase App Distribution via WIF)
 
 jobs:

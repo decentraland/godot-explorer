@@ -60,6 +60,7 @@ on:
 permissions:
   pull-requests: write
   contents: read
+  packages: write
 
 concurrency:
   # `inputs.concurrency_key` (set by mobile_distribute's on-demand rebuild) isolates that run from
@@ -68,17 +69,64 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The builder image is tagged by a hash of docker/android-builder: a change to the Dockerfile
+  # builds and pushes a new tag once, every other run only checks that the tag exists.
+  builder-image:
+    name: Android builder image
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      image: ${{ steps.tag.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}
+          sparse-checkout: docker/android-builder
+
+      - name: Compute image tag
+        id: tag
+        run: |
+          HASH=$(find docker/android-builder -type f | sort | xargs sha256sum | sha256sum | cut -c1-16)
+          echo "image=ghcr.io/decentraland/godot-explorer/android-builder:${HASH}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check whether the image exists
+        id: exists
+        run: |
+          if docker manifest inspect "${{ steps.tag.outputs.image }}" >/dev/null 2>&1; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: docker/setup-buildx-action@v3
+        if: steps.exists.outputs.found != 'true'
+
+      - name: Build and push the image
+        if: steps.exists.outputs.found != 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: docker/android-builder
+          push: true
+          provenance: false
+          tags: ${{ steps.tag.outputs.image }}
+          cache-from: type=registry,ref=ghcr.io/decentraland/godot-explorer/android-builder:buildcache
+          cache-to: type=registry,ref=ghcr.io/decentraland/godot-explorer/android-builder:buildcache,mode=max
+
   build:
     name: Build Android
+    needs: builder-image
     runs-on: ubuntu-latest
     timeout-minutes: 50
     container:
-      # image generated at: https://github.com/decentraland/godot-docker-builder
-      # Mirror of quay.io/decentraland/dcl-godot-android-builder (5 GB: ~5 min from quay, ~1 on ghcr).
-      # After bumping the tag, copy it: skopeo copy docker://quay.io/<image>:<tag> docker://ghcr.io/<image>:<tag>
-      image: ghcr.io/decentraland/dcl-godot-android-builder:394c180223d3e2ad410d191147e9e2ad39884c0b
+      image: ${{ needs.builder-image.outputs.image }}
       credentials:
-        username: ${{ github.actor }}
+        username: ${{ github.repository_owner }}
         password: ${{ secrets.GITHUB_TOKEN }}
       volumes:
         - /home/user/.cache/devgodot:/github/home/.cache/devgodot
