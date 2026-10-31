@@ -261,7 +261,7 @@ jobs:
           echo $! > "$RUNNER_TEMP/mem_sampler.pid"
           echo "resource sampler started (pid $(cat "$RUNNER_TEMP/mem_sampler.pid")) → $LOG"
 
-      # Allocate the store build number (idempotent per commit SHA, matches the Android versionCode
+      # Allocate the store build number (idempotent per commit SHA + flavor, matches the Android versionCode
       # for the same commit); export below stamps it into CFBundleVersion. Skipped if the secret is
       # absent (keeps the committed placeholder — these unsigned per-push builds never ship).
       # Runs BEFORE the Rust builds: lib/build.rs bakes DCL_BUILD_NUMBER into the Sentry release
@@ -270,6 +270,7 @@ jobs:
         uses: ./.github/actions/compute-build-number
         with:
           sha: ${{ github.event.pull_request.head.sha || github.sha }}
+          flavor: ${{ env.BUILD_FLAVOR }}
           secret: ${{ secrets.BUILD_NUMBER_SECRET }}
           allocated-by: ios
 

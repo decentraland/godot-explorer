@@ -31,10 +31,10 @@ pub const GODOT_BUILD_SHA: &str = "a1a0b4f6f";
 /// branch's CI build. An explicit `--branch` on the CLI still takes precedence over this.
 ///
 /// Reset to `None` once the branch is merged and `GODOT_BUILD_SHA` is bumped to the merge commit —
-/// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently unset:
-/// the non-blocking pipeline/shader compile work (decentraland/godotengine#27) is merged into
-/// `4.6.2` and `GODOT_BUILD_SHA` points at that merge commit.
-pub const GODOT_USE_BRANCH: Option<&str> = None;
+/// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently set to
+/// the MSDF and Label3D colour-glyph fixes (decentraland/godotengine#32) until it merges; that
+/// branch is based on `GODOT_BUILD_SHA`.
+pub const GODOT_USE_BRANCH: Option<&str> = Some("fix/msdf-overlaps-label3d-color-glyphs");
 
 /// Release tag identifying a specific fork build — `<version>.stable.gh.<sha>`, mirroring the
 /// `--version` string. Single source for the release URL path segment, the on-disk template SHA

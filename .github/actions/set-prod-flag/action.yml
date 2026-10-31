@@ -23,10 +23,12 @@ runs:
         case "$REF" in
           refs/heads/release* | release*)
             echo "PROD_FLAG=--prod" >> $GITHUB_ENV
+            echo "BUILD_FLAVOR=prod" >> $GITHUB_ENV
             echo "Running on a release* branch - setting PROD_FLAG=--prod (ref=$REF)"
             ;;
           *)
             echo "PROD_FLAG=--staging" >> $GITHUB_ENV
+            echo "BUILD_FLAVOR=staging" >> $GITHUB_ENV
             echo "Running on $REF - setting PROD_FLAG=--staging"
             ;;
         esac
