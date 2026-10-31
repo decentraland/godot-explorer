@@ -152,11 +152,47 @@ pub fn comms_gatekeeper_local() -> String {
         suffix(ServiceGroup::Comms)
     )
 }
-pub fn social_service() -> String {
-    format!(
-        "wss://rpc-social-service-ea.decentraland.{}",
-        suffix(ServiceGroup::Comms)
-    )
+/// `--social-api-url` / `--social-stream-url` overrides, set once by the CLI parse at boot.
+/// They point the social client at another deployment, e.g. a social-service running on a
+/// laptop in the same network as the phone.
+static SOCIAL_API_URL_OVERRIDE: std::sync::RwLock<String> = std::sync::RwLock::new(String::new());
+static SOCIAL_STREAM_URL_OVERRIDE: std::sync::RwLock<String> =
+    std::sync::RwLock::new(String::new());
+
+pub fn set_social_url_overrides(api_url: &str, stream_url: &str) {
+    if let Ok(mut w) = SOCIAL_API_URL_OVERRIDE.write() {
+        *w = api_url.to_string();
+    }
+    if let Ok(mut w) = SOCIAL_STREAM_URL_OVERRIDE.write() {
+        *w = stream_url.to_string();
+    }
+}
+
+fn url_override(value: &std::sync::RwLock<String>) -> Option<String> {
+    value
+        .read()
+        .ok()
+        .map(|v| v.clone())
+        .filter(|v| !v.is_empty())
+}
+
+/// Social service HTTP API (friends, blocks).
+pub fn social_api() -> String {
+    url_override(&SOCIAL_API_URL_OVERRIDE).unwrap_or_else(|| {
+        format!(
+            "https://social-api.decentraland.{}",
+            suffix(ServiceGroup::Social)
+        )
+    })
+}
+/// Social service real-time updates (WebSocket).
+pub fn social_service_stream() -> String {
+    url_override(&SOCIAL_STREAM_URL_OVERRIDE).unwrap_or_else(|| {
+        format!(
+            "wss://rpc-social-service-ea.decentraland.{}/v1/stream",
+            suffix(ServiceGroup::Social)
+        )
+    })
 }
 pub fn archipelago_stats() -> String {
     format!(
@@ -558,7 +594,8 @@ mod tests {
             peer_lambdas(),
             comms_gatekeeper(),
             comms_gatekeeper_local(),
-            social_service(),
+            social_api(),
+            social_service_stream(),
             archipelago_stats(),
             ethereum_rpc(),
             places_api(),
