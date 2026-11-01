@@ -20,7 +20,8 @@ use crate::{
     },
     helpers::get_exe_extension,
     install_dependency::{
-        download_and_extract_zip, godot_export_templates_path, set_executable_permission,
+        download_and_extract_zip, firebase_ios_installed, godot_export_templates_path,
+        set_executable_permission,
     },
     path::{adjust_canonicalization, get_godot_path},
     platform::validate_platform_for_target,
@@ -497,6 +498,14 @@ pub fn export(
         }
         _ => return Err(anyhow::anyhow!("Unexpected final target: {}", target)),
     };
+
+    // The plugin's .gdip links the Firebase xcframeworks; without them the generated Xcode
+    // project references files that are not there and fails much later, inside xcodebuild.
+    if target == "ios" && !firebase_ios_installed() {
+        return Err(anyhow::anyhow!(
+            "Firebase iOS SDK is not installed (run: cargo run -- install --targets ios)"
+        ));
+    }
 
     let output_rel_path = format!("{EXPORTS_FOLDER}{output_file_name}");
     if std::path::Path::new(output_rel_path.as_str()).exists() {

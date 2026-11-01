@@ -2,6 +2,7 @@
 #include "NotificationDatabase.h"
 #include "AVPlayerWrapper.h"
 #include "image_picker_service.h"
+#include "firebase_service.h"
 #include "core/version.h"
 #include "core/os/os.h"
 #include "core/string/print_string.h"
@@ -278,6 +279,13 @@ void DclGodotiOS::_bind_methods() {
 
     // Remote push (APNs)
     ClassDB::bind_method(D_METHOD("get_apns_token"), &DclGodotiOS::get_apns_token);
+
+    // Firebase Analytics
+    ClassDB::bind_method(D_METHOD("firebase_is_available"), &DclGodotiOS::firebase_is_available);
+    ClassDB::bind_method(D_METHOD("get_firebase_app_instance_id"), &DclGodotiOS::get_firebase_app_instance_id);
+    ClassDB::bind_method(D_METHOD("set_firebase_user_id", "user_id"), &DclGodotiOS::set_firebase_user_id);
+    ClassDB::bind_method(D_METHOD("set_firebase_user_property", "name", "value"), &DclGodotiOS::set_firebase_user_property);
+    ClassDB::bind_method(D_METHOD("log_firebase_event", "event_name", "params_json"), &DclGodotiOS::log_firebase_event);
 
     // Signal emitted when a deeplink URL is received
     ADD_SIGNAL(MethodInfo("deeplink_received", PropertyInfo(Variant::STRING, "url")));
@@ -843,6 +851,30 @@ bool DclGodotiOS::has_notification_permission() {
 
 String DclGodotiOS::get_apns_token() {
     return apnsToken;
+}
+
+bool DclGodotiOS::firebase_is_available() {
+    return ::firebase_is_available();
+}
+
+String DclGodotiOS::get_firebase_app_instance_id() {
+    return String::utf8([firebase_app_instance_id() UTF8String]);
+}
+
+bool DclGodotiOS::set_firebase_user_id(String user_id) {
+    return firebase_set_user_id([NSString stringWithUTF8String:user_id.utf8().get_data()]);
+}
+
+bool DclGodotiOS::set_firebase_user_property(String name, String value) {
+    return firebase_set_user_property(
+        [NSString stringWithUTF8String:name.utf8().get_data()],
+        [NSString stringWithUTF8String:value.utf8().get_data()]);
+}
+
+bool DclGodotiOS::log_firebase_event(String event_name, String params_json) {
+    return firebase_log_event(
+        [NSString stringWithUTF8String:event_name.utf8().get_data()],
+        [NSString stringWithUTF8String:params_json.utf8().get_data()]);
 }
 
 void DclGodotiOS::emit_apns_token_ready(String token) {
