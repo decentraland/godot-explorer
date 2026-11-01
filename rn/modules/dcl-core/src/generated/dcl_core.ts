@@ -11092,6 +11092,10 @@ export enum DisconnectReason {
    */
   DuplicateSession,
   RoomClosed,
+  /**
+   * The platform banned the account: signing in with another one is the way out.
+   */
+  PlatformBan,
   Other,
 }
 
@@ -11105,6 +11109,8 @@ const FfiConverterTypeDisconnectReason = (() => {
         case 2:
           return DisconnectReason.RoomClosed;
         case 3:
+          return DisconnectReason.PlatformBan;
+        case 4:
           return DisconnectReason.Other;
         default:
           throw new UniffiInternalError.UnexpectedEnumCase();
@@ -11116,8 +11122,10 @@ const FfiConverterTypeDisconnectReason = (() => {
           return c.writeI32(1);
         case DisconnectReason.RoomClosed:
           return c.writeI32(2);
-        case DisconnectReason.Other:
+        case DisconnectReason.PlatformBan:
           return c.writeI32(3);
+        case DisconnectReason.Other:
+          return c.writeI32(4);
       }
     }
     allocationSize(value: TypeName): number {
@@ -11169,6 +11177,7 @@ const FfiConverterTypeEntryRefusal = (() => {
 export enum EngineNotice_Tags {
   EntryRefused = 'EntryRefused',
   Disconnected = 'Disconnected',
+  DisconnectRecovered = 'DisconnectRecovered',
   Banned = 'Banned',
   LowMemory = 'LowMemory',
 }
@@ -11234,6 +11243,35 @@ export const EngineNotice = (() => {
     }
   }
 
+  type DisconnectRecovered__interface = {
+    tag: EngineNotice_Tags.DisconnectRecovered;
+  };
+  /**
+   * The connection came back while a `Disconnected` notice was up.
+   */
+  class DisconnectRecovered_
+    extends UniffiEnum
+    implements DisconnectRecovered__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'EngineNotice';
+    readonly tag = EngineNotice_Tags.DisconnectRecovered;
+    constructor() {
+      super('EngineNotice', 'DisconnectRecovered');
+    }
+
+    static new(): DisconnectRecovered_ {
+      return new DisconnectRecovered_();
+    }
+
+    static instanceOf(obj: any): obj is DisconnectRecovered_ {
+      return obj.tag === EngineNotice_Tags.DisconnectRecovered;
+    }
+  }
+
   type Banned__interface = {
     tag: EngineNotice_Tags.Banned;
   };
@@ -11294,6 +11332,7 @@ export const EngineNotice = (() => {
     instanceOf,
     EntryRefused: EntryRefused_,
     Disconnected: Disconnected_,
+    DisconnectRecovered: DisconnectRecovered_,
     Banned: Banned_,
     LowMemory: LowMemory_,
   });
@@ -11305,6 +11344,7 @@ export type EngineNotice = InstanceType<
   (typeof EngineNotice)[
     | 'EntryRefused'
     | 'Disconnected'
+    | 'DisconnectRecovered'
     | 'Banned'
     | 'LowMemory']
 >;
@@ -11325,8 +11365,10 @@ const FfiConverterTypeEngineNotice = (() => {
             reason: FfiConverterTypeDisconnectReason.readFromCursor(c),
           });
         case 3:
-          return new EngineNotice.Banned();
+          return new EngineNotice.DisconnectRecovered();
         case 4:
+          return new EngineNotice.Banned();
+        case 5:
           return new EngineNotice.LowMemory();
         default:
           throw new UniffiInternalError.UnexpectedEnumCase();
@@ -11347,12 +11389,16 @@ const FfiConverterTypeEngineNotice = (() => {
           FfiConverterTypeDisconnectReason.writeIntoCursor(inner.reason, c);
           return;
         }
-        case EngineNotice_Tags.Banned: {
+        case EngineNotice_Tags.DisconnectRecovered: {
           c.writeI32(3);
           return;
         }
-        case EngineNotice_Tags.LowMemory: {
+        case EngineNotice_Tags.Banned: {
           c.writeI32(4);
+          return;
+        }
+        case EngineNotice_Tags.LowMemory: {
+          c.writeI32(5);
           return;
         }
         default:
@@ -11374,6 +11420,9 @@ const FfiConverterTypeEngineNotice = (() => {
           let size = 4;
           size += FfiConverterTypeDisconnectReason.allocationSize(inner.reason);
           return size;
+        }
+        case EngineNotice_Tags.DisconnectRecovered: {
+          return 4;
         }
         case EngineNotice_Tags.Banned: {
           return 4;

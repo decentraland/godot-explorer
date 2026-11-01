@@ -54,6 +54,7 @@ in phase 3 and not run again here. Rows marked "not done" are the work left befo
 | Legacy | Now | Android | Left |
 |---|---|---|---|
 | Chat, mentions | RN `hud/ChatPanel` | Ran: opens | Sending and mentions not run |
+| Mentions with punctuation, spaces, wrong case (main #3142) | RN `hud/chatModel.ts` `mentionHits`, `mentions.ts` | Not run (jest only) | |
 | Notification list, mark read | RN `menu/` + core | Phase 3 pass | In-world toasts and polling not done |
 | Push (token, permission, remote push) | `DclPush` + core registration | Ran: permission prompt, grant | Identify delivery, push with the app killed |
 | Day 1 welcome local notification, `day1-notification` kill switch (main #3060) | `dcl_core::day1_notification` + RN `syncDay1Notification` (`DclPush`) | Not run | iOS: no `DclPush` yet (shared with event reminders, 4.6) |
@@ -86,7 +87,16 @@ in phase 3 and not run again here. Rows marked "not done" are the work left befo
 | Review prompt | `dcl_core::review` + Play card | Not run | Wearable-claimed trigger not wired |
 | Back button leaves the world | `confirmLeave` | Ran: confirm shown, LEAVE returns to Discover, re-enter loads | |
 | Orientation (portrait menus, landscape world) | `setOrientation` per screen | Ran: world in landscape | |
+| Pulse outage and session-evicted modals, platform-ban SIGN IN / EXIT (main #3065) | `world/session_watch.rs` + `CoreModals` | Not run | Reset on sign-out and closing the ban modal on `loading_started` are not ported |
 | Creator preview HUD, multiplayer debug, interactable overlay | Dropped | | Dev tools; rebuild if wanted |
+
+## Engine behaviour added by main syncs
+
+| Legacy | Now | Android | Left |
+|---|---|---|---|
+| Base-eye iris tint (main #3106) | `avatars/eye_masks.rs` + `mask_material.gdshader` | Not run | Unity cannot show it, validate between two Godot clients |
+| Scene fonts `font_src` on UI text and TextShape (main #3132) | `content/font.rs`, `text_shape/{node,layout,fallbacks,glyph_prewarm,glyph_cache}.rs` | Not run | Emoji colour and CJK artefacts need the engine pin with godotengine#32 |
+| Profile status on nameplates, Pulse-required island recovery (main #3065) | `comms/adapter/{island_session,profile_fetch}.rs`, `avatars/nameplate.rs` | Not run | Platform bans and island removal need backend-assisted QA |
 
 ## Persisted keys
 

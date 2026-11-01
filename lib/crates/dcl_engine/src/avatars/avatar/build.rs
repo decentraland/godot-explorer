@@ -1,7 +1,7 @@
 //! Building the avatar from a profile: fetching the wearables, assembling the meshes onto the
 //! skeleton, tinting skin and hair, and the facial textures.
 
-use godot::classes::{MeshInstance3D, ShaderMaterial, Skeleton3D, StandardMaterial3D};
+use godot::classes::{MeshInstance3D, ShaderMaterial, Skeleton3D, StandardMaterial3D, Texture2D};
 use godot::prelude::*;
 
 use super::assembly;
@@ -10,6 +10,7 @@ use super::emote_load::{
 };
 use crate::avatars::avatar_type::DclAvatarWireFormat;
 use crate::avatars::dcl_user_profile::DclUserProfile;
+use crate::avatars::eye_masks::base_eye_mask;
 use crate::avatars::mesh_assembler::apply_toon_material;
 use crate::avatars::wearables::{self, category, get_curated_wearable_list};
 use crate::engine::local_task::await_all;
@@ -64,6 +65,7 @@ pub async fn update_from_profile(avatar: Gd<DclAvatar>, profile: Gd<DclUserProfi
         let mut avatar = avatar.clone();
         let mut this = avatar.bind_mut();
         this.nametag.profile_ready = true;
+        this.nametag.profile_status.clear();
         // The reveal waits for the body and the ground too: the give-up clock restarts here.
         this.spawn_reveal.born_ms = godot::classes::Time::singleton().get_ticks_msec();
         if let Some(nodes) = this.nodes.as_mut() {
@@ -665,7 +667,13 @@ fn apply_texture_and_mask(
     material.set_shader_parameter("base_texture", &texture(&hashes[0]).to_variant());
     material.set_shader_parameter("material_color", &color.to_variant());
     material.set_shader_parameter("mask_color", &mask.to_variant());
-    let mask_texture = hashes.get(1).and_then(texture);
+    let mask_texture = match hashes.get(1) {
+        Some(hash) => texture(hash),
+        None => base_eye_mask(&hashes[0]).map(|(path, replace)| {
+            material.set_shader_parameter("mask_replace", &(replace as i32 as f32).to_variant());
+            load::<Texture2D>(path)
+        }),
+    };
     material.set_shader_parameter("mask_texture", &mask_texture.to_variant());
     mesh.set_surface_override_material(0, &material);
 }

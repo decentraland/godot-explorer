@@ -3893,7 +3893,9 @@ impl INode for SceneManager {
         match what {
             NodeNotification::APPLICATION_PAUSED => {
                 crate::tools::memory_monitor::APP_PAUSED.store(true, Ordering::Relaxed);
+                crate::text_shape::glyph_cache::save_all();
             }
+            NodeNotification::WM_CLOSE_REQUEST => crate::text_shape::glyph_cache::save_all(),
             NodeNotification::APPLICATION_RESUMED => {
                 crate::tools::memory_monitor::APP_PAUSED.store(false, Ordering::Relaxed);
             }

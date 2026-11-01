@@ -2,7 +2,9 @@ use ethers_core::types::H160;
 use godot::prelude::*;
 use http::Uri;
 use std::sync::Arc;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+#[cfg(any(feature = "use_livekit", test))]
+use std::time::Duration;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use crate::auth::wallet;
 use crate::avatars::avatar_sink::GlobalSceneSink;
@@ -81,61 +83,21 @@ const SCENE_ROOM_RECONNECT_MAX_SECS: u64 = 60;
 #[cfg(feature = "use_pulse")]
 const PREVIEW_SCENE_ID_PREFIX: &str = "b64-";
 
-/// Whether avatar sync — movement and emotes — still goes over LiveKit.
-///
-/// Pulse is the carrier: while it is established, LiveKit gets none of it (main room,
-/// archipelago island and scene room alike). The authoritative
-/// server reads avatar state off Pulse as a scene listener, so the LiveKit copy is duplication.
-///
-/// The gate is deliberately scoped to `pulse_established` rather than to activation, so a Pulse
-/// drop resumes every LiveKit send on the next frame — the cutover can never leave a player
-/// invisible. `dual_channel` (`--livekit-movement`, `dual-channel=true`) restores the old
-/// both-at-once behaviour for debugging.
+/// LiveKit avatar traffic is an explicit development override, never an outage fallback.
 #[cfg(feature = "use_pulse")]
-fn avatar_sync_over_livekit(dual_channel: bool, pulse_established: bool) -> bool {
-    dual_channel || !pulse_established
+fn avatar_sync_over_livekit(dual_channel: bool) -> bool {
+    dual_channel
 }
 
-/// Whether the Pulse transport activates. Pure so the precedence is unit-testable.
-///
-/// `locally_enabled` is `!--no-pulse`, which always wins. `explicit_opt_in` is `--pulse`, an
-/// endpoint (`--pulse-server` / PULSE_SERVER) or a realm (`--pulse-realm` / PULSE_REALM).
-/// Otherwise the deployment's `pulse` flag decides, fail-closed — except in `--preview`.
-///
-/// **A local preview never joins Pulse on the strength of the flag alone.** Its realm key is
-/// `lsd:` + the preview scene's entity id, which is reversible base64 of the developer's
-/// absolute project path and hostname; letting a fleet-wide flag push that to the default
-/// (production) Pulse from every `dcl start` would be a surprise. `sdk-commands` gates its own
-/// `--pulse-realm` off by default for the same reason, so Local Scene Development opts in
-/// explicitly — which is exactly what the orchestrator and `DCL_SERVER_PULSE_REALM=1` do.
+/// Preview realm keys contain local project information, so previews require opt-in.
 #[cfg(feature = "use_pulse")]
-fn pulse_activation(
-    locally_enabled: bool,
-    explicit_opt_in: bool,
-    preview_mode: bool,
-    flag_enabled: Option<bool>,
-) -> bool {
-    if !locally_enabled {
-        return false;
-    }
-    if explicit_opt_in {
-        return true;
-    }
-    !preview_mode && flag_enabled == Some(true)
+fn pulse_activation(locally_enabled: bool, explicit_opt_in: bool, preview_mode: bool) -> bool {
+    locally_enabled && (explicit_opt_in || !preview_mode)
 }
 
-/// Effective dual-channel setting. An explicit local choice (CLI `--livekit-movement` /
-/// `--no-livekit-movement`, deeplink `dual-channel=`) always wins; otherwise the deployment's
-/// `dual-channel` feature flag decides, defaulting to ON until the flags fetch settles.
-///
-/// The flag is the rollout control for this cutover, and it defaults ON deliberately: an
-/// authoritative server only stops needing the LiveKit copy of avatar state once it ingests
-/// Pulse as a scene listener, and that is a property of the *deployment*, not of this client.
-/// Flipping the flag off is what hands avatar sync to Pulse fleet-wide, reversibly.
-#[cfg(feature = "use_pulse")]
-fn dual_channel_effective(local_override: Option<bool>, flag_enabled: bool) -> bool {
-    local_override.unwrap_or(flag_enabled)
-}
+mod lifecycle;
+mod recovery;
+use recovery::Recovery;
 
 /// Decides whether the scene-room reconnect loop should spawn a new attempt now.
 /// Pure (no Godot/Tokio deps) so the in-flight guard is unit-testable. The guard:
@@ -232,18 +194,6 @@ use crate::comms::pulse::{
 };
 use crate::http_request::http_queue_requester::HttpQueueRequester;
 
-/// Consecutive never-established Pulse connection attempts before giving up for the whole
-/// session (Unity parity: 5 attempts, then permanent LiveKit-only fallback until restart).
-#[cfg(feature = "use_pulse")]
-const PULSE_SESSION_FAILURE_LIMIT: u32 = 5;
-
-/// How long after `notify_app_resumed` a `DuplicateIdentity`/`DuplicateSession` eviction is
-/// treated as our own pre-background session being reclaimed (retry) rather than another
-/// device taking over the account (park + modal). Mobile OSes cut the app's network within
-/// seconds of backgrounding, so every resume rebuilds sessions that may still be alive
-/// server-side — the eviction that follows is self-inflicted.
-const RESUME_GRACE_PERIOD: Duration = Duration::from_secs(30);
-
 #[allow(clippy::large_enum_variant)]
 enum CommsConnection {
     None,
@@ -291,9 +241,7 @@ pub struct CommunicationManager {
     archipelago_profile_announced: bool,
     /// Flag to prevent automatic reconnection after DuplicateIdentity disconnect
     block_auto_reconnect: bool,
-    /// End of the post-resume window during which Duplicate* evictions are retried instead
-    /// of treated as another device (see [`RESUME_GRACE_PERIOD`]). `None` = no window armed.
-    resume_grace_until: Option<Instant>,
+    recovery: Recovery,
 
     /// When true, all comms are disconnected/deferred until loading finishes
     comms_on_hold: bool,
@@ -316,16 +264,8 @@ pub struct CommunicationManager {
     scene_room: Option<LivekitRoom>,
     current_scene_id: Option<GString>,
 
-    // Pulse (ENet avatar-state relay) — an always-on parallel room, not a MainRoom variant:
-    // its death must never surface as a session disconnect (LiveKit keeps the session alive).
     #[cfg(feature = "use_pulse")]
     pulse_room: Option<PulseRoom>,
-    /// Consecutive attempts that never reached Established; survives clean() so realm changes
-    /// don't reset the strike count. At PULSE_SESSION_FAILURE_LIMIT → one-way session disable.
-    #[cfg(feature = "use_pulse")]
-    pulse_session_failures: u32,
-    #[cfg(feature = "use_pulse")]
-    pulse_disabled_for_session: bool,
     /// The initial TeleportRequest is deferred until both a valid realm name and a broadcast
     /// position exist (sending a bogus realm would silo us into a phantom partition).
     #[cfg(feature = "use_pulse")]
@@ -334,26 +274,11 @@ pub struct CommunicationManager {
     /// the Pulse TeleportRequest.
     #[cfg(feature = "use_pulse")]
     last_dcl_position: Option<Vector3>,
-    /// Explicit local dual-channel choice (CLI `--livekit-movement` / `--no-livekit-movement`,
-    /// deeplink `dual-channel=`): `None` follows the server flag. See `dual_channel_effective`.
+    /// Explicit developer override for duplicate LiveKit movement/emote traffic.
     #[cfg(feature = "use_pulse")]
     dual_channel_override: Option<bool>,
-    /// Deployment `dual-channel` flag: whether movement and emotes keep going over LiveKit while
-    /// Pulse is established. Defaults ON (today's behaviour) and is reported by feature_flags.gd
-    /// once the fetch settles — flipping it off is what makes Pulse the sole avatar-sync carrier.
-    /// Either way the gate is `established`-scoped: LiveKit sending auto-resumes the moment Pulse
-    /// drops, so neither setting can make the player invisible.
-    #[cfg(feature = "use_pulse")]
-    dual_channel_flag: bool,
-    /// Runtime activation override (deeplink `pulse=true/false`): `None` follows the CLI/env.
     #[cfg(feature = "use_pulse")]
     pulse_runtime_enabled: Option<bool>,
-    /// Server `pulse` feature-flag verdict, reported once per run by feature_flags.gd when
-    /// the mobile-bff fetch settles. Fail-closed: `None` (not reported yet) and `Some(false)`
-    /// (flag off, absent, or fetch failed) both keep Pulse off unless an explicit
-    /// runtime/CLI opt-in overrides it — see `pulse_enabled`.
-    #[cfg(feature = "use_pulse")]
-    pulse_flag_enabled: Option<bool>,
     /// Runtime endpoint override (deeplink `pulse-server=host:port`, shareable so a group can
     /// join the same server). Wins over --pulse-server / PULSE_SERVER / the default endpoint.
     #[cfg(feature = "use_pulse")]
@@ -442,7 +367,7 @@ impl INode for CommunicationManager {
             last_profile_version_broadcast: Instant::now(),
             archipelago_profile_announced: false,
             block_auto_reconnect: false,
-            resume_grace_until: None,
+            recovery: Recovery::default(),
             comms_on_hold: false,
             saved_adapter_for_resume: GString::default(),
             multiplayer_debug: false,
@@ -455,21 +380,13 @@ impl INode for CommunicationManager {
             #[cfg(feature = "use_pulse")]
             pulse_room: None,
             #[cfg(feature = "use_pulse")]
-            pulse_session_failures: 0,
-            #[cfg(feature = "use_pulse")]
-            pulse_disabled_for_session: false,
-            #[cfg(feature = "use_pulse")]
             pulse_teleport_pending: false,
             #[cfg(feature = "use_pulse")]
             last_dcl_position: None,
             #[cfg(feature = "use_pulse")]
             dual_channel_override: None,
             #[cfg(feature = "use_pulse")]
-            dual_channel_flag: true,
-            #[cfg(feature = "use_pulse")]
             pulse_runtime_enabled: None,
-            #[cfg(feature = "use_pulse")]
-            pulse_flag_enabled: None,
             #[cfg(feature = "use_pulse")]
             pulse_endpoint_override: None,
             #[cfg(feature = "use_pulse")]
@@ -505,6 +422,10 @@ impl INode for CommunicationManager {
     }
 
     fn process(&mut self, _dt: f64) {
+        #[cfg(feature = "use_pulse")]
+        self.poll_pulse_room();
+        self.sync_island_with_pulse();
+
         // Handle scene access check results
         while let Ok((scene_id, allowed, error_message)) = self.scene_access_receiver.try_recv() {
             self.signals().scene_access_checked().emit(
@@ -589,10 +510,7 @@ impl INode for CommunicationManager {
         let mut processor_reset = false;
         let mut chat_signals = Vec::new();
         let mut outgoing_messages = Vec::new();
-        let mut disconnect_info: Option<(
-            crate::comms::adapter::message_processor::DisconnectReason,
-            String,
-        )> = None;
+        let mut disconnects = Vec::new();
 
         if let Some(processor) = &mut self.message_processor {
             let processor_polling_ok = processor.poll();
@@ -612,7 +530,7 @@ impl INode for CommunicationManager {
             }
 
             // Check if disconnected from the server (returns reason + room_id)
-            disconnect_info = processor.consume_disconnect_reason();
+            disconnects = processor.consume_disconnects();
 
             // Check if room metadata indicates the player was banned.
             // Only clean the scene room — keep main room alive for navigation.
@@ -660,10 +578,22 @@ impl INode for CommunicationManager {
         }
 
         // Emit disconnected signal if needed (after borrowing is done)
-        if let Some((reason, room_id)) = disconnect_info {
+        for (reason, room_id) in disconnects {
+            if self.block_auto_reconnect {
+                break;
+            }
             use crate::comms::adapter::message_processor::DisconnectReason;
 
-            if reason == DisconnectReason::DuplicateIdentity && self.in_resume_grace() {
+            if reason == DisconnectReason::IslandRemoved {
+                #[cfg(feature = "use_livekit")]
+                if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
+                    archipelago.island_removed(&room_id);
+                }
+                continue;
+            }
+            if reason == DisconnectReason::DuplicateIdentity
+                && self.recovery.in_resume_grace(Instant::now())
+            {
                 // Right after a resume the server can still hold this client's
                 // pre-background session; the eviction that follows our rejoin is
                 // self-inflicted, not another device. Scene and island rooms have their own
@@ -683,12 +613,7 @@ impl INode for CommunicationManager {
             } else if reason == DisconnectReason::DuplicateIdentity {
                 // DuplicateIdentity from ANY room → full disconnect (existing behavior)
                 tracing::warn!("Disconnected from '{}': DuplicateIdentity - another client connected with same identity", room_id);
-                self.block_auto_reconnect = true;
-                let saved_connection_str = self.current_connection_str.clone();
-                self.clean();
-                self.current_connection_str = saved_connection_str;
-
-                self.signals().disconnected().emit(0i32);
+                self.stop_comms(0);
             } else if room_id.starts_with("scene-") {
                 if reason == DisconnectReason::Kicked {
                     // Kicked from scene room → full disconnect (clean all rooms)
@@ -717,6 +642,7 @@ impl INode for CommunicationManager {
                     DisconnectReason::RoomClosed => 1,
                     DisconnectReason::Kicked => 2,
                     DisconnectReason::Other => 3,
+                    DisconnectReason::IslandRemoved => continue,
                 };
                 tracing::warn!("Disconnected from '{}': {:?}", room_id, reason);
                 self.signals().disconnected().emit(reason_code);
@@ -768,7 +694,7 @@ impl INode for CommunicationManager {
         // backoff prevents hammering while connectivity is poor (issue #2382).
         #[cfg(feature = "use_livekit")]
         if should_start_scene_room_reconnect(
-            self.comms_on_hold,
+            self.comms_on_hold || self.block_auto_reconnect,
             self.scene_room.is_some(),
             self.current_scene_id.is_some(),
             self.scene_room_reconnect_at,
@@ -788,10 +714,6 @@ impl INode for CommunicationManager {
             self.scene_room_reconnect_backoff_secs =
                 (self.scene_room_reconnect_backoff_secs * 2).min(SCENE_ROOM_RECONNECT_MAX_SECS);
         }
-
-        // Poll the Pulse room (state machine + inbound bridging)
-        #[cfg(feature = "use_pulse")]
-        self.poll_pulse_room();
 
         // Periodic ProfileVersion broadcasting (every 10 seconds)
         if self.last_profile_version_broadcast.elapsed().as_secs() >= 10 {
@@ -871,13 +793,7 @@ impl CommunicationManager {
         }
     }
 
-    /// Effective Pulse activation. Precedence: runtime override (deeplink `pulse=` /
-    /// `pulse-server=`) > CLI (`--no-pulse` always disables, `--pulse` force-enables) >
-    /// server `pulse` feature flag, fail-closed — Pulse stays off until feature_flags.gd
-    /// confirms the flag is on (fetch failure or an absent flag keeps it off). A server
-    /// flag can never force-enable Pulse over a local opt-out.
-    ///
-    /// In `--preview` the flag alone is not enough — see [`pulse_activation`].
+    /// Normal sessions require Pulse. Local preview and developer overrides are explicit.
     #[cfg(feature = "use_pulse")]
     fn pulse_enabled(&self, cli: &crate::godot_classes::dcl_cli::DclCli) -> bool {
         self.pulse_runtime_enabled.unwrap_or_else(|| {
@@ -885,19 +801,17 @@ impl CommunicationManager {
                 cli.pulse,
                 cli.pulse_explicit,
                 cli.preview_mode || self.local_scene_development,
-                self.pulse_flag_enabled,
             )
         })
     }
 
     /// Create the Pulse room if activation is on and it doesn't exist yet.
-    /// Activation: see `pulse_enabled` (deeplink > CLI > feature flag, fail-closed).
     /// Endpoint: deeplink `pulse-server=` > `--pulse-server` / `PULSE_SERVER` > default
     /// `urls::pulse_server():7777` (env-resolved via the `comms` group; `dclenv=zone`
     /// or `dclenv=comms::zone,org` both target the zone deployment).
     #[cfg(feature = "use_pulse")]
     fn ensure_pulse_room(&mut self) {
-        if self.pulse_room.is_some() || self.pulse_disabled_for_session || self.comms_on_hold {
+        if self.pulse_room.is_some() || self.block_auto_reconnect || self.comms_on_hold {
             return;
         }
 
@@ -978,70 +892,6 @@ impl CommunicationManager {
                 Some(parsed) => parsed,
                 None => (endpoint, crate::comms::consts::PULSE_SERVER_PORT),
             }
-        }
-    }
-
-    #[cfg(feature = "use_pulse")]
-    fn poll_pulse_room(&mut self) {
-        let events = {
-            let Some(pulse_room) = self.pulse_room.as_mut() else {
-                return;
-            };
-            pulse_room.poll(Instant::now(), || {
-                let player_identity = DclGlobal::singleton().bind().get_player_identity();
-                let player_identity = player_identity.bind();
-                let ephemeral = player_identity.try_get_ephemeral_auth_chain()?;
-                let profile_version = player_identity
-                    .clone_profile()
-                    .map(|p| p.version as i32)
-                    .unwrap_or(0);
-                Some((ephemeral, profile_version))
-            })
-        };
-
-        for event in events {
-            match event {
-                PulseRoomEvent::Established => {
-                    self.pulse_session_failures = 0;
-                    // Mandatory first gameplay message; deferred until realm + position exist.
-                    self.pulse_teleport_pending = true;
-                }
-                PulseRoomEvent::AttemptFailed => {
-                    self.pulse_session_failures += 1;
-                    if self.pulse_session_failures >= PULSE_SESSION_FAILURE_LIMIT {
-                        tracing::warn!(
-                            "pulse: {} consecutive failed attempts — falling back to LiveKit-only for this session",
-                            self.pulse_session_failures
-                        );
-                        self.pulse_disabled_for_session = true;
-                        if let Some(mut pulse_room) = self.pulse_room.take() {
-                            pulse_room.clean();
-                        }
-                        return;
-                    }
-                }
-                PulseRoomEvent::Dead { reason } => {
-                    // The Pulse server evicts oldest-first on a duplicate wallet, so a
-                    // DuplicateSession right after a resume is our own pre-background zombie
-                    // being reclaimed — one rebuild wins the session back.
-                    if reason == Some(PulseDisconnect::DuplicateSession) && self.in_resume_grace() {
-                        tracing::warn!(
-                            "pulse: DuplicateSession within resume grace — rebuilding room to reclaim the session"
-                        );
-                        if let Some(mut pulse_room) = self.pulse_room.take() {
-                            pulse_room.clean();
-                        }
-                        self.ensure_pulse_room();
-                        return;
-                    }
-                    // Terminal code — parked until the next change_adapter rebuilds the room.
-                    tracing::warn!("pulse: room dead until next adapter change");
-                }
-            }
-        }
-
-        if self.pulse_teleport_pending {
-            self.try_send_pulse_teleport();
         }
     }
 
@@ -1130,6 +980,9 @@ impl CommunicationManager {
 
     #[cfg(feature = "use_livekit")]
     fn reconnect_scene_room(&self) {
+        if self.block_auto_reconnect {
+            return;
+        }
         let Some(scene_entity_id) = &self.current_scene_id else {
             return;
         };
@@ -1373,9 +1226,17 @@ impl CommunicationManager {
     pub fn on_adapter_changed(voice_chat_enabled: bool, new_adapter: GString);
 
     /// Signal emitted when disconnected from the server
-    /// reason: 0 = DuplicateIdentity, 1 = RoomClosed, 2 = Kicked, 3 = Other
+    /// reason: 0 = DuplicateIdentity, 1 = RoomClosed, 2 = Kicked, 3 = Other, 4 = PulseUnavailable, 5 = PlatformBanned
     #[signal]
     pub fn disconnected(reason: i32);
+
+    #[signal]
+    pub fn pulse_recovered();
+
+    #[func]
+    pub fn retry_pulse(&mut self) {
+        self.retry_pulse_connection();
+    }
 
     /// Signal emitted with the result of a scene access check
     /// allowed: true if access is granted, false if banned
@@ -1448,7 +1309,7 @@ impl CommunicationManager {
     fn is_livekit_movement_dual_channel(&self) -> bool {
         #[cfg(feature = "use_pulse")]
         {
-            dual_channel_effective(self.dual_channel_override, self.dual_channel_flag)
+            self.dual_channel_override.unwrap_or(false)
         }
         // Without Pulse there is nothing to hand avatar sync over to: LiveKit carries it.
         #[cfg(not(feature = "use_pulse"))]
@@ -1457,8 +1318,7 @@ impl CommunicationManager {
 
     /// Runtime (deeplink `pulse-server=host:port`): join a specific Pulse server. Shareable —
     /// everyone opening the same deeplink lands on the same instance. Overrides the CLI/env
-    /// endpoint, clears any session fallback (an explicit user action earns a fresh chance),
-    /// and rebuilds the room immediately.
+    /// endpoint and rebuilds the room.
     #[func]
     pub fn set_pulse_server(&mut self, host_port: GString) {
         #[cfg(feature = "use_pulse")]
@@ -1470,8 +1330,6 @@ impl CommunicationManager {
             tracing::info!("pulse: runtime endpoint set to {endpoint}");
             self.pulse_endpoint_override = Some(endpoint);
             self.pulse_runtime_enabled = Some(true);
-            self.pulse_disabled_for_session = false;
-            self.pulse_session_failures = 0;
             if let Some(mut pulse_room) = self.pulse_room.take() {
                 pulse_room.clean();
                 self.pulse_teleport_pending = false;
@@ -1516,20 +1374,6 @@ impl CommunicationManager {
         let _ = is_preview;
     }
 
-    /// Deployment `dual-channel` flag, reported by feature_flags.gd once the fetch settles.
-    /// Only the default: an explicit local choice (`--livekit-movement` /
-    /// `--no-livekit-movement`, deeplink `dual-channel=`) always wins. No-op without use_pulse.
-    #[func]
-    pub fn set_dual_channel_flag_enabled(&mut self, enabled: bool) {
-        #[cfg(feature = "use_pulse")]
-        {
-            self.dual_channel_flag = enabled;
-            tracing::info!("pulse: dual-channel flag = {enabled}");
-        }
-        #[cfg(not(feature = "use_pulse"))]
-        let _ = enabled;
-    }
-
     /// Runtime (deeplink `pulse-realm=<realm>`): announce a specific realm instead of the
     /// derived one. Rebuilds the room rather than re-announcing on the live one — this client
     /// tears the Pulse room down on every realm change, and the decoder's subject state is
@@ -1545,8 +1389,6 @@ impl CommunicationManager {
             tracing::info!("pulse: runtime realm set to {realm}");
             self.pulse_realm_override = Some(realm);
             self.pulse_runtime_enabled = Some(true);
-            self.pulse_disabled_for_session = false;
-            self.pulse_session_failures = 0;
             if let Some(mut pulse_room) = self.pulse_room.take() {
                 pulse_room.clean();
                 self.pulse_teleport_pending = false;
@@ -1559,15 +1401,13 @@ impl CommunicationManager {
     }
 
     /// Runtime (deeplink `pulse=true/false`): toggle the Pulse transport with the configured
-    /// endpoint. Enabling clears any session fallback; disabling tears the room down.
+    /// endpoint. Disabling means no island connectivity.
     #[func]
     pub fn set_pulse_enabled(&mut self, enabled: bool) {
         #[cfg(feature = "use_pulse")]
         {
             self.pulse_runtime_enabled = Some(enabled);
             if enabled {
-                self.pulse_disabled_for_session = false;
-                self.pulse_session_failures = 0;
                 self.ensure_pulse_room();
             } else if let Some(mut pulse_room) = self.pulse_room.take() {
                 pulse_room.clean();
@@ -1575,32 +1415,6 @@ impl CommunicationManager {
                 self.pending_pulse_emote_urn = None;
             }
             tracing::info!("pulse: runtime enabled = {enabled}");
-        }
-        #[cfg(not(feature = "use_pulse"))]
-        let _ = enabled;
-    }
-
-    /// Server `pulse` feature-flag verdict (feature_flags.gd, once per run when the
-    /// mobile-bff fetch settles; `false` on fetch failure or an absent flag — fail-closed).
-    /// Decides the default only: explicit runtime/CLI opt-ins and opt-outs win (see
-    /// `pulse_enabled`), so the flag can neither kill a `pulse=true`/`pulse-server=`
-    /// deeplink test run nor force-enable Pulse over `--no-pulse`.
-    #[func]
-    pub fn set_pulse_flag_enabled(&mut self, enabled: bool) {
-        #[cfg(feature = "use_pulse")]
-        {
-            self.pulse_flag_enabled = Some(enabled);
-            tracing::info!("pulse: feature flag enabled = {enabled}");
-            let global = DclGlobal::singleton();
-            let cli = global.bind().cli.clone();
-            let effective = self.pulse_enabled(&cli.bind());
-            if effective {
-                self.ensure_pulse_room();
-            } else if let Some(mut pulse_room) = self.pulse_room.take() {
-                pulse_room.clean();
-                self.pulse_teleport_pending = false;
-                self.pending_pulse_emote_urn = None;
-            }
         }
         #[cfg(not(feature = "use_pulse"))]
         let _ = enabled;
@@ -1903,17 +1717,15 @@ impl CommunicationManager {
             }
         };
 
-        // See `avatar_sync_over_livekit`: while Pulse is established it is the only carrier.
+        // Pulse establishment gates Pulse sends; LiveKit duplication is an explicit override.
         #[cfg(feature = "use_pulse")]
         let pulse_established = self
             .pulse_room
             .as_ref()
             .is_some_and(|pulse| pulse.is_established());
-        #[cfg(not(feature = "use_pulse"))]
-        let pulse_established = false;
         #[cfg(feature = "use_pulse")]
         let movement_over_livekit =
-            avatar_sync_over_livekit(self.is_livekit_movement_dual_channel(), pulse_established);
+            avatar_sync_over_livekit(self.is_livekit_movement_dual_channel());
         #[cfg(not(feature = "use_pulse"))]
         let movement_over_livekit = true;
 
@@ -1929,9 +1741,7 @@ impl CommunicationManager {
             _ => false,
         };
 
-        // Also send to scene room if available (dual broadcasting) — but not while Pulse is
-        // established: the authoritative server behind a scene room now reads avatar state off
-        // Pulse as a scene listener, so this copy would be pure duplication.
+        // Duplicate into scene rooms only with the developer override.
         #[cfg(feature = "use_livekit")]
         if movement_over_livekit {
             if let Some(scene_room) = &mut self.scene_room {
@@ -1964,72 +1774,6 @@ impl CommunicationManager {
             if let Some(pulse_room) = &mut self.pulse_room {
                 pulse_room.send_movement(&uncompressed_movement);
                 message_sent = true;
-            }
-        }
-
-        if message_sent {
-            self.last_position_broadcast_index += 1;
-        }
-        message_sent
-    }
-
-    #[func]
-    fn broadcast_position_and_rotation(&mut self, position: Vector3, rotation: Quaternion) -> bool {
-        // Update archipelago position if connected via archipelago
-        #[cfg(feature = "use_livekit")]
-        if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
-            archipelago.update_position(glam::Vec3::new(position.x, position.y, position.z));
-        }
-
-        let index = self.last_position_broadcast_index;
-        let get_packet = || {
-            let position_packet = rfc4::Position {
-                index: index as u32,
-                position_x: position.x,
-                position_y: position.y,
-                position_z: -position.z,
-                rotation_x: rotation.x,
-                rotation_y: rotation.y,
-                rotation_z: -rotation.z,
-                rotation_w: -rotation.w,
-            };
-
-            rfc4::Packet {
-                message: Some(rfc4::packet::Message::Position(position_packet)),
-                protocol_version: DEFAULT_PROTOCOL_VERSION,
-            }
-        };
-
-        // Send to main room if available
-        let mut message_sent = if let Some(main_room) = &mut self.main_room {
-            let sent = main_room.send_rfc4(get_packet(), true);
-            if sent {
-                tracing::debug!("📡 Position sent to main room");
-            }
-            sent
-        } else {
-            false
-        };
-
-        // Also send to scene room if available (dual broadcasting)
-        #[cfg(feature = "use_livekit")]
-        if let Some(scene_room) = &mut self.scene_room {
-            let scene_sent = scene_room.send_rfc4(get_packet(), true);
-            message_sent = message_sent || scene_sent; // Consider successful if either main or scene room succeeded
-            if scene_sent {
-                tracing::debug!("📡 Position also sent to scene room");
-            }
-        }
-
-        // Also send through archipelago's adapter if available
-        #[cfg(feature = "use_livekit")]
-        if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
-            if let Some(adapter) = archipelago.adapter_as_mut() {
-                let sent = adapter.send_rfc4(get_packet(), true);
-                if sent {
-                    tracing::debug!("📡 Position also sent through archipelago");
-                    message_sent = true;
-                }
             }
         }
 
@@ -2135,12 +1879,7 @@ impl CommunicationManager {
     fn emote_over_livekit(&self) -> bool {
         #[cfg(feature = "use_pulse")]
         {
-            avatar_sync_over_livekit(
-                self.is_livekit_movement_dual_channel(),
-                self.pulse_room
-                    .as_ref()
-                    .is_some_and(|pulse| pulse.is_established()),
-            )
+            avatar_sync_over_livekit(self.is_livekit_movement_dual_channel())
         }
         #[cfg(not(feature = "use_pulse"))]
         true
@@ -2364,6 +2103,9 @@ impl CommunicationManager {
 
     #[func]
     pub fn change_adapter(&mut self, comms_fixed_adapter_gstr: GString) {
+        if self.block_auto_reconnect {
+            return;
+        }
         let comms_fixed_adapter_str = comms_fixed_adapter_gstr.to_string();
         let Some((protocol, comms_address)) = comms_fixed_adapter_str.as_str().split_once(':')
         else {
@@ -2382,7 +2124,6 @@ impl CommunicationManager {
         self.current_connection_str
             .clone_from(&comms_fixed_adapter_str.to_godot());
         self.archipelago_profile_announced = false; // Reset flag when changing adapters
-        self.block_auto_reconnect = false; // Reset block flag to allow this reconnection
         let avatar_scene = DclGlobal::singleton().bind().get_avatars();
 
         tracing::warn!(
@@ -2547,6 +2288,7 @@ impl CommunicationManager {
     }
 
     fn clean(&mut self) {
+        self.recovery.reset_outage();
         #[cfg(feature = "use_pulse")]
         if let Some(mut pulse_room) = self.pulse_room.take() {
             pulse_room.clean();
@@ -2586,6 +2328,10 @@ impl CommunicationManager {
             self.scene_room = None;
             self.scene_room_reconnect_at = None;
             self.scene_room_connect_in_flight = None;
+            // Invalidate queued results and senders held by requests from the old session.
+            let (sender, receiver) = mpsc::channel(10);
+            self.scene_room_connection_sender = sender;
+            self.scene_room_connection_receiver = receiver;
         }
         self.current_scene_id = None;
         self.current_connection = CommsConnection::None;
@@ -2593,29 +2339,11 @@ impl CommunicationManager {
         self.archipelago_profile_announced = false;
     }
 
-    /// The app returned to the foreground (GDScript calls this on
-    /// `NOTIFICATION_APPLICATION_FOCUS_IN`). Mobile OSes cut the app's network shortly after
-    /// backgrounding, so every transport is rebuilding right now: forgive the Pulse failure
-    /// strikes that a slow-returning radio would burn, and arm the grace window that lets
-    /// Duplicate* evictions (our own zombie sessions being reclaimed) retry instead of
-    /// locking comms behind the "session ended" modal.
     #[func]
     pub fn notify_app_resumed(&mut self) {
-        #[cfg(feature = "use_pulse")]
-        if self.pulse_session_failures > 0 {
-            tracing::info!(
-                "app resumed — clearing {} pulse session failure strike(s)",
-                self.pulse_session_failures
-            );
-            self.pulse_session_failures = 0;
+        if !self.block_auto_reconnect {
+            self.recovery.resumed(Instant::now());
         }
-        self.resume_grace_until = Some(Instant::now() + RESUME_GRACE_PERIOD);
-        tracing::info!("app resumed — comms resume grace window armed");
-    }
-
-    fn in_resume_grace(&self) -> bool {
-        self.resume_grace_until
-            .is_some_and(|until| Instant::now() < until)
     }
 
     /// Disconnect all comms while a scene is loading.
@@ -2640,6 +2368,10 @@ impl CommunicationManager {
             return;
         }
         self.comms_on_hold = false;
+        if self.block_auto_reconnect {
+            self.saved_adapter_for_resume = GString::default();
+            return;
+        }
 
         // Discard stale scene room connection requests that queued during the hold
         #[cfg(feature = "use_livekit")]
@@ -2702,6 +2434,9 @@ impl CommunicationManager {
     pub fn leave(&mut self, sign_out_session: bool) {
         self.clean();
         if sign_out_session {
+            self.block_auto_reconnect = false;
+            self.recovery = Recovery::default();
+            self.saved_adapter_for_resume = GString::default();
             let mut player_identity = DclGlobal::singleton().bind().get_player_identity();
             player_identity.bind_mut().logout();
         }
@@ -2731,6 +2466,9 @@ impl CommunicationManager {
 
     #[cfg(feature = "use_livekit")]
     fn handle_scene_room_connection_request(&mut self, request: SceneRoomConnectionRequest) {
+        if self.block_auto_reconnect {
+            return;
+        }
         match request {
             SceneRoomConnectionRequest::Banned { scene_id } => {
                 // Handle banned signal from scene room connection/reconnection.
@@ -2812,6 +2550,9 @@ impl CommunicationManager {
     #[cfg(feature = "use_livekit")]
     #[func]
     pub fn _on_change_scene_id(&mut self, scene_id: i32) {
+        if self.block_auto_reconnect {
+            return;
+        }
         use std::sync::Arc;
 
         use crate::{
@@ -3116,8 +2857,8 @@ impl CommunicationManager {
             let cli = global.bind().cli.clone();
             let cli = cli.bind();
             let pulse_enabled = self.pulse_enabled(&cli);
-            let pulse_state = if self.pulse_disabled_for_session {
-                "disabled_for_session"
+            let pulse_state = if self.block_auto_reconnect {
+                "session_stopped"
             } else if let Some(pulse_room) = &self.pulse_room {
                 pulse_room.state_name()
             } else {
@@ -3137,11 +2878,7 @@ impl CommunicationManager {
             dict.set(&"pulse_endpoint".to_variant(), &pulse_endpoint.to_variant());
             dict.set(
                 &"pulse_failures".to_variant(),
-                &(self.pulse_session_failures as i64).to_variant(),
-            );
-            dict.set(
-                &"pulse_disabled_for_session".to_variant(),
-                &self.pulse_disabled_for_session.to_variant(),
+                &(self.recovery.failures as i64).to_variant(),
             );
             dict.set(
                 &"dual_channel".to_variant(),
@@ -3161,7 +2898,6 @@ impl CommunicationManager {
             dict.set("pulse_state", "unavailable");
             dict.set("pulse_endpoint", "");
             dict.set("pulse_failures", 0i64);
-            dict.set("pulse_disabled_for_session", false);
             dict.set("dual_channel", true);
         }
 
@@ -3617,89 +3353,16 @@ mod tests {
         }
     }
 
-    // ==========================================
-    // Tests for avatar_sync_over_livekit (Pulse is the avatar-sync carrier)
-    // ==========================================
-
     #[cfg(feature = "use_pulse")]
-    mod avatar_sync_gate {
-        use super::*;
-
-        /// The point of the change: once Pulse is up, LiveKit carries no movement or emotes.
-        #[test]
-        fn established_pulse_takes_livekit_out_of_the_path() {
-            assert!(!avatar_sync_over_livekit(false, true));
-        }
-
-        /// The safety net: any state where Pulse is not established keeps LiveKit sending, so
-        /// a drop, a failed handshake or a disabled transport can never hide the player.
-        #[test]
-        fn livekit_carries_avatar_sync_whenever_pulse_is_not_established() {
-            assert!(avatar_sync_over_livekit(false, false));
-        }
-
-        /// The escape hatch still forces both channels at once.
-        #[test]
-        fn dual_channel_forces_livekit_regardless() {
-            assert!(avatar_sync_over_livekit(true, true));
-            assert!(avatar_sync_over_livekit(true, false));
-        }
-
-        /// Until the deployment flips `dual-channel` off, LiveKit keeps carrying avatar sync —
-        /// an authoritative server that does not yet ingest Pulse must not be starved of it.
-        #[test]
-        fn flag_defaults_on_so_the_cutover_is_opt_in_per_deployment() {
-            assert!(dual_channel_effective(None, true));
-            assert!(!dual_channel_effective(None, false));
-        }
-
-        /// A local choice outranks the flag in both directions, so a dev can force either mode.
-        #[test]
-        fn local_override_beats_the_flag() {
-            assert!(dual_channel_effective(Some(true), false));
-            assert!(!dual_channel_effective(Some(false), true));
-        }
-    }
-
-    // ==========================================
-    // Tests for pulse_activation (who gets to turn the transport on)
-    // ==========================================
-
-    #[cfg(feature = "use_pulse")]
-    mod pulse_activation_rules {
-        use super::*;
-
-        /// Outside preview the deployment flag decides, fail-closed on absent/unfetched.
-        #[test]
-        fn flag_decides_outside_preview() {
-            assert!(pulse_activation(true, false, false, Some(true)));
-            assert!(!pulse_activation(true, false, false, Some(false)));
-            assert!(!pulse_activation(true, false, false, None));
-        }
-
-        /// The point of the preview carve-out: a plain `dcl start` preview must not be pushed
-        /// onto production Pulse by a fleet-wide flag, because its realm key carries the
-        /// developer's project path and hostname.
-        #[test]
-        fn preview_ignores_the_flag_without_an_explicit_opt_in() {
-            assert!(!pulse_activation(true, false, true, Some(true)));
-        }
-
-        /// ...but an explicit opt-in (--pulse-realm / --pulse-server / --pulse) still works,
-        /// which is how the orchestrator and DCL_SERVER_PULSE_REALM=1 drive Local Scene
-        /// Development.
-        #[test]
-        fn preview_joins_on_an_explicit_opt_in() {
-            assert!(pulse_activation(true, true, true, Some(true)));
-            assert!(pulse_activation(true, true, true, None));
-        }
-
-        /// --no-pulse always wins, everywhere.
-        #[test]
-        fn local_opt_out_always_wins() {
-            assert!(!pulse_activation(false, true, false, Some(true)));
-            assert!(!pulse_activation(false, true, true, Some(true)));
-        }
+    #[test]
+    fn pulse_is_required_except_explicit_development_opt_outs() {
+        assert!(pulse_activation(true, false, false));
+        assert!(!pulse_activation(true, false, true));
+        assert!(pulse_activation(true, true, true));
+        assert!(!pulse_activation(false, true, false));
+        assert!(!pulse_activation(false, true, true));
+        assert!(!avatar_sync_over_livekit(false));
+        assert!(avatar_sync_over_livekit(true));
     }
 
     // ==========================================

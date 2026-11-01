@@ -25,6 +25,7 @@ import {
   sceneRequestModal,
 } from '../src/modals/CoreModals';
 import { confirmLeave } from '../src/app/wiring';
+import { t } from '../src/i18n';
 import { registerModalApi } from '../src/modals/bridge';
 import {
   destinationInput,
@@ -296,6 +297,37 @@ describe('engine notices', () => {
     );
     closed?.buttons[1].onPress?.();
     expect(a.reconnect).toHaveBeenCalled();
+  });
+
+  it('offer sign in or exit after a platform ban, with the ban copy', () => {
+    const a = actions();
+    const ban = noticeModal(
+      new EngineNotice.Disconnected({ reason: DisconnectReason.PlatformBan }),
+      a,
+    );
+    expect(ban?.title).toBe(t('MODAL_BAN_KICKED_TITLE'));
+    expect(ban?.dismissable).toBe(false);
+    expect(ban?.buttons[1].label).toBe(t('MODAL_SESSION_ENDED_SIGN_IN_PRIMARY'));
+    ban?.buttons[1].onPress?.();
+    expect(a.signOut).toHaveBeenCalled();
+    ban?.buttons[0].onPress?.();
+    expect(a.home).toHaveBeenCalled();
+  });
+
+  it('keep the outage modal under a key the recovery notice can withdraw', () => {
+    const a = actions();
+    const outage = noticeModal(
+      new EngineNotice.Disconnected({ reason: DisconnectReason.Other }),
+      a,
+    );
+    expect(outage?.key).toBe('disconnected-recoverable');
+    expect(outage?.buttons[1].label).toBe(t('MODAL_SESSION_ENDED_RETRY_PRIMARY'));
+    const closed = noticeModal(
+      new EngineNotice.Disconnected({ reason: DisconnectReason.RoomClosed }),
+      a,
+    );
+    expect(closed?.key).toBe('disconnected');
+    expect(noticeModal(new EngineNotice.DisconnectRecovered(), a)).toBeNull();
   });
 
   it('keep a ban modal until the player leaves', () => {

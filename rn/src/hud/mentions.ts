@@ -7,8 +7,8 @@ export function mentionQuery(text: string, caret: number): string | null {
   if (at === -1 || (at > 0 && before[at - 1] !== ' ')) {
     return null;
   }
-  const query = before.slice(at + 1);
-  return query.includes(' ') ? null : query;
+  // Names can contain spaces: the query ends when it outgrows every nearby name.
+  return before.slice(at + 1);
 }
 
 export function matchProfiles<T extends { name: string }>(

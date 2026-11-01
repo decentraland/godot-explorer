@@ -19,4 +19,8 @@ export const engine = {
   CHAT_SYSTEM_TELEPORTED: '[color=#ccc]🟢 Teleported to {location}[/color]',
   CHAT_SYSTEM_UNKNOWN_COMMAND: '[color=#ccc]🔴 Unknown command[/color]',
   TOOLTIP_VIEW_PROFILE: 'View profile',
+  NAMEPLATE_PROFILE_LOADING: 'Loading profile…',
+  NAMEPLATE_NO_PROFILE: 'No profile',
+  NAMEPLATE_PROFILE_UNAVAILABLE: 'Profile unavailable',
+  NAMEPLATE_PROFILE_CROSS_ENVIRONMENT: 'Cross-environment profile (.org)',
 } as const;

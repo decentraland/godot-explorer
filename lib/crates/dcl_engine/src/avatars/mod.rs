@@ -7,6 +7,7 @@ pub mod dcl_user_profile;
 pub mod emote_mask;
 pub mod emotes;
 pub mod exclude_ids;
+mod eye_masks;
 pub mod impostor;
 pub mod impostor_capture;
 pub mod item;

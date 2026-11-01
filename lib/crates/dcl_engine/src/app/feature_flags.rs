@@ -20,8 +20,6 @@ use crate::godot_classes::promise::PromiseError;
 
 /// Flag names exactly as the mobile-bff payload serves them.
 pub const FLAG_ARCHIPELAGO: &str = "archipielago";
-pub const FLAG_PULSE: &str = "pulse";
-pub const FLAG_DUAL_CHANNEL: &str = "dual-channel";
 /// Collects FCM push tokens and maps them in Segment. Turning it off stops new tokens from being
 /// registered; it does not stop delivery to tokens already collected, a server-side decision.
 pub const FLAG_PUSH_ENABLED: &str = "push-enabled";
@@ -140,19 +138,12 @@ impl FeatureFlags {
     }
 
     /// Applies the comms flags. `archipielago=false` skips the archipelago connection while scene
-    /// rooms and Pulse keep working. `pulse` is fail-closed; it only decides the default, and an
-    /// explicit local choice (deeplink `pulse=true`, `pulse-server=`, `--pulse`) or opt-out
-    /// (`--no-pulse`, `pulse=false`) always wins. `dual-channel` is the rollout control for avatar
-    /// sync: while true (the default, today's behaviour) movement and emotes keep going over
-    /// LiveKit even when Pulse is established; false hands them to Pulse alone, which is only safe
-    /// once the deployment's authoritative servers ingest Pulse as scene listeners.
+    /// rooms and Pulse keep working. Pulse itself is not a flag: it is required in normal sessions.
     fn apply_flags(&self) {
         let mut comms = globals::comms();
         {
             let mut comms = comms.bind_mut();
             comms.set_archipelago_enabled(self.enabled(FLAG_ARCHIPELAGO, true));
-            comms.set_pulse_flag_enabled(self.enabled(FLAG_PULSE, false));
-            comms.set_dual_channel_flag_enabled(self.enabled(FLAG_DUAL_CHANNEL, true));
         }
         // Metrics holds the startup identify until this arrives: the cached FCM token is already
         // there at its ready, so the identify would otherwise always win the race and the switch

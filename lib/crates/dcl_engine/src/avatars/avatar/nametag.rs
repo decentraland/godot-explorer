@@ -1,7 +1,7 @@
 //! The avatar's nameplate: when it shows, what it says, and where it floats.
 
 use godot::classes::control::{LayoutPreset, MouseFilter};
-use godot::classes::{CollisionObject3D, MeshInstance3D};
+use godot::classes::{CollisionObject3D, MeshInstance3D, TranslationServer};
 use godot::prelude::*;
 
 use crate::avatars::impostor::LodState;
@@ -24,8 +24,8 @@ pub struct NametagState {
     pub occluded: bool,
     /// False until a real profile was applied: until then the plate shows the scene default.
     pub profile_ready: bool,
-    pub request_failures: i32,
-    pub request_banned: bool,
+    /// Translation key from comms: the pending state, or the cross-environment caption.
+    pub profile_status: String,
     /// Max of the posed bones' height along the skeleton's Y row, cached per skeleton update.
     pub posed_top: f32,
     /// Meters between the topmost joint and the top of the meshes (skull, hats).
@@ -38,8 +38,7 @@ impl Default for NametagState {
             gate_visible: true,
             occluded: false,
             profile_ready: false,
-            request_failures: 0,
-            request_banned: false,
+            profile_status: "NAMEPLATE_PROFILE_LOADING".into(),
             posed_top: 0.0,
             clearance: 0.3,
         }
@@ -137,10 +136,18 @@ impl DclAvatar {
         if self.nodes.is_none() {
             return;
         }
-        // No profile yet: the plate still shows its scene default ("nickname#xxxx"). Hide it in
-        // production; dev builds show the request state.
+        // No profile yet: the plate would show its scene default ("nickname#xxxx"), so it shows
+        // the request state instead.
         let profile_pending = !self.nametag.profile_ready && !self.is_avatar_shape;
-        if profile_pending && !DclGlobal::is_production() {
+        let status: GString = if self.nametag.profile_ready {
+            GString::new()
+        } else {
+            self.nametag.profile_status.as_str().into()
+        };
+        if let Some(nodes) = self.nodes.as_mut() {
+            nodes.nickname_ui.bind_mut().set_profile_status(status);
+        }
+        if profile_pending {
             self.apply_pending_profile_nameplate();
         }
         // A scene NPC keeps the proto default "NPC" name only when the scene set none; FAR
@@ -155,8 +162,7 @@ impl DclAvatar {
             || far
             || self.nametag_hidden
             || self.hidden
-            || own_nametag_off
-            || (profile_pending && DclGlobal::is_production());
+            || own_nametag_off;
         self.nametag.gate_visible = !should_hide;
         if should_hide {
             // Zero the alpha too: the placement derives visibility from its eased alpha, so a
@@ -170,9 +176,13 @@ impl DclAvatar {
         }
     }
 
-    /// Dev and staging: the request state instead of the meaningless "nickname#xxxx".
     fn apply_pending_profile_nameplate(&mut self) {
-        let failed = self.nametag.request_banned;
+        let key = if self.nametag.profile_status.is_empty() {
+            "NAMEPLATE_PROFILE_LOADING"
+        } else {
+            self.nametag.profile_status.as_str()
+        };
+        let text = TranslationServer::singleton().translate(key);
         let id = self.avatar_id.to_string();
         let tag: GString = if id.is_empty() {
             "…".into()
@@ -182,23 +192,16 @@ impl DclAvatar {
         if let Some(nodes) = self.nodes.as_mut() {
             let mut ui = nodes.nickname_ui.bind_mut();
             ui.set_name_claimed(false);
-            ui.set_nickname(if failed { "Failed" } else { "Loading" }.into());
+            ui.set_nickname(GString::from(&text));
             ui.set_tag(tag);
-            ui.set_nickname_color(if failed {
-                Color::from_rgb(0.85, 0.4, 0.4)
-            } else {
-                Color::from_rgb(0.7, 0.7, 0.7)
-            });
+            ui.set_nickname_color(Color::from_rgb(0.7, 0.7, 0.7));
         }
     }
 
-    /// Pushed from comms when a profile fetch fails or gets banned.
-    pub fn set_profile_request_state(&mut self, failures: i32, banned: bool) {
-        self.nametag.request_failures = failures;
-        self.nametag.request_banned = banned;
-        if !self.nametag.profile_ready {
-            self.apply_nickname_visibility();
-        }
+    /// Pushed from comms: the pending-state key, or the cross-environment caption ("" clears).
+    pub fn set_profile_status(&mut self, status: GString) {
+        self.nametag.profile_status = status.to_string();
+        self.apply_nickname_visibility();
     }
 
     pub fn set_client_version(&mut self, version: GString) {
