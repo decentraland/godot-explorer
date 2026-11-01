@@ -127,6 +127,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var process_tick_quota: SettingsSlider = %ProcessTickQuota
 @onready var check_button_raycast_debugger: CheckButton = %CheckButton_RaycastDebugger
 @onready var check_button_show_interactable_area: CheckButton = %CheckButton_ShowInteractableArea
+@onready var check_button_stream_mode: CheckButton = %CheckButton_StreamMode
 @onready var check_button_multiplayer_debug: CheckButton = %CheckButton_MultiplayerDebug
 @onready var dropdown_list_realm: DropdownList = %DropdownList_Realm
 
@@ -197,6 +198,8 @@ func _ready():
 	_update_dynamic_graphics_status()
 	_setup_impostor_benchmark_button()
 	_setup_streak_debug_button()
+	# Staging only, unlike the rest of Dev Tools (dev builds and prod tester wallets).
+	%StreamMode.visible = DclGlobal.is_staging()
 	_setup_fast_day_cycle_toggle()
 	_setup_light_debug_controls()
 	_setup_custom_profile_controls()
@@ -487,6 +490,7 @@ func _select_section(key: String, user_initiated: bool) -> void:
 				check_button_show_interactable_area.set_pressed_no_signal(
 					explorer.show_interactable_area
 				)
+				check_button_stream_mode.set_pressed_no_signal(StreamMode.is_enabled(explorer))
 			_sync_light_controls_for_profile()
 
 	if Global.is_orientation_portrait() and user_initiated:
@@ -1402,6 +1406,12 @@ func _on_check_button_show_interactable_area_toggled(toggled_on: bool) -> void:
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		explorer.set_interactable_area_visible(toggled_on)
+
+
+func _on_check_button_stream_mode_toggled(toggled_on: bool) -> void:
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		StreamMode.set_enabled(explorer, toggled_on)
 
 
 func _on_check_button_scene_logs_enabled_toggled(toggled_on: bool) -> void:
