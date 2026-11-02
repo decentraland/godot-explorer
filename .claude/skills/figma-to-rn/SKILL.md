@@ -1,6 +1,6 @@
 ---
 name: figma-to-rn
-description: Use when building or fixing a React Native screen or component in `rn/src` from a Figma design, or when a screen "doesn't look like the Figma". Encodes the Figma→RN workflow for this repo - unit conversion (px/2 via `u()`), mapping Figma output onto `rn/src/ds` tokens and components instead of inline values, auto-layout→flexbox, hero/background assets, safe areas, and the side-by-side screenshot check that must pass before the work is done. Trigger on a figma.com URL, "implement/port/match this design", "differs from Figma", entry flow, FTUE, modal or screen polish.
+description: Use when building or fixing a React Native screen or component in `rn/src` from a Figma design, or when a screen "doesn't look like the Figma". Encodes the Figma→RN workflow for this repo - unit conversion (px/2 via `u()`), mapping Figma output onto `rn/packages/ui-native/src` tokens and components instead of inline values, auto-layout→flexbox, hero/background assets, safe areas, and the side-by-side screenshot check that must pass before the work is done. Trigger on a figma.com URL, "implement/port/match this design", "differs from Figma", entry flow, FTUE, modal or screen polish.
 ---
 
 # Figma → React Native
@@ -19,7 +19,7 @@ The entry flow shipped looking nothing like `Mobile-Entry-Flow` because it was p
 
 ## Units
 
-Figma frames are **720×1600 px = 360×800 dp at 2x**. In code, write the Figma px **divided by 2** inside `u()` (`rn/src/ds/scale.ts`), which scales by `min(width,height)/360`.
+Figma frames are **720×1600 px = 360×800 dp at 2x**. In code, write the Figma px **divided by 2** inside `u()` (`rn/packages/ui-native/src/scale.ts`), which scales by `min(width,height)/360`.
 
 | Figma px | code |
 |---|---|
@@ -36,9 +36,9 @@ Never put raw Figma px in `u()`, and never use unscaled numbers for layout sizes
 1. `create_session` with the fileKey, then `get_design_context` (`skillNames: "figma-design-to-code"`, `clientFrameworks: "react-native"`) for **one screen frame at a time**. The whole board is far too large for `get_metadata`; use the node id of a single frame. Use `get_variable_defs` for colors and text styles.
 2. Download the screenshot (`get_screenshot`) next to the generated code. It is the target.
 3. **Map before writing.** For every color, font, radius and component in the Figma output, find the existing one:
-   - Colors → `rn/src/ds/tokens.ts` (`colors.ruby`, `snow`, `pearl`…). Figma variable `DCL/Ruby` = `#FF2D55` = `colors.ruby`. If a color has no token, add a token, never an inline hex.
+   - Colors → `rn/packages/ui-native/src/tokens.ts` (`colors.ruby`, `snow`, `pearl`…). Figma variable `DCL/Ruby` = `#FF2D55` = `colors.ruby`. If a color has no token, add a token, never an inline hex.
    - Text → `AppText` variants. Figma `Btn: Inter Bold 30 uppercase` has no matching variant unless you add one. Check weight (`Bold` ≠ `semibold`), size, line height and case.
-   - Buttons/inputs/pills → `rn/src/ds/*`. Extend the component with a prop when Figma has a variant it lacks. Do not restyle at the call site.
+   - Buttons/inputs/pills → `rn/packages/ui-native/src/*`. Extend the component with a prop when Figma has a variant it lacks. Do not restyle at the call site.
    - Icons → `ds/Icon` and `ds/iconSvgs.ts`. Add missing SVGs there.
 4. **Auto-layout → flexbox.** Figma `flex-col justify-between pt-220 pb-165 px-64` maps to a `View` with `flex: 1`, `justifyContent: 'space-between'`, `paddingTop: u(110)`… Keep the *rules* (padding, gap, alignment, fill vs hug), not absolute positions. Do not use fixed spacers (`flex: 3` / `flex: 2`) to imitate a position.
 5. **Safe areas.** Figma frames are 1600 high including the status bar. Do not add `insets.top` on top of a header or padding that already reserves it; reserve once, from the frame's own numbers.

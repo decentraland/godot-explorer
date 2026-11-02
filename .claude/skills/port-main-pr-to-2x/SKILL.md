@@ -91,7 +91,7 @@ or phase 4 (d56ccae8b0); then `grep -rn` the Rust name in that commit.
 6. **Crossing layers** adds a typed core call/event. Regenerate bindings
    (`cd lib && cargo build -p dcl_bindings && cd ../rn && npm run ubrn:generate`), commit what the
    repo tracks, keep `rn/src/core/mock` working for no-engine builds.
-7. **UI**: RN design system (`rn/src/ds`), i18n keys `t(...)` added to en/es/pt_BR in `rn/src/i18n` (the only source; see the `i18n` skill), screens registered in
+7. **UI**: RN design system (`rn/packages/ui-native/src`), i18n keys `t(...)` added to en/es/pt_BR in `rn/src/i18n` (the only source; see the `i18n` skill), screens registered in
    their `gallery.tsx` when the folder has one. Figma references from the PR body carry over.
 8. **Tests** move with their subject (D-20): pure logic → Rust unit tests or jest; engine behaviour →
    `#[itest]` when feasible.

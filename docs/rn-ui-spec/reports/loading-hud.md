@@ -1,7 +1,7 @@
 # Report: loading-hud (manifest seq 0-12)
 
 Sources: Loading file `mhmvDVAQ2ZaJbfLuJW1VM4` (seq 0-3), HUD file `nxP78pUCEHj3BY0meiXipe` (seq 4-12). All 13 screenshots captured (1600x720 landscape) under `docs/rn-ui-spec/shots/{loading,hud}/`.
-Unit convention: Figma px at 1600x720; RN `u(px/2)` (SCALE = min(w,h)/360, rn/src/ds/scale.ts). All sizes below are Figma px.
+Unit convention: Figma px at 1600x720; RN `u(px/2)` (SCALE = min(w,h)/360, rn/packages/ui-native/src/scale.ts). All sizes below are Figma px.
 
 ## 1. Inventory
 
@@ -87,7 +87,7 @@ Keyboard: chat input uses KeyboardAvoidingView; when keyboard is open Godot shou
 
 ## 5. Tokens, components, inconsistencies
 
-5.1 Tokens (from get_design_context HUD 609:7021): DCL/Orange #FF7439 (sender), Gray #CFCDD4 (system text), Mythic #FF4BED (own/mention highlight; legacy mention `#FC03EC`, gold `#FFD700` for @mentions of others), White #FFF, Silver #A09BA8, Black40% rgba(0,0,0,.4), own rows 0.7, radius 5.33, iconhud #DFD0FF, font Inter (SemiBold/Regular), keys use SF Pro Rounded Medium (RN: use Inter-Medium or bundle the font; iOS has SF Pro Rounded via `fontFamily: 'System'` w/ design rounded not available in RN -> accept Inter). Loading uses lavender #E8B9FF border, purple gradient fill. All exist in `rn/src/ds/tokens.ts` (orange, gray, silver, lavender, scrim, purple450/550 ...) except mythic pink #FF4BED (in `rarityColors.mythic.dark`) and iconhud.
+5.1 Tokens (from get_design_context HUD 609:7021): DCL/Orange #FF7439 (sender), Gray #CFCDD4 (system text), Mythic #FF4BED (own/mention highlight; legacy mention `#FC03EC`, gold `#FFD700` for @mentions of others), White #FFF, Silver #A09BA8, Black40% rgba(0,0,0,.4), own rows 0.7, radius 5.33, iconhud #DFD0FF, font Inter (SemiBold/Regular), keys use SF Pro Rounded Medium (RN: use Inter-Medium or bundle the font; iOS has SF Pro Rounded via `fontFamily: 'System'` w/ design rounded not available in RN -> accept Inter). Loading uses lavender #E8B9FF border, purple gradient fill. All exist in `rn/packages/ui-native/src/tokens.ts` (orange, gray, silver, lavender, scrim, purple450/550 ...) except mythic pink #FF4BED (in `rarityColors.mythic.dark`) and iconhud.
 Existing ds: `AppText`, `IconButton`, `Pill`, `LinearFill`, `Icon` (check iconSvgs for chat/bulb/emote/friends/X; likely missing: lightbulb, chat-bubble, dancing figure, friends-heart, up-arrow jump, hand, X). New components to build: `LoadingScreen`, `TipCard`, `ProgressBar`, `HudAvatarButton`, `HudCircleButton`, `ChatNotificationList`, `ChatRow`, `ChatPanel`, `ChatInput`, `MentionList`, `EmoteButton`, `HideUiRestoreButton`.
 
 5.2 Inconsistencies / questions

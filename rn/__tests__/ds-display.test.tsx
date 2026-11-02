@@ -23,7 +23,7 @@ import {
   indexFromOffset,
   iconNames,
 } from '@dcl/ui-native';
-import { demos } from '../src/gallery/demos';
+import { demos } from './fixtures/demos';
 
 function render(element: ReactElement) {
   let tree!: ReturnType<typeof create>;

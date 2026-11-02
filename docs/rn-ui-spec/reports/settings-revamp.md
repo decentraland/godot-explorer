@@ -132,7 +132,7 @@ TEMPORARY FILES caption; "Current Cache Size" + right "0.5 GB" (empty state "00 
 ## 7. Tokens and components
 
 Colors (sampled): bg `#6B1FA6`->`#470071`; section caption/divider/address `#E8B9FF` (= `colors.lavender`); ruby `#FF2D55` (= `colors.ruby`); snow `#FCFCFC`; nav/shadow `#161518`; control fill `#2B0044`/`#32004F` (closest `colors.purple550 #24033B`, not exact); selected landscape row `#7B3AA0`; pink delete link `#AE3575`-`#FF5A8A` range. Font Inter (existing `fonts`). Radii: buttons ~10 (existing `radii.button` u(8)), fields ~10, cards ~10.
-Existing in `rn/src/ds`: AppText, BottomNav (has `settings` tab), IconButton, Icon, PrimaryButton (ruby), Pill, Tabs, Gradient, tokens. Missing: Switch, Slider, Dropdown (+open list), ProgressBar, SectionRow (chevron row + selected state), SettingRow (label+desc+control), Banner (warning icon), ReadOnlyField, ConfirmModal, LinkRow (external icon), outlined button (SIGN OUT / CLEAN CACHE).
+Existing in `rn/packages/ui-native/src`: AppText, BottomNav (has `settings` tab), IconButton, Icon, PrimaryButton (ruby), Pill, Tabs, Gradient, tokens. Missing: Switch, Slider, Dropdown (+open list), ProgressBar, SectionRow (chevron row + selected state), SettingRow (label+desc+control), Banner (warning icon), ReadOnlyField, ConfirmModal, LinkRow (external icon), outlined button (SIGN OUT / CLEAN CACHE).
 Icons needed: chevron left/right/down/up, check, copy, external-link, warning triangle, logout; section icons no longer needed (pills removed).
 
 ## 8. Legacy and RN status
