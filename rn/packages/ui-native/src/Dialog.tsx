@@ -6,7 +6,7 @@ import { Icon, IconName } from './Icon';
 import { PrimaryButton, ButtonTone } from './PrimaryButton';
 import { colors } from './tokens';
 import { u } from './scale';
-import { t } from '../i18n';
+import { t } from './i18n';
 
 export type DialogButton = {
   label: string;

@@ -1,8 +1,14 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BottomSheet, colors, LinearFill, snapHeights } from '../ds';
-import type { SnapConfig } from '../ds';
+import {
+  BottomSheet,
+  colors,
+  LinearFill,
+  snapHeights,
+  u,
+} from '@dcl/ui-native';
+import type { SnapConfig } from '@dcl/ui-native';
 import { AvatarHole, StageBackground } from './AvatarStage';
 import {
   BackButton,
@@ -14,7 +20,6 @@ import { EmoteChip } from './EmoteChip';
 import { EmoteSlots } from './EmoteSlots';
 import { chipName } from './emoteLogic';
 import { SheetContent } from './SheetContent';
-import { u } from '../ds/scale';
 
 /** Sheet heights as fractions of the area above the footer (Figma 720x1600 frames). */
 const WEARABLES_SNAPS: SnapConfig = { peek: 24, half: 0.514, full: 0.863 };

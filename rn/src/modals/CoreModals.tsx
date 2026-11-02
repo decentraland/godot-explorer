@@ -16,7 +16,7 @@ import type { EngineNotice, SceneRequest } from '../core/native';
 import { t } from '../i18n';
 import { deviceFacts } from '../platform/deviceFacts';
 import { passwordError } from './destination';
-import { useToast } from '../ds';
+import { useToast } from '@dcl/ui-native';
 import { useConnectionQuality } from './useConnectionQuality';
 import { useModals } from './ModalProvider';
 import type { ModalApi } from './ModalProvider';

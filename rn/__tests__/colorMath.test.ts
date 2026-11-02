@@ -1,4 +1,4 @@
-import { hexToHsv, hsvToHex } from '../src/ds/colorMath';
+import { hexToHsv, hsvToHex } from '@dcl/ui-native';
 
 describe('colorMath', () => {
   it('round-trips colors', () => {

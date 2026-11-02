@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { AppText, colors, Icon, LinkRow, u } from '../ds';
+import { AppText, colors, Icon, LinkRow, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { sectionsFor, SectionKey } from './sections';
 

@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { ItemCard } from '../ds';
+import { ItemCard, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { EmoteArt } from './ItemArt';
 import { emoteStrip } from './emoteLogic';
@@ -7,7 +7,6 @@ import { Emote } from './emotes';
 import { EmptyBlock } from './GridStates';
 import { ItemGrid } from './ItemGrid';
 import type { EmptyCopy } from './platformPolicy';
-import { u } from '../ds/scale';
 
 /** Grid of emotes; tile strips follow the selected slot (UNEQUIP / check / EQUIP). */
 export function EmotesGrid({

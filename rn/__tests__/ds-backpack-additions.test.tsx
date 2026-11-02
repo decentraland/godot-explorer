@@ -1,5 +1,5 @@
 import { act, create } from 'react-test-renderer';
-import { BottomSheet, ItemCard } from '../src/ds';
+import { BottomSheet, ItemCard } from '@dcl/ui-native';
 
 const text = (node: unknown): string =>
   JSON.stringify(node, (key, value) => (key === 'props' ? undefined : value));

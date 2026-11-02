@@ -10,11 +10,10 @@ import {
   View,
 } from 'react-native';
 import { core } from '../core';
-import { AppText, colors, PrimaryButton, radii } from '../ds';
+import { AppText, colors, PrimaryButton, radii, u } from '@dcl/ui-native';
 import { FlowFrame } from './FlowFrame';
 import { isValidName, Provider } from './flowMachine';
 import { I18nKey, t } from '../i18n';
-import { u } from '../ds/scale';
 
 const logo = require('../assets/logo.png');
 

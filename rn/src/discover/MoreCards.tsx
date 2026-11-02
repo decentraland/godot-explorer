@@ -1,6 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { AppText, colors, Skeleton } from '../ds';
-import { u } from '../ds/scale';
+import { AppText, colors, Skeleton, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { Place } from './api';
 import { EVENT_W, PLACE_W } from './Cards';

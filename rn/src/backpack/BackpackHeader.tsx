@@ -1,8 +1,7 @@
 import { StyleSheet, View } from 'react-native';
-import { IconButton, Pill } from '../ds';
+import { IconButton, Pill, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { Mode } from './backpackState';
-import { u } from '../ds/scale';
 
 /** Wearables / Emotes switch and the filter button; the filter menu is rendered by the screen. */
 export function BackpackHeader({

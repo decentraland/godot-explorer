@@ -13,7 +13,7 @@ import {
   hudInsets,
   isNativeTouchZone,
 } from '../src/hud/layout';
-import { u } from '../src/ds';
+import { u } from '@dcl/ui-native';
 
 const line = (n: number) => ({
   id: `l${n}`,

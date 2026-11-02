@@ -1,5 +1,5 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { ItemCard, Pill, SlotTile, Tabs, layout } from '../ds';
+import { ItemCard, Pill, SlotTile, Tabs, layout, u } from '@dcl/ui-native';
 import type { AvatarState } from '../core/native';
 import { t } from '../i18n';
 import type { I18nKey } from '../i18n';
@@ -27,7 +27,6 @@ import {
   TABS,
   TabKey,
 } from './taxonomy';
-import { u } from '../ds/scale';
 
 /** The pill generation spells two slot labels differently. */
 const PILL_LABELS: Record<string, I18nKey> = {

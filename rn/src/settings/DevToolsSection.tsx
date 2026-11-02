@@ -8,7 +8,7 @@ import {
   Slider,
   TextField,
   u,
-} from '../ds';
+} from '@dcl/ui-native';
 import { t } from '../i18n';
 import { devRealms } from './links';
 import { Group, SectionCaption, ToggleRow } from './rows';

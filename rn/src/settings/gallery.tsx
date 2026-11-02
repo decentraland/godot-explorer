@@ -1,6 +1,6 @@
 import '../hud/gallery';
 import { useMemo } from 'react';
-import { BottomNav } from '../ds';
+import { BottomNav } from '@dcl/ui-native';
 import { registerAlias, registerPreview } from '../gallery/registry';
 import { createMockApi, MockSeed } from './mockApi';
 import type { PreviewState } from './SectionBody';

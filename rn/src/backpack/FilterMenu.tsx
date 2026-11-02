@@ -1,8 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { AppText, colors, Icon } from '../ds';
+import { AppText, colors, Icon, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { ItemFilter } from './selection';
-import { u } from '../ds/scale';
 
 const OPTIONS: {
   key: ItemFilter;

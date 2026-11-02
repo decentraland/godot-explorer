@@ -11,7 +11,7 @@ import { hexToHsv, Hsv, hsvToHex } from './colorMath';
 import { LinearFill } from './Gradient';
 import { colors } from './tokens';
 import { u } from './scale';
-import { t } from '../i18n';
+import { t } from './i18n';
 
 const HUE_STOPS = [0, 60, 120, 180, 240, 300, 360].map((hue, index) => ({
   offset: index / 6,

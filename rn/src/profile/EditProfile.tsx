@@ -9,8 +9,15 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppText, colors, Dialog, Icon, LinearFill, TextField } from '../ds';
-import { u } from '../ds/scale';
+import {
+  AppText,
+  colors,
+  Dialog,
+  Icon,
+  LinearFill,
+  TextField,
+  u,
+} from '@dcl/ui-native';
 import type { I18nKey } from '../i18n';
 import { t } from '../i18n';
 import { AddLinkDialog } from './AddLinkDialog';

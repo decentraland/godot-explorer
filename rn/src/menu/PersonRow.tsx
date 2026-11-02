@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
-import { AppText, colors, Icon, IconName, u } from '../ds';
+import { AppText, colors, Icon, IconName, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import type { Person } from './types';
 

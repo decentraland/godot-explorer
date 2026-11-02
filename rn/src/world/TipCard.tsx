@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { AppText, colors, fonts, Icon, u } from '../ds';
+import { AppText, colors, fonts, Icon, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import type { Tip } from './loadingModel';
 

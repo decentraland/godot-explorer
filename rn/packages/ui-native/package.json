@@ -1,0 +1,13 @@
+{
+  "name": "@dcl/ui-native",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Decentraland mobile design system for React Native (Figma: Design System Mobile)",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "peerDependencies": {
+    "react": ">=19",
+    "react-native": ">=0.80",
+    "react-native-svg": ">=15"
+  }
+}

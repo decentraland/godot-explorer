@@ -2,6 +2,9 @@
   "name": "DclRn",
   "version": "0.0.1",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "android": "react-native run-android --main-activity com.godot.game.GodotAppLauncher",
     "android:no-godot": "DCL_NO_GODOT=1 react-native run-android --main-activity com.godot.game.GodotAppLauncher --extra-params -PdclNoGodot=true",
@@ -14,6 +17,7 @@
     "ubrn:generate": "node ./scripts/ubrn-generate.mjs"
   },
   "dependencies": {
+    "@dcl/ui-native": "*",
     "@react-native-clipboard/clipboard": "1.16.3",
     "@react-native/new-app-screen": "0.86.3",
     "@sentry/react-native": "8.30.0",

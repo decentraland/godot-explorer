@@ -1,4 +1,4 @@
-import type { Rarity } from '../ds';
+import type { Rarity } from '@dcl/ui-native';
 
 export type ProfileLink = { title: string; url: string };
 

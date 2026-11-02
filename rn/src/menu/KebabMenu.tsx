@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { AppText, colors, Icon, IconName, u } from '../ds';
+import { AppText, colors, Icon, IconName, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 
 export type KebabAction = 'share' | 'reportContent' | 'reportBug';

@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { Keyboard, StyleSheet, View } from 'react-native';
-import { colors } from '../ds';
+import { colors } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { Place } from './api';
 import { CategoryScreen } from './CategoryScreen';

@@ -1,6 +1,5 @@
 import { Pressable, StyleSheet } from 'react-native';
-import { AppText, colors, Icon } from '../ds';
-import { u } from '../ds/scale';
+import { AppText, colors, Icon, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 
 /** EDIT PROFILE: outlined, dark fill; `compact` is the landscape size. */

@@ -10,7 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { colors, fonts, Icon, u } from '../ds';
+import { colors, fonts, Icon, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { ChatRow } from './ChatRow';
 import { Segment, TokenizeContext } from './chatModel';

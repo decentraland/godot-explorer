@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Image, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppText, colors, fonts, Dialog, Icon, LinearFill, u } from '../ds';
+import {
+  AppText,
+  colors,
+  fonts,
+  Dialog,
+  Icon,
+  LinearFill,
+  u,
+} from '@dcl/ui-native';
 import type { LoadingProgress } from '../hud/types';
 import { t } from '../i18n';
 import { LoadingProgressRow } from './LoadingProgressRow';
@@ -98,7 +106,12 @@ export function LoadingCover({
       />
       <LinearFill stops={SIDE_SCRIM} angle={90} />
 
-      <View style={[styles.column, { top: Math.max(insets.top, u(16)) + u(32), left }]}>
+      <View
+        style={[
+          styles.column,
+          { top: Math.max(insets.top, u(16)) + u(32), left },
+        ]}
+      >
         <Image source={logo} style={styles.logo} />
         <AppText variant="heading" numberOfLines={3} style={styles.title}>
           {title}
@@ -134,7 +147,10 @@ export function LoadingCover({
         onPress={onClose}
         style={[
           styles.close,
-          { top: Math.max(insets.top, u(16)), right: Math.max(insets.right, u(16)) },
+          {
+            top: Math.max(insets.top, u(16)),
+            right: Math.max(insets.right, u(16)),
+          },
         ]}
       >
         <Icon name="close" size={14} color={colors.snow} />

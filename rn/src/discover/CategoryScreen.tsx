@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { SearchField } from '../ds';
-import { u } from '../ds/scale';
+import { SearchField, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { Place } from './api';
 import { useApi } from './ApiContext';

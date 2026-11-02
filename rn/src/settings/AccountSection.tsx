@@ -8,7 +8,7 @@ import {
   OutlinedButton,
   ReadOnlyField,
   u,
-} from '../ds';
+} from '@dcl/ui-native';
 import { t } from '../i18n';
 import { shortenAddress } from './format';
 import type { SettingsModel } from './useSettings';

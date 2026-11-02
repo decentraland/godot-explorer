@@ -1,5 +1,11 @@
 import { StyleSheet, View } from 'react-native';
-import { Dropdown, DropdownOption, LinearFill, u, WarningBanner } from '../ds';
+import {
+  Dropdown,
+  DropdownOption,
+  LinearFill,
+  u,
+  WarningBanner,
+} from '@dcl/ui-native';
 import { t } from '../i18n';
 import { GRAPHIC_PROFILES, SKYBOX_TIMES } from './keys';
 import { Group, SectionCaption, ToggleRow } from './rows';

@@ -1,7 +1,7 @@
 import '../hud/gallery';
 import { ReactNode } from 'react';
 import { NavProvider } from '../app/NavProvider';
-import { BottomNav } from '../ds';
+import { BottomNav } from '@dcl/ui-native';
 import { registerAlias, registerPreview } from '../gallery/registry';
 import { GodotPlaceholder } from '../godot/GodotPlaceholder';
 import { PlaceDetail } from './types';

@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { LinearFill } from '../ds';
+import { LinearFill } from '@dcl/ui-native';
 
 export type Backdrop = 'purple' | 'lavender';
 

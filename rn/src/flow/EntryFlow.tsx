@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer, useState } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
 import { BackpackScreen } from '../backpack/BackpackScreen';
-import { PrimaryButton } from '../ds';
+import { PrimaryButton, u } from '@dcl/ui-native';
 import type { Place } from '../discover/api';
 import { useApi } from '../discover/ApiContext';
 import { ftuePlaces } from '../discover/ftue';
@@ -39,7 +39,6 @@ import {
   WaitScreen,
 } from './screens';
 import { t } from '../i18n';
-import { u } from '../ds/scale';
 
 /** Portrait-only entry flow: splash → terms → account → (auth) → avatar → name → welcome → app. */
 export function EntryFlow({

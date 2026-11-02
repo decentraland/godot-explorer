@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { t } from '../i18n';
-import { u } from '../ds';
+import { u } from '@dcl/ui-native';
 import {
   DRAWER_H,
   DRAWER_LEFT,

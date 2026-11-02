@@ -1,5 +1,5 @@
 import { Linking, View } from 'react-native';
-import { LinkRow, WarningBanner } from '../ds';
+import { LinkRow, WarningBanner } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { DISCORD_URL, helpUrl, legalLinks } from './links';
 import { Group, SectionCaption } from './rows';

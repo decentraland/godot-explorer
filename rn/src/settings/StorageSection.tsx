@@ -7,7 +7,7 @@ import {
   OutlinedButton,
   ProgressBar,
   u,
-} from '../ds';
+} from '@dcl/ui-native';
 import { t } from '../i18n';
 import { cacheFraction, formatCacheSize, formatMaxCache } from './format';
 import { CACHE_SIZES_GB } from './keys';

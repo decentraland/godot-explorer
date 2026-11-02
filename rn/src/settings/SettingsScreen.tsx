@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { ReactNode } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppText, colors, Icon, LinearFill, u, useToast } from '../ds';
+import { AppText, colors, Icon, LinearFill, u, useToast } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { getSettingsApi, SettingsApi } from './api';
 import { isSplitLayout } from './format';

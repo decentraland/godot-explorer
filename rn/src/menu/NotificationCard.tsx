@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { AppText, colors, u } from '../ds';
+import { AppText, colors, u } from '@dcl/ui-native';
 import { notificationView, relativeTime } from './notifications';
 import { Thumb } from './Cards';
 import { Avatar } from './PersonRow';

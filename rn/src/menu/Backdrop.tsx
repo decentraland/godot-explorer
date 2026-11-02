@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { LinearFill, u } from '../ds';
+import { LinearFill, u } from '@dcl/ui-native';
 
 const PAD = [
   { right: u(51), bottom: u(36), size: u(40) },

@@ -1,6 +1,6 @@
 import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppText, colors, u } from '../ds';
+import { AppText, colors, u } from '@dcl/ui-native';
 import { getPreview, previewGroup, previewIds } from './registry';
 
 /** All registered previews grouped by manifest source; tap opens the deep link. */

@@ -1,6 +1,5 @@
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { AppText, colors, LinearFill } from '../ds';
-import { u } from '../ds/scale';
+import { AppText, colors, LinearFill, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { CATEGORIES } from './catalog';
 import type { Category } from './types';

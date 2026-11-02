@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, layout, LinearFill, radii } from '../ds';
+import { colors, layout, LinearFill, radii, u } from '@dcl/ui-native';
 import { AvatarHole, StageBackground } from './AvatarStage';
 import {
   BackButton,
@@ -10,7 +10,6 @@ import {
 } from './BackpackChrome';
 import { EmoteSlots } from './EmoteSlots';
 import { SheetContent } from './SheetContent';
-import { u } from '../ds/scale';
 
 const PANEL_WIDTH = 312 + 48;
 const FILTER_RIGHT = 349;

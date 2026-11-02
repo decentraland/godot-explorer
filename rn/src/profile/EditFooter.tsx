@@ -1,6 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { AppText, colors } from '../ds';
-import { u } from '../ds/scale';
+import { AppText, colors, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 
 /** CANCEL / SAVE bar that replaces the bottom navigation while editing. */

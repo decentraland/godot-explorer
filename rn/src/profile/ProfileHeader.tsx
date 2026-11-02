@@ -1,6 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { AppText, colors, fonts, Icon } from '../ds';
-import { u } from '../ds/scale';
+import { AppText, colors, fonts, Icon, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { ClaimedSeal } from './ClaimedSeal';
 import { shortAddress } from './logic';

@@ -1,5 +1,5 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, fonts, Icon, u } from '../ds';
+import { colors, fonts, Icon, u } from '@dcl/ui-native';
 import type { ChatProfile } from './types';
 import { fullName } from './useChatFeed';
 

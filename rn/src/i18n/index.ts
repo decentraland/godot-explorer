@@ -1,3 +1,4 @@
+import { setTranslator } from '@dcl/ui-native';
 import { en } from './en';
 import { table as es } from './es';
 import { table as ptBR } from './pt_BR';
@@ -75,3 +76,5 @@ export function plural(
       : key;
   return fill(lookup(form) ?? key, params);
 }
+
+setTranslator(key => t(key));

@@ -1,6 +1,5 @@
 import { Linking, StyleSheet, View } from 'react-native';
-import { Chip } from '../ds';
-import { u } from '../ds/scale';
+import { Chip, u } from '@dcl/ui-native';
 import type { ProfileLink } from './types';
 
 /** Wrapping link chips; tapping opens the URL, `onRemove` adds the delete X (Edit Profile). */

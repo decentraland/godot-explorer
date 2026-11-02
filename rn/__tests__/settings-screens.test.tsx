@@ -5,7 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { setCoreForTests } from '../src/core';
 import { createMockCore } from '../src/core/mock';
 import type { CoreApi } from '../src/core';
-import { LinkRow, OutlinedButton } from '../src/ds';
+import { LinkRow, OutlinedButton } from '@dcl/ui-native';
 import { en } from '../src/i18n/en';
 import { createMockApi, MockSeed } from '../src/settings/mockApi';
 import { SettingsScreen } from '../src/settings/SettingsScreen';
@@ -49,7 +49,10 @@ async function mount(
     onClose?: () => void;
   } = {},
 ) {
-  const api = createMockApi({ env: { devBuild: false, devTools: false }, ...seed });
+  const api = createMockApi({
+    env: { devBuild: false, devTools: false },
+    ...seed,
+  });
   let tree!: Tree;
   const element: ReactElement = (
     <SafeAreaProvider initialMetrics={metrics}>
@@ -419,7 +422,10 @@ describe('landscape split', () => {
 
 describe('Dev Tools and camera', () => {
   it('drives the dev actions through the api', async () => {
-    const { api, tree } = await mount({ env: { devBuild: true, devTools: true } }, 'dev');
+    const { api, tree } = await mount(
+      { env: { devBuild: true, devTools: true } },
+      'dev',
+    );
     await press(tree, 'Scene Logs');
     await press(tree, 'TEST NOTIFICATIONS');
     await press(tree, 'CONNECT');

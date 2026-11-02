@@ -1,5 +1,5 @@
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { AppText, colors, Skeleton, u } from '../ds';
+import { AppText, colors, Skeleton, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { NotificationCard } from './NotificationCard';
 import { unreadCount } from './notifications';

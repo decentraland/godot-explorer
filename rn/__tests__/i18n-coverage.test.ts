@@ -26,7 +26,11 @@ const UNUSED_ALLOWED = [
   'MODAL_BAN_PRE_CHECK_PRIMARY',
   'MODAL_BAN_PRE_CHECK_TITLE',
 ];
-const SRC = path.join(__dirname, '..', 'src');
+const ROOT = path.join(__dirname, '..');
+const ROOTS = [
+  path.join(ROOT, 'src'),
+  path.join(ROOT, 'packages', 'ui-native', 'src'),
+];
 // Props whose string value a player reads.
 const TEXT_PROPS = new Set([
   'title',
@@ -87,7 +91,7 @@ function hardcodedText(file: string): string[] {
       return;
     }
     found.push(
-      `${path.relative(SRC, file)}:${line + 1}  ${JSON.stringify(
+      `${path.relative(ROOT, file)}:${line + 1}  ${JSON.stringify(
         value.trim(),
       )}`,
     );
@@ -129,7 +133,7 @@ function hardcodedText(file: string): string[] {
   return found;
 }
 
-const files = sourceFiles(SRC);
+const files = ROOTS.flatMap(r => sourceFiles(r));
 const allSource = files.map(f => fs.readFileSync(f, 'utf8')).join('\n');
 const keys = Object.keys(en as Record<string, string>);
 

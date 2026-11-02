@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { AppText, Badge, colors, Icon, Skeleton, u } from '../ds';
+import { AppText, Badge, colors, Icon, Skeleton, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { PanelEmpty } from './PanelEmpty';
 import { AddFriendButton, PersonRow, SquareButton } from './PersonRow';

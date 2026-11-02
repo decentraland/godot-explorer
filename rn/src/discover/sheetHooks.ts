@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNav } from '../app/NavProvider';
-import { useToast } from '../ds';
+import { useToast } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { syncEventReminder } from '../notifications/push';
 import { maybeAskForReview } from '../notifications/review';

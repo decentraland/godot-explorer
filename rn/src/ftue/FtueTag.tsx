@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, fonts, u } from '../ds';
+import { colors, fonts, u } from '@dcl/ui-native';
 
 export type Notch = 'up' | 'down' | 'left';
 

@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Icon } from './Icon';
 import { colors, fonts } from './tokens';
 import { u } from './scale';
-import { t } from '../i18n';
+import { t } from './i18n';
 
 /** Search-mode header: optional back chevron, input, clear X when there is text; `framed` is the outlined box. */
 export function SearchField({

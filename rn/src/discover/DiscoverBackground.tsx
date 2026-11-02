@@ -1,7 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { SvgXml } from 'react-native-svg';
-import { colors, LinearFill, RadialFill } from '../ds';
-import { u } from '../ds/scale';
+import { colors, LinearFill, RadialFill, u } from '@dcl/ui-native';
 import { getFlag } from './flags';
 
 const BATS = [

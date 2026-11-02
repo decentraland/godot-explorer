@@ -7,7 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavProvider, useNav, Nav } from '../src/app/NavProvider';
 import { getScreen } from '../src/app/registry';
 import { getPreview, previewIds } from '../src/gallery/registry';
-import { LinkRow, OutlinedButton } from '../src/ds';
+import { LinkRow, OutlinedButton } from '@dcl/ui-native';
 import '../src/settings';
 import '../src/settings/gallery';
 

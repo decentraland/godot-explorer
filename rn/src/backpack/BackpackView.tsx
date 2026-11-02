@@ -1,10 +1,9 @@
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
-import { colors, RadialFill } from '../ds';
+import { colors, RadialFill, u } from '@dcl/ui-native';
 import { BackButton, LayoutProps } from './BackpackChrome';
 import { ConnectionLost } from './ConnectionLost';
 import { LandscapeLayout } from './LandscapeLayout';
 import { PortraitLayout } from './PortraitLayout';
-import { u } from '../ds/scale';
 
 /** Dim purple with a soft glow off to one side, behind the connection-lost state. */
 function LostBackground() {

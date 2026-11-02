@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { LinearFill, u } from '../ds';
+import { LinearFill, u } from '@dcl/ui-native';
 
 const PALETTES = [
   ['#2A6FB5', '#C7742E'],

@@ -8,7 +8,7 @@ import {
 } from 'react';
 import { Linking, PixelRatio, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { HudCircleButton, u } from '../ds';
+import { HudCircleButton, u } from '@dcl/ui-native';
 import { Control } from '../core/native';
 import { worldRealm } from '../discover/api';
 import { t } from '../i18n';

@@ -24,7 +24,7 @@ import type { MenuSection } from './drawerState';
 import type { SocialState } from './social';
 import type { DiscoverFeed, NotificationsResult } from './types';
 import type { Loaded } from './useLoad';
-import { LinearFill, u } from '../ds';
+import { LinearFill, u } from '@dcl/ui-native';
 import { StyleSheet, View } from 'react-native';
 
 const noop = () => {};

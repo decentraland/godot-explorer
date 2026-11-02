@@ -1,4 +1,4 @@
-import type { Rarity } from '../ds';
+import type { Rarity } from '@dcl/ui-native';
 import type { AvatarState } from '../core/native';
 import type { Catalog } from './api';
 import { BASE_PREFIX, FEMALE, MALE, Wearable } from './catalog';

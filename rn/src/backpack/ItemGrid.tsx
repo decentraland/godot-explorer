@@ -1,6 +1,6 @@
 import { ReactElement } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { layout } from '../ds';
+import { layout } from '@dcl/ui-native';
 
 const SPACER: unique symbol = Symbol('spacer');
 type Cell<T> = T | typeof SPACER;

@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { AppText, colors, Icon, Skeleton, u } from '../ds';
+import { AppText, colors, Icon, Skeleton, u } from '@dcl/ui-native';
 import type { DiscoverEvent, Place } from '../discover/api';
 import { t } from '../i18n';
 import { EventCard, PLACE_W, PlaceCard } from './Cards';

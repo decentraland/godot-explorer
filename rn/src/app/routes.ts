@@ -1,5 +1,5 @@
 import type { Place } from '../discover/api';
-import type { NavKey } from '../ds';
+import type { NavKey } from '@dcl/ui-native';
 
 /**
  * Route name -> params. Feature packages add their sheets by augmenting this interface

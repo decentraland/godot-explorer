@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
-import { Dropdown, DropdownOption } from '../ds';
-import { u } from '../ds/scale';
+import { Dropdown, DropdownOption, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { dropdownDirection } from './logic';
 

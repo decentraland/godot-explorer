@@ -1,5 +1,5 @@
 import { core } from '../core';
-import { Rarity } from '../ds';
+import { Rarity } from '@dcl/ui-native';
 import { contentsUrl, entitiesUrl } from './catalog';
 
 export const BASE_EMOTE_PREFIX = 'urn:decentraland:off-chain:base-emotes:';

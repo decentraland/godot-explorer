@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text } from 'react-native';
 import { ControlsFtueElement } from '../core/native';
-import { colors, fonts, u } from '../ds';
+import { colors, fonts, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import type { I18nKey } from '../i18n';
 import { hudPoint, Insets, JOYSTICK_BASE } from '../hud/layout';

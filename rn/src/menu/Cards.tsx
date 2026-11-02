@@ -1,5 +1,5 @@
 import { Image, Pressable, StyleSheet, View } from 'react-native';
-import { AppText, colors, Icon, u } from '../ds';
+import { AppText, colors, Icon, u } from '@dcl/ui-native';
 import type { DiscoverEvent, Place } from '../discover/api';
 import { formatRate, formatUsers, startsIn } from '../discover/format';
 import { t } from '../i18n';

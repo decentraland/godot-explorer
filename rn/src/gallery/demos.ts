@@ -1,24 +1,28 @@
 import { ComponentProps } from 'react';
-import { ActionSquareButton } from './ActionSquareButton';
-import { BottomSheet } from './BottomSheet';
-import { Chip, StatusPill } from './StatusPill';
-import { CollapsibleSection } from './CollapsibleSection';
-import { Dialog } from './Dialog';
-import { Dropdown } from './Dropdown';
-import { EmptyState } from './EmptyState';
-import { HudCircleButton } from './HudCircleButton';
-import { LinkRow } from './LinkRow';
-import { OutlinedButton } from './OutlinedButton';
-import { PageDots, SnapCarousel } from './Carousel';
-import { ProgressBar } from './ProgressBar';
-import { ReadOnlyField } from './ReadOnlyField';
-import { SearchField } from './SearchField';
-import { Skeleton } from './Skeleton';
-import { Slider } from './Slider';
-import { Switch } from './Switch';
-import { TextField } from './TextField';
-import { ToastBubble } from './Toast';
-import { WarningBanner } from './WarningBanner';
+import {
+  ActionSquareButton,
+  BottomSheet,
+  Chip,
+  StatusPill,
+  CollapsibleSection,
+  Dialog,
+  Dropdown,
+  EmptyState,
+  HudCircleButton,
+  LinkRow,
+  OutlinedButton,
+  PageDots,
+  SnapCarousel,
+  ProgressBar,
+  ReadOnlyField,
+  SearchField,
+  Skeleton,
+  Slider,
+  Switch,
+  TextField,
+  ToastBubble,
+  WarningBanner,
+} from '@dcl/ui-native';
 
 const noop = () => {};
 

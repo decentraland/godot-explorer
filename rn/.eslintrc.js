@@ -6,7 +6,7 @@ module.exports = {
   extends: '@react-native',
   overrides: [
     {
-      files: ['src/**/*.{ts,tsx}', 'App.tsx'],
+      files: ['src/**/*.{ts,tsx}', 'packages/*/src/**/*.{ts,tsx}', 'App.tsx'],
       excludedFiles: [
         '**/*mock*',
         '**/mock/**',

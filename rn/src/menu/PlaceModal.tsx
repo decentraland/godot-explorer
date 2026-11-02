@@ -1,5 +1,12 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { AppText, colors, Icon, LinearFill, RadialFill, u } from '../ds';
+import {
+  AppText,
+  colors,
+  Icon,
+  LinearFill,
+  RadialFill,
+  u,
+} from '@dcl/ui-native';
 import type { DiscoverEvent, Place } from '../discover/api';
 import { t } from '../i18n';
 import { EventTags, Thumb } from './Cards';
