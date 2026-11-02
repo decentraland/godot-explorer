@@ -351,7 +351,9 @@ pub async fn load_image_texture(
     } else if infer_mime::is_tga(&bytes_vec) {
         image.load_tga_from_buffer(&bytes)
     } else if infer_mime::is_ktx(&bytes_vec) {
-        image.load_ktx_from_buffer(&bytes)
+        image.load_ktx_from_buffer(&PackedByteArray::from(
+            infer_mime::ktx2_keep_srgb_bytes(&bytes_vec).as_ref(),
+        ))
     } else if infer_mime::is_bmp(&bytes_vec) {
         image.load_bmp_from_buffer(&bytes)
     } else if infer_mime::is_svg(&bytes_vec) {
@@ -434,6 +436,20 @@ fn pad_image_to_multiple_of_4(image: &mut Gd<Image>) -> bool {
     }
 }
 
+fn is_etc2_format(format: godot::classes::image::Format) -> bool {
+    use godot::classes::image::Format;
+    matches!(
+        format,
+        Format::ETC2_R11
+            | Format::ETC2_R11S
+            | Format::ETC2_RG11
+            | Format::ETC2_RG11S
+            | Format::ETC2_RGB8
+            | Format::ETC2_RGBA8
+            | Format::ETC2_RGB8A1
+    )
+}
+
 /// Resize to the pixel budget, pad to a multiple of 4 and ETC2-compress
 /// `image` in place. Shared by the GLB bake, the standalone texture bake and
 /// the runtime mobile path so all three produce the same bytes for the same
@@ -444,11 +460,19 @@ fn pad_image_to_multiple_of_4(image: &mut Gd<Image>) -> bool {
 /// then emits `ETC2_R11`/`ETC2_RG11` — 8 bpp, twice the size of `ETC2_RGB8`
 /// for no visual gain in a BaseMaterial3D. Force RGB for those.
 pub fn prepare_etc2_image(image: &mut Gd<Image>, max_size: i32) {
-    resize_image(image, max_size);
-
+    // The KTX2 loader hands back whatever the device transcodes to; only ETC2
+    // passes through, the rest (ASTC/BPTC) decodes to RGBA8 first.
     if image.is_compressed() {
-        return;
+        if is_etc2_format(image.get_format()) {
+            resize_image(image, max_size);
+            return;
+        }
+        if image.decompress() != Error::OK {
+            tracing::warn!("Failed to decompress {:?} image", image.get_format());
+            return;
+        }
     }
+    resize_image(image, max_size);
     pad_image_to_multiple_of_4(image);
 
     let detected = image.detect_used_channels();

@@ -124,6 +124,34 @@ pub fn is_ktx(buffer: &[u8]) -> bool {
         && buffer[3] == 0x58
 }
 
+/// Godot's KTX2 loader converts sRGB-tagged Basis data (UASTC/ETC1S) to linear
+/// while decoding, but materials sample albedo as sRGB again, so color textures
+/// render dark. Re-tagging the DFD transfer function as linear makes the loader
+/// keep the encoded bytes, which is what the glTF/SDK texture contract expects.
+pub fn ktx2_keep_srgb_bytes(bytes: &[u8]) -> std::borrow::Cow<'_, [u8]> {
+    const KHR_DF_TRANSFER_LINEAR: u8 = 1;
+    const KHR_DF_TRANSFER_SRGB: u8 = 2;
+    // vkFormat at 12, dfdByteOffset at 48; transfer is byte 14 of the DFD
+    // (total size, vendor/type, version/size, then model, primaries, transfer).
+    let vk_format = bytes
+        .get(12..16)
+        .and_then(|b| b.try_into().ok())
+        .map(u32::from_le_bytes);
+    let dfd_offset = bytes
+        .get(48..52)
+        .and_then(|b| b.try_into().ok())
+        .map(u32::from_le_bytes);
+    if let (Some(0), Some(dfd_offset)) = (vk_format, dfd_offset) {
+        let transfer_at = dfd_offset as usize + 14;
+        if bytes.get(transfer_at) == Some(&KHR_DF_TRANSFER_SRGB) {
+            let mut patched = bytes.to_vec();
+            patched[transfer_at] = KHR_DF_TRANSFER_LINEAR;
+            return std::borrow::Cow::Owned(patched);
+        }
+    }
+    std::borrow::Cow::Borrowed(bytes)
+}
+
 /// Returns whether a buffer is AVIF image data.
 /// AVIF uses ISOBMFF container format with ftyp box and 'avif' or 'avis' brand.
 pub fn is_avif(buffer: &[u8]) -> bool {
@@ -165,4 +193,33 @@ pub fn is_heic(buffer: &[u8]) -> bool {
     // Check for HEIC brands at offset 8
     let brand = &buffer[8..12];
     brand == b"heic" || brand == b"heix" || brand == b"hevc" || brand == b"hevx"
+}
+
+#[cfg(test)]
+mod ktx2_tests {
+    use super::ktx2_keep_srgb_bytes;
+
+    fn header(vk_format: u32, transfer: u8) -> Vec<u8> {
+        let mut b = vec![0u8; 0x68 + 44];
+        b[..12].copy_from_slice(b"\xABKTX 20\xBB\r\n\x1A\n");
+        b[12..16].copy_from_slice(&vk_format.to_le_bytes());
+        b[48..52].copy_from_slice(&0x68u32.to_le_bytes());
+        b[0x68 + 14] = transfer;
+        b
+    }
+
+    #[test]
+    fn srgb_basis_is_retagged_linear() {
+        let input = header(0, 2);
+        let out = ktx2_keep_srgb_bytes(&input);
+        assert_eq!(out[0x68 + 14], 1);
+        assert_eq!(input[0x68 + 14], 2);
+    }
+
+    #[test]
+    fn linear_and_non_basis_are_untouched() {
+        assert_eq!(ktx2_keep_srgb_bytes(&header(0, 1))[0x68 + 14], 1);
+        assert_eq!(ktx2_keep_srgb_bytes(&header(43, 2))[0x68 + 14], 2);
+        assert_eq!(ktx2_keep_srgb_bytes(b"\xABKTX 20").as_ref(), b"\xABKTX 20");
+    }
 }

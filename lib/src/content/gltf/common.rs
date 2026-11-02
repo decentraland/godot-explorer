@@ -141,7 +141,11 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, state: &mut TextureBakeSta
                             if should_compress {
                                 create_compressed_texture(&mut image, state.max_size)
                             } else {
-                                if resize_image(&mut image, state.max_size) {
+                                // A size mismatch means the importer built a placeholder
+                                // (KTX2) rather than the real image.
+                                if resize_image(&mut image, state.max_size)
+                                    || texture_image.get_width() != image.get_width()
+                                {
                                     texture_image.set_image(&image);
                                 }
                                 texture_image.clone().upcast()
@@ -194,29 +198,39 @@ fn decode_gltf_source_images(
         let Ok(dict) = entry.try_to::<VarDictionary>() else {
             continue;
         };
-        let bytes: Option<Vec<u8>> =
-            if let Some(uri) = dict.get("uri").and_then(|v| v.try_to::<GString>().ok()) {
-                let uri = uri.to_string();
-                if let Some(data) = uri.strip_prefix("data:") {
-                    data.split_once(',').and_then(|(_, b64)| {
-                        use base64::Engine as _;
-                        base64::engine::general_purpose::STANDARD.decode(b64).ok()
-                    })
-                } else {
-                    std::fs::read(format!("{}{}", base_path, uri)).ok()
-                }
-            } else if let Some(view) = dict.get("bufferView").and_then(|v| v.try_to::<i64>().ok()) {
-                buffer_views
-                    .get(view as usize)
-                    .map(|bv| bv.load_buffer_view_data(&*state).to_vec())
+        let bytes: Option<Vec<u8>> = if let Some(uri) = image_source_uri(&dict) {
+            let uri = uri.to_string();
+            if let Some(data) = uri.strip_prefix("data:") {
+                data.split_once(',').and_then(|(_, b64)| {
+                    use base64::Engine as _;
+                    base64::engine::general_purpose::STANDARD.decode(b64).ok()
+                })
             } else {
-                None
-            };
+                std::fs::read(format!("{}{}", base_path, uri)).ok()
+            }
+        } else if let Some(view) = dict.get("bufferView").and_then(|v| v.try_to::<i64>().ok()) {
+            buffer_views
+                .get(view as usize)
+                .map(|bv| bv.load_buffer_view_data(&*state).to_vec())
+        } else {
+            None
+        };
         if let Some(image) = bytes.and_then(|b| decode_image_bytes(&b)) {
             out.insert(texture.instance_id(), image);
         }
     }
     out
+}
+
+/// Where a glTF image's bytes live: the real file recorded by
+/// `custom_gltf_importer.gd` for KTX2 images (the importer itself only sees a
+/// placeholder PNG), otherwise the image's own `uri`.
+fn image_source_uri(dict: &VarDictionary) -> Option<GString> {
+    dict.get("extras")
+        .and_then(|v| v.try_to::<VarDictionary>().ok())
+        .and_then(|extras| extras.get("dcl_src_uri"))
+        .and_then(|v| v.try_to::<GString>().ok())
+        .or_else(|| dict.get("uri").and_then(|v| v.try_to::<GString>().ok()))
 }
 
 /// Decode by content like `GLTFDocument::_parse_image_bytes_into_image` (plus
@@ -236,7 +250,9 @@ fn decode_image_bytes(bytes: &[u8]) -> Option<Gd<Image>> {
     } else if is_webp {
         image.load_webp_from_buffer(&PackedByteArray::from(bytes))
     } else if is_ktx {
-        image.load_ktx_from_buffer(&PackedByteArray::from(bytes))
+        image.load_ktx_from_buffer(&PackedByteArray::from(
+            crate::utils::infer_mime::ktx2_keep_srgb_bytes(bytes).as_ref(),
+        ))
     } else {
         return None;
     };
@@ -315,7 +331,7 @@ fn map_gltf_images_to_hashes(
         let Ok(dict) = entry.try_to::<VarDictionary>() else {
             continue;
         };
-        let Some(uri) = dict.get("uri").and_then(|v| v.try_to::<GString>().ok()) else {
+        let Some(uri) = image_source_uri(&dict) else {
             continue;
         };
         let Some(hash) = name_to_hash.get(&uri.to_string()) else {
