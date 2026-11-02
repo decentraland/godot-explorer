@@ -1,0 +1,307 @@
+---
+name: figma-to-rn
+description: Use whenever porting a Figma design (a screen, a component, a single tweak) into `rn/src/`. Runs the full fetch → convert → build → pixel-verify → iterate loop with minimal back-and-forth — don't wait to be told to check fontSize, lineHeight, letterSpacing, colors, radii or spacing; check all of them, verify against real screenshots, and only report once the numbers converge.
+---
+
+# Figma → React Native (Decentraland entry flow and beyond)
+
+This is the general playbook for turning a Figma node into `rn/src/` code at the precision level
+the team expects — not "looks about right," but numbers that match Figma within a pixel or two,
+proven with a real screenshot comparison, not eyeballed. Built out over the `feat/entry-flow-parity`
+session porting Account Home / Sign In; apply it to any future Figma → RN work in this repo.
+
+**The standing expectation: don't wait to be walked through each check.** Given a Figma node and a
+target screen/component, run the whole loop below unprompted — fetch, convert, build, screenshot,
+measure, fix, re-measure — and only hand control back once position/size/color/spacing all verify
+within ~1-2px. Report a compact table of what was checked and the before/after numbers, not a
+running narration of each step.
+
+**This skill is young and is expected to keep improving — that's the point, not a gap to apologize
+for.** Several rounds of back-and-forth on one screen are fine; what matters is that each round
+teaches the skill something so the *next* screen needs fewer rounds. Every constant here (the
+~0.73 cap-to-baseline ratio, the ~1.2× leading-normal multiplier, the specific gap values in the
+worked reference) was fit from a small number of examples on one Figma file — treat them as a
+starting estimate, re-verify with `get_metadata` per node, and **when a new pattern, pitfall, or
+better technique turns up, add it here before moving on**, the same way `figma-to-godot-ui` absorbs
+a lesson from every PR that uses it. Don't just fix the one screen and let the insight evaporate —
+a technique that only lives in one session's transcript doesn't compound.
+
+## 0. Setup
+
+- **Check `design-system-mobile.md` (next to this file) before re-deriving a color, type-scale, or
+  button/input spec from a screen's own node.** It catalogs the "Design System Mobile" Figma file
+  (`Jis8xv58qaDNy53OCGLeoh`), fully surveyed page by page: colors cross-checked against
+  `rn/packages/ui-native/src/tokens.ts`, the full type scale (H1–H6, Body 1–5, Captions, Botones), `Button/Primary`/
+  `Button/Entry` specs, the Text Field component (Default/Focus/Error), and icon family base sizes
+  (NavBar/Menu/Base/Logo-Connect). Tags/Names (Discover + in-world nametags) and Safe areas
+  (resolved natively by `react-native-safe-area-context`, nothing to port) are noted but not deeply
+  surveyed since nothing in this flow needs them yet. Extend that file (not this one) whenever a
+  screen surfaces a new finding against it.
+- **Confirm which page/node is canonical before trusting a first fetch.** This org's Figma files
+  commonly carry more than one version of the same screen at different fidelity — an "ATLAS" page
+  with redline/spec annotations, and a "HIFI"/"HIFI-WIP" page with the fully-composed final design
+  (same pattern `figma-to-godot-ui` documents for other files). Two nodes that look identical by
+  name and screenshot can still differ by a few px in real resolved position — found this on Account
+  Home, where a HIFI-linked node (`1738:9473`) had the bottom block's `paddingBottom` ~4px off from
+  the ATLAS node (`1905:14886`) used for the first pass. If the user links a *specific* node partway
+  through, treat that as the priority source and re-verify against it with §5 rather than assuming
+  whatever was already fetched is close enough — don't guess which page is "more right," ask or let
+  a linked node settle it.
+- Figma MCP: `create_session` once per file, reuse the `sessionId` for every subsequent call.
+- `get_metadata` on a node for its resolved tree (ids, names, `x/y/width/height` — **absolute
+  ground truth for position and size**, unlike CSS classes which can be ambiguous).
+- `get_design_context` on a node for the CSS-ish spec (colors, font, radius, border) — **convert
+  it, never paste it**. It targets React+Tailwind; this project is RN + a `u()` scale + the
+  existing design system in `rn/packages/ui-native/src/`.
+- `get_screenshot` on a node for the reference image, downloaded via `curl -L` (the URL expires in
+  7 days — never keep it as a link, fetch and save the PNG immediately).
+- Python + Pillow for the verification scripts below. System Python usually lacks Pillow in this
+  environment — make a throwaway venv once per session:
+  ```bash
+  python3 -m venv .venv && .venv/bin/pip install --quiet Pillow
+  ```
+
+## 1. The scale convention — get this right first, it invalidates everything else if wrong
+
+`rn/packages/ui-native/src/scale.ts`'s `u(x)` expects **Figma px ÷ 2** — confirmed by the file's own doc comment.
+`SCALE = min(width,height)/360`, so `u(size) = size * SCALE`. A Figma `gap-[46px]` is `u(23)`, a
+`text-[72px]` is `u(36)`. Never pass a raw Figma number into `u()`, never eyeball-map to "whichever
+existing token looks about right."
+
+## 2. Per text node — fontSize, lineHeight, letterSpacing
+
+**fontSize**: `text-[Npx]` in the Tailwind export → `u(N / 2)`. Trust it directly, it's literal.
+
+**lineHeight — the single most common mistake.** `get_design_context` shows `leading-[normal]` for
+most text in this file. That is **not** a literal value — it means "use the font's own default
+metric," which for Inter is ≈1.2× the font size, **not** 1.0×. Reading `leading-[normal]` as
+"`lineHeight == fontSize`" is wrong and produces visibly tighter text than Figma. Two cases:
+
+- **A node references a named Figma text style** (the design-context response appends a line like
+  `These styles are contained in the design: ... Btn: Font(family: "Inter", style: Bold, size: 30,
+  weight: 700, lineHeight: 100, letterSpacing: 0)`). That `lineHeight: 100` is **literal and
+  authoritative** — 100% means equal to font size, exactly. Use it as-is, no back-calculation
+  needed. This is how the entry-flow's button labels confirmed `lineHeight == fontSize` really is
+  correct there (unlike the title/tagline/disclaimer, which have no such named style and default
+  to `leading-normal`).
+- **No named style, just `leading-[normal]`**: back-calculate the real line-height from
+  `get_metadata`'s resolved height, because that's the only place the literal number lives:
+  1. Get the node's resolved `height` and figure out how many lines it wraps to (check the
+     screenshot, or character-count-vs-width estimate).
+  2. If the node has **no** `text-box-trim` class: `height = lines × lineHeight` exactly (clean
+     division — a 2-line title at 174px height is 87px/line, no remainder).
+  3. If the node **has** `[text-box-trim:trim-both] [text-box-edge:cap_alphabetic]`: the trim only
+     removes the leading above the first line and below the last line, **not** the gap between
+     wrapped lines internally. `height = (lines-1) × lineHeight + capToBaseline`, where
+     `capToBaseline ≈ 0.7-0.73 × fontSize` for Inter (empirically fit from this file's own nodes —
+     re-derive per node with two known data points when precision matters, don't hardcode blindly).
+  4. Convert the solved `lineHeight` through `u(figma_px / 2)` same as fontSize.
+  5. As a ballpark sanity check only (never a substitute for step 1-4): Inter's `leading-normal` is
+     close to 1.2× the font size in this file. Two confirmed examples: a 72px title → 87px real
+     line-height (87/72=1.21); a 30px legal/disclaimer text → 36px real line-height (36/30=1.2).
+
+**letterSpacing**: check for a `tracking-[Npx]` class, or a named style's `letterSpacing` field in
+the "styles contained in the design" footer. If absent, it's 0 — same as RN's own default, nothing
+to set. Every node checked in this file so far (title, body, buttons, legal/disclaimer) is
+`letterSpacing: 0` — don't assume it needs a value unless you actually see one.
+
+## 2b. "Uppercase" is a style, not translated text
+
+Figma buttons often carry a `uppercase` CSS class on the label while the underlying string is
+natural case (`"Google"`, the span renders `GOOGLE` only because of the class). **Never bake the
+transform into the translation catalog** (`FLOW_X: 'PLAY AS GUEST'`) — add `textTransform:
+'uppercase'` to the style instead, scoped to the specific label(s) that need it, not to a shared
+`AppText` variant used elsewhere in the app (e.g. `variant="button"` is reused by dozens of
+unrelated card titles/names across the app that must stay natural case — adding the transform there
+would be a silent regression everywhere else). Found on Sign In: the provider button labels
+(`Google`/`Wallet Connect`/`Apple`/`Continue with email`) were missing the transform entirely and
+rendered in sentence case against Figma's uppercase spec, while Account Home's `PLAY AS GUEST`/
+`SIGN IN` happened to read correctly only because an earlier pass had hardcoded the caps into the
+catalog string itself (a latent anti-pattern worth revisiting, not copying forward).
+
+## 2c. A "gradient" background may actually be a baked image, not a CSS gradient
+
+Some Figma backgrounds export as an SVG with `<filter>` Gaussian-blur elements (glowing orbs behind
+a solid base color) — `react-native-svg` doesn't render those filter primitives, so recreating it
+from the raw SVG/path data isn't practical. Don't guess a 2-stop `LinearFill` approximation from the
+visible colors either — it reads visibly flatter than the real thing (checked on Sign In: a flat
+magenta→purple gradient was clearly less saturated/directional than Figma's actual blurred-orb
+background). Instead, `get_screenshot` the *specific background sub-node* (not the whole screen) at
+a resolution matching its native Figma size, download it as a PNG, and use it as an `ImageBackground`
+— same technique as this file's existing photo backgrounds. This gets the exact rendered colors
+including the blur, at the cost of one more bundled asset.
+
+## 2d. Icons and other assets — use the design's asset, found in the design system first
+
+Never redraw a glyph the design already provides, even when a look-alike is one path away. For
+every icon or image a screen shows: (1) `get_metadata` on the Icons page of the design-system file
+(`10:158`) and find the component (`Icon/Base`, `Icon/Menu`, `Icon/NavBar`, `Icon/Settings`,
+`Icon/Modal`, `Logo/Connect`); (2) confirm the screen's instance really is that component (the
+`get_design_context` of the consuming node names it, and its SVG `d` matches the master's byte for
+byte); (3) download the master's SVG with `curl -L` and put the path data in `rn/packages/ui-native/src/iconSvgs.ts`
+— `fillPaths` for `Icon/Base` (54×54 monochrome fills, colour via `fill`), `sources` for multi-colour
+exports. An icon the design-system file does not have is still never drawn by hand: download it
+from the screen's own node in the design file it came from, add it the same way, and flag it as
+outside the design system — the designer decides whether it gets promoted into the library or stays
+a one-off that isn't worth adding. Found on `Button/Reminder`: `bell`/`check` had been hand-drawn 24×24 strokes while `Icon/Base` had the real
+`Type=Notification`/`Type=Check` all along; the rest of `baseStrokes`/`strokePaths` in `Icon.tsx` is
+the same debt, to be swapped family by family as screens touch them.
+
+## 3. Colors, fills, borders, radii
+
+| Figma export | RN |
+|---|---|
+| `bg-[#RRGGBB]` | `backgroundColor: '#RRGGBB'` — check `rn/packages/ui-native/src/tokens.ts` first, this repo keeps hex values as named tokens (`colors.ruby`, `colors.snow`, etc.); use the token, don't duplicate the literal |
+| `bg-[rgba(r,g,b,a)]` | copy verbatim as the RN rgba string |
+| `border-N border-[#hex] border-solid` | `borderWidth: u(N)` (border widths are **not** halved like other dimensions — Figma's own export already gives the literal stroke width, e.g. `border-2` is a literal 2px stroke, not `2 * 2`), `borderColor: '#hex'` |
+| `rounded-[Npx]` | `borderRadius: u(N / 2)` — check `rn/packages/ui-native/src/tokens.ts`'s `radii` first (`radii.button = u(8)` already *is* 16px, don't re-derive and hardcode a second copy) |
+
+Confirm every color/radius pairing against the actual token file, not by re-typing the hex — a
+button whose fill, border, and radius all trace back to existing tokens (`colors.ruby`,
+`colors.snow`, `radii.button`) is both correct and consistent with the rest of the app.
+
+## 4. Layout — spacing, gaps, padding
+
+**Prefer `get_metadata`'s resolved positions over a Tailwind `gap-[Npx]`/`pb-[Npx]` class when they
+disagree.** A real contradiction surfaced this session: one screen's exported `pb-[350px]` didn't
+match what the metadata's actual child positions implied. Compute gaps directly:
+`gap = nextChild.y - (prevChild.y + prevChild.height)`, `padding = frame.height -
+(lastChild.y + lastChild.height)`. Metadata is ground truth; the CSS class is a convenience that
+can drift from it.
+
+**Fixed edge padding + adaptive middle gap, not a hardcoded middle value.** A layout with two
+groups pinned to the top and bottom of a frame (an "ACCOUNT_HOME"-style screen: logo/title/tagline
+at the top, buttons/legal at the bottom, lots of empty space between) is
+`justifyContent: 'space-between'` with the *edge* paddings taken from Figma, not a fixed middle
+`gap` value — a fixed gap computed at one device aspect ratio overflows or underflows at another.
+
+**Watch for double-counted padding** when a shared wrapper (e.g. `FlowFrame`) and a per-screen
+container both contribute vertical space. If the per-screen container already carries Figma-exact
+margins, the shared wrapper should contribute *only* real safe-area inset, nothing more — a wrapper
+that adds its own "safety buffer" on top of a screen that already has a correct margin quietly eats
+the budget `space-between` needs and collapses everything toward the center.
+
+**RN has no `text-box-trim`.** Every multi-line text node that uses it in Figma renders *taller* in
+RN than in Figma, because RN keeps the font's natural leading above/below the block that Figma's
+trim strips away. The fix is never to shrink that node's own `lineHeight` (which must stay accurate
+to Figma's real per-line metric, see §2) — it's to absorb the excess in the **margin/gap
+immediately before** the oversized block, found empirically via §5, not computed analytically (the
+exact amount of "untrimmed leftover" isn't predictable from the Tailwind export alone).
+
+**A component shared across two screens needs its anchor value literally identical, not just each
+screen individually close to Figma.** With `justifyContent:'space-between'`, an element's distance
+from its container's edge is set *only* by that container's `paddingTop`/`paddingBottom` — internal
+gaps before it only affect spacing from the *previous* sibling, not its distance from the edge. If
+the same component (e.g. a Terms disclaimer footer) appears at the bottom of two different screens
+and should read as the *same persisted element* across a screen transition (no jump, no visual
+reset), both screens' trailing padding must be the exact same `u()` value — even if each screen's
+own Figma frame gives a slightly different nominal number (here: Account Home's Figma source was
+`161px`/`u80.5`, Sign In's was `163px`/`u81.5` — close enough that the designer clearly intended
+parity, so pick one value and use it on both, then re-verify each screen's own landmarks via §5
+since changing a shared padding shifts everything anchored above it too). Don't tune two screens'
+bottom paddings independently to "look right" in isolation — check whether they're meant to match
+whenever the same component crosses screens.
+
+## 5. Verification — pixel-measure, don't eyeball
+
+Build the screen, then prove the numbers with real screenshots. Two tiers:
+
+**Coarse pass (overall rhythm / sanity)**: normalize both images to a common height and overlay a
+gridline every 5%, to make sure landmarks (hat, button block, disclaimer) land in roughly the right
+place:
+```python
+from PIL import Image, ImageDraw
+target_h = 1600
+fig_r = fig.resize((int(fig.width*target_h/fig.height), target_h))
+impl_r = impl.resize((int(impl.width*target_h/impl.height), target_h))
+# paste side by side, draw horizontal lines every 5% of target_h, label with the %
+```
+This is good enough to catch a layout that's badly wrong, but **gridline-eyeballing at this
+resolution has ~10-15% measurement error** — not good enough to settle a "is this gap 2-3px off"
+question. Don't try to read individual-pixel differences off a gridline screenshot; it produces
+inconsistent readings between successive attempts.
+
+**Precise pass (does this specific gap/height match, within a couple px)**: pixel-color
+edge-detection along a scanline through a solid-fill landmark (a button, a solid block) — accurate
+to ~1px and the method that actually converged every residual gap this session:
+```python
+from PIL import Image
+
+def find_edges(path, scan_x_frac=0.5, y_search=(0.55, 0.85), is_target=lambda r,g,b: False):
+    im = Image.open(path).convert('RGB')
+    w, h = im.size
+    x = int(w * scan_x_frac)
+    y0, y1 = int(h*y_search[0]), int(h*y_search[1])
+    px = im.load()
+    ys = [y for y in range(y0, y1) if is_target(*px[x, y])]
+    return (min(ys), max(ys), h) if ys else None
+
+# example: PLAY AS GUEST is a solid ruby (#FF2D55) fill
+is_ruby = lambda r,g,b: r > 200 and g < 120 and 40 < b < 140
+top, bot, h = find_edges('impl.png', is_target=is_ruby)
+frac_top = top / h
+fig_top_px = frac_top * 1600   # convert to Figma's 1600-tall frame for direct comparison
+```
+Run this on both the Figma reference screenshot and the device screenshot, report both numbers and
+the delta, apply **one** targeted fix, rebuild, re-measure. Do not guess a magnitude and move on —
+confirm convergence with the same script before calling a gap "fixed."
+
+## 6. Iteration discipline
+
+- **One change per measured gap.** Don't bundle three guessed adjustments into one edit; each
+  landmark gets its own measure → fix → re-measure cycle, otherwise a correction and an overshoot
+  cancel out and you can't tell which fix actually worked.
+- **Small deltas.** Move by a few px-equivalent at a time, not large jumps — an explicit user
+  correction like "you went 2-3px over" or "you moved way too far" is itself a data point: it tells
+  you the right step size for the *next* nudge, don't re-guess from scratch.
+- **Trust a live visual report over a static analytical model.** If the user is watching a live
+  reload and says a position looks off, treat that as ground truth even if your own screenshot
+  measurement said it already converged — rebuild and re-measure, don't argue with the math.
+- **Report compactly.** A table of node → Figma value → code value → verification result beats a
+  blow-by-blow narration. Save the narration for when something doesn't converge and you need to
+  explain why.
+
+## 7. Don't re-derive what's already a shared component
+
+Before building a "new" button/card/radius from scratch, check `rn/packages/ui-native/src/` — `PrimaryButton`
+already has `square` (16dp corners, full label, for entry-flow CTAs) and `outline` (translucent +
+2px snow border) tones; `AppText` variants carry the type scale (`heading` u28, `body` u15,
+`button` u15, `caption` u12 — check these against a node's `text-[Npx]` before assuming a screen
+needs a bespoke font size). Extend an existing DS component additively (a new tone/variant) rather
+than hand-rolling a one-off style when the shape already exists elsewhere in the app.
+
+## Worked reference (Account Home, ATLAS page `H1Alvbe7sh0e0IyLckewMI`)
+
+| Node | Figma | RN (`u()`) | How it was found |
+|---|---|---|---|
+| Title fontSize | 72px | `u(36)` | literal `text-[72px]` |
+| Title lineHeight | 87px (2 lines, no trim: `174÷2`) | `u(43.5)` | `get_metadata` height ÷ lines |
+| Tagline fontSize | 40px | `u(20)` | literal |
+| Tagline lineHeight | 48px (trimmed: `77=1×L+29.3`) | `u(24)` | back-calculated, trim formula |
+| Legal fontSize | 30px | `u(15)` | literal, matches `AppText variant="body"` default |
+| Legal lineHeight | 36px (trimmed: `94=2×L+22`) | `u(18)` | back-calculated, trim formula |
+| Button label lineHeight | 100% (named "Btn" style) | no override needed | literal from named-style metadata, not leading-normal |
+| Button fill/border/radius | `#FF2D55` / `rgba(0,0,0,.6)`+2px `#FCFCFC` / 16px | `colors.ruby` / `outline` tone / `radii.button` | existing DS tokens, confirmed exact |
+| Button height | 93-96px | `minHeight: u(46)` | pixel-edge-detection vs metadata's nominal 96 |
+| Gap title→tagline | ~40px visual (not the naive `194-174=20` box math) | `marginTop: u(4)` | pixel-edge-detection (baseline-to-cap-top), not box subtraction |
+| Gap buttons→disclaimer | 47px nominal, but RN's untrimmed 3-line disclaimer runs ~7u taller than Figma's trimmed version | `accountActions.gap: u(18.5)` | nominal value as a start, corrected via pixel-edge-detection until PLAY AS GUEST's measured top matched Figma's within <1px |
+| Screen `paddingBottom` (anchors the shared disclaimer) | `u(84)` box-math on the HIFI node, but the *visible* disclaimer text sits ~7px higher than that box edge once rendered (RN's untrimmed line-boxes leave extra leading below the last line that Figma's trim doesn't have) | `accountContainer.paddingBottom: u(77)`, **must equal** `signInScroll.paddingBottom` on Sign In too (see §4's shared-anchor note) | started from HIFI's box-math value, then corrected by eye against the live app (user: "disclaimer's slightly too high, lower it ~7px") |
+
+The gap/padding rows are the important lesson: **the nominal Figma box-math number is a starting
+point, not the final answer**, whenever RN can't replicate a Figma-only CSS feature (`text-box-trim`,
+`leading-normal`) exactly — and that gap, between the *box edge* (which `get_metadata` describes
+exactly) and the *visible glyphs* (which depend on how the platform's text renderer distributes
+leading within an oversized line-box), isn't something the Figma export can tell you up front. Close
+every number with §5's pixel measurement, and when the landmark is text rather than a scannable
+solid color, trust a direct visual report over the box math.
+
+**Decoupling two landmarks anchored to the same bottom padding.** When a `justifyContent:
+'space-between'` block has a fixed-position element (e.g. a button, already verified correct) above
+a looser one (e.g. text whose visible glyphs don't line up with its box edge), moving the *lower*
+element without disturbing the *upper* one means changing two values together in opposite
+directions by the same amount: decrease `paddingBottom` by `X` (slides the whole block's bottom
+edge — and the lower element with it — down by `X`) and increase the gap immediately above the
+lower element by the same `X` (grows the block's total height by `X`, which exactly cancels the
+`paddingBottom` decrease for everything *above* that gap, keeping the upper element's position
+fixed). Verify with §5 that the upper landmark's measured position is unchanged before trusting the
+lower one moved correctly.

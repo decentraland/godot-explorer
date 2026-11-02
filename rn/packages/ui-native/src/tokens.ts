@@ -2,12 +2,14 @@ import { u } from './scale';
 /** Design tokens from the "Design System Mobile" Figma file. Sizes are Figma px / 2 (dp). */
 export const colors = {
   ruby: '#FF2D55',
+  rubyPressed: '#E1002B',
   orange: '#FF7439',
   shadow: '#161518',
   pearl: '#ECEBED',
   snow: '#FCFCFC',
   gray: '#CFCDD4',
   silver: '#A09BA8',
+  textDisabled: 'rgba(160,155,168,0.5)',
   lavender: '#E8B9FF',
   magenta: '#C640CD',
   purple350: '#691FA9',
@@ -16,9 +18,12 @@ export const colors = {
   purple550: '#24033B',
   cardLight: '#B48CD7',
   glass: 'rgba(105,31,169,0.4)',
+  glassPressed: 'rgba(105,31,169,0.6)',
   scrim: 'rgba(0,0,0,0.4)',
   white70: 'rgba(255,255,255,0.7)',
+  white50: 'rgba(252,252,252,0.5)',
   white30: 'rgba(252,252,252,0.3)',
+  white20: 'rgba(255,255,255,0.2)',
   white10: 'rgba(255,255,255,0.1)',
   mythic: '#FF4BED',
   iconHud: '#DFD0FF',
@@ -28,7 +33,10 @@ export const colors = {
   panelDark: '#1F0033',
   rowSelected: '#7B3AA0',
   violetSquare: '#45146E',
+  black20: 'rgba(0,0,0,0.2)',
+  black30: 'rgba(0,0,0,0.3)',
   black40: 'rgba(0,0,0,0.4)',
+  black60: 'rgba(0,0,0,0.6)',
   lavender70: 'rgba(232,185,255,0.7)',
 } as const;
 

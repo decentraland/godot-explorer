@@ -1,12 +1,6 @@
 import { ReactElement } from 'react';
 import { act, create } from 'react-test-renderer';
-import {
-  Dialog,
-  Dropdown,
-  PrimaryButton,
-  Tabs,
-  TextField,
-} from '@dcl/ui-native';
+import { Dialog, Dropdown, Button, Tabs, TextField } from '@dcl/ui-native';
 
 const render = (element: ReactElement) => {
   let tree!: ReturnType<typeof create>;
@@ -115,11 +109,9 @@ describe('Dialog additions', () => {
 });
 
 describe('Figma-fidelity additions', () => {
-  it('PrimaryButton draws the dark tone with rounded corners', () => {
+  it('Button draws the dark tone', () => {
     const out = text(
-      render(
-        <PrimaryButton label="Leave" tone="dark" rounded onPress={() => {}} />,
-      ),
+      render(<Button label="Leave" tone="dark" onPress={() => {}} />),
     );
     expect(out).toContain('rgba(0,0,0,0.4)');
   });

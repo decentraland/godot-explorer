@@ -10,7 +10,6 @@ import {
   EmptyState,
   HudCircleButton,
   LinkRow,
-  OutlinedButton,
   PageDots,
   SnapCarousel,
   ProgressBar,
@@ -107,10 +106,6 @@ export const demos = {
     value: 0.5,
     label: 'Current Cache Size',
   } satisfies ComponentProps<typeof ProgressBar>,
-  OutlinedButton: {
-    label: 'CLEAN CACHE',
-    onPress: noop,
-  } satisfies ComponentProps<typeof OutlinedButton>,
   CollapsibleSection: {
     title: 'LINKS',
     open: false,

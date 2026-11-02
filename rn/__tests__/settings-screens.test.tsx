@@ -5,7 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { setCoreForTests } from '../src/core';
 import { createMockCore } from '../src/core/mock';
 import type { CoreApi } from '../src/core';
-import { LinkRow, OutlinedButton } from '@dcl/ui-native';
+import { Button, LinkRow } from '@dcl/ui-native';
 import { en } from '../src/i18n/en';
 import { createMockApi, MockSeed } from '../src/settings/mockApi';
 import { SettingsScreen } from '../src/settings/SettingsScreen';
@@ -307,7 +307,7 @@ describe('Language, Help, Storage', () => {
     await press(tree, 'CLEAN CACHE');
     expect(api.calls).toContain('clearCache');
     expect(text(tree)).toContain('0 MB');
-    expect(tree.root.findByType(OutlinedButton).props.disabled).toBe(true);
+    expect(tree.root.findByType(Button).props.disabled).toBe(true);
   });
 
   it('commits a new max cache size', async () => {

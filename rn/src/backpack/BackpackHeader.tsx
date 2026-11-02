@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { IconButton, Pill, u } from '@dcl/ui-native';
+import { IconButton, PillButton, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { Mode } from './backpackState';
 
@@ -23,13 +23,15 @@ export function BackpackHeader({
 }) {
   return (
     <View style={styles.row}>
-      <Pill
+      <PillButton
+        big
         label={t('BACKPACK_WEARABLES')}
         icon="wearables"
         selected={mode === 'wearables'}
         onPress={() => onMode('wearables')}
       />
-      <Pill
+      <PillButton
+        big
         label={t('BACKPACK_EMOTES')}
         icon="emotes"
         selected={mode === 'emotes'}
@@ -38,8 +40,8 @@ export function BackpackHeader({
       <View style={{ marginLeft: u(filterGap - 12) }}>
         <IconButton
           icon="filter"
-          label={t('BACKPACK_FILTER')}
-          active={menuOpen}
+          accessibilityLabel={t('BACKPACK_FILTER')}
+          selected={menuOpen}
           badge={filterActive}
           onPress={onFilter}
         />

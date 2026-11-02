@@ -1,10 +1,10 @@
 import { StyleSheet, View } from 'react-native';
 import {
   AppText,
+  Button,
   colors,
   Dropdown,
   fonts,
-  OutlinedButton,
   u,
   WarningBanner,
 } from '@dcl/ui-native';
@@ -90,8 +90,9 @@ export function GameplaySection({ m }: { m: SettingsModel }) {
               <AppText variant="body" style={styles.replayLabel}>
                 {t('SETTINGS_REPLAY_TUTORIAL')}
               </AppText>
-              <OutlinedButton
-                box
+              <Button
+                big
+                tone="secondary"
                 label={t('SETTINGS_REPLAY')}
                 onPress={() => emitIntent({ type: 'replay_tutorial' })}
               />

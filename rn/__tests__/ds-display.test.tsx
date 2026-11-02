@@ -11,6 +11,7 @@ import {
   Icon,
   IconButton,
   LinkRow,
+  NotificationBadge,
   PageDots,
   ProgressBar,
   Skeleton,
@@ -73,16 +74,16 @@ describe('Badge, IconButton, Tabs, HudCircleButton', () => {
     expect(text(render(<Badge />))).not.toContain('99');
   });
 
-  it('IconButton renders a badge and extends the label', () => {
+  it('IconButton renders a notification badge', () => {
     const tree = render(
       <IconButton
         icon="bell"
-        label="Notifications"
-        badge={2}
+        accessibilityLabel="Notifications"
+        badge
         onPress={() => {}}
       />,
     );
-    expect(text(tree)).toContain('2');
+    expect(tree.root.findAllByType(NotificationBadge)).toHaveLength(1);
   });
 
   it('Tabs show a badge on the tab', () => {
@@ -301,7 +302,6 @@ describe('demo props', () => {
       'StatusPill',
       'Chip',
       'ProgressBar',
-      'OutlinedButton',
       'CollapsibleSection',
       'LinkRow',
       'WarningBanner',

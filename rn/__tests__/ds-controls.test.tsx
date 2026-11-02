@@ -1,8 +1,8 @@
 import { ReactElement } from 'react';
 import { act, create, ReactTestInstance } from 'react-test-renderer';
 import {
+  Button,
   Dropdown,
-  OutlinedButton,
   ReadOnlyField,
   SearchField,
   Slider,
@@ -284,15 +284,39 @@ describe('ReadOnlyField', () => {
   });
 });
 
-describe('OutlinedButton', () => {
+describe('Button', () => {
   it('presses and respects disabled', () => {
     const onPress = jest.fn();
-    const tree = render(<OutlinedButton label="SIGN OUT" onPress={onPress} />);
+    const tree = render(
+      <Button tone="secondary" label="SIGN OUT" onPress={onPress} />,
+    );
     act(() => pressable(tree, 'SIGN OUT').props.onPress());
     expect(onPress).toHaveBeenCalledTimes(1);
     const off = render(
-      <OutlinedButton label="CLEAN" disabled onPress={onPress} />,
+      <Button tone="secondary" label="CLEAN" disabled onPress={onPress} />,
     );
     expect(pressable(off, 'CLEAN').props.disabled).toBe(true);
+  });
+
+  it('exposes the reminder toggle state', () => {
+    const set = render(
+      <Button
+        tone="reminder"
+        selected
+        icon="check"
+        label="REMIND ME"
+        onPress={() => {}}
+      />,
+    );
+    expect(pressable(set, 'REMIND ME').props.accessibilityState).toEqual({
+      disabled: false,
+      selected: true,
+    });
+    const plain = render(
+      <Button tone="secondary" label="PLAIN" onPress={() => {}} />,
+    );
+    expect(pressable(plain, 'PLAIN').props.accessibilityState).toEqual({
+      disabled: false,
+    });
   });
 });

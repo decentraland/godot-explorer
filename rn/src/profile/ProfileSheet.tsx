@@ -1,6 +1,7 @@
 import { CameraFocus } from '../core/native';
 import { ReactNode } from 'react';
 import {
+  Pressable,
   ScrollView,
   StyleSheet,
   useWindowDimensions,
@@ -12,8 +13,9 @@ import {
   AppText,
   BottomSheet,
   colors,
-  IconButton,
+  Icon,
   layout,
+  radii,
   Snap,
   snapHeights,
   u,
@@ -95,12 +97,18 @@ export function ProfileSheet({
         >
           {snap === 'full' && (
             <View style={styles.close}>
-              <IconButton
-                icon="close"
-                size={36}
-                label={t('PROFILE_CLOSE')}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('PROFILE_CLOSE')}
                 onPress={() => onSnapChange('half')}
-              />
+                hitSlop={8}
+                style={({ pressed }) => [
+                  styles.closeButton,
+                  pressed && styles.closeButtonPressed,
+                ]}
+              >
+                <Icon name="close" size={20} />
+              </Pressable>
             </View>
           )}
           {profile ? (
@@ -187,6 +195,15 @@ const styles = StyleSheet.create({
   footer: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   content: { paddingHorizontal: u(24), paddingTop: u(8) },
   close: { marginBottom: u(12), alignSelf: 'flex-start' },
+  closeButton: {
+    width: u(36),
+    height: u(36),
+    borderRadius: radii.button,
+    backgroundColor: colors.purple550,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonPressed: { opacity: 0.8 },
   edit: { marginTop: u(26) },
   section: { marginTop: u(30) },
   sectionTitle: {

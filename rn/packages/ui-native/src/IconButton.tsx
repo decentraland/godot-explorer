@@ -1,56 +1,133 @@
-import { Pressable, StyleSheet, View } from 'react-native';
-import { Badge } from './Badge';
+import { StyleSheet } from 'react-native';
 import { Icon, IconName } from './Icon';
-import { colors, radii } from './tokens';
+import { NotificationBadge } from './NotificationBadge';
+import { PressableBase } from './internal/PressableBase';
+import { colors } from './tokens';
 import { u } from './scale';
 
+/** Figma's icon-only button family — `variant="filled"` covers both `Button/Discover` (`big`,
+ * 94×96, purple overlay) and `Button/Filter` (default, 60×60, black overlay); `variant="outline"`
+ * is `Button/Social` (54×54, 2px border, used for accept/cancel-style circular actions). Colors
+ * are passed directly, not a `tone` enum — this family's palette varies per concrete use (purple
+ * nav overlay vs. black filter overlay vs. a semantic accept/cancel border) in a way a shared tone
+ * system can't express without forcing unrelated cases through the same few names. */
 export function IconButton({
   icon,
-  label,
   onPress,
-  size = 30,
-  active = false,
-  badge,
+  variant = 'filled',
+  big = false,
+  selected = false,
+  disabled = false,
+  badge = false,
+  /** `variant="outline"` only: the border colour while pressed, for a semantic accept/cancel
+   * flash (e.g. `colors.ruby` for cancel, a green rarity colour for accept). Defaults to no
+   * change — only the background darkens on press. */
+  accentColor,
+  accessibilityLabel,
 }: {
   icon: IconName;
-  label: string;
   onPress: () => void;
-  size?: number;
-  active?: boolean;
-  /** `true` draws a dot, a number draws a count. */
-  badge?: boolean | number;
+  variant?: 'filled' | 'outline';
+  /** `variant="filled"` only: the Large Discover size (94×96) — default is the Filter size (60×60). */
+  big?: boolean;
+  selected?: boolean;
+  disabled?: boolean;
+  badge?: boolean;
+  accentColor?: string;
+  accessibilityLabel: string;
 }) {
+  if (variant === 'outline') {
+    return (
+      <PressableBase
+        onPress={onPress}
+        disabled={disabled}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityState={{ disabled, selected }}
+        style={pressed => [
+          styles.outline,
+          {
+            backgroundColor: disabled
+              ? colors.black30
+              : pressed
+              ? colors.black60
+              : colors.black40,
+            borderColor: disabled
+              ? 'rgba(160,155,168,0.5)'
+              : pressed
+              ? accentColor ?? colors.snow
+              : colors.snow,
+          },
+        ]}
+      >
+        <Icon name={icon} size={20} color={colors.snow} />
+        {badge && <NotificationBadge style={styles.outlineBadge} />}
+      </PressableBase>
+    );
+  }
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
+    <PressableBase
       onPress={onPress}
-      hitSlop={8}
-      style={({ pressed }) => [
-        styles.button,
-        { width: u(size), height: u(size) },
-        active && styles.active,
-        pressed && styles.pressed,
-      ]}
+      disabled={disabled}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled, selected }}
+      style={pressed =>
+        big
+          ? [
+              styles.big,
+              {
+                backgroundColor: `rgba(105,31,169,${
+                  disabled ? 0.2 : selected ? 0.7 : pressed ? 0.3 : 0.4
+                })`,
+              },
+            ]
+          : [
+              styles.medium,
+              // Figma's Disabled swatch for Filter reuses the Default background, so there is
+              // no disabled style here.
+              {
+                backgroundColor:
+                  selected || pressed ? colors.black60 : colors.black40,
+              },
+            ]
+      }
     >
-      <Icon name={icon} size={size * 0.55} />
-      {badge !== undefined && badge !== false && (
-        <View style={styles.badge}>
-          <Badge count={typeof badge === 'number' ? badge : undefined} />
-        </View>
+      <Icon name={icon} size={big ? 26 : 21} color={colors.snow} />
+      {badge && (
+        <NotificationBadge
+          style={big ? styles.bigBadge : styles.mediumBadge}
+        />
       )}
-    </Pressable>
+    </PressableBase>
   );
 }
 
 const styles = StyleSheet.create({
-  button: {
+  big: {
+    position: 'relative',
+    width: u(47),
+    height: u(48),
+    borderRadius: u(8),
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radii.button,
-    backgroundColor: colors.purple550,
   },
-  active: { backgroundColor: colors.purple450 },
-  pressed: { opacity: 0.8 },
-  badge: { position: 'absolute', top: -u(4), right: -u(4) },
+  medium: {
+    position: 'relative',
+    width: u(30),
+    height: u(30),
+    borderRadius: u(5),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  outline: {
+    position: 'relative',
+    width: u(27),
+    height: u(27),
+    borderRadius: u(4),
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bigBadge: { position: 'absolute', top: -u(2), right: -u(2) },
+  mediumBadge: { position: 'absolute', top: -u(2), right: u(1) },
+  outlineBadge: { position: 'absolute', top: -u(4), right: -u(4) },
 });

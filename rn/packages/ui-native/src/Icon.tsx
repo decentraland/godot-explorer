@@ -1,9 +1,12 @@
 import { parse, SvgAst, SvgXml } from 'react-native-svg';
 import {
+  appleSvg,
   backpackOutlineSvg,
   backpackSvg,
   compassActiveSvg,
   compassOutlineSvg,
+  fillPaths,
+  googleSvg,
   profileFillSvg,
   profileRingSvg,
   filterSvg,
@@ -16,10 +19,12 @@ import {
 import { u } from './scale';
 
 const sources = {
+  apple: appleSvg,
   backpack: backpackSvg,
   backpackOutline: backpackOutlineSvg,
   compassActive: compassActiveSvg,
   compassOutline: compassOutlineSvg,
+  google: googleSvg,
   profileFill: profileFillSvg,
   profileRing: profileRingSvg,
   filter: filterSvg,
@@ -36,7 +41,6 @@ const asts = Object.fromEntries(
 
 const baseStrokes = {
   back: 'M15 4 L7 12 L15 20',
-  check: 'M4 12.5 L9.5 18 L20 6.5',
   plus: 'M12 5 V19 M5 12 H19',
   close: 'M5 5 L19 19 M19 5 L5 19',
   compass:
@@ -57,18 +61,23 @@ const baseStrokes = {
   chevronRight: 'M9 4 L17 12 L9 20',
   compassFilled:
     'M1.5 12 a10.5 10.5 0 1 0 21 0 a10.5 10.5 0 1 0 -21 0 M16.8 7.2 L13.8 13.8 L7.2 16.8 L10.2 10.2 Z',
+  mail: 'M3 5 H21 V19 H3 Z M3 5 L12 13 L21 5',
 } as const;
 
 const strokes: Record<string, string> = { ...baseStrokes, ...strokePaths };
 
+const fills: Record<string, string> = fillPaths;
+
 export type IconName =
   | keyof typeof sources
   | keyof typeof baseStrokes
-  | keyof typeof strokePaths;
+  | keyof typeof strokePaths
+  | keyof typeof fillPaths;
 
 export const iconNames = [
   ...Object.keys(sources),
   ...Object.keys(strokes),
+  ...Object.keys(fills),
 ] as IconName[];
 
 export function Icon({
@@ -86,6 +95,10 @@ export function Icon({
   fill?: string;
 }) {
   const size = u(designSize);
+  if (name in fills) {
+    const xml = `<svg viewBox="0 0 54 54"><path d="${fills[name]}" fill="${color}"/></svg>`;
+    return <SvgXml xml={xml} width={size} height={size} />;
+  }
   if (name in strokes) {
     const path = strokes[name];
     const xml = `<svg viewBox="0 0 24 24" fill="none"><path d="${path}" fill="${

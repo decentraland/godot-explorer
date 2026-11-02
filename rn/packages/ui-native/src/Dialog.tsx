@@ -3,7 +3,7 @@ import { Keyboard, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
 import { LinearFill, RadialFill } from './Gradient';
 import { Icon, IconName } from './Icon';
-import { PrimaryButton, ButtonTone } from './PrimaryButton';
+import { Button, ButtonTone } from './Button';
 import { colors } from './tokens';
 import { u } from './scale';
 import { t } from './i18n';
@@ -131,10 +131,9 @@ export function Dialog({
             <View style={styles.buttons}>
               {buttons.map(button => (
                 <View key={button.label} style={styles.button}>
-                  <PrimaryButton
+                  <Button
                     label={button.label}
                     tone={button.tone}
-                    rounded={rounded}
                     disabled={button.disabled}
                     onPress={button.onPress}
                   />

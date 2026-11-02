@@ -1,10 +1,10 @@
 import { StyleSheet, View } from 'react-native';
 import {
   AppText,
+  Button,
   colors,
   Dropdown,
   fonts,
-  OutlinedButton,
   ProgressBar,
   u,
 } from '@dcl/ui-native';
@@ -55,8 +55,9 @@ export function StorageSection({
           onChange={v => m.set('max_cache_size', Number(v))}
         />
         <View>
-          <OutlinedButton
-            box
+          <Button
+            big
+            tone="secondary"
             label={t('SETTINGS_CLEAN_CACHE')}
             disabled={m.cacheBytes === 0}
             onPress={() => {

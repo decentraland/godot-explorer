@@ -1,12 +1,17 @@
 import { act, create } from 'react-test-renderer';
-import { Pill } from '@dcl/ui-native';
+import { PillButton } from '@dcl/ui-native';
 
-describe('Pill', () => {
+describe('PillButton', () => {
   it('renders its label and icon', () => {
     let tree!: ReturnType<typeof create>;
     act(() => {
       tree = create(
-        <Pill label="Wearables" icon="wearables" selected onPress={() => {}} />,
+        <PillButton
+          label="Wearables"
+          icon="wearables"
+          selected
+          onPress={() => {}}
+        />,
       );
     });
     const json = JSON.stringify(tree.toJSON());

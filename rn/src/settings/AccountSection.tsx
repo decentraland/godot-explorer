@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   AppText,
+  Button,
   colors,
   Dialog,
   fonts,
-  OutlinedButton,
   ReadOnlyField,
   u,
 } from '@dcl/ui-native';
@@ -109,8 +109,9 @@ export function AccountSection({
         </View>
       </View>
       <View style={styles.bottom}>
-        <OutlinedButton
-          box
+        <Button
+          big
+          tone="secondary"
           icon="logout"
           label={t('CUSTOM_BUTTON_SIGN_OUT')}
           onPress={() => setDialog('signOut')}
