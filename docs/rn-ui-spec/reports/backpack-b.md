@@ -2,7 +2,7 @@
 
 Figma file `jkkuZWmTjjFlhlqWUQoGF4`, page `20:2779`. 36 screens captured (30 portrait 720x1600, 6 landscape 1600x720); all files exist under `docs/rn-ui-spec/shots/backpack/`. Companion report: `backpack-a.md` (seq 104-139: body/face/clothing pill design, colour editor, emote selection frames). Coordinates are Figma px measured from the screenshots (+-4px). RN `u()` = Figma px / 2 (360dp-wide frame; landscape frames are 720 px = 360dp tall, so the same scale applies).
 
-Capture note: the Figma MCP seat hit its call limit (burst of ~4 calls per ~minute, shared with the other backpack agent); every node was retried and none failed. I did not spend `get_design_context`; tokens below come from the screenshots plus the existing `rn/src/ds` tokens, which already match (grid 3x192 px tiles, 24 px gutter, 24 px gap = `layout`).
+Capture note: the Figma MCP seat hit its call limit (burst of ~4 calls per ~minute, shared with the other backpack agent); every node was retried and none failed. I did not spend `get_design_context`; tokens below come from the screenshots plus the existing `rn/packages/ui-native/src` tokens, which already match (grid 3x192 px tiles, 24 px gutter, 24 px gap = `layout`).
 
 ## 0. Two design generations in this range (important)
 
@@ -104,7 +104,7 @@ Full-screen state (replaces the whole backpack, no header, no nav in the frame):
 
 ## 4. Tokens and reusable components
 
-All required tokens already exist in `rn/src/ds/tokens.ts` (`ruby #FF2D55`, `orange #FF7439`, `shadow #161518`, `lavender #E8B9FF`, `purple450/500/550`, `cardLight #B48CD7`, `rarityColors`, `layout` 24/12/3). Components in `rn/src/ds`: `Pill`, `Tabs`, `SlotTile`, `ItemCard` (+ `SkeletonCard`), `IconButton`, `BottomNav`, `GradientView/LinearFill/RadialFill`, `ColorPicker`, `AppText`. Missing in `ds`: a badge-dot on `IconButton`, a toast/name-chip component, an empty-state block (icon + title + hint), a `Chip`-style check-strip variant of `ItemCard`, a dropdown/menu primitive (RN's `FilterMenu` is backpack-local, fine).
+All required tokens already exist in `rn/packages/ui-native/src/tokens.ts` (`ruby #FF2D55`, `orange #FF7439`, `shadow #161518`, `lavender #E8B9FF`, `purple450/500/550`, `cardLight #B48CD7`, `rarityColors`, `layout` 24/12/3). Components in `rn/packages/ui-native/src`: `Pill`, `Tabs`, `SlotTile`, `ItemCard` (+ `SkeletonCard`), `IconButton`, `BottomNav`, `GradientView/LinearFill/RadialFill`, `ColorPicker`, `AppText`. Missing in `ds`: a badge-dot on `IconButton`, a toast/name-chip component, an empty-state block (icon + title + hint), a `Chip`-style check-strip variant of `ItemCard`, a dropdown/menu primitive (RN's `FilterMenu` is backpack-local, fine).
 
 ## 5. Legacy counterpart (`godot/src/ui/pages/backpack`)
 

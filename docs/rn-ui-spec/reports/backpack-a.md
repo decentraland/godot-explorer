@@ -68,7 +68,7 @@ Capture note: the Figma MCP seat hit its call limit repeatedly (shared with the 
 - Tabs row: y ~746 baseline; labels uppercase 26px semi-bold: ALL x~52, BODY ~176, FACE ~295, CLOTHING ~440, EXTRAS ~598; active = white + 4px ruby underline, inactive = lavender 70%. Left margin 52.
 - Sub-pills: y 835 centre, height ~52, radius full; active = light lavender fill (#E8B9FF-ish) dark text; inactive = translucent purple (#691FA9 40%) light text; font 22px medium; gap 16.
 - Swatch row (Body shape, Skin, Hair, Facial hair, Eye, Eyebrows): y centre ~940, circles 80px, gap 28, first = rainbow wheel, then palette; selected = 3px ruby/pink ring with 4px gap; row scrolls horizontally (last circle clipped at the right edge).
-- Item grid: 3 columns, card 193x193 (radius 8px, 2px #fff border at 80%; equipped = 4px orange #FF7439 border + bottom strip "UNEQUIP" 34px #161518 white bold 22px). Column x 49, 265, 481; row pitch ~216 (gap ~24). Card background: diagonal gradient #B48CD7 -> #FCFCFC (base) or rarity gradient (collectible, see rarityColors in `rn/src/ds/tokens.ts`). Grid scrolls under the nav.
+- Item grid: 3 columns, card 193x193 (radius 8px, 2px #fff border at 80%; equipped = 4px orange #FF7439 border + bottom strip "UNEQUIP" 34px #161518 white bold 22px). Column x 49, 265, 481; row pitch ~216 (gap ~24). Card background: diagonal gradient #B48CD7 -> #FCFCFC (base) or rarity gradient (collectible, see rarityColors in `rn/packages/ui-native/src/tokens.ts`). Grid scrolls under the nav.
 - Grid starts y ~1022 under swatch row (wearables with swatches), ~1000 under sub-pills without swatches (Mouth, clothing), ~850 emotes.
 
 ### 3.1 Body-Shape (104, 106) / color editor (105)
@@ -108,9 +108,9 @@ Capture note: the Figma MCP seat hit its call limit repeatedly (shared with the 
 
 ## 4. Components / tokens
 
-Colors (match `rn/src/ds/tokens.ts`): ruby #FF2D55 (active pill/tab underline/EQUIP), orange #FF7439 (equipped border), shadow #161518 (strip, nav), lavender #E8B9FF (inactive tab/links), purple350 #691FA9, purple450 #460F6F, purple500 #350854, purple550 #24033B, cardLight #B48CD7 + snow #FCFCFC, rarity gradients in `rarityColors`.
+Colors (match `rn/packages/ui-native/src/tokens.ts`): ruby #FF2D55 (active pill/tab underline/EQUIP), orange #FF7439 (equipped border), shadow #161518 (strip, nav), lavender #E8B9FF (inactive tab/links), purple350 #691FA9, purple450 #460F6F, purple500 #350854, purple550 #24033B, cardLight #B48CD7 + snow #FCFCFC, rarity gradients in `rarityColors`.
 Type: Inter. Tab 26px/700 uppercase; pill 22; card strip 22 bold uppercase; empty title 40 semi-bold; link 28 underline; sheet title 30; slider labels 16 caps.
-Existing in `rn/src/ds`: Pill, IconButton, Tabs, SlotTile, ItemCard (+SkeletonCard), SwatchRow, HsvSliders, ColorPicker, BottomNav, GradientView, Icon, PrimaryButton. Not existing: ToastChip/NameChip, EmptyState (icon+title+link), text sub-pill row (SlotTile is thumbnail-based), vertical slot rail (landscape), CheckStrip/EquipStrip variants of ItemCard caption, notification dot.
+Existing in `rn/packages/ui-native/src`: Pill, IconButton, Tabs, SlotTile, ItemCard (+SkeletonCard), SwatchRow, HsvSliders, ColorPicker, BottomNav, GradientView, Icon, PrimaryButton. Not existing: ToastChip/NameChip, EmptyState (icon+title+link), text sub-pill row (SlotTile is thumbnail-based), vertical slot rail (landscape), CheckStrip/EquipStrip variants of ItemCard caption, notification dot.
 
 ## 5. Legacy counterpart (Godot)
 

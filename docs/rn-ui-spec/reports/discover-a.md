@@ -1,6 +1,6 @@
 # discover-a report (manifest seq 13-43, source discover)
 
-STATUS: COMPLETE for visual analysis, 31/31 screenshots read. `get_design_context` was NOT called (its tool contract requires loading the figma-design-to-code skill first, which is not available in this agent), so there are no Figma-extracted tokens. Numbers below are read off the 720x1600 screenshots (Figma px; RN dp = px / 2 via `u()`), and tokens already in `rn/src/ds/tokens.ts` are cross-referenced. Context: discover-c.md covers seq 75-103 (same Discover list, sheets for events/places/friends); this report covers FTUE, the Discover list's early variants, and the Place / World / Event detail sheets in all their states.
+STATUS: COMPLETE for visual analysis, 31/31 screenshots read. `get_design_context` was NOT called (its tool contract requires loading the figma-design-to-code skill first, which is not available in this agent), so there are no Figma-extracted tokens. Numbers below are read off the 720x1600 screenshots (Figma px; RN dp = px / 2 via `u()`), and tokens already in `rn/packages/ui-native/src/tokens.ts` are cross-referenced. Context: discover-c.md covers seq 75-103 (same Discover list, sheets for events/places/friends); this report covers FTUE, the Discover list's early variants, and the Place / World / Event detail sheets in all their states.
 
 ## 1. Screen inventory
 
@@ -92,7 +92,7 @@ Expanded (20/21/23/24/28-30): full-screen sheet (no radius), X close icon 44px a
 ## 4. Reusable components / tokens
 - Seen: gradient background; section header (semibold 32 white); PlaceCard (img 294x155 + title + stat row); EventCard (406x240 + badges LIVE / attendee pill / Trending / "IN 5 MINS"); bottom sheet (handle + blur backdrop + collapsed/expanded snap points); square icon button 94x94 (share, calendar, like, dislike; selected state); primary coral JUMP IN with arrow-in-box; stat cell with dividers; category chip (icon + caps); description label; icon-link text; heart toggle; FTUE snap carousel card; skip link; OS share/calendar intents.
 - Colors: ruby #FF2D55 (JUMP IN, LIVE, filled heart), lavender #E8B9FF (compass active/ @UserName tint), purple350 #691FA9 (tile fill), purple450/500 (sheet), white70/white10 (stat labels, dividers) all in `tokens.ts`; green Trending pill ~#2FCF9A and link periwinkle ~#9D8CFF are NOT in tokens.
-- Existing in `rn/src/ds`: AppText, BottomNav, Gradient, Icon, IconButton, PrimaryButton, Pill, ItemCard, Tabs, SlotTile, tokens, scale. Missing: BottomSheet primitive (DetailSheet implements its own), Skeleton, Chip, StatRow, SnapCarousel, Toast.
+- Existing in `rn/packages/ui-native/src`: AppText, BottomNav, Gradient, Icon, IconButton, PrimaryButton, Pill, ItemCard, Tabs, SlotTile, tokens, scale. Missing: BottomSheet primitive (DetailSheet implements its own), Skeleton, Chip, StatRow, SnapCarousel, Toast.
 
 ## 5. Legacy counterparts
 - FTUE: `godot/src/ui/components/molecules/snap_carousel/ftue_screen.gd` + `ui/pages/discover/first_time_user_experience.tscn` (Skip, Jump In, `load_places`, Genesis Plaza place id).

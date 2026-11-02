@@ -1,6 +1,6 @@
 # discover-b report (manifest seq 44-74, source discover: event-detail variants, search flow, skeletons, results/errors)
 
-STATUS: COMPLETE. All 31 screenshots (seq 44-74) were read. `get_design_context` was NOT called (its mandatory figma-design-to-code skill was not loaded, and the seat has a tight call limit), so there are no exact tokens; every number is read off the 720x1600 PNGs (Figma px = RN `u()` units, see `rn/src/ds/scale.ts`). Note: the range label says "landscape" but every frame in 44-74 is 720x1600 portrait; the landscape Discover is in discover-c (seq 77-79).
+STATUS: COMPLETE. All 31 screenshots (seq 44-74) were read. `get_design_context` was NOT called (its mandatory figma-design-to-code skill was not loaded, and the seat has a tight call limit), so there are no exact tokens; every number is read off the 720x1600 PNGs (Figma px = RN `u()` units, see `rn/packages/ui-native/src/scale.ts`). Note: the range label says "landscape" but every frame in 44-74 is 720x1600 portrait; the landscape Discover is in discover-c (seq 77-79).
 Consistent with `discover-c.md` (list/cards/sheets/tokens) and `legacy-godot.md` section 3 (Discover, search). Common elements are described once in discover-c; only deltas are repeated here.
 
 ## 1. Screen inventory
@@ -106,8 +106,8 @@ Same sheet shell as discover-c 81 (top radius ~24, gradient #43106f->#320a5a, ha
 ## 4. Reusable components / tokens
 - Colours (read from pixels, approximate): bg gradient #7b2cb5 (top-left) -> #43006b (centre) -> #7d1596 (bottom-right); text white; secondary text ~70% white; lilac accent #c9a8ff (recents title, clear icon, nav active, creator name); skeleton fill white 6-10% alpha; sheet fill #43106f -> #320a5a; square button #45146e; bottom nav #151515; red #ff2d55 (LIVE, REMINDER SET); teal #2fcf9a (Trending); pink/magenta gradient (Featured pill).
 - Type: Inter; header 46 bold; section 32 semibold; card title 28 semibold; meta 26 regular; suggestion row 30 regular; empty/error title 46 bold, body 30 regular; button 30 bold uppercase.
-- New components needed (none exist in `rn/src/ds`): `SearchField` (back + input + clear), `SuggestionRow`, `RecentSearches` (title + Clean all + rows), `EmptyState` (icon + title + body; used for "No result found", "Something went wrong"), `Skeleton`/`Shimmer` (+ `PlaceCardSkeleton`, `EventCardSkeleton`), `ImageFallback`, `StatusPill` (LIVE/IN n MINS/Trending/Featured), `OutlineActionButton` with `on` state, `MetaRow` with dividers.
-- Existing in `rn/src/ds`: AppText, IconButton, Icon (+ iconSvgs: need magnifier, chevron-left, X, clock, bell, check, calendar, share, pin, image-off), PrimaryButton, Pill, Gradient, BottomNav, tokens, scale. In `rn/src/discover`: Cards (PlaceCard/EventCard), DetailSheet, DiscoverScreen.
+- New components needed (none exist in `rn/packages/ui-native/src`): `SearchField` (back + input + clear), `SuggestionRow`, `RecentSearches` (title + Clean all + rows), `EmptyState` (icon + title + body; used for "No result found", "Something went wrong"), `Skeleton`/`Shimmer` (+ `PlaceCardSkeleton`, `EventCardSkeleton`), `ImageFallback`, `StatusPill` (LIVE/IN n MINS/Trending/Featured), `OutlineActionButton` with `on` state, `MetaRow` with dividers.
+- Existing in `rn/packages/ui-native/src`: AppText, IconButton, Icon (+ iconSvgs: need magnifier, chevron-left, X, clock, bell, check, calendar, share, pin, image-off), PrimaryButton, Pill, Gradient, BottomNav, tokens, scale. In `rn/src/discover`: Cards (PlaceCard/EventCard), DetailSheet, DiscoverScreen.
 
 ## 5. Legacy counterparts (godot/src/ui)
 - Search bar: `components/molecules/search_bar/search_bar.{gd,tscn}` (signals `cleared`, open/close).
