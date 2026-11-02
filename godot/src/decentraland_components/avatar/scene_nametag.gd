@@ -75,4 +75,8 @@ func _text_width() -> float:
 	var total := 0.0
 	for index in label_text.length():
 		total += FONT.get_char_size(label_text.unicode_at(index), FONT_SIZE).x
+		# The pill never draws wider than MAX_WIDTH; stop before measuring the rest of
+		# a label the scene authored (one FFI call per character).
+		if total >= MAX_WIDTH:
+			return MAX_WIDTH
 	return total

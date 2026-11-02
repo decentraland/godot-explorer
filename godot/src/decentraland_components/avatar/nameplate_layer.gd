@@ -227,25 +227,31 @@ static func update(avatar) -> void:
 			on_screen = view_rect.intersects(Rect2(pos, screen_size))
 			_set_on_screen(avatar, on_screen)
 			var untested: bool = _occlusion_untested.has(avatar.get_instance_id())
-			if avatar._nametag_gate_visible:
-				if on_screen and not avatar._nameplate_occluded and not untested:
-					# Plates stay pinned to their anchor (no de-overlap shifting) —
-					# design decision on #2938: in crowds the cap limits full tags
-					# instead of moving them around.
-					# Chat bubbles gate on distance only (#2938) — the crowd cap must not
-					# hide the bubble of someone standing next to you.
-					var show_chat := focused or dist <= TIER_FULL_END
-					_apply_tier(ui, tier, show_chat)
-					# Mutate the entry in place: a fresh Dictionary literal per plate per
-					# frame showed up in allocation profiles.
-					var id: int = ui.get_instance_id()
-					var entry: Dictionary = _plate_dists.get(id, {})
-					entry.dist = dist
-					entry.focused = focused
-					_plate_dists[id] = entry
-					target_a = _tier_alpha(tier, dist, focused)
-				else:
-					_untrack_plate(ui)
+			# `_nametag_gate_visible` belongs in the condition, not inside it: a hidden
+			# tag must leave `_plate_dists` or it keeps one of the seven crowd slots.
+			if (
+				avatar._nametag_gate_visible
+				and on_screen
+				and not avatar._nameplate_occluded
+				and not untested
+			):
+				# Plates stay pinned to their anchor (no de-overlap shifting) —
+				# design decision on #2938: in crowds the cap limits full tags
+				# instead of moving them around.
+				# Chat bubbles gate on distance only (#2938) — the crowd cap must not
+				# hide the bubble of someone standing next to you.
+				var show_chat := focused or dist <= TIER_FULL_END
+				_apply_tier(ui, tier, show_chat)
+				# Mutate the entry in place: a fresh Dictionary literal per plate per
+				# frame showed up in allocation profiles.
+				var id: int = ui.get_instance_id()
+				var entry: Dictionary = _plate_dists.get(id, {})
+				entry.dist = dist
+				entry.focused = focused
+				_plate_dists[id] = entry
+				target_a = _tier_alpha(tier, dist, focused)
+			else:
+				_untrack_plate(ui)
 			# An anchor above the top edge would clip the tag, so keep the drawn plate
 			# inside the viewport.
 			pos.y = maxf(pos.y, 0.0)
@@ -264,7 +270,7 @@ static func update(avatar) -> void:
 				var tag_size: Vector2 = scene_tag.size * scale_f
 				var tag_pos := Vector2(
 					pos.x + (screen_size.x - tag_size.x) * 0.5,
-					pos.y - tag_size.y - PLATE_GAP,
+					pos.y - tag_size.y - PLATE_GAP * scale_f,
 				)
 				if not avatar._nametag_gate_visible:
 					# No name to sit above (nameless NPC): the plate takes the name's
@@ -273,15 +279,15 @@ static func update(avatar) -> void:
 				tag_pos.y = maxf(tag_pos.y, 0.0)
 				scene_tag.position = tag_pos
 				scene_tag.z_index = ui.z_index + 1
+				# Tracked unconditionally, like `_plate_ray_targets`: erasing it while the
+				# plate is occluded makes the ray fall back to the head anchor, which is not
+				# behind the wall, so the plate flickers at the occlusion rate.
+				var tag_center: Vector2 = tag_pos + tag_size * 0.5
+				_scene_tag_ray_targets[avatar.get_instance_id()] = (
+					cam.project_ray_origin(tag_center) + cam.project_ray_normal(tag_center) * dist
+				)
 				if on_screen and not untested and not avatar._scene_tag_occluded:
 					scene_tag_target_a = _tier_alpha(tier, dist, focused)
-					var tag_center: Vector2 = tag_pos + tag_size * 0.5
-					_scene_tag_ray_targets[avatar.get_instance_id()] = (
-						cam.project_ray_origin(tag_center)
-						+ cam.project_ray_normal(tag_center) * dist
-					)
-				else:
-					_scene_tag_ray_targets.erase(avatar.get_instance_id())
 		else:
 			_untrack_plate(ui)
 	else:
@@ -300,8 +306,6 @@ static func update(avatar) -> void:
 			scene_tag.modulate.a, scene_tag_target_a * (1.0 - hold), delta * FADE_SPEED
 		)
 		scene_tag.visible = scene_tag.modulate.a > 0.01
-		if not scene_tag.visible:
-			_scene_tag_ray_targets.erase(avatar.get_instance_id())
 
 
 ## Hide the scene plate now (gate closed, avatar out of tree) and zero its alpha so

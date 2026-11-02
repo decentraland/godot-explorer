@@ -35,6 +35,10 @@ pub fn native_background_color() -> Color {
 /// write that lands first must not be lost.
 const PENDING_RETRY_WINDOW: Duration = Duration::from_secs(5);
 
+/// A plate draws at most a few hundred characters before it is clamped to its max
+/// width; the cap keeps a scene-authored megabyte string out of the text shaping path.
+const MAX_LABEL_CHARS: usize = 256;
+
 /// One plate as the renderer draws it, with the protocol's fallbacks resolved.
 #[derive(Debug, Clone, PartialEq)]
 pub struct NametagPlate {
@@ -49,8 +53,9 @@ impl NametagPlate {
         let background_color = color3_or_background(value.background_color.as_ref());
         Self {
             // Kept verbatim: an empty label draws a color-only plate, and a label of
-            // spaces widens it (protocol#474).
-            label: value.label.clone(),
+            // spaces widens it (protocol#474). Capped because the plate can never draw
+            // wider than its MAX_WIDTH and the label is scene-authored.
+            label: value.label.chars().take(MAX_LABEL_CHARS).collect(),
             label_color: color3_or(value.label_color.as_ref(), native_label_color()),
             background_color,
             // Border defaults to the background so a plate carries no visible border.
@@ -310,6 +315,27 @@ mod tests {
             ..Default::default()
         });
         assert_eq!(spaces.label, "   ");
+    }
+
+    #[test]
+    fn label_is_capped_to_the_drawable_length() {
+        let plate = NametagPlate::from_proto(&PbAvatarNametag {
+            label: "a".repeat(MAX_LABEL_CHARS * 4),
+            ..Default::default()
+        });
+
+        assert_eq!(plate.label.chars().count(), MAX_LABEL_CHARS);
+    }
+
+    #[test]
+    fn label_cap_counts_characters_not_bytes() {
+        let plate = NametagPlate::from_proto(&PbAvatarNametag {
+            label: "ñ".repeat(MAX_LABEL_CHARS * 2),
+            ..Default::default()
+        });
+
+        assert_eq!(plate.label.chars().count(), MAX_LABEL_CHARS);
+        assert!(plate.label.len() > MAX_LABEL_CHARS);
     }
 
     #[test]
