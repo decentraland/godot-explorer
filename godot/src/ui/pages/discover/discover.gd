@@ -192,16 +192,19 @@ func _set_card_origin(data: Dictionary, card: PlaceItem) -> void:
 		places_my_places: "my_places",
 		friends_online: "friends",
 	}
+	# Both keys or neither: a slot without its carousel would read as a real position.
 	for carousel in carousel_keys:
 		if carousel.item_container == container:
 			data["_carousel"] = carousel_keys[carousel]
-	var slot := 0
-	for child in container.get_children():
-		if child == card:
-			break
-		if child is PlaceItem:
-			slot += 1
-	data["_carousel_position"] = slot
+			var slot := 0
+			for child in container.get_children():
+				if child == card:
+					break
+				if child is PlaceItem:
+					slot += 1
+			data["_carousel_position"] = slot
+			return
+	push_warning("[Discover] place card tapped from an untracked carousel")
 
 
 func _on_friend_jump_in(parcel_position: Vector2i, realm: String):
