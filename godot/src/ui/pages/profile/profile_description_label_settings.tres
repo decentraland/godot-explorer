@@ -1,8 +1,0 @@
-[gd_resource type="LabelSettings" load_steps=2 format=3 uid="uid://6uimow55ok0b"]
-
-[ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="1_50aw1"]
-
-[resource]
-font = ExtResource("1_50aw1")
-font_size = 24
-outline_color = Color(0, 0, 0, 1)

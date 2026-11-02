@@ -1,0 +1,72 @@
+use crate::nft::{frames::FrameStyle, shape::NftShape};
+use crate::{
+    dcl::{
+        components::{proto_components::common::Color3, SceneComponentId},
+        crdt::{
+            last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
+            SceneCrdtStateProtoComponents,
+        },
+    },
+    scene_runner::{godot_dcl_scene::add_own_visual_child, scene::Scene},
+};
+use godot::{classes::Node, prelude::*};
+
+pub fn update_nft_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
+    let godot_dcl_scene = &mut scene.godot_dcl_scene;
+    let dirty_lww_components = &scene.current_dirty.lww_components;
+    let nft_shape_component = SceneCrdtStateProtoComponents::get_nft_shape(crdt_state);
+
+    if let Some(nft_shape_dirty) = dirty_lww_components.get(&SceneComponentId::NFT_SHAPE) {
+        for entity in nft_shape_dirty {
+            let new_value = nft_shape_component.get(entity);
+
+            let Some(new_value) = new_value else {
+                continue; // no value, continue
+            };
+
+            let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
+
+            let new_value = new_value.value.clone();
+
+            let existing = node_3d
+                .try_get_node_as::<Node>("NFTShape")
+                .and_then(|n| n.try_cast::<NftShape>().ok());
+
+            if new_value.is_none() {
+                if let Some(mut nft_shape_node) = existing {
+                    nft_shape_node.queue_free();
+                    node_3d.remove_child(&nft_shape_node);
+                }
+            } else if let Some(new_value) = new_value {
+                let urn = new_value.urn.to_godot();
+                let style = new_value.style.unwrap_or(0); // default NFT_CLASSIC=0
+                let color = new_value.color.unwrap_or(Color3 {
+                    r: 0.6404918,
+                    g: 0.611472,
+                    b: 0.8584906,
+                });
+                let color = color.to_godot();
+
+                let nft_shape_3d = if let Some(nft_shape_3d) = existing {
+                    nft_shape_3d
+                } else {
+                    let mut nft_shape_3d = crate::scene_runner::scene_cache::packed_scene(
+                        "res://src/decentraland_components/nft_shape.tscn",
+                    )
+                    .instantiate()
+                    .unwrap()
+                    .cast::<NftShape>();
+
+                    nft_shape_3d.set_name("NFTShape");
+                    add_own_visual_child(&mut node_3d, &nft_shape_3d.clone().upcast::<Node>());
+                    nft_shape_3d
+                };
+
+                match FrameStyle::from_i32(style) {
+                    Some(style) => NftShape::load_nft(&nft_shape_3d, urn.to_string(), style, color),
+                    None => godot_error!("NFTShape: unknown frame style {style}"),
+                }
+            }
+        }
+    }
+}

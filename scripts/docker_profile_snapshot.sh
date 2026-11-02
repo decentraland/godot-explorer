@@ -5,7 +5,7 @@
 # What it does:
 #   1. (Optional) Builds the Rust lib and exports the Linux Godot client.
 #   2. Stages the Docker build context (binary, .pck, libdclgodot.so,
-#      libsentry, crashpad_handler, entry-point.sh, Dockerfile).
+#      entry-point.sh, Dockerfile).
 #   3. Builds the Docker image.
 #   4. Fetches one or more profiles from a Decentraland catalyst by wallet
 #      address and transforms each into the avatars.json payload the
@@ -151,12 +151,10 @@ fi
 EXPORT_BIN="${REPO_ROOT}/exports/decentraland.godot.client.x86_64"
 EXPORT_PCK="${REPO_ROOT}/exports/decentraland.godot.client.pck"
 LIB_DCL_GODOT="${REPO_ROOT}/lib/target/libdclgodot_linux/libdclgodot.so"
-SENTRY_LIB="${REPO_ROOT}/godot/addons/sentry/bin/linux/x86_64/libsentry.linux.debug.x86_64.so"
-CRASHPAD="${REPO_ROOT}/godot/addons/sentry/bin/linux/x86_64/crashpad_handler"
 ENTRY_POINT="${REPO_ROOT}/entry-point.sh"
 DOCKERFILE="${REPO_ROOT}/Dockerfile"
 
-for f in "$EXPORT_BIN" "$EXPORT_PCK" "$LIB_DCL_GODOT" "$SENTRY_LIB" "$CRASHPAD" "$ENTRY_POINT" "$DOCKERFILE"; do
+for f in "$EXPORT_BIN" "$EXPORT_PCK" "$LIB_DCL_GODOT" "$ENTRY_POINT" "$DOCKERFILE"; do
   [ -f "$f" ] || die "missing artifact: $f (re-run without --skip-build, or run cargo run -- build && cargo run -- export --target linux)"
 done
 
@@ -169,8 +167,6 @@ if [ "$SKIP_IMAGE" -eq 0 ]; then
   cp "$EXPORT_BIN"     "$CTX_DIR/decentraland.godot.client.x86_64"
   cp "$EXPORT_PCK"     "$CTX_DIR/decentraland.godot.client.pck"
   cp "$LIB_DCL_GODOT"  "$CTX_DIR/libdclgodot.so"
-  cp "$SENTRY_LIB"     "$CTX_DIR/libsentry.linux.debug.x86_64.so"
-  cp "$CRASHPAD"       "$CTX_DIR/crashpad_handler"
   cp "$ENTRY_POINT"    "$CTX_DIR/entry-point.sh"
   cp "$DOCKERFILE"     "$CTX_DIR/Dockerfile"
 

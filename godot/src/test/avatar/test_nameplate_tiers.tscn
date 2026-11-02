@@ -1,6 +1,0 @@
-[gd_scene format=3 uid="uid://dtiersnameplate01"]
-
-[ext_resource type="Script" uid="uid://xekfhvkpclpy" path="res://src/test/avatar/test_nameplate_tiers.gd" id="1_tiers"]
-
-[node name="TestNameplateTiers" type="Node"]
-script = ExtResource("1_tiers")

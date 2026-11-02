@@ -1,0 +1,14 @@
+# Bindings for dcl_core, exported from the same libdclgodot the engine lives in (D-6).
+# The library is built by `cargo run -- build` (never by ubrn, which would use cargo-ndk).
+rust:
+  directory: ../../../lib
+  manifestPath: crates/dcl_engine/Cargo.toml
+bindings:
+  ts: src/generated
+  cpp: cpp/generated
+android:
+  targets:
+    - arm64-v8a
+  useSharedLibrary: true
+  # Where the engine build leaves libdclgodot.so for the link step.
+  jniLibs: ../../../android/app/godot/jniLibs

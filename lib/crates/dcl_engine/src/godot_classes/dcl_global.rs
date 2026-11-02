@@ -1,0 +1,894 @@
+use std::{path::PathBuf, sync::Arc};
+
+use crate::engine::DclEngine;
+use dcl_core::{Core, CoreConfig, Platform};
+use godot::{
+    classes::{node::ProcessMode, Engine, Os},
+    obj::Singleton,
+    prelude::*,
+};
+
+use crate::{
+    analytics::metrics::Metrics,
+    auth::{dcl_player_identity::DclPlayerIdentity, ethereum_provider::EthereumProvider},
+    avatars::avatar_scene::AvatarScene,
+    comms::communication_manager::CommunicationManager,
+    content::content_provider::ContentProvider,
+    dcl::common::{set_scene_log_enabled, set_scene_perf_warnings_enabled},
+    godot_classes::dcl_avatar::DclAvatar,
+    http_request::rust_http_queue_requester::RustHttpQueueRequester,
+    profile::profile_service::ProfileService,
+    scene_runner::scene_manager::SceneManager,
+    test_runner::testing_tools::DclTestingTools,
+    tools::network_inspector::{NetworkInspector, NetworkInspectorSender},
+};
+
+#[cfg(feature = "use_memory_debugger")]
+use crate::tools::memory_debugger::MemoryDebugger;
+
+#[cfg(feature = "use_memory_debugger")]
+use crate::tools::benchmark_report::BenchmarkReport;
+
+/// How long the scene-input poller keeps forwarding after the last joypad
+/// activity, so the release edge of a tap isn't dropped with the press.
+const JOYPAD_INPUT_WINDOW: std::time::Duration = std::time::Duration::from_millis(250);
+
+use super::{
+    dcl_cli::DclCli, dcl_dynamic_graphics_manager::DclDynamicGraphicsManager, dcl_realm::DclRealm,
+    dcl_social_blacklist::DclSocialBlacklist, dcl_tokio_rpc::DclTokioRpc,
+    portables::DclPortableExperienceController,
+};
+
+/// Plugs the engine's sinks into the core's logger. On the platforms where Godot's output already
+/// reaches the system log (and unless `--no-pipe-logging`), the core's platform sink goes quiet.
+fn attach_engine_logging() {
+    use crate::tools::godot_logger::{should_pipe_to_godot, GodotTracingLayer};
+    let pipe_to_godot = should_pipe_to_godot();
+    let mut sinks: Vec<Box<dyn dcl_core::logging::EventSink>> = Vec::new();
+    if pipe_to_godot {
+        sinks.push(Box::new(GodotTracingLayer));
+    }
+    // Godot's console output never reaches stdout on iOS, so all Rust levels go to the log hub.
+    #[cfg(target_os = "ios")]
+    sinks.push(Box::new(crate::tools::log_stream::LogHubLayer::new()));
+    dcl_core::logging::attach_engine_sinks(sinks, pipe_to_godot);
+    crate::tools::godot_logger::apply_cmdline_log_filter();
+}
+
+/// The core is installed by the host on phones; on desktop, and until the hosts do it, the engine
+/// installs it here with Godot's `user://`. Either way the data dir must be Godot's (risks R-6).
+fn ensure_core() -> &'static Core {
+    let user_dir = PathBuf::from(Os::singleton().get_user_data_dir().to_string());
+    let core = match Core::try_get() {
+        Some(core) => core,
+        None => Core::install(CoreConfig {
+            data_dir: user_dir.clone(),
+            platform: Platform::current(),
+        }),
+    };
+    debug_assert_eq!(Core::installs(), 1, "one core per process");
+    debug_assert_eq!(
+        std::fs::canonicalize(core.data_dir()).ok(),
+        std::fs::canonicalize(&user_dir).ok(),
+        "the core data dir must be Godot's user://"
+    );
+    core
+}
+
+#[derive(GodotClass)]
+#[class(base=Node)]
+pub struct DclGlobal {
+    _base: Base<Node>,
+
+    #[var(pub)]
+    pub scene_runner: Gd<SceneManager>,
+    #[var(pub)]
+    pub comms: Gd<CommunicationManager>,
+    #[var(pub)]
+    pub avatars: Gd<AvatarScene>,
+    #[var(pub)]
+    pub realm: Gd<DclRealm>,
+    #[var(pub)]
+    pub portable_experience_controller: Gd<DclPortableExperienceController>,
+    #[var(pub)]
+    pub testing_tools: Gd<DclTestingTools>,
+    #[var(pub)]
+    pub preview_mode: bool,
+    #[var(pub)]
+    pub testing_scene_mode: bool,
+    #[var(pub)]
+    pub fixed_skybox_time: bool,
+    #[var(pub)]
+    pub player_identity: Gd<DclPlayerIdentity>,
+    #[var(pub)]
+    pub content_provider: Gd<ContentProvider>,
+    #[var(no_set, pub)]
+    pub http_requester: Gd<RustHttpQueueRequester>,
+    #[var(pub)]
+    pub dcl_tokio_rpc: Gd<DclTokioRpc>,
+
+    pub ethereum_provider: Arc<EthereumProvider>,
+
+    #[var(pub)]
+    pub metrics: Gd<Metrics>,
+
+    #[var(pub)]
+    pub renderer_version: GString,
+
+    pub is_mobile: bool,
+
+    // Refreshed by any on-screen touch-button (joypad) activity, press or
+    // release, to now+250ms. Lets the scene-input poller forward synthetic
+    // actions on desktop even when the mouse isn't captured — including the
+    // release frame itself, so PET_UP edges aren't dropped (power-lock bug).
+    pub joypad_input_active_until: Option<std::time::Instant>,
+
+    pub is_android: bool,
+
+    pub is_ios: bool,
+
+    pub is_virtual_mobile: bool,
+
+    #[var(pub)]
+    pub has_javascript_debugger: bool,
+
+    #[var(pub)]
+    pub network_inspector: Gd<NetworkInspector>,
+
+    #[var(pub)]
+    pub scene_inspector_dispatcher: Gd<crate::tools::scene_inspector::SceneInspectorDispatcher>,
+
+    #[var(pub)]
+    pub social_blacklist: Gd<DclSocialBlacklist>,
+
+    #[cfg(feature = "use_memory_debugger")]
+    #[var(pub)]
+    pub memory_debugger: Gd<MemoryDebugger>,
+
+    #[cfg(feature = "use_memory_debugger")]
+    #[var(pub)]
+    pub benchmark_report: Gd<BenchmarkReport>,
+
+    #[var(no_set, pub)]
+    pub profile_service: Gd<ProfileService>,
+
+    #[var(no_set, pub)]
+    pub cli: Gd<DclCli>,
+
+    #[var(no_set, pub)]
+    pub engine: Gd<DclEngine>,
+
+    #[var(no_set, pub)]
+    pub dynamic_graphics_manager: Gd<DclDynamicGraphicsManager>,
+
+    // Stored as InstanceId, not Gd<DclAvatar>: the underlying Node3D may be freed
+    // between physics ticks. Resolve via get_selected_avatar() to drop stale ids.
+    pub selected_avatar: Option<InstanceId>,
+
+    // Scene Inspector active flag — set from GDScript when deeplink/CLI activates the Scene Inspector.
+    // Checked by scene_manager when spawning scenes to decide if they should be instrumented.
+    #[var(pub)]
+    pub scene_inspector_active: bool,
+
+    // Input modifier state - set by scenes via PBInputModifier component on PLAYER entity
+    #[var(pub)]
+    pub input_modifier_disable_all: bool,
+    #[var(pub)]
+    pub input_modifier_disable_walk: bool,
+    #[var(pub)]
+    pub input_modifier_disable_jog: bool,
+    #[var(pub)]
+    pub input_modifier_disable_run: bool,
+    #[var(pub)]
+    pub input_modifier_disable_jump: bool,
+    #[var(pub)]
+    pub input_modifier_disable_emote: bool,
+    #[var(pub)]
+    pub input_modifier_disable_double_jump: bool,
+    #[var(pub)]
+    pub input_modifier_disable_gliding: bool,
+
+    // On-screen touch controls - set by scenes via PBTouchScreenControls on the ROOT entity.
+    // `touch_controls_active` is true while the component is present. `touch_controls_inputs`
+    // is a denylist of per-button overrides (each a dictionary {action, hide, icon}); buttons
+    // not listed keep their default (shown). `touch_controls_main_action` is the godot action
+    // name for the large central button (empty = keep default jump).
+    #[var(pub)]
+    pub touch_controls_active: bool,
+    #[var(pub)]
+    pub touch_controls_hide_joystick: bool,
+    #[var(pub)]
+    pub touch_controls_hide_crosshair: bool,
+    #[var(pub)]
+    pub touch_controls_main_action: GString,
+    #[var(pub)]
+    pub touch_controls_inputs: VarArray,
+
+    // SDK-controlled skybox time - set by scenes via PBSkyboxTime component on ROOT entity
+    #[var(pub)]
+    pub sdk_skybox_time_active: bool,
+    /// The sky's clock, created at boot.
+    #[var(pub)]
+    pub skybox_time: Option<Gd<crate::sky::skybox_time::SkyboxTime>>,
+
+    // The services the app root creates at boot (see `engine::bootstrap`).
+    #[var(pub)]
+    pub scene_fetcher: Option<Gd<crate::fetcher::scene_fetcher::SceneFetcher>>,
+    #[var(pub)]
+    pub snapshot: Option<Gd<crate::app::snapshot::Snapshot>>,
+    #[var(pub)]
+    pub music_player: Option<Gd<crate::app::music_player::MusicPlayer>>,
+    #[var(pub)]
+    pub raycast_debugger: Option<Gd<crate::app::raycast_debugger::RaycastDebugger>>,
+    #[var(pub)]
+    pub analytics_controller: Option<Gd<crate::app::analytics_controller::AnalyticsController>>,
+    #[var(pub)]
+    pub feature_flags: Option<Gd<crate::app::feature_flags::FeatureFlags>>,
+    #[var(pub)]
+    pub graphics_autotune: Gd<crate::app::graphics_autotune::GraphicsAutotune>,
+    #[var(pub)]
+    pub deep_link_router: Gd<crate::app::deep_link::DeepLinkRouter>,
+    /// The scene inspector's bridge, a GDScript node until the debug tooling is Rust.
+    pub scene_inspector_bridge: Option<Gd<Node>>,
+
+    // The deep link the app was opened with, parsed; the URL is cleared once consumed.
+    #[var(pub)]
+    pub deep_link_obj: Gd<crate::godot_classes::dcl_parse_deep_link::DclParseDeepLink>,
+    #[var(pub)]
+    pub deep_link_url: GString,
+    /// The environment came from `--dclenv` or a deeplink `dclenv=` (including `org`): the IAP
+    /// sandbox auto-switch must not override that explicit choice.
+    #[var(pub)]
+    pub dcl_env_explicit: bool,
+
+    // The player's camera and its mode, kept here for the code that has no handle on the player.
+    #[var(pub)]
+    pub player_camera_node: Option<Gd<crate::godot_classes::dcl_camera_3d::DclCamera3D>>,
+    #[var(pub)]
+    pub current_camera_mode: i32,
+    #[var(pub)]
+    pub camera_mode_blocked: bool,
+
+    /// Set by a run launched on its own (a scene opened directly in the editor), not by `DclRoot`.
+    #[var(pub)]
+    pub standalone: bool,
+    #[var(pub)]
+    pub session_id: GString,
+    /// Fixed width (canvas px) of the chat's notifications column, reported by the chat so the
+    /// scene interactable area is computed without hardcoding it. Stable per device.
+    #[var(pub)]
+    pub chat_notifications_width: i32,
+    /// The orientation layout state. The RN host owns the device orientation: the engine only
+    /// mirrors the window's shape.
+    pub is_portrait: bool,
+    /// Guards `sign_out` against re-entrancy: the comms disconnect emits the logout signal
+    /// deferred, which can route back into it a frame later.
+    pub signing_out: bool,
+    pub logging_selftest: crate::app::logging_selftest::LoggingSelftest,
+    #[var(pub)]
+    pub sdk_skybox_fixed_time: u32,
+    #[var(pub)]
+    pub sdk_skybox_transition_forward: bool,
+}
+
+#[godot_api]
+impl INode for DclGlobal {
+    fn init(base: Base<Node>) -> Self {
+        #[cfg(feature = "use_deno")]
+        crate::dcl::js::init_runtime();
+
+        let core = ensure_core();
+        attach_engine_logging();
+
+        tracing::info!(
+            "DclGlobal init invoked version={}",
+            env!("GODOT_EXPLORER_VERSION")
+        );
+
+        // Scene Inspector is initialized lazily when the first scene with
+        // --scene-inspector enabled is spawned (see scene_thread in dcl/js/mod.rs).
+
+        // Initialize Rust classes
+        let mut avatars: Gd<AvatarScene> = AvatarScene::new_alloc();
+        let mut comms: Gd<CommunicationManager> = CommunicationManager::new_alloc();
+        let mut scene_runner: Gd<SceneManager> = SceneManager::new_alloc();
+        let mut content_provider: Gd<ContentProvider> = ContentProvider::new_alloc();
+        let mut network_inspector: Gd<NetworkInspector> = NetworkInspector::new_alloc();
+        let mut scene_inspector_dispatcher: Gd<
+            crate::tools::scene_inspector::SceneInspectorDispatcher,
+        > = crate::tools::scene_inspector::SceneInspectorDispatcher::new_alloc();
+        let mut social_blacklist: Gd<DclSocialBlacklist> = DclSocialBlacklist::new_alloc();
+
+        #[cfg(feature = "use_memory_debugger")]
+        let mut memory_debugger: Gd<MemoryDebugger> = MemoryDebugger::new_alloc();
+
+        #[cfg(feature = "use_memory_debugger")]
+        let mut benchmark_report: Gd<BenchmarkReport> = BenchmarkReport::new_alloc();
+
+        let mut metrics: Gd<Metrics> = Metrics::new_alloc();
+        let mut cli: Gd<DclCli> = DclCli::new_alloc();
+        let mut engine: Gd<DclEngine> = DclEngine::new_alloc();
+        engine.set_name("dcl_engine");
+        let mut dynamic_graphics_manager: Gd<DclDynamicGraphicsManager> =
+            DclDynamicGraphicsManager::new_alloc();
+
+        // For now, keep using base Rust classes - GDScript extensions will be created in global.gd
+        let mut realm: Gd<DclRealm> = DclRealm::new_alloc();
+        let mut dcl_tokio_rpc: Gd<DclTokioRpc> = DclTokioRpc::new_alloc();
+        let mut player_identity: Gd<DclPlayerIdentity> = DclPlayerIdentity::new_alloc();
+        player_identity.set_name("player_identity");
+        let mut testing_tools: Gd<DclTestingTools> = DclTestingTools::new_alloc();
+        let mut portable_experience_controller: Gd<DclPortableExperienceController> =
+            DclPortableExperienceController::new_alloc();
+
+        // Arm the boot-log ring as early as possible — gated by a configured
+        // scene-inspector target (debug/dev only; the export plugin bakes it only
+        // in debug, prod never has it) — so any early boot logs, which fire before
+        // `global.gd` can arm it, are captured into the ring and flushed when a
+        // consumer subscribes. The Rust tracing layer is already installed
+        // (init_logger above) and `push_early_log` needs no sender, so no
+        // capture-sink install is required here; `global.gd` installs the
+        // Godot/native sinks at `_ready`. Without this, iOS misses these early
+        // logs (they're os_log-only and pre-arming).
+        if !cli.bind().scene_inspector.is_empty() {
+            crate::tools::scene_inspector::set_early_log_capture(true);
+        }
+
+        crate::utils::clock::spawn_background_sync(core.handle());
+
+        scene_runner.set_name("scene_runner");
+        scene_runner.set_process_mode(ProcessMode::DISABLED);
+        comms.set_name("comms");
+        avatars.set_name("avatar_scene");
+        realm.set_name("realm");
+        dcl_tokio_rpc.set_name("dcl_tokio_rpc");
+        player_identity.set_name("player_identity");
+        testing_tools.set_name("testing_tool");
+        content_provider.set_name("content_provider");
+        portable_experience_controller.set_name("portable_experience_controller");
+        network_inspector.set_name("network_inspector");
+        scene_inspector_dispatcher.set_name("scene_inspector_dispatcher");
+
+        // Register the global Scene Inspector sender so Rust scene threads can push entries
+        let _ = crate::tools::scene_inspector::set_global_sender(
+            scene_inspector_dispatcher.bind().get_sender(),
+        );
+        social_blacklist.set_name("social_blacklist");
+
+        #[cfg(feature = "use_memory_debugger")]
+        memory_debugger.set_name("memory_debugger");
+
+        #[cfg(feature = "use_memory_debugger")]
+        benchmark_report.set_name("benchmark_report");
+
+        metrics.set_name("metrics");
+        cli.set_name("cli");
+        dynamic_graphics_manager.set_name("dynamic_graphics_manager");
+
+        // Use CLI singleton for parsing
+        let (
+            testing_scene_mode,
+            preview_mode,
+            developer_mode,
+            fixed_skybox_time,
+            force_mobile,
+            only_no_optimized,
+        ) = {
+            let cli_bind = cli.bind();
+            (
+                cli_bind.scene_test_mode,
+                cli_bind.preview_mode,
+                cli_bind.developer_mode,
+                cli_bind.fixed_skybox_time,
+                cli_bind.force_mobile,
+                cli_bind.only_no_optimized,
+            )
+        };
+
+        // If --only-no-optimized flag is set, disable optimized wearable/emote loading
+        if only_no_optimized {
+            tracing::info!("--only-no-optimized: Disabling optimized wearable/emote loading");
+            content_provider
+                .bind_mut()
+                .set_optimized_wearable_base_url(GString::new());
+        }
+
+        set_scene_log_enabled(preview_mode || testing_scene_mode || developer_mode);
+        // Creator-facing frame-sync warnings: preview sessions, or a `scene-stats` deeplink
+        // (deep_link.rs).
+        set_scene_perf_warnings_enabled(preview_mode);
+
+        let is_mobile = Os::singleton().has_feature("mobile") || force_mobile;
+        let is_android = std::env::consts::OS == "android";
+        let is_ios = std::env::consts::OS == "ios";
+
+        Self {
+            _base: base,
+            is_mobile,
+            joypad_input_active_until: None,
+            is_android,
+            is_ios,
+            is_virtual_mobile: false,
+            scene_runner,
+            comms,
+            avatars,
+            testing_tools,
+            realm,
+            portable_experience_controller,
+            preview_mode,
+            testing_scene_mode,
+            fixed_skybox_time,
+            dcl_tokio_rpc,
+            player_identity,
+            content_provider,
+            http_requester: RustHttpQueueRequester::new_gd(),
+            ethereum_provider: Arc::new(EthereumProvider::new()),
+            metrics,
+            renderer_version: env!("GODOT_EXPLORER_VERSION").into(),
+            network_inspector,
+            scene_inspector_dispatcher,
+            social_blacklist,
+
+            #[cfg(feature = "use_memory_debugger")]
+            memory_debugger,
+
+            #[cfg(feature = "use_memory_debugger")]
+            benchmark_report,
+
+            profile_service: ProfileService::new_gd(),
+
+            #[cfg(feature = "enable_inspector")]
+            has_javascript_debugger: true,
+            #[cfg(not(feature = "enable_inspector"))]
+            has_javascript_debugger: false,
+            cli,
+            engine,
+            dynamic_graphics_manager,
+            selected_avatar: None,
+
+            scene_inspector_active: false,
+
+            // Input modifiers start as false (no modification)
+            input_modifier_disable_all: false,
+            input_modifier_disable_walk: false,
+            input_modifier_disable_jog: false,
+            input_modifier_disable_run: false,
+            input_modifier_disable_jump: false,
+            input_modifier_disable_emote: false,
+            input_modifier_disable_double_jump: false,
+            input_modifier_disable_gliding: false,
+
+            // On-screen touch controls start inactive (default joystick + gamepad shown)
+            touch_controls_active: false,
+            touch_controls_hide_joystick: false,
+            touch_controls_hide_crosshair: false,
+            touch_controls_main_action: GString::new(),
+            touch_controls_inputs: VarArray::new(),
+
+            // SDK skybox time starts as inactive
+            sdk_skybox_time_active: false,
+            skybox_time: None,
+            scene_fetcher: None,
+            snapshot: None,
+            music_player: None,
+            raycast_debugger: None,
+            analytics_controller: None,
+            feature_flags: None,
+            graphics_autotune: crate::app::graphics_autotune::GraphicsAutotune::new_gd(),
+            deep_link_router: crate::app::deep_link::DeepLinkRouter::new_gd(),
+            scene_inspector_bridge: None,
+            deep_link_obj: crate::godot_classes::dcl_parse_deep_link::DclParseDeepLink::new_gd(),
+            deep_link_url: GString::new(),
+            dcl_env_explicit: false,
+            player_camera_node: None,
+            current_camera_mode: crate::player::body::CameraMode::ThirdPerson.to_i32(),
+            camera_mode_blocked: false,
+            standalone: false,
+            session_id: GString::new(),
+            chat_notifications_width: 0,
+            is_portrait: true,
+            signing_out: false,
+            logging_selftest: Default::default(),
+            sdk_skybox_fixed_time: 0,
+            sdk_skybox_transition_forward: true,
+        }
+    }
+}
+
+#[godot_api]
+impl DclGlobal {
+    #[signal]
+    pub fn sdk_skybox_time_active_changed(is_active: bool);
+
+    /// A chat line, for the shell's chat. `address` is `system` for the app's own notices.
+    #[signal]
+    pub fn on_chat_message(address: GString, message: GString, timestamp: f64);
+
+    #[signal]
+    pub fn loading_started();
+
+    #[signal]
+    pub fn loading_finished();
+
+    #[signal]
+    pub fn change_parcel(new_parcel: Vector2i);
+
+    /// The player tapped an avatar. The Godot passport is gone: the shell opens profiles through
+    /// its own intent, so nothing listens for this today.
+    #[signal]
+    pub fn open_profile_by_avatar(avatar: Gd<DclAvatar>);
+
+    #[signal]
+    pub fn open_backpack(on_emotes: bool);
+
+    #[signal]
+    pub fn camera_mode_set(camera_mode: i32);
+
+    #[signal]
+    pub fn orientation_changed(is_portrait: bool);
+
+    #[func]
+    fn set_scene_log_enabled(&self, enabled: bool) {
+        set_scene_log_enabled(enabled);
+    }
+
+    /// Creator-facing scene performance warnings on the in-app console (slow
+    /// `onUpdate` / missed frames, see scene_manager.rs). Preview-only.
+    #[func]
+    fn set_scene_perf_warnings_enabled(&self, enabled: bool) {
+        set_scene_perf_warnings_enabled(enabled);
+    }
+
+    /// Logging self-test for the **Rust stack**: emit every `tracing` level plus
+    /// raw `println!`/`eprintln!`, so the unified channel + Sentry pipeline can be
+    /// verified end-to-end. Called from GDScript's `_run_logging_selftest()` when
+    /// `--test-logging` / `?test-logging=true` is set. ERROR/WARN additionally
+    /// exercise the Godot→Sentry path; `println!`/`eprintln!` exercise the iOS fd
+    /// capture (they never go through `tracing`).
+    #[func]
+    pub fn test_logging(&self) {
+        tracing::trace!("[LOGTEST][rust] trace via tracing::trace!");
+        tracing::debug!("[LOGTEST][rust] debug via tracing::debug!");
+        tracing::info!("[LOGTEST][rust] info via tracing::info!");
+        tracing::warn!("[LOGTEST][rust] warn via tracing::warn! (expect Sentry)");
+        tracing::error!("[LOGTEST][rust] error via tracing::error! (expect Sentry)");
+        println!("[LOGTEST][rust] stdout via println! (iOS: fd capture)");
+        eprintln!("[LOGTEST][rust] stderr via eprintln! (iOS: fd capture)");
+    }
+
+    #[func]
+    fn is_mobile(&self) -> bool {
+        self.is_mobile
+    }
+
+    #[func]
+    pub fn is_telemetry_disabled() -> bool {
+        cfg!(feature = "disable_telemetry")
+    }
+
+    #[func]
+    fn is_android(&self) -> bool {
+        self.is_android
+    }
+
+    #[func]
+    fn is_android_or_emulating(&self) -> bool {
+        self.is_android || self.cli.bind().emulate_android
+    }
+
+    #[func]
+    fn is_ios(&self) -> bool {
+        self.is_ios
+    }
+
+    #[func]
+    fn is_ios_or_emulating(&self) -> bool {
+        self.is_ios || self.cli.bind().emulate_ios
+    }
+
+    #[func]
+    fn is_virtual_mobile(&self) -> bool {
+        self.is_virtual_mobile
+    }
+
+    #[func]
+    pub(crate) fn _set_is_mobile(&mut self, is_mobile: bool) {
+        self.is_mobile = is_mobile;
+        self.is_virtual_mobile = is_mobile;
+    }
+
+    #[func]
+    pub fn get_selected_avatar(&mut self) -> Option<Gd<DclAvatar>> {
+        let id = self.selected_avatar?;
+        match Gd::<DclAvatar>::try_from_instance_id(id) {
+            Ok(gd) => Some(gd),
+            Err(_) => {
+                // Avatar node was freed; drop the stale id so we stop trying.
+                self.selected_avatar = None;
+                None
+            }
+        }
+    }
+
+    #[func]
+    pub fn ui_has_focus(&self) -> bool {
+        self.engine.bind().ui_has_focus()
+    }
+
+    #[func]
+    pub fn get_version() -> GString {
+        env!("GODOT_EXPLORER_VERSION").into()
+    }
+
+    /// Clean-semver release string for Sentry (`{major.minor.patch}+{build}`), so
+    /// `release.version` / `release.build` filtering, adoption and regression tracking
+    /// work. Distinct from `get_version()`, which keeps the human/log-facing full string
+    /// (commit hash + `-{env}` suffix). Commit hash and environment reach Sentry via
+    /// `dist` and `environment`. Built in build.rs (`GODOT_EXPLORER_SENTRY_RELEASE`).
+    #[func]
+    pub fn get_sentry_release() -> GString {
+        env!("GODOT_EXPLORER_SENTRY_RELEASE").into()
+    }
+
+    /// Get version string with environment suffix (e.g., "v1.0.0 - zone")
+    /// Hidden when environment is plain "org" (production default).
+    #[func]
+    pub fn get_version_with_env() -> GString {
+        let version = format!("v{}", env!("GODOT_EXPLORER_VERSION"));
+        let config = crate::env::get_config();
+        let repr = config.to_string_repr();
+        if repr == "org" {
+            GString::from(&version)
+        } else {
+            GString::from(&format!("{} - {}", version, repr))
+        }
+    }
+
+    #[func]
+    pub fn generate_uuid_v4() -> GString {
+        uuid::Uuid::new_v4().to_string().to_godot()
+    }
+
+    #[func]
+    pub fn is_production() -> bool {
+        env!("GODOT_EXPLORER_VERSION").contains("-prod")
+    }
+
+    #[func]
+    pub fn is_staging() -> bool {
+        env!("GODOT_EXPLORER_VERSION").contains("-staging")
+    }
+
+    #[func]
+    pub fn is_dev() -> bool {
+        env!("GODOT_EXPLORER_VERSION").contains("-dev")
+    }
+
+    #[func]
+    pub fn get_commit_hash() -> GString {
+        env!("GODOT_EXPLORER_COMMIT_HASH").into()
+    }
+
+    /// Marketing version with the build number but no commit hash or environment, e.g.
+    /// `1.14.0.1844` (everything before the first `-` of `GODOT_EXPLORER_VERSION`). Locally,
+    /// with no `DCL_BUILD_NUMBER`, it's just `{major.minor.patch}`. Used in production.
+    #[func]
+    pub fn get_short_version() -> GString {
+        let full = env!("GODOT_EXPLORER_VERSION");
+        GString::from(full.split('-').next().unwrap_or(full))
+    }
+
+    /// Full version with build number, commit hash and environment, e.g.
+    /// `1.14.0.1844-6cefb54-staging`. The `-debug` build-mode marker is dropped so the shape is
+    /// always `{version}.{build}-{hash}-{env}`. Used outside production for diagnostics.
+    #[func]
+    pub fn get_full_version() -> GString {
+        GString::from(
+            env!("GODOT_EXPLORER_VERSION")
+                .replace("-debug", "")
+                .as_str(),
+        )
+    }
+
+    #[func]
+    pub fn get_commit_message() -> GString {
+        env!("GODOT_EXPLORER_COMMIT_MESSAGE").into()
+    }
+
+    #[func]
+    pub fn get_branch_name() -> GString {
+        env!("GODOT_EXPLORER_BRANCH_NAME").into()
+    }
+
+    pub fn has_singleton() -> bool {
+        let Some(main_loop) = Engine::singleton().get_main_loop() else {
+            return false;
+        };
+        let Some(root) = main_loop.cast::<SceneTree>().get_root() else {
+            return false;
+        };
+        root.has_node("Global")
+    }
+
+    /// The player's camera, `None` once its world is gone (cloning a freed `Gd` panics).
+    pub fn player_camera(&self) -> Option<Gd<crate::godot_classes::dcl_camera_3d::DclCamera3D>> {
+        self.player_camera_node
+            .as_ref()
+            .filter(|camera| camera.is_instance_valid())
+            .cloned()
+    }
+
+    pub fn try_singleton() -> Option<Gd<Self>> {
+        let res = Engine::singleton()
+            .get_main_loop()?
+            .cast::<SceneTree>()
+            .get_root()?
+            .get_node_or_null("Global")?
+            .try_cast::<Self>();
+        res.ok()
+    }
+
+    pub fn singleton() -> Gd<Self> {
+        Self::try_singleton().expect("Failed to get global singleton!")
+    }
+
+    pub fn get_network_inspector_sender() -> Option<NetworkInspectorSender> {
+        Some(
+            Self::try_singleton()?
+                .bind()
+                .network_inspector
+                .bind()
+                .get_sender(),
+        )
+    }
+
+    /// Reset all input modifiers to false (no modification)
+    pub fn reset_input_modifiers(&mut self) {
+        self.input_modifier_disable_all = false;
+        self.input_modifier_disable_walk = false;
+        self.input_modifier_disable_jog = false;
+        self.input_modifier_disable_run = false;
+        self.input_modifier_disable_jump = false;
+        self.input_modifier_disable_emote = false;
+        self.input_modifier_disable_double_jump = false;
+        self.input_modifier_disable_gliding = false;
+    }
+
+    /// Reset on-screen touch controls to defaults (joystick + full gamepad shown)
+    pub fn reset_touch_controls(&mut self) {
+        self.touch_controls_active = false;
+        self.touch_controls_hide_joystick = false;
+        self.touch_controls_hide_crosshair = false;
+        self.touch_controls_main_action = GString::new();
+        self.touch_controls_inputs = VarArray::new();
+    }
+
+    /// Reset SDK skybox time to inactive state
+    pub fn reset_skybox_time(&mut self) {
+        self.sdk_skybox_time_active = false;
+        self.sdk_skybox_fixed_time = 0;
+        self.sdk_skybox_transition_forward = true;
+    }
+
+    /// Check if walk input is disabled (either by disable_all or disable_walk)
+    #[func]
+    pub fn is_walk_disabled(&self) -> bool {
+        self.input_modifier_disable_all || self.input_modifier_disable_walk
+    }
+
+    /// Check if jog input is disabled (either by disable_all or disable_jog)
+    #[func]
+    pub fn is_jog_disabled(&self) -> bool {
+        self.input_modifier_disable_all || self.input_modifier_disable_jog
+    }
+
+    /// Check if run input is disabled (either by disable_all or disable_run)
+    #[func]
+    pub fn is_run_disabled(&self) -> bool {
+        self.input_modifier_disable_all || self.input_modifier_disable_run
+    }
+
+    /// Check if jump input is disabled (either by disable_all or disable_jump)
+    #[func]
+    pub fn is_jump_disabled(&self) -> bool {
+        self.input_modifier_disable_all || self.input_modifier_disable_jump
+    }
+
+    /// Check if emote input is disabled (either by disable_all or disable_emote)
+    #[func]
+    pub fn is_emote_disabled(&self) -> bool {
+        self.input_modifier_disable_all || self.input_modifier_disable_emote
+    }
+
+    /// Check if double-jump is disabled in the current scene. A blanket
+    /// disable_jump or disable_all also suppresses double-jump, since the
+    /// trigger (jump input) itself is unavailable.
+    #[func]
+    pub fn is_double_jump_disabled(&self) -> bool {
+        self.input_modifier_disable_all
+            || self.input_modifier_disable_jump
+            || self.input_modifier_disable_double_jump
+    }
+
+    /// Check if glide is disabled in the current scene. A blanket disable_jump
+    /// or disable_all also suppresses glide, since opening the glider is a
+    /// jump-press gesture.
+    #[func]
+    pub fn is_glide_disabled(&self) -> bool {
+        self.input_modifier_disable_all
+            || self.input_modifier_disable_jump
+            || self.input_modifier_disable_gliding
+    }
+
+    /// Check if all movement input is disabled
+    #[func]
+    pub fn is_all_input_disabled(&self) -> bool {
+        self.input_modifier_disable_all
+    }
+
+    /// Set the Decentraland environment for URL transformation.
+    /// Supports per-group overrides: "zone", "auth::zone,org", "auth::zone,comms::today,org"
+    #[func]
+    pub fn set_dcl_environment(env: GString) {
+        if let Some(config) = crate::env::DclEnvConfig::parse(&env.to_string()) {
+            crate::env::set_environment_config(config);
+        } else {
+            tracing::warn!("Invalid environment value: {}", env);
+        }
+    }
+
+    /// Get the current Decentraland environment string.
+    /// Returns the full config string if overrides are present, otherwise just the suffix.
+    #[func]
+    pub fn get_dcl_environment() -> GString {
+        GString::from(&crate::env::get_config().to_string_repr())
+    }
+
+    /// Change the Rust log filter at runtime.
+    /// Accepts any valid tracing EnvFilter string.
+    /// Examples: "debug", "info", "warn", "dclgodot::comms=debug,warn"
+    #[func]
+    pub fn set_rust_log_filter(filter: GString) {
+        match crate::tools::godot_logger::set_log_filter(&filter.to_string()) {
+            Ok(()) => godot_print!("Rust log filter updated to: {}", filter),
+            Err(e) => tracing::error!("Failed to update Rust log filter: {}", e),
+        }
+    }
+
+    #[func]
+    pub fn notify_joypad_input() {
+        DclGlobal::singleton().bind_mut().joypad_input_active_until =
+            Some(std::time::Instant::now() + JOYPAD_INPUT_WINDOW);
+    }
+
+    /// True while the window opened by the last joypad activity is open.
+    pub fn joypad_input_active(&self) -> bool {
+        self.joypad_input_active_until
+            .is_some_and(|t| t > std::time::Instant::now())
+    }
+
+    /// Resolves and applies the UI language (see `app::locale`).
+    #[func]
+    pub fn apply_locale() {
+        crate::app::locale::apply_locale();
+    }
+
+    /// Locale forwarded to SDK7 scenes (`getExplorerInformation`, `localeChanged`).
+    /// Callers pass the resolved app locale (`app::locale`), never the OS one.
+    #[func]
+    pub fn set_scene_locale(locale: GString) {
+        crate::godot_classes::dcl_scene_locale::set_scene_locale(&locale.to_string());
+    }
+
+    /// Per-profile particle budgets, applied on graphic profile change.
+    /// scene_budget: max live particles summed over a scene's emitters (0 = off).
+    /// emitter_cap: hard cap per emitter. use_cpu: create CPUParticles3D emitters.
+    #[func]
+    pub fn set_particle_profile_budgets(scene_budget: i32, emitter_cap: i32, use_cpu: bool) {
+        crate::scene_runner::components::particle_system::set_particle_profile_budgets(
+            scene_budget,
+            emitter_cap,
+            use_cpu,
+        );
+    }
+}

@@ -1,6 +1,5 @@
 [gd_scene format=3 uid="uid://c7bnh6p6qygxu"]
 
-[ext_resource type="Script" uid="uid://cuall0fytf468" path="res://src/ui/components/organisms/emotes/emote_item_ui.gd" id="2_jdnf4"]
 [ext_resource type="Texture2D" uid="uid://byn2ta5gkfyg" path="res://src/ui/components/organisms/emotes/emote_slot_background.svg" id="2_l3874"]
 [ext_resource type="Texture2D" uid="uid://dd5nwhl0n5lo5" path="res://assets/ui/add-icon.svg" id="3_p4x31"]
 [ext_resource type="Texture2D" uid="uid://u1udg2i45c0r" path="res://src/ui/components/organisms/emotes/emote_slot_outline.svg" id="4_kedbx"]
@@ -14,11 +13,10 @@ fill = 1
 fill_from = Vector2(0.5, 0.5)
 fill_to = Vector2(0.75, 0.25)
 
-[node name="EmoteWheelItem" type="TextureButton" unique_id=304691548]
+[node name="EmoteWheelItem" type="EmoteItemUi" unique_id=304691548]
 offset_right = 140.0
 offset_bottom = 140.0
 pivot_offset = Vector2(-38, 215)
-script = ExtResource("2_jdnf4")
 
 [node name="Control_Inner" type="Control" parent="." unique_id=588235276]
 unique_name_in_owner = true
@@ -128,4 +126,3 @@ texture = ExtResource("4_kedbx")
 expand_mode = 1
 stretch_mode = 4
 
-[connection signal="item_rect_changed" from="." to="." method="_on_item_rect_changed"]

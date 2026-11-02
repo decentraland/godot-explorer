@@ -1,6 +1,6 @@
 ---
 name: godot
-description: Use when editing Godot files in this repo — GDScript (.gd), scenes (.tscn) or resources (.tres) under `godot/`. Covers the .tscn/.tres serialization rules that differ from GDScript, instance property overrides, GDScript pitfalls this codebase has hit, and the repo's validation commands. Trigger on hand-editing a .tscn/.tres, "failed to load" resource errors, or GDScript parse errors.
+description: Use when editing Godot files in this repo — scenes (.tscn) or resources (.tres) under `godot/`. Covers the .tscn/.tres serialization rules that differ from hand-written code, instance property overrides, and the repo's validation commands. Trigger on hand-editing a .tscn/.tres, "failed to load" resource errors, or script load errors.
 ---
 
 # Godot files in this repo
@@ -9,7 +9,7 @@ The project runs a custom Godot 4.6 fork through xtask — `cargo run -- run` ru
 `cargo run -- run -e` opens the editor. There is no `godot` binary on `PATH`. UI placement lives in
 the `godot-ui-components` skill, user-facing text in the `i18n` skill.
 
-## .tscn / .tres are serialization, not GDScript
+## .tscn / .tres are serialization
 
 ```
 [ext_resource type="Script" path="res://item.gd" id="1"]
@@ -51,18 +51,9 @@ vertex_color_use_as_albedo = true
 material = SubResource("StandardMaterial3D_1")
 ```
 
-## GDScript
-
-- `:=` can't infer a type from a `Variant` — properties on results of `get_edited_scene_root()`,
-  `get_node()`, `Dictionary.get()`, `Array.front()` and the like. Annotate explicitly:
-  `var scene_path: String = root.scene_file_path`.
-- Use callables, not method-name strings: `_apply_current.call_deferred()`, not
-  `call_deferred("_apply_current")` — the string form skips parse-time checks and breaks on rename.
-
 ## Validate
 
 ```bash
-cargo run -- check-gdscript      # every script must parse
-gdformat godot/ && gdlint godot/ # dcl-regenesislabs fork of gdtoolkit
-cargo run -- import-assets       # after adding assets or moving scripts
+cargo run -- import-assets       # after adding assets or changing a scene
+find godot/src -name '*.gd'      # must stay empty: the engine has no GDScript
 ```

@@ -247,7 +247,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     //
     // firebase-messaging is a `compileOnly` dependency: the types below are resolved at compile
     // time but supplied at runtime by the app (export_plugin.gd adds the same coordinate). On a
-    // build where Firebase never initializes — a Quest or AOSP device with no Play Services, or
+    // build where Firebase never initializes — an AOSP device with no Play Services, or
     // an export missing google-services.json — touching these classes throws, hence the broad
     // `Throwable` catches. Failing to get a token must degrade to "this device can't receive
     // push", never to a crash.

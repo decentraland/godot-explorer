@@ -98,21 +98,6 @@ jobs:
             test -s "assets-output/${png#output/}" || { echo "empty or missing: $png"; exit 1; }
           done
 
-      # COMMENTED DUE TO FLAKY TEST
-      # - name: Run scene-rendering test
-      #   run: |
-      #     mkdir -p scenes-output
-      #     podman run --rm -v \
-      #       $(pwd)/tests/scene-renderer-test-input.json:/app/scenes.json \
-      #       --env PRESET_ARGS="--scene-renderer --scene-input-file scenes.json" \
-      #       -v $(pwd)/scenes-output:/app/output localhost/godot-explorer:${{ github.sha }}
-
-      # - name: Compare images with snapshots
-      #   run: |
-      #     cargo run -- compare-image-folders \
-      #       --snapshots tests/snapshots/scene-image-generation/ \
-      #       --result ${{ github.workspace }}/scenes-output/
-
       - name: Upload artifacts
         if: success() || failure()
         uses: actions/upload-artifact@v4
@@ -121,4 +106,3 @@ jobs:
           path: |
             ${{ github.workspace }}/avatars-output/**/*
             ${{ github.workspace }}/assets-output/**/*
-            ${{ github.workspace }}/scenes-output/**/*

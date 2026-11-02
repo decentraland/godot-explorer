@@ -1,10 +1,8 @@
 [gd_scene format=3 uid="uid://dmr0fcamx7t56"]
 
-[ext_resource type="Script" uid="uid://bu1t2cfib3j0n" path="res://src/mobile/joystick/virtual_joystick.gd" id="1_8x4dy"]
-[ext_resource type="Script" uid="uid://dbghjmvuruo85" path="res://src/mobile/joystick/active_area.gd" id="2_gh23i"]
 [ext_resource type="Material" uid="uid://beinfjlq7dgke" path="res://src/mobile/joystick/joystick_material.tres" id="3_naunr"]
 
-[node name="VirtualJoystick" type="Control" unique_id=1142380904]
+[node name="VirtualJoystick" type="VirtualJoystick" unique_id=1142380904]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -12,9 +10,8 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-script = ExtResource("1_8x4dy")
 deadzone_size = 10.0
-_joystick_default_position = Vector2(154, 146)
+joystick_default_position = Vector2(154, 146)
 joystick_mode = 1
 visibility_mode = 1
 metadata/mobile_preview_orientation = "landscape"
@@ -26,7 +23,6 @@ anchor_right = 0.4
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 0
-script = ExtResource("2_gh23i")
 
 [node name="ColorRect" type="ColorRect" parent="ActiveArea" unique_id=297031327]
 visible = false
@@ -54,4 +50,3 @@ mouse_filter = 2
 unique_name_in_owner = true
 wait_time = 0.5
 
-[connection signal="resized" from="." to="." method="_on_resized"]

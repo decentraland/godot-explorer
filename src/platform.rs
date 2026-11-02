@@ -226,7 +226,7 @@ pub fn validate_platform_for_target(target: &str) -> Result<(), anyhow::Error> {
             }
             check_ios_development().map_err(|e| anyhow::anyhow!(e))?;
         }
-        "android" | "quest" => {
+        "android" => {
             check_android_sdk().map_err(|e| anyhow::anyhow!(e))?;
         }
         "windows" | "win64" => {

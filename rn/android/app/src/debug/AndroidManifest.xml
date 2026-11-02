@@ -1,0 +1,13 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:tools="http://schemas.android.com/tools">
+  <application>
+    <activity-alias android:name="com.godot.game.GodotAppLauncher" tools:node="merge">
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="dclrn" android:host="preview" />
+      </intent-filter>
+    </activity-alias>
+  </application>
+</manifest>

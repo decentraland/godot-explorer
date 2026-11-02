@@ -1,0 +1,14 @@
+[package]
+name = "dcl_bindings"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+# A small library with the same uniffi metadata as libdclgodot (dcl_core's FFI and dcl_host), for
+# generating the TypeScript, Kotlin and Swift bindings without building the engine.
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+dcl_core = { path = "../dcl_core", features = ["ffi"] }
+dcl_host = { path = "../dcl_host" }

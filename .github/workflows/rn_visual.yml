@@ -1,0 +1,171 @@
+name: 📸 RN visual snapshots
+
+# Screenshots of the main screens of the RN gallery (rn/src/gallery/snapshot-set.json), taken in Chromium from the
+# react-native-web build of the app with the mock core: no emulator, no Godot. A PR's capture is compared by reg-cli with the official
+# screenshots of its base branch and sent to the mobile board (R2), where the changes are reviewed: the review is
+# mirrored to the PR as the commit status "RN visual snapshots". A push to an official branch replaces its set.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'rn/**'
+      - 'tools/ui-spec/**'
+      - '.github/workflows/rn_visual.yml'
+      - '.github/actions/rn-npm-ci/**'
+  push:
+    branches: [2.x, main, release, 'release-*']
+    paths:
+      - 'rn/**'
+      - 'tools/ui-spec/**'
+      - '.github/workflows/rn_visual.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rn-visual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    name: Capture the screens
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: ./.github/actions/rn-npm-ci
+
+      - name: Python imaging for the capture post-processing
+        run: sudo apt-get install -y --no-install-recommends python3-pil
+
+      - name: Install Chromium
+        working-directory: rn
+        run: npx playwright-core install --with-deps chromium
+
+      - name: Capture the screens
+        run: bash tools/ui-spec/ci_capture.sh shots/screens --set
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shots-screens
+          path: shots/screens
+          if-no-files-found: warn
+          retention-days: 7
+
+  compare:
+    name: Compare with the official screenshots
+    needs: capture
+    if: ${{ !cancelled() && needs.capture.result != 'skipped' && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      BUILD_REPORTER_TOKEN: ${{ secrets.BUILD_REPORTER_TOKEN }}
+      BOARD_EVENTS_URL: ${{ vars.BOARD_EVENTS_URL }}
+      BOARD_URL: https://mobile-board.dclregenesislabs.xyz
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: ./.github/actions/rn-npm-ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: shots-*
+          merge-multiple: true
+          path: shots
+
+      # The board's official set of the base branch; until a push has published one, every screen shows as new.
+      - name: Official screenshots of the base branch
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          mkdir -p baseline
+          rc=0
+          python3 tools/ui-spec/board_visual.py fetch-official --ref "$BASE_REF" --out baseline || rc=$?
+          if [ "$rc" = 3 ]; then
+            echo "No official screenshots for $BASE_REF yet."
+          elif [ "$rc" != 0 ]; then
+            exit "$rc"
+          fi
+
+      # reg-cli exits 0 when screens changed: the review decides, not this step.
+      - name: Compare
+        run: |
+          python3 tools/ui-spec/visual_report.py prepare --new shots --baseline baseline
+          cd rn && npx reg-cli ../visual-report/actual ../visual-report/expected ../visual-report/diff \
+            -R ../visual-report/index.html -J ../visual-report/reg.json -M 0.06 -T 0.001 -I
+
+      - name: Send the report to the board
+        id: board
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          [ -f visual-report/reg.json ] || exit 0
+          RUN=$(python3 tools/ui-spec/board_visual.py open-run --kind pr --sha "$HEAD_SHA" --ref "$HEAD_REF" --base-ref "$BASE_REF" --pr "$PR" | tail -n 1)
+          echo "$RUN" | grep -Eq '^[0-9]+-[0-9]+$' || exit 0
+          python3 tools/ui-spec/board_visual.py upload-report --run "$RUN" --report visual-report
+          python3 tools/ui-spec/board_visual.py complete-run --run "$RUN" --report visual-report
+          echo "run=$RUN" >> "$GITHUB_OUTPUT"
+
+      - name: Report
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          BOARD_RUN: ${{ steps.board.outputs.run }}
+        run: |
+          [ -f visual-report/reg.json ] || exit 0
+          rc=0
+          python3 tools/ui-spec/visual_report.py summary --run-url "$RUN_URL" \
+            ${BOARD_RUN:+--board-url "$BOARD_URL/#visual=$BOARD_RUN"} || rc=$?
+          cat visual-report/report.md >> "$GITHUB_STEP_SUMMARY"
+          # A fork's token is read-only: the summary above is the report there.
+          if [ "${{ github.event.pull_request.head.repo.full_name }}" = "${{ github.repository }}" ]; then
+            PR=${{ github.event.pull_request.number }}
+            ID=$(gh api "repos/${{ github.repository }}/issues/$PR/comments" --paginate \
+              --jq '.[] | select(.body | contains("<!-- rn-visual-snapshots -->")) | .id' | head -n 1)
+            if [ -n "$ID" ]; then
+              gh api -X PATCH "repos/${{ github.repository }}/issues/comments/$ID" -F body=@visual-report/report.md >/dev/null
+            else
+              gh api "repos/${{ github.repository }}/issues/$PR/comments" -F body=@visual-report/report.md >/dev/null
+            fi
+          fi
+          exit "$rc"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rn-visual-report
+          path: visual-report
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # A push to an official branch (2.x, main, release*) replaces that branch's official screenshots in the board.
+  official:
+    name: Publish the official screenshots
+    needs: capture
+    if: ${{ needs.capture.result == 'success' && github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      BUILD_REPORTER_TOKEN: ${{ secrets.BUILD_REPORTER_TOKEN }}
+      BOARD_EVENTS_URL: ${{ vars.BOARD_EVENTS_URL }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: shots-*
+          merge-multiple: true
+          path: shots
+
+      - name: Publish
+        run: python3 tools/ui-spec/board_visual.py publish-official --ref "${{ github.ref_name }}" --sha "${{ github.sha }}" --dir shots

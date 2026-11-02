@@ -8,8 +8,11 @@ inputs:
 runs:
   using: composite
   steps:
+    # Saved only on pushes (main/release/2.x): a PR's cache is readable by that PR alone, and each
+    # ~1 GB save evicts the shared caches from the 10 GB repo limit.
     - uses: Swatinem/rust-cache@v2
       with:
+        save-if: ${{ github.event_name == 'push' }}
         workspaces: |
           .
           lib/

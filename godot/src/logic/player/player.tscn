@@ -1,22 +1,19 @@
 [gd_scene format=3 uid="uid://blv7r5folt1d5"]
 
-[ext_resource type="Script" uid="uid://bwfhs05dq8dhm" path="res://src/logic/player/player.gd" id="1_5bfm2"]
 [ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar/avatar.tscn" id="2_n22nx"]
 [ext_resource type="PackedScene" uid="uid://cbtq7kaarx6mp" path="res://src/logic/player/camera_mode_area_detector.tscn" id="2_rco65"]
 [ext_resource type="PackedScene" uid="uid://qyi7gcf7tphy" path="res://src/logic/player/outline_system.tscn" id="3_sxiuh"]
 [ext_resource type="PackedScene" uid="uid://biigqf0xvnrcj" path="res://src/logic/player/stuck_detector.tscn" id="4_stuck"]
-[ext_resource type="Script" uid="uid://8dutfncs4yky" path="res://src/logic/player/camera_collision_clamp.gd" id="5_clamp"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_pxti1"]
 margin = 0.08
 radius = 0.3
 height = 1.6
 
-[node name="Player" type="CharacterBody3D" unique_id=1845110250]
+[node name="Player" type="Player" unique_id=1845110250]
 collision_layer = 4
 collision_mask = 2
 safe_margin = 0.01
-script = ExtResource("1_5bfm2")
 
 [node name="CollisionShape3D_Body" type="CollisionShape3D" parent="." unique_id=546537198]
 unique_name_in_owner = true
@@ -36,8 +33,7 @@ margin = 0.3
 
 [node name="CameraArm" type="Node3D" parent="Mount" unique_id=185943616]
 
-[node name="CameraCollisionClamp" type="Node3D" parent="Mount" unique_id=185943617]
-script = ExtResource("5_clamp")
+[node name="CameraCollisionClamp" type="CameraCollisionClamp" parent="Mount" unique_id=185943617]
 
 [node name="Camera3D" type="DclCamera3D" parent="Mount/CameraArm" unique_id=172558912]
 smoothing_speed = 2.0
@@ -61,6 +57,6 @@ skip_process = true
 [node name="AudioStreamPlayer_Camera" type="AudioStreamPlayer" parent="." unique_id=901349121]
 bus = &"UI"
 
-[connection signal="block_camera_mode" from="camera_mode_area_detector" to="." method="_on_camera_mode_area_detector_block_camera_mode"]
-[connection signal="unblock_camera_mode" from="camera_mode_area_detector" to="." method="_on_camera_mode_area_detector_unblock_camera_mode"]
+[connection signal="block_camera_mode" from="camera_mode_area_detector" to="." method="on_camera_mode_blocked"]
+[connection signal="unblock_camera_mode" from="camera_mode_area_detector" to="." method="on_camera_mode_unblocked"]
 [connection signal="visibility_changed" from="Avatar" to="." method="_on_avatar_visibility_changed"]

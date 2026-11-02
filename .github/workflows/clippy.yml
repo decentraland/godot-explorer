@@ -19,7 +19,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
         with:
-          toolchain: "1.90"
+          toolchain: "1.94"
           components: clippy
 
       - name: Set up cache
@@ -31,13 +31,18 @@ jobs:
       - name: cargo install
         run: cargo run -- install --no-templates
 
+      # asset_server is only built by the Docker image (main/release); check it here so PRs catch it.
       - name: cargo check
         working-directory: lib
-        run: cargo check
+        run: cargo check --workspace --features dclgodot/asset_server
 
       - name: cargo clippy
         working-directory: lib
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --workspace --features dclgodot/asset_server -- -D warnings
+
+      - name: dcl_core and dcl_host tests (no Godot)
+        working-directory: lib
+        run: cargo test -p dcl_core -p dcl_host
 
       - name: Version check
         run: cargo run -- version-check

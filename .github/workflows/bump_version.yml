@@ -63,7 +63,9 @@ jobs:
           NEW="${{ steps.ver.outputs.new }}"
           # lib/Cargo.toml (source of truth) + its lock entry
           sed -i "s/^version = \"${CURRENT}\"/version = \"${NEW}\"/" lib/Cargo.toml
-          sed -i "0,/name = \"dclgodot\"/{ /name = \"dclgodot\"/{ n; s/version = \"${CURRENT}\"/version = \"${NEW}\"/ } }" lib/Cargo.lock
+          for CRATE in dclgodot dcl_core; do
+            sed -i "/^name = \"${CRATE}\"$/{ n; s/version = \"${CURRENT}\"/version = \"${NEW}\"/ }" lib/Cargo.lock
+          done
           # Android version/name + iOS short_version (marketing strings shown in the stores)
           sed -i "s/version\/name=\"${CURRENT}\"/version\/name=\"${NEW}\"/" godot/export_presets.cfg
           sed -i "s/application\/short_version=\"${CURRENT}\"/application\/short_version=\"${NEW}\"/" godot/export_presets.cfg

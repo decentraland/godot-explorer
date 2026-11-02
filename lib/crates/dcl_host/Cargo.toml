@@ -1,0 +1,22 @@
+[package]
+name = "dcl_host"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+# What the native host (Kotlin, Swift) calls and implements: creating the core at launch and the
+# host-only traits (D-41). A foreign trait has one process-global vtable, so each trait is
+# implemented by exactly one runtime: these by Kotlin/Swift, `dcl_core`'s FFI by the JS shell.
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+dcl_core = { path = "../dcl_core", features = ["ffi"] }
+uniffi = { version = "=0.31" }
+async-trait = "0.1.68"
+tokio = { version = "1.40.0", features = ["time"] }
+uuid = { version = "1.3.0", features = ["v4"] }
+chrono = "0.4.31"
+
+[dev-dependencies]
+tokio = { version = "1.40.0", features = ["macros", "rt"] }

@@ -4,6 +4,8 @@ on:
     branches:
       - main
       - release
+      # Long-lived 2.0.0 integration branch: its push builds save the warm Rust cache its PRs restore.
+      - 2.x
   pull_request:
 
 concurrency:
@@ -16,13 +18,9 @@ jobs:
     name: 📊 Static checks
     uses: ./.github/workflows/static_checks.yml
 
-  # Second stage: Clippy and build checks that require compilation
   clippy:
     name: 🔧 Clippy & Build Checks
-    needs: static-checks
     uses: ./.github/workflows/clippy.yml
-
-  # Third stage: Run all the builds and tests (all depend on static-checks)
 
   # Temporarily disabled: GPU self-hosted runner is down
   # test-coverage:
@@ -32,7 +30,6 @@ jobs:
 
   android-build:
     name: 🤖 Android
-    needs: static-checks
     uses: ./.github/workflows/android_builds.yml
     secrets:
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -54,9 +51,13 @@ jobs:
   # - Manual workflow dispatch (ref: main/release)
   # The signed Android APK is uploaded to R2 by android_builds.yml on every build.
 
+  # Desktop Linux does not ship; it only feeds the Docker image (avatar/asset renderer), so it runs on
+  # main/release pushes, or on a PR with the publish-docker label. clippy checks the asset_server feature.
   linux-build:
     name: 🐧 Linux
-    needs: static-checks
+    if: >-
+      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/release'))
+      || contains(github.event.pull_request.labels.*.name, 'publish-docker')
     uses: ./.github/workflows/linux_builds.yml
   # Disable Windows and MacOS builds for now
   # macos-build:

@@ -77,9 +77,8 @@ Trigger: you're about to copy-paste a Control subtree into two pages, or you not
 2. Create the new directory and move the scene/script with `git mv` so history is preserved.
 3. Update every `res://src/ui/<old>/...` reference (`.tscn`, `.tres`, `.gd`, `.gdshader`) by literal string substitution. Rust callers can also hardcode `res://` paths — `rg 'res://src/ui/<old>' lib/` to catch them.
 4. Delete `godot/.godot/global_script_class_cache.cfg` and `godot/.godot/uid_cache.bin`, then regenerate via `cargo run -- import-assets`. Godot caches stale class paths and the validator will fail otherwise.
-5. Run `cargo run -- check-gdscript` — must report 0 errors.
-6. Run `gdformat godot/ && gdlint godot/` — longer Atomic Design paths often push `preload(...)` past the column budget and need a reflow.
-7. If you edited any Rust file with a hardcoded `res://src/ui/...` path, run `cd lib && cargo fmt --all`.
+5. Run `cargo run -- import-assets` — must report no errors.
+6. If you edited any Rust file with a hardcoded `res://src/ui/...` path, run `cd lib && cargo fmt --all`.
 
 ## Path-reference gotchas
 
@@ -104,8 +103,7 @@ Trigger: you're about to copy-paste a Control subtree into two pages, or you not
 - [ ] Directory + script + scene + `.gd.uid` all share the same `snake_case` stem.
 - [ ] `class_name` (if any) is `PascalCase`.
 - [ ] Every `preload`/`load`/`[ext_resource path=...]` reference resolves; no `res://src/ui/<old>/` strings remain (rg across `godot/` *and* `lib/`).
-- [ ] `cargo run -- check-gdscript` → 0 errors.
-- [ ] `gdformat godot/` and `gdlint godot/` pass.
+- [ ] `cargo run -- import-assets` → no errors.
 - [ ] If a Rust file was touched: `cd lib && cargo fmt --all && cargo clippy -- -D warnings`.
 - [ ] For PNG/JPG moves: the sibling `.import` file's `source_file=` matches the new path.
 - [ ] Any user-facing text is keyed and present in all three catalogues; `python3 tools/i18n/extract_strings.py --check` and `python3 tools/i18n/format_csv.py --check` pass. See the **i18n** skill.

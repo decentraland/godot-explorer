@@ -1,7 +1,6 @@
 [gd_scene format=3 uid="uid://d1i02k5nxmje6"]
 
 [ext_resource type="Texture2D" uid="uid://delidesdvfjyx" path="res://assets/themes/dark_dcl_theme/icons/Mic.svg" id="1_8amxb"]
-[ext_resource type="Script" uid="uid://n63ru00fl7lr" path="res://src/decentraland_components/nickname_ui.gd" id="1_stx67"]
 [ext_resource type="PackedScene" uid="uid://bce2jth446t8i" path="res://src/decentraland_components/avatar/nickname_message_container.tscn" id="2_cu2t2"]
 [ext_resource type="Texture2D" uid="uid://bx7w4x7t54ai8" path="res://assets/check-mark.svg" id="3_tj4hi"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_wgh2x"]
@@ -19,7 +18,7 @@ corner_radius_top_right = 75
 corner_radius_bottom_right = 75
 corner_radius_bottom_left = 75
 
-[node name="NicknameUI" type="MarginContainer" unique_id=1431825349]
+[node name="NicknameUI" type="NicknameUi" unique_id=1431825349]
 offset_right = 130.0
 offset_bottom = 70.0
 size_flags_horizontal = 4
@@ -28,7 +27,6 @@ theme_override_constants/margin_left = 70
 theme_override_constants/margin_top = 35
 theme_override_constants/margin_right = 60
 theme_override_constants/margin_bottom = 35
-script = ExtResource("1_stx67")
 message_container_scene = ExtResource("2_cu2t2")
 
 [node name="Panel" type="Panel" parent="." unique_id=1209667483]

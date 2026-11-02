@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Drive the UNIFIED scene-inspector channel (eval + tree queries) through the
+# Drive the UNIFIED scene-inspector channel (tree queries + typed commands) through the
 # debug-hub consumer port. One request → its matching ACK.
 #
 # This speaks the scene-inspector CMD protocol (the source-of-truth contract an
@@ -15,22 +15,17 @@
 #   unified.sh scenes
 #   unified.sh scene  '{"scene_id":0,"filters":{"component":["Transform"]}}'
 #   unified.sh avatar '{"by":"local"}'
-#   unified.sh eval   'Engine.get_frames_per_second()'
+#   unified.sh state
 #   PORT=9230 HOST=127.0.0.1 unified.sh focus
 set -euo pipefail
 
 PORT="${PORT:-9230}"
 HOST="${HOST:-127.0.0.1}"
-cmd="${1:?usage: unified.sh <cmd> [args-json | eval-code]}"
+cmd="${1:?usage: unified.sh <cmd> [args-json]}"
 shift || true
 
 id="req-${RANDOM}${RANDOM}"
-if [ "$cmd" = "eval" ]; then
-  # JSON-escape the snippet into {"code": "..."}.
-  args="$(printf '%s' "${1:-}" | python3 -c 'import json,sys; print(json.dumps({"code": sys.stdin.read()}))')"
-else
-  args="${1:-{}}"
-fi
+args="${1:-{}}"
 
 frame="$(printf '{"type":"SCENE_INSPECTOR_CMD","cmd":"%s","args":%s,"id":"%s"}' "$cmd" "$args" "$id")"
 

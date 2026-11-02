@@ -1,0 +1,597 @@
+//! Centralized URL management for Decentraland services.
+//!
+//! URLs are automatically transformed based on the current environment (org, zone, today).
+//! Per-service-group overrides allow fine-grained control via the dclenv parameter.
+
+use crate::env::{self, DclEnvironment, ServiceGroup};
+
+/// Domain suffix for a service group (respects per-group overrides).
+fn suffix(group: ServiceGroup) -> &'static str {
+    env::suffix_for(group)
+}
+
+/// Resolved environment for a service group.
+fn resolved_env(group: ServiceGroup) -> DclEnvironment {
+    env::env_for(group)
+}
+
+/// Domain suffix for the default environment (ungrouped URLs).
+fn default_suffix() -> &'static str {
+    env::get_environment().suffix()
+}
+
+// Auth
+pub fn auth_frontend() -> String {
+    if resolved_env(ServiceGroup::Auth) == DclEnvironment::Today {
+        "http://localhost:5173/auth/requests".to_string()
+    } else {
+        format!(
+            "https://decentraland.{}/auth/requests",
+            suffix(ServiceGroup::Auth)
+        )
+    }
+}
+pub fn auth_mobile_frontend() -> String {
+    if resolved_env(ServiceGroup::Auth) == DclEnvironment::Today {
+        "http://localhost:5173/auth/mobile".to_string()
+    } else {
+        format!(
+            "https://decentraland.{}/auth/mobile",
+            suffix(ServiceGroup::Auth)
+        )
+    }
+}
+pub fn auth_api_base() -> String {
+    if resolved_env(ServiceGroup::Auth) == DclEnvironment::Today {
+        "https://auth-api.decentraland.zone".to_string()
+    } else {
+        format!(
+            "https://auth-api.decentraland.{}",
+            suffix(ServiceGroup::Auth)
+        )
+    }
+}
+pub fn auth_api_requests() -> String {
+    if resolved_env(ServiceGroup::Auth) == DclEnvironment::Today {
+        "https://auth-api.decentraland.zone/requests".to_string()
+    } else {
+        format!(
+            "https://auth-api.decentraland.{}/requests",
+            suffix(ServiceGroup::Auth)
+        )
+    }
+}
+
+// Asset Bundle Registry
+pub fn asset_bundle_registry_profiles() -> String {
+    format!(
+        "https://asset-bundle-registry.decentraland.{}/profiles",
+        suffix(ServiceGroup::Catalyst)
+    )
+}
+
+// Catalyst
+pub fn main_realm() -> String {
+    format!(
+        "https://realm-provider-ea.decentraland.{}/main",
+        suffix(ServiceGroup::Catalyst)
+    )
+}
+pub fn worlds_content_server() -> String {
+    format!(
+        "https://worlds-content-server.decentraland.{}/world/",
+        suffix(ServiceGroup::Catalyst)
+    )
+}
+
+// Peer: org uses peer.decentraland.org, zone uses peer.decentraland.zone,
+// today uses peer-testing.decentraland.org (internal dev catalyst).
+fn peer_base_for(env: DclEnvironment) -> String {
+    match env {
+        DclEnvironment::Org => "https://peer.decentraland.org".to_string(),
+        DclEnvironment::Zone => "https://peer.decentraland.zone".to_string(),
+        DclEnvironment::Today => "https://peer-testing.decentraland.org".to_string(),
+    }
+}
+pub fn peer_base() -> String {
+    peer_base_for(resolved_env(ServiceGroup::Catalyst))
+}
+pub fn peer_content() -> String {
+    format!("{}/content/", peer_base())
+}
+pub fn peer_lambdas() -> String {
+    format!("{}/lambdas/", peer_base())
+}
+
+// Identity decoupling ("Option D" testing). When `ServiceGroup::Profile` is
+// explicitly overridden (e.g. `dclenv=catalyst::org,profile::zone,zone`), the
+// player's own profile/identity catalyst is pinned to that env regardless of the
+// connected realm — so scenes load from one env while the avatar, wearables,
+// backpack and profile resolve from another. Returns `None` when no profile
+// override is set, preserving the normal realm-bound behavior. Consumed by
+// `DclRealm`'s profile/lambda URL accessors so every caller is covered centrally.
+fn identity_env() -> Option<DclEnvironment> {
+    let config = env::get_config();
+    if config.has_override(ServiceGroup::Profile) {
+        Some(config.env_for(ServiceGroup::Profile))
+    } else {
+        None
+    }
+}
+pub fn identity_lambdas() -> Option<String> {
+    identity_env().map(|e| format!("{}/lambdas/", peer_base_for(e)))
+}
+pub fn identity_content() -> Option<String> {
+    identity_env().map(|e| format!("{}/content/", peer_base_for(e)))
+}
+
+// Comms
+/// Pulse (ENet avatar-state relay) host — no scheme/port; the game port is
+/// `comms::consts::PULSE_SERVER_PORT` (UDP 7777). Pulse follows the `comms`
+/// service group (it is part of the comms stack): `dclenv=zone` or
+/// `dclenv=comms::zone,org` both point it at the zone deployment. Pulse only
+/// has org + zone deployments (Unity: `pulse-server.decentraland.{ENV}`), so
+/// Today maps to zone.
+#[cfg(feature = "use_pulse")]
+pub fn pulse_server() -> String {
+    let suffix = match resolved_env(ServiceGroup::Comms) {
+        DclEnvironment::Org => "org",
+        _ => "zone",
+    };
+    format!("pulse-server.decentraland.{suffix}")
+}
+pub fn comms_gatekeeper() -> String {
+    format!(
+        "https://comms-gatekeeper.decentraland.{}/get-scene-adapter",
+        suffix(ServiceGroup::Comms)
+    )
+}
+pub fn comms_gatekeeper_local() -> String {
+    format!(
+        "https://comms-gatekeeper-local.decentraland.{}/get-scene-adapter",
+        suffix(ServiceGroup::Comms)
+    )
+}
+pub fn social_service() -> String {
+    format!(
+        "wss://rpc-social-service-ea.decentraland.{}",
+        suffix(ServiceGroup::Comms)
+    )
+}
+pub fn archipelago_stats() -> String {
+    format!(
+        "https://archipelago-ea-stats.decentraland.{}",
+        suffix(ServiceGroup::Comms)
+    )
+}
+
+// Web3 (ungrouped — uses default)
+pub fn ethereum_rpc() -> String {
+    format!("wss://rpc.decentraland.{}/mainnet", default_suffix())
+}
+pub fn ethereum_rpc_with_project(project: &str) -> String {
+    format!("{}?project={}", ethereum_rpc(), project)
+}
+
+// Places (hardcoded to org unless explicitly overridden)
+pub fn places_api() -> String {
+    let config = env::get_config();
+    if config.has_override(ServiceGroup::Places) {
+        format!(
+            "https://places.decentraland.{}/api",
+            config.suffix_for(ServiceGroup::Places)
+        )
+    } else {
+        "https://places.decentraland.org/api".to_string()
+    }
+}
+
+// Events
+pub fn events_api() -> String {
+    format!(
+        "https://events.decentraland.{}/api/events",
+        suffix(ServiceGroup::Events)
+    )
+}
+pub fn jump_events() -> String {
+    format!(
+        "https://decentraland.{}/jump/events",
+        suffix(ServiceGroup::Events)
+    )
+}
+
+// Seasonal Discover assets: one folder per season key, the same on every environment.
+pub fn seasonal_assets() -> &'static str {
+    "https://mobile-ota.dclregenesislabs.xyz/seasons/"
+}
+
+// Mobile BFF
+pub fn mobile_bff() -> String {
+    format!(
+        "https://mobile-bff.decentraland.{}",
+        suffix(ServiceGroup::MobileBff)
+    )
+}
+// Mobile-bff base used by the attestation flow (/attest/* endpoints). Same
+// host template as `mobile_bff()`, but resolves through
+// `ServiceGroup::Attestation` so QA can target a different env per-group via
+// `dclenv=attestation::zone,org`. Dev-only — release clients call
+// `mobile_bff()` and bypass the override (see attestation_service.gd).
+pub fn attestation_bff() -> String {
+    format!(
+        "https://mobile-bff.decentraland.{}",
+        suffix(ServiceGroup::Attestation)
+    )
+}
+pub fn destinations_api() -> String {
+    format!(
+        "https://mobile-bff.decentraland.{}/destinations",
+        suffix(ServiceGroup::MobileBff)
+    )
+}
+pub fn mobile_events_api() -> String {
+    format!(
+        "https://mobile-bff.decentraland.{}/events",
+        suffix(ServiceGroup::MobileBff)
+    )
+}
+pub fn account_deletion() -> String {
+    format!(
+        "https://mobile-bff.decentraland.{}/deletion",
+        suffix(ServiceGroup::MobileBff)
+    )
+}
+/// Force-update gate. Pinned to the `v2` track: the bare `/app-versions` route serves the
+/// frozen legacy row, whose minimum can never be raised again because clients 1.12.0 to
+/// 1.13.1 render the update overlay below the startup splash and hang on the spinner
+/// instead of showing it. Only builds carrying that fix may read a movable track.
+pub fn app_versions() -> String {
+    format!(
+        "https://mobile-bff.decentraland.{}/app-versions/v2",
+        suffix(ServiceGroup::MobileBff)
+    )
+}
+pub fn feature_flags() -> String {
+    format!(
+        "https://mobile-bff.decentraland.{}/feature-flags",
+        suffix(ServiceGroup::MobileBff)
+    )
+}
+pub fn device_support() -> String {
+    format!(
+        "https://mobile-bff.decentraland.{}/device-support",
+        suffix(ServiceGroup::MobileBff)
+    )
+}
+pub fn campaigns() -> String {
+    format!(
+        "https://mobile-bff.decentraland.{}/campaigns",
+        suffix(ServiceGroup::MobileBff)
+    )
+}
+
+// Intercom ticket proxy (native bug reports, issue #2652).
+//
+// The proxy holds the Intercom workspace token and forwards ticket creation; the
+// client never talks to Intercom directly. It verifies Decentraland signed-fetch
+// and allowlists the `Origin` header per environment, so `intercom_origin()` must
+// accompany every request or the proxy answers 403.
+pub fn intercom_tickets() -> String {
+    format!(
+        "https://intercom-proxy.decentraland.{}/intercom/tickets",
+        suffix(ServiceGroup::IntercomProxy)
+    )
+}
+pub fn intercom_origin() -> String {
+    format!(
+        "https://play.decentraland.{}",
+        suffix(ServiceGroup::IntercomProxy)
+    )
+}
+
+// Notifications
+pub fn notifications_api() -> String {
+    format!(
+        "https://notifications.decentraland.{}",
+        suffix(ServiceGroup::Notifications)
+    )
+}
+
+// Credits server (IAP purchases + on-chain credits balance). Base host only; the
+// IAP client appends paths like /credits/iap/quote and /users/:address/credits.
+pub fn credits_server() -> String {
+    format!(
+        "https://credits.decentraland.{}",
+        suffix(ServiceGroup::CreditsServer)
+    )
+}
+
+// Frontend (ungrouped — uses default)
+pub fn host() -> String {
+    format!("https://decentraland.{}", default_suffix())
+}
+/// Which web app serves the storefront in an environment.
+///
+/// The two apps answer on the same domain under a different path AND with a
+/// DIFFERENT route table, so a deep link cannot be built by concatenating a path
+/// onto `marketplace()`: a legacy path under `/shop` lands on the shop's "Page not
+/// found" (that is what broke the backpack recommendations and the "go to
+/// marketplace" CTAs on zone).
+///
+/// | destination | `decentraland/marketplace`      | `decentraland/shop`      |
+/// |-------------|---------------------------------|--------------------------|
+/// | browse      | `/browse?section=wearables`     | `/items?category=wearable` |
+/// | item detail | `/contracts/{c}/items/{i}`      | `/item/{c}/{i}`          |
+/// | claim NAME  | `/names/claim`                  | `/items?category=names`  |
+///
+/// Sources: `webapp/src/modules/routing/locations.ts` (marketplace) and
+/// `app/src/App.tsx` + `app/src/lib/routes.ts` (shop).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Storefront {
+    /// The classic marketplace, served at `/marketplace`.
+    Marketplace,
+    /// The new shop, served at `/shop`.
+    Shop,
+}
+
+impl Storefront {
+    /// Path segment the app is served from on a decentraland.<env> host. Unused by
+    /// the `today` dev server, which serves its app at the root of localhost.
+    fn path(self) -> &'static str {
+        match self {
+            Self::Marketplace => "marketplace",
+            Self::Shop => "shop",
+        }
+    }
+}
+
+/// Storefront serving an environment. Both public envs are on the shop; `today` is a
+/// local dev server and keeps the classic routes.
+fn storefront(env: DclEnvironment) -> Storefront {
+    match env {
+        DclEnvironment::Org | DclEnvironment::Zone => Storefront::Shop,
+        DclEnvironment::Today => Storefront::Marketplace,
+    }
+}
+
+/// Storefront root. Both apps redirect it to their own landing page, so it is safe
+/// to open directly — but every deeper destination must go through the builders
+/// below instead of appending to this.
+pub fn marketplace() -> String {
+    let env = resolved_env(ServiceGroup::Marketplace);
+    if env == DclEnvironment::Today {
+        "http://localhost:5173".to_string()
+    } else {
+        format!(
+            "https://decentraland.{}/{}",
+            suffix(ServiceGroup::Marketplace),
+            storefront(env).path()
+        )
+    }
+}
+
+// The route table lives in these three pure functions so both storefronts can be
+// asserted without touching the process-wide environment.
+
+fn browse_path(sf: Storefront, section: &str) -> String {
+    match sf {
+        Storefront::Marketplace => format!("/browse?section={}", section),
+        Storefront::Shop => match section {
+            "wearables" => "/items?category=wearable".to_string(),
+            "emotes" => "/items?category=emote".to_string(),
+            // Unknown section → the unfiltered grid, never a 404.
+            _ => "/items".to_string(),
+        },
+    }
+}
+
+fn item_path(sf: Storefront, contract_address: &str, item_id: &str) -> String {
+    match sf {
+        Storefront::Marketplace => format!("/contracts/{}/items/{}", contract_address, item_id),
+        Storefront::Shop => format!("/item/{}/{}", contract_address, item_id),
+    }
+}
+
+fn claim_name_path(sf: Storefront) -> &'static str {
+    match sf {
+        Storefront::Marketplace => "/names/claim",
+        // The shop has no separate claim route: NAMEs is a category that swaps the
+        // grid for the registration page (`Assets.tsx` → `NamesPage`).
+        Storefront::Shop => "/items?category=names",
+    }
+}
+
+fn current_storefront() -> Storefront {
+    storefront(resolved_env(ServiceGroup::Marketplace))
+}
+
+/// Catalog listing for a backpack section — `"wearables"` or `"emotes"`, the values
+/// the backpack CTA and the empty-state message already use.
+pub fn marketplace_browse(section: &str) -> String {
+    format!(
+        "{}{}",
+        marketplace(),
+        browse_path(current_storefront(), section)
+    )
+}
+
+/// Detail page for a primary/catalog item, from the `contractAddress` + `itemId`
+/// the catalog API returns. NOT for a specific token: the shop routes those through
+/// `/token/{contract}/{tokenId}` precisely so a tokenId never reaches the item page.
+pub fn marketplace_item(contract_address: &str, item_id: &str) -> String {
+    format!(
+        "{}{}",
+        marketplace(),
+        item_path(current_storefront(), contract_address, item_id)
+    )
+}
+// Catalog of wearables/items for the recommendations panel. Follows the identity
+// env (ServiceGroup::Profile) so the listed items live on the same network as the
+// player's wallet. Otherwise (e.g. profile::zone) the catalog returns org/Polygon
+// URNs the zone wallet doesn't own and the zone avatar loader can't resolve, so
+// the recommendations can't be equipped.
+//
+// `/v3/catalog/unified` rather than `/v2/catalog`: it reports `priceCredits`, the
+// price in the same whole credits the IAP balance is denominated in. v2 only
+// reports MANA (wei), a DIFFERENT unit worth ~0.63 credits, so pricing cards off
+// it asks the player for more credits than the item costs. The two endpoints do
+// not share a response shape — see `marketplace_recommended_section.gd`.
+pub fn marketplace_catalog_api() -> String {
+    format!(
+        "https://marketplace-api.decentraland.{}/v3/catalog/unified",
+        suffix(ServiceGroup::Profile)
+    )
+}
+// Owned-NFTs marketplace API (subgraph-backed) — the same source the web "My
+// Assets" uses. Follows the marketplace env (ServiceGroup::Marketplace) so it
+// matches where the user browses/buys. Reflects a mint in ~seconds (vs the
+// catalyst lambda's minutes), so it's the fast source for detecting a just-bought
+// wearable. Base host only; callers append /v1/nfts?... .
+pub fn marketplace_api() -> String {
+    format!(
+        "https://marketplace-api.decentraland.{}",
+        suffix(ServiceGroup::Marketplace)
+    )
+}
+/// NAME registration. Follows the marketplace service group like every other
+/// storefront link (it used to hardcode `/marketplace` on the default env, which
+/// ignored a `marketplace::` override and 404s once the env is on the shop).
+pub fn marketplace_claim_name() -> String {
+    format!("{}{}", marketplace(), claim_name_path(current_storefront()))
+}
+pub fn privacy_policy() -> String {
+    format!("https://decentraland.{}/privacy", default_suffix())
+}
+pub fn terms_of_service() -> String {
+    format!("https://decentraland.{}/terms", default_suffix())
+}
+pub fn content_policy() -> String {
+    format!("https://decentraland.{}/content", default_suffix())
+}
+
+// Proxy (ungrouped — uses default)
+pub fn open_sea_proxy() -> String {
+    format!("https://opensea.decentraland.{}", default_suffix())
+}
+
+// Fixed (no transformation - used for signed fetch headers)
+pub fn origin() -> String {
+    "https://decentraland.org".to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_env_is_org() {
+        assert_eq!(default_suffix(), "org");
+    }
+
+    #[test]
+    fn test_peer_base_org() {
+        assert_eq!(peer_base(), "https://peer.decentraland.org");
+    }
+
+    #[test]
+    fn test_peer_content_uses_peer_base() {
+        assert_eq!(peer_content(), format!("{}/content/", peer_base()));
+    }
+
+    #[test]
+    fn test_peer_lambdas_uses_peer_base() {
+        assert_eq!(peer_lambdas(), format!("{}/lambdas/", peer_base()));
+    }
+
+    #[test]
+    fn test_storefront_routes_per_env() {
+        // Only the localhost dev build stays on /marketplace.
+        assert_eq!(storefront(DclEnvironment::Zone), Storefront::Shop);
+        assert_eq!(storefront(DclEnvironment::Org), Storefront::Shop);
+        assert_eq!(storefront(DclEnvironment::Today), Storefront::Marketplace);
+
+        // Every destination the client links to, in both route tables. The shop
+        // does not answer the classic paths at all, so a mix-up is a 404 rather
+        // than a redirect — which is exactly how this broke on zone.
+        for (sf, browse, item, claim) in [
+            (
+                Storefront::Marketplace,
+                "/browse?section=wearables",
+                "/contracts/0xabc/items/3",
+                "/names/claim",
+            ),
+            (
+                Storefront::Shop,
+                "/items?category=wearable",
+                "/item/0xabc/3",
+                "/items?category=names",
+            ),
+        ] {
+            assert_eq!(browse_path(sf, "wearables"), browse);
+            assert_eq!(item_path(sf, "0xabc", "3"), item);
+            assert_eq!(claim_name_path(sf), claim);
+        }
+
+        assert_eq!(
+            browse_path(Storefront::Marketplace, "emotes"),
+            "/browse?section=emotes"
+        );
+        assert_eq!(
+            browse_path(Storefront::Shop, "emotes"),
+            "/items?category=emote"
+        );
+        // An unrecognized section must still land on a real page.
+        assert_eq!(browse_path(Storefront::Shop, "hats"), "/items");
+    }
+
+    #[test]
+    fn test_origin_is_fixed() {
+        assert_eq!(origin(), "https://decentraland.org");
+    }
+
+    #[test]
+    fn test_all_urls_valid() {
+        let urls = [
+            auth_frontend(),
+            auth_mobile_frontend(),
+            auth_api_base(),
+            auth_api_requests(),
+            main_realm(),
+            worlds_content_server(),
+            peer_base(),
+            peer_content(),
+            peer_lambdas(),
+            comms_gatekeeper(),
+            comms_gatekeeper_local(),
+            social_service(),
+            archipelago_stats(),
+            ethereum_rpc(),
+            places_api(),
+            events_api(),
+            mobile_events_api(),
+            notifications_api(),
+            credits_server(),
+            mobile_bff(),
+            host(),
+            marketplace(),
+            marketplace_claim_name(),
+            privacy_policy(),
+            terms_of_service(),
+            content_policy(),
+            jump_events(),
+            account_deletion(),
+            intercom_tickets(),
+            intercom_origin(),
+            open_sea_proxy(),
+            origin(),
+        ];
+
+        for url in urls {
+            assert!(
+                url.starts_with("https://") || url.starts_with("wss://"),
+                "Invalid URL: {}",
+                url
+            );
+        }
+    }
+}

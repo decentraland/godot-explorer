@@ -1,12 +1,9 @@
 [gd_scene format=3 uid="uid://b7e8iko6dwv7p"]
 
 [ext_resource type="PackedScene" uid="uid://nn0iih4xpn2e" path="res://src/ui/components/atoms/buttons/button_touch_action/button_touch_action.tscn" id="1_81cx4"]
-[ext_resource type="Script" uid="uid://dwlnsnbe4h0b0" path="res://src/ui/components/organisms/joypad/joypad.gd" id="1_il1fe"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="4_8at3g"]
-[ext_resource type="Script" uid="uid://di30mxklw1rhe" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_skin.gd" id="6_orbsk"]
 [ext_resource type="Texture2D" uid="uid://dk0wxh4uovqgc" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_default.png" id="7_orbdf"]
 [ext_resource type="Material" uid="uid://cq1dvbbcpt82c" path="res://src/ui/components/molecules/button_profile/texture_rect_rounded_material.tres" id="9_ah7yu"]
-[ext_resource type="Script" uid="uid://pu4yhyrav2vp" path="res://src/ui/components/organisms/joypad/joypad_arc.gd" id="10_jarc"]
 
 [sub_resource type="Gradient" id="Gradient_gqjtl"]
 offsets = PackedFloat32Array(0, 0.9964953)
@@ -16,7 +13,7 @@ colors = PackedColorArray(0, 0, 0, 0.10980392, 0.019859813, 0.019859813, 0.01985
 gradient = SubResource("Gradient_gqjtl")
 width = 254
 
-[node name="Joypad" type="Control" unique_id=400349512]
+[node name="Joypad" type="Joypad" unique_id=400349512]
 editor_description = "Figma: RightSideControls (organism). File skocZRe2lV9IjqV4rF6EYs. Per-count satellite frames: 3=5:1141, 2=3:1187, 1=3:1274."
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 3
@@ -26,7 +23,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-script = ExtResource("1_il1fe")
 metadata/mobile_preview_orientation = "landscape"
 
 [node name="Button_Press" parent="." unique_id=2084128393 instance=ExtResource("1_81cx4")]
@@ -49,7 +45,7 @@ theme_override_constants/icon_max_width = 85
 expand_icon = true
 trigger_action = "ia_jump"
 
-[node name="Control" type="Control" parent="Button_Press" unique_id=1244565756]
+[node name="Control" type="JoypadArc" parent="Button_Press" unique_id=1244565756]
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
@@ -61,7 +57,6 @@ offset_top = -20.0
 grow_horizontal = 0
 grow_vertical = 0
 mouse_filter = 2
-script = ExtResource("10_jarc")
 single_node_t = 0.0
 
 [node name="Button_Interact" parent="Button_Press/Control" unique_id=1651527188 instance=ExtResource("1_81cx4")]
@@ -102,7 +97,7 @@ mouse_force_pass_scroll_events = false
 trigger_action = "ia_secondary"
 
 [node name="Button_Quaternary" parent="Button_Press/Control" unique_id=1522992834 instance=ExtResource("1_81cx4")]
-editor_description = "Satellite slot 4 (no fixed action). Occupies the topmost arc position when exactly 5 buttons are visible, so the '+' toggle isn't needed; hidden and replaced by the '+' when there are more. Any action can be rendered here — see joypad.gd _render_action_on."
+editor_description = "Satellite slot 4 (no fixed action). Occupies the topmost arc position when exactly 5 buttons are visible, so the '+' toggle isn't needed; hidden and replaced by the '+' when there are more. Any action can be rendered here — see the Joypad class (render_action_on)."
 visible = false
 layout_mode = 1
 offset_left = -57.0
@@ -134,7 +129,7 @@ theme_override_constants/icon_max_width = 30
 toggle_mode = true
 icon_alignment = 1
 
-[node name="OrbSkin" type="TextureRect" parent="Button_Press/Control/Button_Combo" unique_id=956671328]
+[node name="OrbSkin" type="OrbSkin" parent="Button_Press/Control/Button_Combo" unique_id=956671328]
 show_behind_parent = true
 layout_mode = 1
 anchors_preset = 15
@@ -150,11 +145,10 @@ mouse_filter = 2
 texture = ExtResource("7_orbdf")
 expand_mode = 1
 stretch_mode = 5
-script = ExtResource("6_orbsk")
 
 [node name="ComboColumn" type="VBoxContainer" parent="Button_Press/Control/Button_Combo" unique_id=724900001]
 unique_name_in_owner = true
-editor_description = "Figma: Frame 3089 - the 1/2/3/4 combo column. Revealed by the 12 toggle; collapsed by default. Positioned + sized to its visible buttons by joypad.gd _assign_slots."
+editor_description = "Figma: Frame 3089 - the 1/2/3/4 combo column. Revealed by the 12 toggle; collapsed by default. Positioned + sized to its visible buttons by the Joypad class (assign_slots)."
 layout_mode = 1
 anchors_preset = 2
 anchor_top = 1.0
@@ -228,4 +222,3 @@ grow_vertical = 2
 mouse_filter = 2
 texture = SubResource("GradientTexture1D_mrvwt")
 
-[connection signal="toggled" from="Button_Press/Control/Button_Combo" to="." method="_on_button_combo_toggled"]

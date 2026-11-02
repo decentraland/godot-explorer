@@ -17,8 +17,6 @@ WORKDIR /app
 COPY decentraland.godot.client.x86_64 \
     decentraland.godot.client.pck \
     libdclgodot.so  \
-    libsentry.linux.debug.x86_64.so  \
-    crashpad_handler  \
     entry-point.sh \
     /app/
 

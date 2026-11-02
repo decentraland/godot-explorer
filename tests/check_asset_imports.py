@@ -23,7 +23,6 @@ IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webp', '.bmp', '.tga'}
 EXCLUDED_DIRS = {
     'android/build',
     '.godot',
-    'addons/godot-xr-tools',  # Third-party addon
     'exports',  # Export output folder
 }
 

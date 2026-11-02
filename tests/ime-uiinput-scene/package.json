@@ -1,0 +1,12 @@
+{
+  "name": "ime-uiinput-scene",
+  "private": true,
+  "scripts": {
+    "start": "sdk-commands start",
+    "build": "sdk-commands build"
+  },
+  "devDependencies": {
+    "@dcl/sdk": "latest",
+    "@dcl/js-runtime": "7.30.1"
+  }
+}
