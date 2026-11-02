@@ -449,10 +449,10 @@ func _get_mention_query():
 	if at_pos > 0 and before_caret[at_pos - 1] != " ":
 		return null
 
+	# Names can contain spaces, so a space does not end the query on its own; once it
+	# outgrows every nearby name, _get_matching_avatars naturally finds nothing and the
+	# caller hides the dropdown.
 	var query: String = before_caret.substr(at_pos + 1)
-	# If there's a space in the query portion, the mention is already finished
-	if query.contains(" "):
-		return null
 
 	return query
 
