@@ -26,7 +26,7 @@ use super::super::{
     cache_file_name::{cache_file_name, cache_file_path},
     content_mapping::ContentMappingAndUrlRef,
     content_provider::SceneGltfContext,
-    file_string::get_base_dir,
+    file_string::{get_base_dir, resolve_dependency_path},
     texture::create_compressed_texture,
 };
 
@@ -1251,21 +1251,26 @@ where
         .await?
         .into_iter()
         .map(|dep| {
-            let full_path = if base_path.is_empty() {
-                dep.clone()
-            } else {
-                format!("{}/{}", base_path, dep)
-            };
-            let item = content_mapping.get_hash(full_path.as_str()).cloned();
-            (dep, item)
+            // The mapping handed to the importer below is keyed by the raw URI as
+            // written in the glTF; only the content-mapping lookup gets the
+            // normalized, scene-relative path.
+            let hash = resolve_dependency_path(&base_path, &dep)
+                .and_then(|full_path| content_mapping.get_hash(&full_path).cloned());
+            (dep, hash)
         })
         .collect::<Vec<(String, Option<String>)>>();
 
     // Check all dependencies are available
-    if dependencies.iter().any(|(_, hash)| hash.is_none()) {
-        return Err(anyhow::Error::msg(
-            "There are some missing dependencies in the gltf",
-        ));
+    let missing: Vec<&str> = dependencies
+        .iter()
+        .filter(|(_, hash)| hash.is_none())
+        .map(|(dep, _)| dep.as_str())
+        .collect();
+    if !missing.is_empty() {
+        return Err(anyhow::Error::msg(format!(
+            "There are some missing dependencies in the gltf: {}",
+            missing.join(", ")
+        )));
     }
 
     let dependencies_hash: Vec<(String, String)> = dependencies
@@ -1467,5 +1472,27 @@ mod tests {
         // nothing to strip, or a truncated chunk: keep the original bytes
         assert_eq!(strip_png_colorspace_chunks(&expected), None);
         assert_eq!(strip_png_colorspace_chunks(&png[..png.len() - 3]), None);
+    }
+
+    #[tokio::test]
+    async fn parent_relative_image_uri_resolves_to_a_content_mapping_key() {
+        let json =
+            br#"{"asset":{"version":"2.0"},"images":[{"uri":"../optimized-textures/t.jpg"}]}"#;
+        let mut glb = b"glTF".to_vec();
+        glb.extend_from_slice(&2u32.to_le_bytes());
+        glb.extend_from_slice(&(12 + 8 + json.len() as u32).to_le_bytes());
+        glb.extend_from_slice(&(json.len() as u32).to_le_bytes());
+        glb.extend_from_slice(b"JSON");
+        glb.extend_from_slice(json);
+
+        let path =
+            std::env::temp_dir().join(format!("dcl_gltf_relpath_{}.glb", std::process::id()));
+        std::fs::write(&path, &glb).unwrap();
+        let deps = get_dependencies(path.to_str().unwrap()).await.unwrap();
+        let _ = std::fs::remove_file(&path);
+
+        assert_eq!(deps, vec!["../optimized-textures/t.jpg".to_string()]);
+        let resolved = resolve_dependency_path(&get_base_dir("assets/models/a.glb"), &deps[0]);
+        assert_eq!(resolved.as_deref(), Some("assets/optimized-textures/t.jpg"));
     }
 }
