@@ -105,7 +105,7 @@ Order top to bottom (98, 720x3368): header -> feature banners (+dots) -> "Jump b
 ## 4. Components and tokens
 New vs discover-c: FeatureBanner (card + scrim + title + CTA square or JUMP IN button), PageDots, CategoryChip (tile + label), CategoryHeader (back + title + search) and SearchField (inline), PlaceGrid (2 col), SkeletonSheet, CompactPlaceRow (Jump back in), StoryViewer, ConnectionLost full-screen (illustration variant), SeasonalBackground.
 Colours seen: coral #FF2D55 (CTA), violet button fill #43106F, lilac #D79BFF (counts/"by"), bg gradient (discover-c), nav #151515, chip gradient #C03FD0 -> #7B2BB0, dim text rgba(255,255,255,0.7).
-Existing in rn/src/ds: AppText, BottomNav, IconButton, Icon, PrimaryButton, Pill, Gradient, ItemCard, tokens, scale. No dots, chip, search field, banner, or skeleton components exist yet. New icons needed: wifi-off, arrow-in-box (JUMP IN already has one in DetailSheet?), emoji PNG assets for categories (social/music/game/art/fashion...).
+Existing in rn/packages/ui-native/src: AppText, BottomNav, IconButton, Icon, PrimaryButton, Pill, Gradient, ItemCard, tokens, scale. No dots, chip, search field, banner, or skeleton components exist yet. New icons needed: wifi-off, arrow-in-box (JUMP IN already has one in DetailSheet?), emoji PNG assets for categories (social/music/game/art/fashion...).
 
 ## 5. Legacy counterparts
 - Banner: `godot/src/ui/components/molecules/snap_carousel/snap_carousel.gd` and `snap_carousel_card.gd`; used as `%PlacesFeatured` in `godot/src/ui/pages/discover/discover.gd` (tap -> `_on_featured_card_tapped`; featured items are also exported for the debug inspector). `discover_banner.png` asset in the discover folder.

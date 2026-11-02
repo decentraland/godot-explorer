@@ -1,6 +1,8 @@
 import { AppRegistry } from 'react-native';
 import App from './App';
 import { fonts } from '@dcl/ui-native';
+// Installs the catalogue as the design system's translator; nothing else at the entry depends on it.
+import './src/i18n';
 
 // The native builds ship Inter in the app bundle; on web the families are declared here.
 const FACES = {

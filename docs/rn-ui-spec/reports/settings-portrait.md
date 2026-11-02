@@ -2,7 +2,7 @@
 
 Source: Figma file `l6t9Qs4ZueQdFhE6Gcp6hZ`, page `129:2513`. All 39 screenshots were viewed (39/39). `get_design_context` was
 NOT called (no tokens beyond pixel sampling of the PNGs; hex values below are sampled, Figma px at 720x1600, RN dp = px/2
-per `rn/src/ds/scale.ts`). Section 7 is the legacy Godot setting-key table from the earlier pass (still valid).
+per `rn/packages/ui-native/src/scale.ts`). Section 7 is the legacy Godot setting-key table from the earlier pass (still valid).
 
 ## 1. Screen inventory (39 seqs)
 
@@ -70,7 +70,7 @@ plus two landscape HUD frames and two designer notes.
 - Title "Settings": Inter Bold ~48px (24dp), white, x=48, baseline y~123. 221 adds a back chevron at x~76 and shifts the title right (x=117).
 - Chip tab bar: y 194-250 (h 56), x starts at 48, gap ~24, horizontally scrollable, overflows right edge (no fade). Chip = pill, icon 24px + label Inter Medium ~26px. Inactive: fill `rgba(255,255,255,0.25)`-ish (sampled `#894CB8` over bg), label white-ish 80%; active: fill lavender `#E8B9FF`, label/icon dark `#161518`. Icons: monitor (Graphics), speaker (Audio), gamepad (Gameplay), person (Account), archive box (Storage), `</>` (Dev tools).
 - Content column: left/right padding 48 (24dp), width 624. Section header: uppercase Inter Bold ~26px lavender `#E8B9FF`, 1px lavender divider under it (y+27), then rows. Section spacing ~120-150.
-- Bottom nav: bar y 1418-1600 (h 182 = ds `layout.navHeight` 77dp + safe area), bg `#161518`, 4 icons: compass, backpack, gear (active, purple filled), avatar. Exists: `rn/src/ds/BottomNav.tsx`.
+- Bottom nav: bar y 1418-1600 (h 182 = ds `layout.navHeight` 77dp + safe area), bg `#161518`, 4 icons: compass, backpack, gear (active, purple filled), avatar. Exists: `rn/packages/ui-native/src/BottomNav.tsx`.
 - Content scrolls under the nav (237, 238 are cut by the nav). Pages are ScrollViews.
 
 ### 3.2 Row components
@@ -110,11 +110,11 @@ Section "DEV TOOLS": toggles "Scene Logs", "Raycast Debugger", "Scene Processing
 ### 3.9 Splash and login (246, 247, 255, 256)
 Splash: solid `#691FA9`, DCL logo circle ~144 px centered at (360,800). Get started: vertical gradient `#C63FCB` top to `#6A1FA6` bottom; ds logo "Decentraland" wordmark at (72,458); "Get started!" Inter Bold ~72px white; body 40px "**Discover a virtual social world** shaped by its community of creators & explorers." (first part bold); buttons x 72-648: CREATE ACCOUNT (ruby, h 112, radius 12) and SIGN IN (dark `#4A1868`), both bold uppercase 36px. Owned by the auth/flow report; RN already has `rn/src/flow/EntryFlow.tsx` / `FtueScreen.tsx`.
 
-## 4. Tokens (sampled; map to `rn/src/ds/tokens.ts`)
+## 4. Tokens (sampled; map to `rn/packages/ui-native/src/tokens.ts`)
 ruby `#FF2D55` = colors.ruby (switch ON, slider fill, CONNECT, SIGN OUT confirm, Delete link); lavender `#E8B9FF` = colors.lavender (section labels, dividers, active chip, selected option); snow `#FCFCFC` = colors.snow (knob, thumb); input/track `#2B0044` ~ purple550 `#24033B`/(not exact, add `fieldDark`); dialog `#4C147C`; cancel `#2F0C4B`; nav `#161518` = colors.shadow; bg `#460F6F` = purple450. Font Inter (ds fonts present). Radii: field 10px, button 12px, pill chips full.
 
 ## 5. RN status and gaps
-Exists in `rn/src/ds`: AppText, BottomNav (gear tab already), Gradient, Icon/iconSvgs, IconButton, PrimaryButton, Pill, Tabs (underline style - not the chip style). `grep settings` in rn/src hits only BottomNav/Icon/Home: NO settings screen, store or bridge.
+Exists in `rn/packages/ui-native/src`: AppText, BottomNav (gear tab already), Gradient, Icon/iconSvgs, IconButton, PrimaryButton, Pill, Tabs (underline style - not the chip style). `grep settings` in rn/src hits only BottomNav/Icon/Home: NO settings screen, store or bridge.
 Missing ds components: ChipTabs (scrollable pill tabs with icons), Switch (3 states), Slider (custom thumb, live value), Dropdown + option list (open up/down, check), ProgressBar, SettingsSection header, LinkRow (ext/copy icon), OutlineButton (+disabled), TextField, ConfirmDialog (blur scrim), WarningBanner, SkyboxPreview image. Icons to add: monitor, speaker, gamepad, person, archive, code, external-link, copy, log-out, warning, chevron up/down/left, check, eye.
 Bridge needed (reuse the key list in 7): `getSettings()` snapshot, `setSetting(key,value)`, events for dynamic-graphics profile change, `sdk_skybox_time_active`, camera mode set/blocked, session hide-UI sync, `getCacheSize/clearCache`, `signOut`, `deleteAccount`, `copyVersion`/`getVersion`, `openUrl`, bug-report modal, skybox preview capture (Godot screenshot at selected time or static assets per time of day - assets are one image per time, 3 variants seen).
 Godot remains owner of persistence (`user://settings.cfg`, read at boot before RN).

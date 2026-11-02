@@ -54,7 +54,7 @@ jobs:
       - uses: ./.github/actions/rn-npm-ci
 
       - run: npx tsc --noEmit
-      - run: npx eslint App.tsx src __tests__
+      - run: npx eslint App.tsx src packages __tests__
       - run: npx jest
       # High findings sit in build-time tooling (expo's config plugins, the RN CLI) with no fix
       # upstream; a critical one anywhere in the production tree fails the PR.
