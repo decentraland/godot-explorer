@@ -584,7 +584,16 @@ func _on_button_jump_in_pressed():
 			. track_click_button(
 				"JUMP_IN",
 				"PLACE_DETAIL_CLICK",
-				JSON.stringify({"place_id": _data.get("id", "")}),
+				(
+					JSON
+					. stringify(
+						{
+							"place_id": _data.get("id", ""),
+							"carousel": _data.get("_carousel"),
+							"position": _data.get("_carousel_position"),
+						}
+					)
+				),
 			)
 		)
 	_do_jump_in()
@@ -923,7 +932,16 @@ func _on_button_share_pressed() -> void:
 			. track_click_button(
 				"SHARE",
 				"PLACE_DETAIL_CLICK",
-				JSON.stringify({"place_id": _data.get("id", "")}),
+				(
+					JSON
+					. stringify(
+						{
+							"place_id": _data.get("id", ""),
+							"carousel": _data.get("_carousel"),
+							"position": _data.get("_carousel_position"),
+						}
+					)
+				),
 			)
 		)
 	_share_place_or_event()

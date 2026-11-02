@@ -159,18 +159,49 @@ func _on_featured_card_tapped(index: int) -> void:
 		var tex = card.get_texture()
 		if tex:
 			data["_preloaded_texture"] = tex
+		data["_carousel"] = "featured"
+		data["_carousel_position"] = index
 		jump_in.set_data(data)
 		jump_in.open_panel.call_deferred()
 
 
-func on_item_pressed(data):
+func on_item_pressed(data, card: PlaceItem = null):
+	if card:
+		_set_card_origin(data, card)
 	jump_in.set_data(data)
 	jump_in.open_panel()
 
 
-func on_friend_pressed(data):
+func on_friend_pressed(data, card: PlaceItem = null):
+	if card:
+		_set_card_origin(data, card)
 	friend_jump_in.set_data(data)
 	friend_jump_in.open_panel()
+
+
+# Keys and 0-based slots match the DISCOVER event's `carousels`; read back by the PLACE_DETAILS
+# and PLACE_DETAIL_CLICK tracking.
+func _set_card_origin(data: Dictionary, card: PlaceItem) -> void:
+	var container := card.get_parent()
+	# search_param, not search_text: search_text follows keystrokes before a search is submitted.
+	var searching: bool = not places_most_active.generator.search_param.is_empty()
+	var carousel_keys := {
+		last_visited: "last_visited",
+		places_most_active: "search" if searching else "most_active",
+		places_favorites: "favorites",
+		places_my_places: "my_places",
+		friends_online: "friends",
+	}
+	for carousel in carousel_keys:
+		if carousel.item_container == container:
+			data["_carousel"] = carousel_keys[carousel]
+	var slot := 0
+	for child in container.get_children():
+		if child == card:
+			break
+		if child is PlaceItem:
+			slot += 1
+	data["_carousel_position"] = slot
 
 
 func _on_friend_jump_in(parcel_position: Vector2i, realm: String):
@@ -205,6 +236,7 @@ func async_open_place_by_id(place_id: String) -> void:
 	if place_data.is_empty():
 		printerr("[Discover] Empty place data for id: ", place_id)
 		return
+	place_data["_carousel"] = "deeplink"
 	on_item_pressed(place_data)
 
 
