@@ -182,15 +182,112 @@ Don't bulk-import every icon as an SVG asset — pull one on demand when a scree
 same as every other asset-handling rule in this skill. But when you do pull one, it is the Figma
 asset itself, never a redrawn approximation (SKILL.md §2d).
 
-## Tags / Names pages — Discover/in-world UI, not entry-flow
+## Controls page — `Switch`, `Slider`, `Checkbox` (`rn/packages/ui-native/src/`)
 
-`Tags` page: `Tag/Category` (Art/Social/Game/Shop/Education/Music/Fashion/Sports/Crypto/Casino/
-PointOfInterest/Business), `Tag/EventTime` (Live/StartingSoon/InMinutes/InHours/InDays/Date),
-`Tag/Event` (Trending/Featured) — all Discover-feed event chips. `Names` page: `Nametag/Claimed` +
-`Nametag/Unclaimed` (Default/Speaking states), `Icon/NameVerified`, device-type glyphs — in-world
-avatar nametags. Neither is relevant to the entry-flow screens this skill was built against; survey
-properly (state colors, exact radii) only when a Discover or in-world nametag task actually needs
-it.
+Audited 2026-11-02 against `Control/Switch` 562:9023, `Control/Slider` 562:9048, `Control/Checkbox`
+594:126. Every state colour is a palette token; disabled is never an opacity dim on the whole control
+(States page rule: background at a lower alpha + Silver 50% text).
+
+| Component | Figma | Code |
+|---|---|---|
+| Switch Large | track 140×64, pad 4, knob 70×56, pill; Checked Ruby, off Black 40% | `size="lg"`: `u(70)`×`u(32)`, pad `u(2)`, knob `u(35)` × full height |
+| Switch Small | 110×56, pad 3.5, knob 60 | `size="sm"`: `u(55)`×`u(28)`, knob `u(30)` |
+| Switch disabled | on: whole control 50% + Gray knob at 90%; off: Black 20% track + Pale Black knob | `onDisabled` / `offDisabled` / `knob*Disabled` |
+| Slider | track 624×40 Black 40% (`radius.sm` 8 → `u(4)` on the thumb only; track is a pill), Ruby fill, thumb 32×50 Snow + 1px Pearl border + `Elevation/Down`; disabled: fill Pale Black 80%, thumb Pale Black | `track`/`fill`/`thumb` + `fillDisabled`/`thumbDisabled`; label row is `Input/Label` Value (label Inter Medium 30, value Inter Regular 30, both Snow) |
+| Checkbox | Large 48 / Small 30, Black 40% box, 1px Snow border, `rounded-[2px]`; Checked = Ruby border + Ruby fill inset 12.5% **in every size** (the Small checked *node* is Lavender Light — the usage description wins, same call as `Button/Reminder`) | `size="lg"` `u(24)` / `"sm"` `u(15)`, `padding: '12.5%'` for the fill, hitSlop to 44dp, label is the touch target too |
+
+## Dropdowns page — `Dropdown` (one component covers `Input/Dropdown` + `DropdownLabeled` + `OptionsList` + `DropdownOption`)
+
+| Part | Figma | Code |
+|---|---|---|
+| Field | 624×68, `rounded-[12px]`, px 16, gap 10, Black 40%, text Input (Medium 30) Snow, chevron `Icon/Base` 40 | h `u(34)`, radius `u(6)`, px `u(8)`, text `u(15)` medium, chevron `size={20}` |
+| States | Focus/Open: 1px Lavender Light border · Disabled: Black 20% bg, White 20% text, label White 30% · ReadOnly: no chevron, Gray text · Error: 1px `status/danger` #FB3B3B + message | `fieldOpen` / `fieldDisabled` + `textDisabled` + `labelDisabled` / `readOnly` prop / `error` prop (`colors.danger`) |
+| Label | `Input/Label`: Medium 30 Snow, gap 20 to the field | `u(15)` medium, `marginBottom: u(10)` |
+| Options list | `surface/menu` #1B002D, 1px border (Down node says `alpha.violet70`, Up node says `border/menu` = Lavender Light 70% — the theme token wins), radius 12, padding 8, gap 8, `Elevation/Down` or `/Up` | `colors.menu`, `colors.lavender70`, `u(6)`/`u(4)`/`u(4)`, `elevation.down|up` |
+| Option | 68 tall, px 16, radius 12; Selected = Black 40% bg + Lavender Light text + `Icon/Base` Check 40 | `row`/`rowSelected`/`textSelected`, check `size={20}` |
+
+The old `variant="settings"` (tighter paddings) is gone: the Figma field already is the tight one.
+`Input/Label` Description (helper, Caption2 Regular 22 Pearl) renders under the field at `u(11)`.
+
+## Modals page — `Dialog`
+
+`Modal/Dialog` 562:7666 + `Modal/Scrim` 591:118. Portrait card 520 wide (pt 64, pb 60, px 56, content
+gap 54), Landscape 720 (pt 54, pb 48, px 54, gap 48); `surface/modal` #4C147C (`colors.modal`) with
+the two glow blobs (`surface/modal-glow`, approximated with `RadialFill`); radius 16 → `u(8)`; title
+`Modal/Title` Bold 38 → `u(19)` Snow centred; body `Modal/Body` Regular 26 / lh 36 → `u(13)`/`u(18)`
+Snow; text gap 16; CTAs gap 32 (40 landscape) = `Button/Secondary` hugging + `Button/Primary` filling
+(the last button gets `flex: 1` + `fullWidth`). `Icon/Modal` (90×68) sits centred over the top edge
+at `top: -34px`. Scrim: Black 40% + blur 6 in Figma; RN has no blur so it is the documented fallback
+Black 60% (`colors.black60`), which is also what `Modal/Scrim`'s description calls `surface/scrim`.
+Orientation comes from `useWindowDimensions`; the old `rounded`/`width` props are gone. The Link,
+Checkbox, Input and InputLabel blocks are the caller's `children` (`TextField`, `Checkbox`).
+
+## Tabs page — `Tabs`
+
+`Tab/Underline` 618:130: 56 tall, pt 8, pb 16, px 4, gap 4; label `Tab/Label` Semi Bold 28 uppercase,
+Snow when selected (+ 6px Ruby underline), Gray otherwise; `Notification` = 16px `Badge/Notification`
+at top 5 / right -6; `Icon` = an `Icon/Settings` 32 glyph before the label. Code: `u(28)` tall,
+underline `u(3)` absolute at the bottom, dot `u(8)`, `icon` 16dp. A number badge keeps the inline
+count pill (no Figma source — a code-only extension).
+
+## Headers page — `Header`
+
+`Header` 624:57. Portrait 720×176: pt 40, pb 24 (30 with Back), px 48; title H1 Bold 48 → `u(24)`;
+Back = `Icon/Base` 60 → `size={30}` + gap 8; Actions gap 32 → `u(16)`: Search 60, `Badge/Credits`
+(h 60, px 18, gap 10, Black 40% pill, `Icon/Credits` 40 + Medium 32 amount), Ticket 54 (Back only).
+SearchOpen: Back + `Input/Search` filling (gap 24, pb 20) — rendered with the DS `SearchField`.
+Landscape 528×74: title Bold 44 → `u(22)`; TitleButton = `Button/Secondary` Outline → `tone="outline"`.
+Orientation from `useWindowDimensions`.
+
+## Menu page — `BottomNav`
+
+`NavBar` 635:211 Portrait 720×180: pt 32, pb 40 (+ safe-area), px 64, gap 56, items `NavBar/Item`
+82 (`u(41)`), background `surface/navbar` rgba(26,9,37,0.9) (`colors.navbar`) with `NavBar/Portrait`
+(blur 4 + shadow 0/-4/4 Black 25%). Active = the gradient `Icon/NavBar` + the "Selected indicator"
+glow on the bar edge (a 74px Snow line + a 103×56 ellipse, mix-blend lighten). Landscape = a 100-wide
+left rail, py 40, gap 37, 64px items, blur 16. Items in Figma: Explore/Backpack/Settings/Profile
+(portrait), Social/Alerts/Backpack/Settings/Profile (landscape).
+
+## Elevation page — `elevation.down` / `elevation.up` in `tokens.ts`
+
+One shadow, Shadow #161518 at 50%, blur 4, offset 0/±4: Down for things below their trigger
+(dropdown list, menu), Up for things above it or at the bottom of the screen (dropdown opening up,
+bars, sheets). RN: iOS values ÷ 2 (`shadowOffset` 0/±2, `shadowRadius` 2, `shadowOpacity` 0.5),
+Android `elevation: 4`; shadows only draw on a solid background. `Blur/Background` (blur 4 on
+Black 40%) needs a blur library; without one the surface is Black 60% with no blur.
+
+## States page — the rule every component follows
+
+Default → Pressed (one step darker of the same colour, handled by `Pressable`, never a prop) →
+Focus (1px Lavender Light border while the keyboard is open) → Selected (Lavender Light bg + Shadow
+text, or Lavender Light text + check in lists) → Disabled (bg at 50% + Silver 50% text, no touch,
+not announced as actionable) → Error (red border + message, never colour alone). Mobile only: no
+hover, no keyboard focus. Resolved on the page: Pill Selected is Lavender Light in every size;
+Input/Field, CodeSlots and Dropdown errors use `status/danger`; `Button/Filter` has a Pressed;
+`Button/Discover` Pressed is one step darker (purple 60%).
+
+## Tags page — `EventTimeTag`, `EventBadge` (`Tags.tsx`); `Tag/Category` not built
+
+`Tag/EventTime` 35:761: label `Tag/Label` Semi Bold 20 uppercase, px 8, py 4, `rounded-[4px]`;
+Live = Ruby/Snow + the Players box (Shadow bg, h 30, gap 2, Green #30CD00 dot 10, `Icn/PlayersOutline`
+22, `Tag/Count` Medium 20); StartingSoon = Snow bg, Ruby text + Ruby border; InMinutes/InHours/
+InDays/Date = Snow bg, Shadow text + border. `Tag/Event` 35:785: h 32, same padding/radius, Snow
+B5 label on a gradient — Trending `-73°` #22C1C1 → #34C070, Featured `148°` #FFBC5B → #FF2D55 50% →
+#C640CD (`LinearFill`). `Tag/Category` 35:591 (h 42, White 10% pill, 26px MapPins icon + Tags Semi
+Bold 18 uppercase) needs the 12 MapPins icons, which are not an `Icon/*` family — left for the
+Discover pass; `src/discover/CategoryChips.tsx` is the current stand-in.
+
+## Names page — in-world nametags, not built
+
+`Nametag` 562:3419 (Unclaimed/Claimed/Foundation), `Nametag/SpeakingFeedback`, `DCLTag`, plus the
+`Icon/NameVerified`, `Icon/NameLogo`, `Icon/DeviceMobile|Desktop` glyphs (imported into the icon
+tables). Nametags are drawn over avatars in the world; survey the states and radii when that screen
+is ported.
+
+## Backgrounds page — screen assets, not components
+
+`Background` 676:6 (Plain/Glow × Portrait/Landscape) and `Background/Avatar` 677:2 are baked images
+(blurred glows, §2c of the skill): each screen downloads the sub-node it uses as a PNG.
 
 ## Loader page — empty
 

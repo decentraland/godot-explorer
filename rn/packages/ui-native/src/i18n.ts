@@ -2,6 +2,9 @@
  * renders as itself. */
 export type UiNativeKey =
   | 'APP_BACK'
+  | 'APP_CREDITS'
+  | 'APP_SEARCH'
+  | 'APP_TICKET'
   | 'APP_CLEAR'
   | 'APP_CLEAR_SEARCH'
   | 'APP_COLOR_BRIGHTNESS'

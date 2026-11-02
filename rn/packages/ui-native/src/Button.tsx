@@ -24,6 +24,7 @@ export function Button({
   small = false,
   fullWidth = false,
   icon,
+  trailingIcon,
 }: {
   label: string;
   onPress: () => void;
@@ -43,6 +44,8 @@ export function Button({
   fullWidth?: boolean;
   /** Leading icon, drawn in the label colour (Figma's `leadingIcon`). */
   icon?: IconName;
+  /** Trailing icon (Figma's `trailingIcon`, e.g. `jumpIn` for `Type=JumpIn`). */
+  trailingIcon?: IconName;
 }) {
   const inactive = disabled || loading;
   /** `ghost` has no Figma source (see §Disabled below) — everything else gets the explicit
@@ -72,7 +75,7 @@ export function Button({
         tone === 'secondary' && styles.secondary,
         tone === 'dark' && styles.dark,
         tone === 'outline' && styles.outline,
-        icon && styles.withIcon,
+        (icon || trailingIcon) && styles.withIcon,
         reminder && styles.reminder,
         reminder && selected && styles.reminderSelected,
         // Disabled: Figma gives each tone its own explicit bg/border (`theme.colors.*.disabled`),
@@ -111,6 +114,9 @@ export function Button({
           <AppText variant="button" style={{ color: labelColor, fontSize }}>
             {label}
           </AppText>
+          {trailingIcon && (
+            <Icon name={trailingIcon} size={14} color={labelColor} />
+          )}
         </>
       )}
     </PressableBase>

@@ -43,7 +43,6 @@ export function StorageSection({
           />
         </View>
         <Dropdown
-          variant="settings"
           label={t('SETTINGS_MAX_CACHE_SIZE')}
           helper={t('SETTINGS_SETS_HOW_MUCH_STORAGE_THE_APP')}
           value={String(m.values.max_cache_size)}

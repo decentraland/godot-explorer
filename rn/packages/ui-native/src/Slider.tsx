@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { PanResponder, StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
-import { colors } from './tokens';
+import { colors, elevation, fonts } from './tokens';
 import { u } from './scale';
 
 /** Maps a touch x inside a track of `width` to a clamped, stepped value. */
@@ -22,7 +22,8 @@ export function sliderValueFromX(
 
 const THUMB_W = u(16);
 
-/** Ruby-fill slider with a white pill thumb and a right-aligned "NN%" value. */
+/** Figma `Control/Slider` under an `Input/Label` Value row: Black 40% track, Ruby fill, Snow thumb
+ * with `Elevation/Down`; disabled swaps both for Pale Black instead of dimming. */
 export function Slider({
   label,
   value,
@@ -32,7 +33,6 @@ export function Slider({
   max = 100,
   step = 1,
   disabled = false,
-  variant = 'default',
 }: {
   label: string;
   value: number;
@@ -42,8 +42,6 @@ export function Slider({
   max?: number;
   step?: number;
   disabled?: boolean;
-  /** `settings`: square-cornered bar, white body-size value, roomier label row. */
-  variant?: 'default' | 'settings';
 }) {
   const [width, setWidth] = useState(0);
   const latest = useRef({ width, onChange, onChangeEnd, min, max, step });
@@ -78,25 +76,24 @@ export function Slider({
     });
   }, [disabled]);
 
-  const flat = variant === 'settings';
   const ratio = max > min ? (value - min) / (max - min) : 0;
   const thumbLeft = ratio * Math.max(0, width - THUMB_W);
 
   return (
-    <View style={[styles.root, disabled && styles.disabled]}>
-      <View style={[styles.row, flat && styles.rowFlat]}>
-        <AppText variant="body" style={styles.label}>
+    <View style={styles.root}>
+      <View style={styles.row}>
+        <AppText style={[styles.label, disabled && styles.textDisabled]}>
           {label}
         </AppText>
-        <AppText
-          variant={flat ? 'body' : 'caption'}
-          style={flat ? styles.valueFlat : styles.value}
-        >{`${value}%`}</AppText>
+        <AppText style={[styles.value, disabled && styles.textDisabled]}>
+          {`${value}%`}
+        </AppText>
       </View>
       <View
         accessible
         accessibilityRole="adjustable"
         accessibilityLabel={label}
+        accessibilityState={{ disabled }}
         accessibilityValue={{ min, max, now: value }}
         accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
         onAccessibilityAction={e => {
@@ -110,18 +107,22 @@ export function Slider({
           measure();
         }}
         ref={trackRef}
-        style={[styles.track, flat && styles.trackFlat]}
+        style={styles.track}
         {...responder.panHandlers}
       >
         <View
           style={[
             styles.fill,
-            flat && styles.trackFlat,
+            disabled && styles.fillDisabled,
             { width: thumbLeft + THUMB_W / 2 },
           ]}
         />
         <View
-          style={[styles.thumb, flat && styles.thumbFlat, { left: thumbLeft }]}
+          style={[
+            styles.thumb,
+            disabled && styles.thumbDisabled,
+            { left: thumbLeft },
+          ]}
         />
       </View>
     </View>
@@ -130,23 +131,19 @@ export function Slider({
 
 const styles = StyleSheet.create({
   root: { alignSelf: 'stretch' },
-  disabled: { opacity: 0.35 },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: u(8),
+    marginBottom: u(10),
   },
-  label: { fontSize: u(15) },
-  rowFlat: { marginBottom: u(12) },
-  value: { color: colors.lavender },
-  valueFlat: { fontSize: u(15), color: colors.snow },
-  trackFlat: { borderRadius: u(3) },
-  thumbFlat: { borderRadius: u(3) },
+  label: { fontFamily: fonts.medium, fontSize: u(15), color: colors.snow },
+  value: { fontSize: u(15), color: colors.snow },
+  textDisabled: { color: colors.white30 },
   track: {
     height: u(20),
     borderRadius: u(10),
-    backgroundColor: colors.fieldDark,
+    backgroundColor: colors.black40,
     justifyContent: 'center',
   },
   fill: {
@@ -157,12 +154,17 @@ const styles = StyleSheet.create({
     borderRadius: u(10),
     backgroundColor: colors.ruby,
   },
+  fillDisabled: { backgroundColor: colors.paleBlack, opacity: 0.8 },
   thumb: {
     position: 'absolute',
     top: -u(2.5),
     width: THUMB_W,
     height: u(25),
-    borderRadius: u(8),
+    borderRadius: u(4),
+    borderWidth: 1,
+    borderColor: colors.pearl,
     backgroundColor: colors.snow,
+    ...elevation.down,
   },
+  thumbDisabled: { backgroundColor: colors.paleBlack, borderWidth: 0 },
 });

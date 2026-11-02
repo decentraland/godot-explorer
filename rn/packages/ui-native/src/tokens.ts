@@ -38,6 +38,32 @@ export const colors = {
   black40: 'rgba(0,0,0,0.4)',
   black60: 'rgba(0,0,0,0.6)',
   lavender70: 'rgba(232,185,255,0.7)',
+  paleBlack: '#43404A',
+  danger: '#FB3B3B',
+  green: '#30CD00',
+  modal: '#4C147C',
+  menu: '#1B002D',
+  navbar: 'rgba(26,9,37,0.9)',
+  black25: 'rgba(0,0,0,0.25)',
+} as const;
+
+/** Figma `Elevation/Down|Up`: one shadow, 0/±4 offset, blur 4, Shadow at 50% — values ÷ 2 for
+ * iOS; Android only takes `elevation`. Shadows only show on a solid background. */
+export const elevation = {
+  down: {
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 2,
+    elevation: 4,
+  },
+  up: {
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 2,
+    elevation: 4,
+  },
 } as const;
 
 /** Notification card title colours by category. */

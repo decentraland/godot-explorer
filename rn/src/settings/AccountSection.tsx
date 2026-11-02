@@ -145,7 +145,7 @@ export function AccountSection({
       />
       <Dialog
         visible={dialog === 'delete'}
-        icon="warning"
+        icon="alert"
         title={t('SETTINGS_DELETE_TITLE')}
         body={t('SETTINGS_DELETE_BODY')}
         onRequestClose={() => setDialog(null)}

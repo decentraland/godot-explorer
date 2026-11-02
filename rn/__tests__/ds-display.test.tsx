@@ -16,7 +16,8 @@ import {
   ProgressBar,
   Skeleton,
   SnapCarousel,
-  StatusPill,
+  EventBadge,
+  EventTimeTag,
   Tabs,
   WarningBanner,
   colors,
@@ -122,16 +123,19 @@ describe('ActionSquareButton', () => {
   });
 });
 
-describe('StatusPill and Chip', () => {
-  it('renders each kind', () => {
-    expect(text(render(<StatusPill kind="live" label="LIVE" />))).toContain(
-      'LIVE',
-    );
+describe('Tags and Chip', () => {
+  it('renders each event time kind and the live player count', () => {
+    const live = text(render(<EventTimeTag kind="live" label="Live" players={12} />));
+    expect(live).toContain('Live');
+    expect(live).toContain('12');
     expect(
-      text(render(<StatusPill kind="trending" label="Trending" />)),
-    ).toContain('Trending');
-    expect(text(render(<StatusPill kind="count" label="12" />))).toContain(
-      '12',
+      text(render(<EventTimeTag kind="startingSoon" label="In 5 mins" />)),
+    ).toContain('In 5 mins');
+    expect(text(render(<EventTimeTag kind="date" label="Nov 12" />))).toContain(
+      'Nov 12',
+    );
+    expect(text(render(<EventBadge type="featured" label="Featured" />))).toContain(
+      'Featured',
     );
   });
 
@@ -299,7 +303,10 @@ describe('demo props', () => {
       'BottomSheet',
       'Skeleton',
       'EmptyState',
-      'StatusPill',
+      'EventTimeTag',
+      'EventBadge',
+      'Checkbox',
+      'Header',
       'Chip',
       'ProgressBar',
       'CollapsibleSection',

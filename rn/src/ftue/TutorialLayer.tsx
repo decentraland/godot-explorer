@@ -513,7 +513,6 @@ export function WelcomeCard({
   return (
     <Dialog
       visible={visible}
-      rounded
       title={t('FTUE_TUTORIAL_WELCOME_TITLE')}
       body={t('FTUE_TUTORIAL_WELCOME_BODY')}
       onRequestClose={() => {}}

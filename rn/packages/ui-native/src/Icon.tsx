@@ -1,36 +1,69 @@
 import { parse, SvgAst, SvgXml } from 'react-native-svg';
 import {
-  appleSvg,
-  backpackOutlineSvg,
-  backpackSvg,
-  compassActiveSvg,
-  compassOutlineSvg,
-  fillPaths,
+  badgePaths,
+  basePaths,
+  buttonPaths,
+  creditsSvg,
+  discordSvg,
+  Glyph,
+  GlyphFamily,
   googleSvg,
-  profileFillSvg,
-  profileRingSvg,
-  filterSvg,
-  profileSvg,
-  settingsActiveSvg,
-  settingsSvg,
+  logoPaths,
+  menuBanMemberSvg,
+  menuClearChatSvg,
+  menuDemoteSpeakerSvg,
+  menuJumpSvg,
+  menuLeaveSvg,
+  menuMakeSpeakerSvg,
+  menuPaths,
+  menuRemoveMemberSvg,
+  menuRevokeOpSvg,
+  modalAlertSvg,
+  modalBannedSvg,
+  modalBlockSvg,
+  modalBugSvg,
+  modalConnectionSvg,
+  modalPasswordSvg,
+  modalReportSvg,
+  modalSuccessSvg,
+  nameLogoSvg,
+  namePaths,
+  nameVerifiedSvg,
+  navBarPaths,
+  navProfileActiveSvg,
+  navProfileSvg,
+  settingsPaths,
   strokePaths,
+  walletConnectSvg,
   wearablesSvg,
 } from './iconSvgs';
 import { u } from './scale';
 
 const sources = {
-  apple: appleSvg,
-  backpack: backpackSvg,
-  backpackOutline: backpackOutlineSvg,
-  compassActive: compassActiveSvg,
-  compassOutline: compassOutlineSvg,
+  credits: creditsSvg,
+  discord: discordSvg,
   google: googleSvg,
-  profileFill: profileFillSvg,
-  profileRing: profileRingSvg,
-  filter: filterSvg,
-  profile: profileSvg,
-  settings: settingsSvg,
-  settingsActive: settingsActiveSvg,
+  menuBanMember: menuBanMemberSvg,
+  menuClearChat: menuClearChatSvg,
+  menuDemoteSpeaker: menuDemoteSpeakerSvg,
+  menuJump: menuJumpSvg,
+  menuLeave: menuLeaveSvg,
+  menuMakeSpeaker: menuMakeSpeakerSvg,
+  menuRemoveMember: menuRemoveMemberSvg,
+  menuRevokeOp: menuRevokeOpSvg,
+  modalAlert: modalAlertSvg,
+  modalBanned: modalBannedSvg,
+  modalBlock: modalBlockSvg,
+  modalBug: modalBugSvg,
+  modalConnection: modalConnectionSvg,
+  modalPassword: modalPasswordSvg,
+  modalReport: modalReportSvg,
+  modalSuccess: modalSuccessSvg,
+  nameLogo: nameLogoSvg,
+  nameVerified: nameVerifiedSvg,
+  navProfile: navProfileSvg,
+  navProfileActive: navProfileActiveSvg,
+  walletConnect: walletConnectSvg,
   wearables: wearablesSvg,
 };
 
@@ -39,71 +72,146 @@ const asts = Object.fromEntries(
   Object.entries(sources).map(([name, xml]) => [name, parse(xml)]),
 );
 
-const baseStrokes = {
-  back: 'M15 4 L7 12 L15 20',
-  plus: 'M12 5 V19 M5 12 H19',
-  close: 'M5 5 L19 19 M19 5 L5 19',
-  compass:
-    'M2.5 12 a9.5 9.5 0 1 0 19 0 a9.5 9.5 0 1 0 -19 0 M16 8 L13.6 13.6 L8 16 L10.4 10.4 Z',
-  emotes:
-    'M9.5 5 a2.5 2.5 0 1 0 5 0 a2.5 2.5 0 1 0 -5 0 M12 9 V15 M12 10.5 L6.5 7 M12 10.5 L18 8.5 M12 15 L8 21 M12 15 L16.5 21',
-  search: 'M3 10.5 a7.5 7.5 0 1 0 15 0 a7.5 7.5 0 1 0 -15 0 M16 16 L21 21',
-  user: 'M8 8 a4 4 0 1 0 8 0 a4 4 0 1 0 -8 0 M4 21 C4 16 8 14 12 14 C16 14 20 16 20 21',
-  like: 'M7 11 V21 H4 V11 Z M7 11 L11 3 C13 3 14 4.5 13.5 6.5 L13 9 H19 C20.5 9 21.5 10.5 21 12 L19 19 C18.7 20.3 17.7 21 16.5 21 H7',
-  dislike:
-    'M7 13 V3 H4 V13 Z M7 13 L11 21 C13 21 14 19.5 13.5 17.5 L13 15 H19 C20.5 15 21.5 13.5 21 12 L19 5 C18.7 3.7 17.7 3 16.5 3 H7',
-  heart:
-    'M12 20.5 C5 15 3 11.5 3 8.5 A4.5 4.5 0 0 1 12 6.5 A4.5 4.5 0 0 1 21 8.5 C21 11.5 19 15 12 20.5 Z',
-  share:
-    'M15 6 a3 3 0 1 0 6 0 a3 3 0 1 0 -6 0 M3 12 a3 3 0 1 0 6 0 a3 3 0 1 0 -6 0 M15 18 a3 3 0 1 0 6 0 a3 3 0 1 0 -6 0 M8.7 10.5 L15.3 7.5 M8.7 13.5 L15.3 16.5',
-  pin: 'M12 21 C12 21 5 14.5 5 9.5 A7 7 0 0 1 19 9.5 C19 14.5 12 21 12 21 Z M9.5 9.5 a2.5 2.5 0 1 0 5 0 a2.5 2.5 0 1 0 -5 0',
-  jump: 'M3 3 H21 V21 H3 Z M7 12 H16 M12.5 8.5 L16 12 L12.5 15.5',
-  chevronRight: 'M9 4 L17 12 L9 20',
-  compassFilled:
-    'M1.5 12 a10.5 10.5 0 1 0 21 0 a10.5 10.5 0 1 0 -21 0 M16.8 7.2 L13.8 13.8 L7.2 16.8 L10.2 10.2 Z',
-  mail: 'M3 5 H21 V19 H3 Z M3 5 L12 13 L21 5',
+type Mono = { viewBox: string; inner: string; fill?: string };
+
+function prefixed<P extends string, K extends string>(
+  prefix: P,
+  family: { paths: Record<K, Glyph> },
+): Record<`${P}${Capitalize<K>}`, Glyph> {
+  return Object.fromEntries(
+    Object.entries(family.paths).map(([k, v]) => [
+      `${prefix}${k[0].toUpperCase()}${k.slice(1)}`,
+      v,
+    ]),
+  ) as Record<`${P}${Capitalize<K>}`, Glyph>;
+}
+
+const monoFamilies: { family: GlyphFamily; paths: Record<string, Glyph> }[] = [
+  { family: basePaths, paths: basePaths.paths },
+  { family: buttonPaths, paths: buttonPaths.paths },
+  { family: menuPaths, paths: prefixed('menu', menuPaths) },
+  { family: navBarPaths, paths: prefixed('nav', navBarPaths) },
+  { family: settingsPaths, paths: prefixed('settings', settingsPaths) },
+  { family: logoPaths, paths: logoPaths.paths },
+  { family: badgePaths, paths: badgePaths.paths },
+  { family: namePaths, paths: namePaths.paths },
+];
+
+const monos: Record<string, Mono> = {};
+for (const { family, paths } of monoFamilies) {
+  for (const [name, glyph] of Object.entries(paths)) {
+    const g = typeof glyph === 'string' ? { d: glyph } : glyph;
+    monos[name] = {
+      viewBox: g.viewBox ?? `0 0 ${family.viewBox} ${family.viewBox}`,
+      inner:
+        'markup' in g
+          ? g.markup
+          : `<path d="${g.d}"${
+              g.fillRule ? ` fill-rule="${g.fillRule}"` : ''
+            } fill="currentColor"/>`,
+      fill: g.fill,
+    };
+  }
+}
+
+const strokes: Record<string, string> = strokePaths;
+
+/** Names from before the design-system sweep, kept so call sites and tests keep working. */
+const aliases = {
+  backpack: 'navBackpackActive',
+  backpackOutline: 'navBackpack',
+  bell: 'notification',
+  bug: 'menuBug',
+  chevronLeft: 'back',
+  compass: 'navExplore',
+  compassActive: 'navExploreActive',
+  compassFilled: 'navExploreActive',
+  compassOutline: 'navExplore',
+  copy: 'menuCopy',
+  dancer: 'emote',
+  emotes: 'emote',
+  flag: 'menuReport',
+  friends: 'menuFriends',
+  globe: 'world',
+  heart: 'fav',
+  info: 'menuInfo',
+  jump: 'jumpIn',
+  link: 'menuLink',
+  logout: 'leave',
+  mail: 'email',
+  pencil: 'menuEditProfile',
+  people: 'menuCommunity',
+  peopleHeart: 'navSocial',
+  personPlus: 'menuAddFriend',
+  pin: 'location',
+  profile: 'menuPlayer',
+  profileFill: 'navProfile',
+  profileRing: 'navProfileRing',
+  seal: 'nameVerified',
+  settings: 'navSettings',
+  settingsActive: 'navSettingsActive',
+  sliders: 'filter',
+  trash: 'menuDelete',
+  user: 'players',
+  warning: 'alert',
+  wifiOff: 'noConnection',
 } as const;
 
-const strokes: Record<string, string> = { ...baseStrokes, ...strokePaths };
-
-const fills: Record<string, string> = fillPaths;
+type MonoName =
+  | keyof typeof basePaths.paths
+  | keyof typeof buttonPaths.paths
+  | `menu${Capitalize<keyof typeof menuPaths.paths>}`
+  | `nav${Capitalize<keyof typeof navBarPaths.paths>}`
+  | `settings${Capitalize<keyof typeof settingsPaths.paths>}`
+  | keyof typeof logoPaths.paths
+  | keyof typeof badgePaths.paths
+  | keyof typeof namePaths.paths;
 
 export type IconName =
   | keyof typeof sources
-  | keyof typeof baseStrokes
+  | MonoName
   | keyof typeof strokePaths
-  | keyof typeof fillPaths;
+  | keyof typeof aliases;
 
 export const iconNames = [
+  ...Object.keys(monos),
   ...Object.keys(sources),
   ...Object.keys(strokes),
-  ...Object.keys(fills),
+  ...Object.keys(aliases),
 ] as IconName[];
 
 export function Icon({
-  name,
+  name: requested,
   size: designSize = 24,
-  color = '#FCFCFC',
+  color,
   strokeWidth = 2.4,
   fill,
 }: {
   name: IconName;
   size?: number;
+  /** Defaults to snow, or to the glyph's own colour for the ones Figma paints (nav actives, badges, logos). */
   color?: string;
   strokeWidth?: number;
   /** Fills the stroke icon's shapes (even-odd, so nested outlines cut holes). */
   fill?: string;
 }) {
   const size = u(designSize);
-  if (name in fills) {
-    const xml = `<svg viewBox="0 0 54 54"><path d="${fills[name]}" fill="${color}"/></svg>`;
+  const name: string =
+    requested in aliases
+      ? aliases[requested as keyof typeof aliases]
+      : requested;
+  if (name in monos) {
+    const mono = monos[name];
+    const paint = color ?? mono.fill ?? '#FCFCFC';
+    const xml = `<svg viewBox="${mono.viewBox}" color="${paint}">${mono.inner}</svg>`;
     return <SvgXml xml={xml} width={size} height={size} />;
   }
   if (name in strokes) {
-    const path = strokes[name];
-    const xml = `<svg viewBox="0 0 24 24" fill="none"><path d="${path}" fill="${
-      fill ?? 'none'
-    }" fill-rule="evenodd" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    const xml = `<svg viewBox="0 0 24 24" fill="none"><path d="${
+      strokes[name]
+    }" fill="${fill ?? 'none'}" fill-rule="evenodd" stroke="${
+      color ?? '#FCFCFC'
+    }" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     return <SvgXml xml={xml} width={size} height={size} />;
   }
   return <SvgAst ast={asts[name]} override={{ width: size, height: size }} />;

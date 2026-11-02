@@ -37,7 +37,6 @@ export function GameplaySection({ m }: { m: SettingsModel }) {
           <SectionCaption title={t('SETTINGS_CAMERA')} />
           <Group>
             <Dropdown
-              variant="settings"
               label={t('SETTINGS_CAMERA_MODE')}
               value={values.camera_mode}
               disabled={env.cameraLocked}

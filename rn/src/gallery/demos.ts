@@ -2,8 +2,11 @@ import { ComponentProps } from 'react';
 import {
   ActionSquareButton,
   BottomSheet,
+  Checkbox,
   Chip,
-  StatusPill,
+  EventBadge,
+  EventTimeTag,
+  Header,
   CollapsibleSection,
   Dialog,
   Dropdown,
@@ -65,7 +68,7 @@ export const demos = {
   } satisfies ComponentProps<typeof SearchField>,
   Dialog: {
     visible: true,
-    icon: 'warning',
+    icon: 'alert',
     title: 'Leave without saving?',
     body: "You'll lose any unsaved changes.",
     buttons: [
@@ -93,9 +96,25 @@ export const demos = {
     actionLabel: 'RETRY',
     onAction: noop,
   } satisfies ComponentProps<typeof EmptyState>,
-  StatusPill: { kind: 'live', label: 'LIVE' } satisfies ComponentProps<
-    typeof StatusPill
-  >,
+  EventTimeTag: {
+    kind: 'live',
+    label: 'Live',
+    players: 12,
+  } satisfies ComponentProps<typeof EventTimeTag>,
+  EventBadge: {
+    type: 'trending',
+    label: 'Trending',
+  } satisfies ComponentProps<typeof EventBadge>,
+  Checkbox: {
+    checked: true,
+    label: 'I have read and accept the Terms of Service.',
+    onChange: noop,
+  } satisfies ComponentProps<typeof Checkbox>,
+  Header: {
+    title: 'Backpack',
+    onSearch: noop,
+    credits: { amount: 0, onPress: noop },
+  } satisfies ComponentProps<typeof Header>,
   Chip: {
     label: 'Instagram',
     icon: 'link',
