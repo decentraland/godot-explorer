@@ -21,4 +21,8 @@ export const engine: Partial<Record<keyof typeof en, string>> = {
     '[color=#ccc]🟢 Teletransportado a {location}[/color]',
   CHAT_SYSTEM_UNKNOWN_COMMAND: '[color=#ccc]🔴 Comando desconocido[/color]',
   TOOLTIP_VIEW_PROFILE: 'Ver perfil',
+  NAMEPLATE_PROFILE_LOADING: 'Cargando perfil…',
+  NAMEPLATE_NO_PROFILE: 'Sin perfil',
+  NAMEPLATE_PROFILE_UNAVAILABLE: 'Perfil no disponible',
+  NAMEPLATE_PROFILE_CROSS_ENVIRONMENT: 'Perfil de otro entorno (.org)',
 };

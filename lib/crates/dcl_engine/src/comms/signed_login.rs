@@ -62,6 +62,8 @@ pub struct SignedLogin {
 impl SignedLogin {
     pub fn new(uri: Uri, ephemeral_auth_chain: EphemeralAuthChain, meta: SignedLoginMeta) -> Self {
         let (login_result_sender, login_result_receiver) = tokio::sync::oneshot::channel();
+        // Looked up here: the scene tree can only be read from the main thread.
+        let network_inspector_sender = DclGlobal::get_network_inspector_sender();
 
         Core::spawn(async move {
             let unix_time = crate::utils::clock::unix_time_ms();
@@ -83,8 +85,7 @@ impl SignedLogin {
             headers.insert("x-identity-timestamp".into(), format!("{unix_time}"));
             headers.insert("x-identity-metadata".into(), meta.to_string());
 
-            let http_requester =
-                HttpQueueRequester::new(1, DclGlobal::get_network_inspector_sender());
+            let http_requester = HttpQueueRequester::new(1, network_inspector_sender);
             let response = http_requester
                 .request(
                     RequestOption::new(

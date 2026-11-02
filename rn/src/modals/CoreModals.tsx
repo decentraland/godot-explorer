@@ -120,6 +120,9 @@ export function leaveWorld(reset: (route: { name: 'home' }) => void): void {
   reset({ name: 'home' });
 }
 
+/** The disconnect modal the engine withdraws when the connection comes back by itself. */
+const RECOVERABLE_KEY = 'disconnected-recoverable';
+
 /** The modals for what the engine tells the player; each one says how to leave or retry. */
 export function noticeModal(
   notice: EngineNotice,
@@ -162,6 +165,8 @@ export function noticeModal(
         urgent: true,
         buttons: back(t('MODAL_BAN_KICKED_PRIMARY')),
       };
+    case EngineNotice_Tags.DisconnectRecovered:
+      return null;
     case EngineNotice_Tags.LowMemory:
       return {
         key: 'low-memory',
@@ -178,11 +183,19 @@ export function noticeModal(
       };
     case EngineNotice_Tags.Disconnected: {
       const { reason } = notice.inner;
-      if (reason === DisconnectReason.DuplicateSession) {
+      if (
+        reason === DisconnectReason.DuplicateSession ||
+        reason === DisconnectReason.PlatformBan
+      ) {
+        const banned = reason === DisconnectReason.PlatformBan;
         return {
           key: 'disconnected',
-          title: t('MODAL_SESSION_ENDED_DUPLICATE_TITLE'),
-          body: t('MODAL_SESSION_ENDED_DUPLICATE_BODY'),
+          title: banned
+            ? t('MODAL_BAN_KICKED_TITLE')
+            : t('MODAL_SESSION_ENDED_DUPLICATE_TITLE'),
+          body: banned
+            ? t('MODAL_BAN_KICKED_BODY')
+            : t('MODAL_SESSION_ENDED_DUPLICATE_BODY'),
           dismissable: false,
           urgent: true,
           buttons: [
@@ -200,7 +213,8 @@ export function noticeModal(
       }
       const closed = reason === DisconnectReason.RoomClosed;
       return {
-        key: 'disconnected',
+        // Only this one closes by itself when the connection comes back.
+        key: closed ? 'disconnected' : RECOVERABLE_KEY,
         title: closed
           ? t('MODAL_SESSION_ENDED_ROOM_CLOSED_TITLE')
           : t('MODAL_SESSION_ENDED_OTHER_TITLE'),
@@ -269,6 +283,10 @@ export function CoreModals({ ready }: { ready: boolean }) {
           const leave = () => leaveWorld(reset);
           if (notice.tag === EngineNotice_Tags.EntryRefused) {
             reset({ name: 'home' });
+          }
+          if (notice.tag === EngineNotice_Tags.DisconnectRecovered) {
+            modals.dismiss(RECOVERABLE_KEY);
+            return;
           }
           const modal = noticeModal(notice, {
             home: leave,

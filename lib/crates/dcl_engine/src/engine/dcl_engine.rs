@@ -135,7 +135,8 @@ impl DclEngine {
 
     /// Something the player has to hear about: `entry_private`, `entry_password` and
     /// `entry_not_found` (detail: the realm), `disconnected_duplicate`, `disconnected_room_closed`,
-    /// `disconnected_other`, `banned` and `low_memory`.
+    /// `disconnected_other`, `disconnected_platform_ban`, `disconnect_recovered` (the connection came back
+    /// while its notice was up), `banned` and `low_memory`.
     #[func]
     pub fn report_notice(&self, kind: GString, detail: GString) {
         let realm = detail.to_string();
@@ -161,6 +162,10 @@ impl DclEngine {
             "disconnected_other" => EngineNotice::Disconnected {
                 reason: DisconnectReason::Other,
             },
+            "disconnected_platform_ban" => EngineNotice::Disconnected {
+                reason: DisconnectReason::PlatformBan,
+            },
+            "disconnect_recovered" => EngineNotice::DisconnectRecovered,
             "banned" => EngineNotice::Banned,
             "low_memory" => EngineNotice::LowMemory,
             other => {

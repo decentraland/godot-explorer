@@ -48,6 +48,8 @@ pub struct NicknameUi {
     #[export]
     #[var(set = set_room_debug)]
     room_debug: GString,
+    profile_status: GString,
+    status_label: Option<Gd<Label>>,
     message_tween: Option<Gd<Tween>>,
     base: Base<MarginContainer>,
 }
@@ -64,6 +66,8 @@ impl IMarginContainer for NicknameUi {
             nickname_color: Color::WHITE,
             client_version: GString::new(),
             room_debug: GString::new(),
+            profile_status: GString::new(),
+            status_label: None,
             message_tween: None,
             base,
         }
@@ -83,7 +87,7 @@ impl NicknameUi {
     }
 
     fn apply_all(&mut self) {
-        let (claimed, mic, nickname, tag, color, version, room) = (
+        let (claimed, mic, nickname, tag, color, version, room, status) = (
             self.name_claimed,
             self.mic_enabled,
             self.nickname.clone(),
@@ -91,6 +95,7 @@ impl NicknameUi {
             self.nickname_color,
             self.client_version.clone(),
             self.room_debug.clone(),
+            self.profile_status.clone(),
         );
         self.set_name_claimed(claimed);
         self.set_mic_enabled(mic);
@@ -99,6 +104,7 @@ impl NicknameUi {
         self.set_nickname_color(color);
         self.set_client_version(version);
         self.set_room_debug(room);
+        self.set_profile_status(status);
     }
 
     /// Shows the rows the tier allows: `#hash` only in FULL, the badge (checkmark and mic)
@@ -304,6 +310,34 @@ impl NicknameUi {
             return;
         }
         if let Some(mut label) = self.node::<Label>("RoomDebugLabel") {
+            label.set_visible(!value.is_empty());
+            label.set_text(&value);
+        }
+    }
+
+    /// Translation key shown under the name while the profile is pending or from another
+    /// environment; empty hides the row.
+    #[func]
+    pub fn set_profile_status(&mut self, value: GString) {
+        self.profile_status = value.clone();
+        if !self.base().is_inside_tree() {
+            return;
+        }
+        if self.status_label.is_none() {
+            let Some(version) = self.node::<Label>("VersionLabel") else {
+                return;
+            };
+            let Some(mut parent) = version.get_parent() else {
+                return;
+            };
+            let mut label = Label::new_alloc();
+            label.set_horizontal_alignment(godot::global::HorizontalAlignment::CENTER);
+            label.set_auto_translate_mode(godot::classes::node::AutoTranslateMode::ALWAYS);
+            label.add_theme_font_size_override("font_size", 30);
+            parent.add_child(&label);
+            self.status_label = Some(label);
+        }
+        if let Some(label) = self.status_label.as_mut() {
             label.set_visible(!value.is_empty());
             label.set_text(&value);
         }

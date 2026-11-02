@@ -1036,6 +1036,7 @@ dependencies = [
  "sha2",
  "simple-easing",
  "taffy",
+ "thiserror 1.0.69",
  "tokio",
  "tokio-tungstenite",
  "tracing",

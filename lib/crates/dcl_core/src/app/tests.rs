@@ -813,6 +813,10 @@ fn other_notices_do_not_move_the_state() {
         EngineNotice::Disconnected {
             reason: DisconnectReason::RoomClosed,
         },
+        EngineNotice::Disconnected {
+            reason: DisconnectReason::PlatformBan,
+        },
+        EngineNotice::DisconnectRecovered,
         EngineNotice::EntryRefused {
             reason: EntryRefusal::NotFound,
             realm: "r".into(),
@@ -821,5 +825,5 @@ fn other_notices_do_not_move_the_state() {
         app.engine_event(EngineEvent::Notice(notice));
     }
     assert!(matches!(app.state(), State::InWorld { .. }));
-    assert_eq!(notices.seen.lock().unwrap().len(), 4);
+    assert_eq!(notices.seen.lock().unwrap().len(), 6);
 }

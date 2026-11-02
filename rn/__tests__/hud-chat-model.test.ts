@@ -116,6 +116,34 @@ describe('tokenize', () => {
     ]);
   });
 
+  it('matches names followed by punctuation, with spaces, or in the wrong case', () => {
+    const named = {
+      names: ['Kenz0', 'Lara Fire', 'Lara', 'Bob#a1b2', 'Anaïs'],
+      myName: 'Me',
+    };
+    const found = (text: string) =>
+      tokenize(text, named)
+        .filter(s => s.kind === 'mention')
+        .map(s => [s.text, s.value]);
+    expect(found('hey @Kenz0!')).toEqual([['@Kenz0', 'Kenz0']]);
+    expect(found('@kenz0 hi')).toEqual([['@Kenz0', 'Kenz0']]);
+    expect(found('@Lara Fire, come')).toEqual([['@Lara Fire', 'Lara Fire']]);
+    expect(found('@Lara come')).toEqual([['@Lara', 'Lara']]);
+    expect(found('@Bob hi')).toEqual([['@Bob#a1b2', 'Bob#a1b2']]);
+    expect(found('@Anaïs!')).toEqual([['@Anaïs', 'Anaïs']]);
+    expect(found('@Kenz0x and mail@Kenz0')).toEqual([]);
+  });
+
+  it('needs the tag when two nearby profiles share a name', () => {
+    const twins = { names: ['Bob#a1b2', 'Bob#c3d4'] };
+    const found = (text: string) =>
+      tokenize(text, twins)
+        .filter(s => s.kind === 'mention')
+        .map(s => s.value);
+    expect(found('@Bob hi')).toEqual([]);
+    expect(found('@Bob#c3d4 hi')).toEqual(['Bob#c3d4']);
+  });
+
   it('does not link unsafe urls', () => {
     const out = tokenize('x www.bad.com/<script>', ctx);
     expect(out.every(s => s.kind === 'text')).toBe(true);

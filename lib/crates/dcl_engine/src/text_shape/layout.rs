@@ -10,12 +10,14 @@ use godot::global::{HorizontalAlignment, VerticalAlignment};
 
 use super::markup::strip_to_plain;
 
-/// The three TextShape faces, matching the Unity reference's Font List.
+/// The three TextShape faces, matching the Unity reference's Font List, plus a scene font
+/// (`font_src`), which cannot be calibrated: it uses the mean of the three faces in every table.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Face {
     Sans,
     Serif,
     Mono,
+    Custom,
 }
 
 impl Face {
@@ -43,7 +45,7 @@ impl Face {
     /// MSDF imports.
     pub fn font_uid(self) -> &'static str {
         match self {
-            Face::Sans => "uid://dsp1v3gwqgdvu",
+            Face::Sans | Face::Custom => "uid://dsp1v3gwqgdvu",
             Face::Serif => "uid://d4f8lc838jeet",
             Face::Mono => "uid://4ldm8tygdnbc",
         }
@@ -52,7 +54,7 @@ impl Face {
     /// The real bold face, for `[b]` markup (synthetic embolden mangles MSDF glyphs).
     pub fn bold_font_uid(self) -> &'static str {
         match self {
-            Face::Sans => "uid://ru8tau3y1nqn",
+            Face::Sans | Face::Custom => "uid://ru8tau3y1nqn",
             Face::Serif => "uid://1vmt0d4x5gr1",
             Face::Mono => "uid://bfqjyubth6dkc",
         }
@@ -65,6 +67,7 @@ impl Face {
             Face::Sans => 18.242,
             Face::Serif => 18.812,
             Face::Mono => 19.122,
+            Face::Custom => 18.725,
         }
     }
 
@@ -74,6 +77,7 @@ impl Face {
             Face::Sans => 61.0,
             Face::Serif => 38.0,
             Face::Mono => 28.0,
+            Face::Custom => 42.0,
         }
     }
 
@@ -84,6 +88,7 @@ impl Face {
             Face::Sans => 0.088,
             Face::Serif => 0.064,
             Face::Mono => 0.029,
+            Face::Custom => 0.060,
         }
     }
 
@@ -93,6 +98,7 @@ impl Face {
             Face::Sans => 0.086,
             Face::Serif => 0.056,
             Face::Mono => 0.031,
+            Face::Custom => 0.058,
         }
     }
 }
@@ -148,6 +154,7 @@ pub fn world_to_pixels(meters: f32) -> f32 {
 pub struct TextShapeParams {
     pub text: String,
     pub font: Option<i32>,
+    pub font_src: Option<String>,
     pub font_size: Option<f32>,
     pub font_auto_size: Option<bool>,
     pub text_align: Option<i32>,
@@ -474,6 +481,18 @@ mod tests {
         assert_eq!(Face::from_index(9), Face::Sans);
         assert!(line_spacing_px(Some(Face::Sans), 100) > line_spacing_px(Some(Face::Mono), 100));
         assert_eq!(line_spacing_px(None, 100), 0.0);
+    }
+
+    #[test]
+    fn a_scene_font_uses_the_mean_of_the_faces() {
+        let mean = |f: fn(Face) -> f32| (f(Face::Sans) + f(Face::Serif) + f(Face::Mono)) / 3.0;
+        assert!((Face::Custom.font_size_factor() - mean(Face::font_size_factor)).abs() < 0.01);
+        assert!(
+            (Face::Custom.glyph_spacing_per_mille() - mean(Face::glyph_spacing_per_mille)).abs()
+                < 0.5
+        );
+        assert!((Face::Custom.anchor_offset_em() - mean(Face::anchor_offset_em)).abs() < 0.005);
+        assert!((Face::Custom.line_spacing_em() - mean(Face::line_spacing_em)).abs() < 0.005);
     }
 
     #[test]

@@ -11,7 +11,14 @@ instance uniform float own_fade : hint_range(0.0, 1.0) = 0.0;
 uniform vec4 material_color;
 uniform vec4 mask_color;
 uniform sampler2D base_texture : hint_default_white;
+// No mask = no tint. Keep white: Unity's DefaultEyesMask and wearable-preview don't tint maskless
+// eyes either, and a black default recolors the whole eye, sclera included (#2439). Base eyes get
+// a bundled iris mask instead (avatar.gd BASE_EYE_MASKS); eyebrows/mouth tint via mask_color = BLACK.
 uniform sampler2D mask_texture : hint_default_white;
+// Base-avatar eyes whose iris is a solid black disc: a multiply can only keep it black, so the
+// mask replaces the disc with the picked colour and keeps the bright catch-light. Set only with
+// EyeMasks.BASE_EYE_MASKS_REPLACE; every other mask keeps the multiply below.
+uniform float mask_replace : hint_range(0.0, 1.0) = 0.0;
 
 void fragment() {
 	if (own_fade > 0.0) {
@@ -23,9 +30,12 @@ void fragment() {
 	vec4 base = texture(base_texture, UV);
 	vec4 mask = texture(mask_texture, UV);
 
-	float color_amt = mask.r * mask.a * mask_color.r;
-	vec4 mixed_color = mix(material_color, vec4(1.0), color_amt);
-	vec4 final_color = mixed_color * base;
+	// The mask paints where mask.r is black, so the tint amount is 1 - mask.r.
+	float tint_amt = 1.0 - mask.r * mask.a * mask_color.r;
+	vec3 tinted = base.rgb * mix(vec3(1.0), material_color.rgb, tint_amt);
+	float luma = dot(base.rgb, vec3(0.299, 0.587, 0.114));
+	vec3 replaced = mix(material_color.rgb, base.rgb, smoothstep(0.20, 0.55, luma));
+	vec4 final_color = vec4(mix(tinted, replaced, mask_replace * tint_amt), base.a);
 
 	ALBEDO = final_color.rgb;
 	EMISSION = final_color.rgb * SECOND_SHADE_MULT;

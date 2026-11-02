@@ -97,19 +97,70 @@ const toHttps = (url: string): string =>
 
 type Hit = { start: number; end: number; segment: Segment };
 
-function mentionHits(text: string, ctx: TokenizeContext): Hit[] {
-  const hits: Hit[] = [];
-  for (const m of text.matchAll(/@([^#\s]+)(?:#([0-9a-fA-F]{4}))?/g)) {
-    const unique = m[2] ? `${m[1]}#${m[2]}` : m[1];
-    const mine = unique === ctx.myName;
-    if (ctx.names.includes(unique) || mine) {
-      const segment: Segment = { kind: 'mention', text: m[0], value: unique };
-      hits.push({
-        start: m.index,
-        end: m.index + m[0].length,
-        segment: mine ? { ...segment, mine } : segment,
-      });
+const baseNameLower = (full: string): string =>
+  full.startsWith('#')
+    ? ''
+    : (full.split('#').filter(Boolean)[0] ?? '').toLowerCase();
+
+/** Every lowercased text a sender may type after `@` -> the identity to show. The bare name of an unclaimed profile only resolves while it names one nearby profile. */
+function mentionLookup(ctx: TokenizeContext): Map<string, string> {
+  const identities = new Set(ctx.names.filter(Boolean));
+  if (ctx.myName) {
+    identities.add(ctx.myName);
+  }
+  const owners = new Map<string, number>();
+  for (const identity of identities) {
+    const base = baseNameLower(identity);
+    if (base) {
+      owners.set(base, (owners.get(base) ?? 0) + 1);
     }
+  }
+  const lookup = new Map<string, string>();
+  for (const identity of identities) {
+    lookup.set(identity.toLowerCase(), identity);
+    const base = baseNameLower(identity);
+    if (base && owners.get(base) === 1) {
+      lookup.set(base, identity);
+    }
+  }
+  return lookup;
+}
+
+const escapeRegex = (text: string): string =>
+  text.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
+
+function mentionHits(text: string, ctx: TokenizeContext): Hit[] {
+  if (!text.includes('@')) {
+    return [];
+  }
+  const lookup = mentionLookup(ctx);
+  if (lookup.size === 0) {
+    return [];
+  }
+  // Longest first so "Lara Fire" wins over a nearby "Lara".
+  const names = [...lookup.keys()]
+    .sort((a, b) => b.length - a.length)
+    .map(escapeRegex);
+  const re = new RegExp(
+    `(?<![\\p{L}\\p{N}_.-])@(${names.join('|')})(?![\\p{L}\\p{N}_#])`,
+    'giu',
+  );
+  const hits: Hit[] = [];
+  for (const m of text.matchAll(re)) {
+    const identity = lookup.get(m[1].toLowerCase());
+    if (!identity) {
+      continue;
+    }
+    const segment: Segment = {
+      kind: 'mention',
+      text: `@${identity}`,
+      value: identity,
+    };
+    hits.push({
+      start: m.index,
+      end: m.index + m[0].length,
+      segment: identity === ctx.myName ? { ...segment, mine: true } : segment,
+    });
   }
   return hits;
 }

@@ -27,7 +27,7 @@ describe('mentions', () => {
     expect(mentionQuery('hi @cla', 7)).toBe('cla');
     expect(mentionQuery('@', 1)).toBe('');
     expect(mentionQuery('mail@x', 6)).toBeNull();
-    expect(mentionQuery('hi @cla bob', 11)).toBeNull();
+    expect(mentionQuery('hi @Lara F', 10)).toBe('Lara F');
     expect(mentionQuery('hello', 5)).toBeNull();
   });
 

@@ -164,12 +164,7 @@ pub struct DclCli {
     /// human to test (docs/dev-intent.md). Empty when neither flag was passed.
     pub dev_intent: DevIntent,
 
-    // Pulse transport (see comms/pulse/). `pulse` = not locally disabled (--no-pulse).
-    // `pulse_explicit` = --pulse, an explicit endpoint (--pulse-server / PULSE_SERVER) or an
-    // explicit realm (--pulse-realm / PULSE_REALM) was passed: force activation even when the
-    // server `pulse` feature flag is absent or unreachable (without it activation is
-    // fail-closed on the flag — see CommunicationManager::pulse_enabled). `pulse_server` empty
-    // = default endpoint.
+    // Pulse is required in normal sessions. Explicit opt-in also enables local previews.
     #[var(no_set, pub)]
     pub pulse: bool,
     #[var(no_set, pub)]
@@ -180,9 +175,7 @@ pub struct DclCli {
     // (see CommunicationManager::pulse_realm_name).
     #[var(no_set, pub)]
     pub pulse_realm: GString,
-    // Explicit local dual-channel choice; either one outranks the deployment's `dual-channel`
-    // flag for this run (see CommunicationManager::dual_channel_effective). Neither can cause
-    // invisibility: LiveKit resumes on its own whenever Pulse is not established.
+    // Developer override; LiveKit avatar duplication defaults off.
     #[var(no_set, pub)]
     pub livekit_movement: bool,
     #[var(no_set, pub)]
@@ -725,13 +718,13 @@ impl DclCli {
             // Comms
             ArgDefinition {
                 name: "--pulse".to_string(),
-                description: "Force-enable the Pulse transport (ENet/UDP avatar-state relay) even when the server feature flag is absent or unreachable".to_string(),
+                description: "Enable Pulse in local previews (already required in normal sessions)".to_string(),
                 arg_type: ArgType::Flag,
                 category: "Comms".to_string(),
             },
             ArgDefinition {
                 name: "--no-pulse".to_string(),
-                description: "Disable the Pulse transport for this run (LiveKit-only avatar sync)"
+                description: "Developer opt-out: disable Pulse and island multiplayer for this run"
                     .to_string(),
                 arg_type: ArgType::Flag,
                 category: "Comms".to_string(),
@@ -750,13 +743,13 @@ impl DclCli {
             },
             ArgDefinition {
                 name: "--livekit-movement".to_string(),
-                description: "Force dual-channel ON for this run: keep sending movement and emotes over LiveKit while Pulse is established, whatever the deployment's dual-channel flag says".to_string(),
+                description: "Developer override: duplicate movement and emotes over LiveKit (default OFF)".to_string(),
                 arg_type: ArgType::Flag,
                 category: "Comms".to_string(),
             },
             ArgDefinition {
                 name: "--no-livekit-movement".to_string(),
-                description: "Force dual-channel OFF for this run: Pulse becomes the only carrier for movement and emotes while it is established (auto-resumes if Pulse drops)".to_string(),
+                description: "Send movement and emotes only through Pulse (default); no LiveKit fallback".to_string(),
                 arg_type: ArgType::Flag,
                 category: "Comms".to_string(),
             },
@@ -1011,14 +1004,7 @@ impl INode for DclCli {
             .map(|n| GString::from(&n.to_string()))
             .unwrap_or_default();
 
-        // Pulse transport activation is fail-closed on the server `pulse` feature flag
-        // (see CommunicationManager::pulse_enabled): without an explicit opt-in it stays
-        // off until the flags fetch confirms it. --pulse forces it on for this run
-        // (offline/local testing), and so does naming an endpoint via --pulse-server /
-        // the PULSE_SERVER env var (desktop; bevy parity) — pointing at a server is
-        // explicit intent, matching the pulse-server= deeplink which also self-enables.
-        // --no-pulse forces it off and always wins over the flag. Empty pulse_server =
-        // default endpoint (urls::pulse_server() : PULSE_SERVER_PORT).
+        // An explicit endpoint opts local previews into Pulse as well.
         let pulse_server = args_map
             .get("--pulse-server")
             .and_then(|v| v.as_ref())

@@ -117,6 +117,8 @@ pub enum EngineNotice {
     EntryRefused { reason: EntryRefusal, realm: String },
     /// The comms connection ended and reconnecting did not bring it back.
     Disconnected { reason: DisconnectReason },
+    /// The connection came back while a `Disconnected` notice was up.
+    DisconnectRecovered,
     /// The scene's own room banned the player.
     Banned,
     /// The device is running out of memory in this scene.
@@ -137,6 +139,8 @@ pub enum DisconnectReason {
     /// The account logged in somewhere else.
     DuplicateSession,
     RoomClosed,
+    /// The platform banned the account: signing in with another one is the way out.
+    PlatformBan,
     Other,
 }
 

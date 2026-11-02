@@ -29,6 +29,8 @@ enum ArchipelagoState {
 
 pub struct ArchipelagoManager {
     state: ArchipelagoState,
+    session: super::island_session::IslandSession,
+    assignment_requested_at: Option<Instant>,
 
     // Connection
     ws_url: String,
@@ -90,6 +92,8 @@ impl ArchipelagoManager {
             ws: WsClient::new(),
             ws_url,
             state: ArchipelagoState::Connecting,
+            session: super::island_session::IslandSession::default(),
+            assignment_requested_at: None,
             player_address: ephemeral_auth_chain.signer(),
             ephemeral_auth_chain,
             player_profile,
@@ -137,6 +141,9 @@ impl ArchipelagoManager {
     }
 
     pub fn island_room_state(&self) -> &'static str {
+        if self.session.is_removed() {
+            return "removed_waiting_for_pulse";
+        }
         self.adapter
             .as_ref()
             .map(|adapter| adapter.connection_state_str())
@@ -169,7 +176,44 @@ impl ArchipelagoManager {
         self.ws.send(buf)
     }
 
+    pub fn set_pulse_ready(&mut self, ready: bool) {
+        if !self.session.set_pulse_ready(ready) {
+            return;
+        }
+        self.clean();
+        self.state = ArchipelagoState::Connecting;
+        self.island_connect_failures = 0;
+        self.island_attempt_connected = false;
+        self.last_try_to_connect =
+            Instant::now() - Duration::from_secs(RECONNECT_INTERVAL_SECS + 1);
+    }
+
+    pub fn island_removed(&mut self, room_id: &str) {
+        if self
+            .last_island_id
+            .as_ref()
+            .is_none_or(|id| room_id != format!("archipelago-livekit-{id}"))
+        {
+            return;
+        }
+        self.session.remove(Instant::now());
+        self.clean();
+    }
+
     pub fn poll(&mut self) {
+        if self.session.refresh_after_removal(Instant::now()) {
+            // Removal already discarded the token. Ask the connector for a fresh assignment.
+            self.clean();
+            self.state = ArchipelagoState::Connecting;
+            self.island_connect_failures = 0;
+            self.island_attempt_connected = false;
+            self.last_try_to_connect =
+                Instant::now() - Duration::from_secs(RECONNECT_INTERVAL_SECS + 1);
+        }
+        if !self.session.can_poll() {
+            return;
+        }
+
         let ws_state = self.ws.state();
 
         match self.state.clone() {
@@ -258,6 +302,9 @@ impl ArchipelagoManager {
                         match message {
                             server_packet::Message::Welcome(_welcome) => {
                                 self.state = ArchipelagoState::WelcomeMessageReceived;
+                                self.assignment_requested_at = Some(Instant::now());
+                                // IslandChanged may already be queued behind Welcome.
+                                break;
                             }
                             _ => {
                                 tracing::warn!(
@@ -307,6 +354,20 @@ impl ArchipelagoManager {
             },
         }
 
+        // Gatekeeper can suppress a reannounce while the previous participant is closing.
+        // Retry the WS handshake for a fresh token, never the previous Pulse session's token.
+        if self.adapter.is_none()
+            && self.last_island_conn_str.is_none()
+            && self
+                .assignment_requested_at
+                .is_some_and(|at| at.elapsed() >= Duration::from_secs(10))
+        {
+            self.assignment_requested_at = None;
+            self.ws.close();
+            self.state = ArchipelagoState::Connecting;
+            self.last_try_to_connect = Instant::now();
+        }
+
         // Track whether this attempt ever connected: a success resets the failure strikes,
         // so only never-connected attempts count toward the fresh-handshake escalation.
         if !self.island_attempt_connected
@@ -324,6 +385,17 @@ impl ArchipelagoManager {
         } else {
             true
         };
+
+        // The worker marks removal before enqueueing the UI event, even under backpressure.
+        if self
+            .adapter
+            .as_ref()
+            .is_some_and(|adapter| adapter.connection_state_str() == "removed")
+        {
+            self.session.remove(Instant::now());
+            self.clean();
+            return;
+        }
 
         if !adapter_ok {
             self.adapter = None;
@@ -407,6 +479,10 @@ impl ArchipelagoManager {
     }
 
     pub fn clean(&mut self) {
+        self.assignment_requested_at = None;
+        if let Some(mut adapter) = self.adapter.take() {
+            adapter.clean();
+        }
         self.ws.close();
         self.last_island_conn_str = None;
         self.last_island_id = None;
@@ -451,6 +527,7 @@ impl ArchipelagoManager {
                                     .as_ref()
                                     .is_some_and(|a| a.connection_state_str() == "connected");
 
+                            self.assignment_requested_at = None;
                             // Store connection info for reconnection (always refresh the
                             // token — the previous one may be near expiry).
                             self.last_island_conn_str = Some(msg.conn_str.clone());
