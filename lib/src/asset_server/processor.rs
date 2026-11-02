@@ -468,7 +468,9 @@ async fn process_texture(
     } else if infer_mime::is_tga(&bytes_vec) {
         image.load_tga_from_buffer(&bytes)
     } else if infer_mime::is_ktx(&bytes_vec) {
-        image.load_ktx_from_buffer(&bytes)
+        image.load_ktx_from_buffer(&PackedByteArray::from(
+            infer_mime::ktx2_keep_srgb_bytes(&bytes_vec).as_ref(),
+        ))
     } else {
         // Try PNG as fallback
         image.load_png_from_buffer(&bytes)
