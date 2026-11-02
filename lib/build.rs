@@ -439,14 +439,6 @@ fn main() -> io::Result<()> {
             .into(),
     );
 
-    // Social service protos (with RPC services)
-    proto_files
-        .push(format!("{PROTO_FILES_BASE_DIR}decentraland/social_service/errors.proto").into());
-    proto_files.push(
-        format!("{PROTO_FILES_BASE_DIR}decentraland/social_service/v2/social_service_v2.proto")
-            .into(),
-    );
-
     generate_enum(&proto_components);
     generate_impl_crdt(&proto_components);
     generate_dcl_component_impl(&proto_components);
@@ -475,7 +467,6 @@ fn main() -> io::Result<()> {
     //     every time a new component is added; blanket-derive avoids that.
     let mut prost_config = prost_build::Config::new();
     prost_config.type_attribute(".", "#[derive(serde::Serialize)]");
-    prost_config.service_generator(Box::new(dcl_rpc::codegen::RPCServiceGenerator::new()));
     // Emit the descriptor set so build_quant can read the Pulse quantization
     // field options (the .proto stays the single source of truth for the wire ABI).
     let descriptor_path = Path::new(&env::var("OUT_DIR").unwrap()).join("proto_descriptor_set.bin");
