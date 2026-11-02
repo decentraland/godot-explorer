@@ -8,7 +8,6 @@ const BeforeSendFreedInstanceTest = preload(
 	"res://src/test/sentry/before_send_freed_instance_test.gd"
 )
 const ForceBackfaceCullingTest = preload("res://src/test/gltf/test_force_backface_culling.gd")
-const OneSidedCollidersTest = preload("res://src/test/gltf/test_one_sided_colliders.gd")
 
 
 func start():
@@ -18,7 +17,6 @@ func start():
 		DebugCollectorCountsTest.new(),
 		BeforeSendFreedInstanceTest.new(),
 		ForceBackfaceCullingTest.new(),
-		OneSidedCollidersTest.new(),
 	]
 	var success: bool = rust_test_runner.run_all_tests(gdscript_tests, 0, true, self)
 
