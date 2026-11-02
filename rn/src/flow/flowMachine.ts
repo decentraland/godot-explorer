@@ -1,7 +1,6 @@
 /** Entry flow mirroring the Godot lobby (godot/src/ui/pages/auth/lobby.gd), portrait only. */
 export type Step =
   | 'splash'
-  | 'terms'
   | 'account'
   | 'sign_in'
   | 'auth_wait'
@@ -29,9 +28,8 @@ export type FlowState = {
 };
 
 export type FlowAction =
-  | { type: 'booted'; next?: 'terms' | 'account' }
+  | { type: 'booted' }
   | { type: 'recovered'; hasProfile: boolean; name: string }
-  | { type: 'acceptTerms' }
   | { type: 'playAsGuest' }
   | { type: 'previewGuest' }
   | { type: 'guestReady' }
@@ -70,9 +68,7 @@ const go = (
 export function reduceFlow(state: FlowState, action: FlowAction): FlowState {
   switch (action.type) {
     case 'booted':
-      return state.step === 'splash'
-        ? go(state, action.next ?? 'terms')
-        : state;
+      return state.step === 'splash' ? go(state, 'account') : state;
     case 'recovered':
       // A restored account that already has a name goes straight into the app, as the lobby did.
       if (state.step !== 'splash') {
@@ -81,8 +77,6 @@ export function reduceFlow(state: FlowState, action: FlowAction): FlowState {
       return action.hasProfile
         ? go(state, 'done', { name: action.name })
         : go(state, 'avatar_create');
-    case 'acceptTerms':
-      return go(state, 'account');
     case 'playAsGuest':
       return go(state, 'guest_wait', { guest: true, provider: null });
     case 'previewGuest':
@@ -135,8 +129,6 @@ export function reduceFlow(state: FlowState, action: FlowAction): FlowState {
 
 function back(state: FlowState): FlowState {
   switch (state.step) {
-    case 'account':
-      return go(state, 'terms');
     case 'sign_in':
       return go(state, 'account');
     case 'auth_wait':

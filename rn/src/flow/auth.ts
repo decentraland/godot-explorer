@@ -55,11 +55,8 @@ export async function welcome(): Promise<AuthResult> {
   return { hasProfile: name.length > 0, name };
 }
 
-/** Terms the player already accepted in this version (or an older run of the same one). */
-export const termsAccepted = () =>
-  core().termsAcceptedVersion() >= core().termsVersion();
-
-/** Records the acceptance and lets analytics start (nothing is sent before this). */
+/** Records the acceptance and lets analytics start (nothing is sent before this). Idempotent on
+ * the core side, so it is safe to call from every commit point (guest, sign-in). */
 export async function acceptTerms(): Promise<void> {
   core().acceptTerms(core().termsVersion());
   await core().setAnalyticsConsent(true);

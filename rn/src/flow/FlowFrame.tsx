@@ -1,58 +1,79 @@
 import { ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { ImageBackground, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, Icon, LinearFill, u } from '@dcl/ui-native';
+import { colors, Icon, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 
-/** Magenta-to-purple full-screen backdrop (flat purple when `flat`) with safe-area padding and an optional back button. */
+const photoBackground = require('../assets/photo-background.png');
+const gradientBackground = require('../assets/flow-gradient-background.png');
+
+/** Magenta-to-purple full-screen backdrop (flat purple when `flat`, the lobby's photo background
+ * when `photo`) with safe-area padding and an optional back button. `edgeToEdge` skips the
+ * safe-area padding: the Figma margin is already generous enough to clear the notch/status bar
+ * on its own, so adding insets on top double-pads — for screens with their own exact Figma
+ * vertical margins. */
 export function FlowFrame({
   children,
   onBack,
   flat = false,
+  photo = false,
+  edgeToEdge = false,
 }: {
   children: ReactNode;
   onBack?: () => void;
   flat?: boolean;
+  photo?: boolean;
+  edgeToEdge?: boolean;
 }) {
   const insets = useSafeAreaInsets();
   return (
     <View style={styles.root}>
-      {flat ? null : (
-        <LinearFill
-          stops={[
-            { offset: 0, color: colors.magenta },
-            { offset: 1, color: colors.purple350 },
-          ]}
+      {photo ? (
+        <ImageBackground
+          source={photoBackground}
+          style={StyleSheet.absoluteFill}
+          resizeMode="cover"
+        />
+      ) : flat ? null : (
+        <ImageBackground
+          source={gradientBackground}
+          style={StyleSheet.absoluteFill}
+          resizeMode="cover"
         />
       )}
       <View
         style={[
           styles.content,
-          {
-            paddingTop: insets.top + u(16),
-            paddingBottom: insets.bottom + u(24),
-          },
+          edgeToEdge
+            ? null
+            : { paddingTop: insets.top, paddingBottom: insets.bottom },
         ]}
       >
-        {onBack ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('APP_BACK')}
-            onPress={onBack}
-            hitSlop={12}
-            style={styles.back}
-          >
-            <Icon name="back" size={24} />
-          </Pressable>
-        ) : null}
         {children}
       </View>
+      {onBack ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('APP_BACK')}
+          onPress={onBack}
+          hitSlop={12}
+          style={[styles.back, { top: insets.top + u(16) }]}
+        >
+          <Icon name="back" size={24} />
+        </Pressable>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { ...StyleSheet.absoluteFill, backgroundColor: colors.purple350 },
-  content: { flex: 1, paddingHorizontal: u(24) },
-  back: { width: u(40), height: u(40), justifyContent: 'center' },
+  content: { flex: 1, paddingHorizontal: u(32) },
+  back: {
+    position: 'absolute',
+    left: u(32),
+    width: u(40),
+    height: u(40),
+    justifyContent: 'center',
+  },
 });

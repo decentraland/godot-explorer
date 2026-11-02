@@ -4,18 +4,20 @@ import {
   Image,
   KeyboardAvoidingView,
   Linking,
-  Pressable,
+  ScrollView,
   StyleSheet,
+  Text,
   TextInput,
   View,
 } from 'react-native';
 import { core } from '../core';
-import { AppText, colors, Button, radii, u } from '@dcl/ui-native';
+import { AppText, colors, Button, LoginButton, u } from '@dcl/ui-native';
 import { FlowFrame } from './FlowFrame';
 import { isValidName, Provider } from './flowMachine';
 import { I18nKey, t } from '../i18n';
 
 const logo = require('../assets/logo.png');
+const decentralandLogo = require('../assets/decentraland_logo.png');
 
 export function SplashScreen({ onDone }: { onDone: () => void }) {
   useEffect(() => {
@@ -31,91 +33,87 @@ export function SplashScreen({ onDone }: { onDone: () => void }) {
   );
 }
 
-export function TermsScreen({ onAccept }: { onAccept: () => void }) {
+/** Inline "Terms of Service, Privacy Policy, and Content Policy" disclaimer with real links,
+ * shared by Account Home and Sign In. */
+function TermsDisclaimer() {
+  const urls = core().urls();
+  const links: Record<string, { label: string; url: string }> = {
+    tos: { label: t('FLOW_TERMS_OF_SERVICE'), url: urls.termsOfService },
+    privacy: { label: t('FLOW_PRIVACY_POLICY'), url: urls.privacyPolicy },
+    content: { label: t('FLOW_CONTENT_POLICY'), url: urls.contentPolicy },
+  };
   return (
-    <FlowFrame>
-      <View style={styles.center}>
-        <Image source={logo} style={styles.logoSmall} resizeMode="contain" />
-        <AppText variant="heading" style={styles.title}>
-          {t('FLOW_TERMS_TITLE')}
-        </AppText>
-        <AppText variant="body" style={styles.copy}>
-          {t('FLOW_TERMS_BODY')}
-        </AppText>
-        <Pressable
-          accessibilityRole="link"
-          onPress={() => Linking.openURL(core().urls().termsOfService)}
-          hitSlop={8}
-        >
-          <AppText variant="button" style={styles.link}>
-            {t('FLOW_TERMS_READ')}
-          </AppText>
-        </Pressable>
-      </View>
-      <Button label={t('FLOW_TERMS_ACCEPT')} onPress={onAccept} />
-    </FlowFrame>
+    <AppText variant="body" style={styles.disclaimer}>
+      {t('FLOW_TERMS_DISCLAIMER')
+        .split(/(\{\w+\})/g)
+        .map((part, i) => {
+          const link = links[part.slice(1, -1)];
+          return link ? (
+            <Text
+              key={i}
+              style={styles.disclaimerLink}
+              onPress={() => Linking.openURL(link.url)}
+            >
+              {link.label}
+            </Text>
+          ) : (
+            part
+          );
+        })}
+    </AppText>
   );
 }
 
 export function AccountScreen({
   onGuest,
   onSignIn,
-  onBack,
 }: {
   onGuest: () => void;
   onSignIn: () => void;
-  onBack: () => void;
 }) {
   return (
-    <FlowFrame onBack={onBack}>
-      <View style={styles.accountTop} />
-      <View style={styles.brand}>
-        <Image source={logo} style={styles.brandMark} resizeMode="contain" />
-        <AppText variant="title" style={styles.brandName}>
-          {t('FLOW_BRAND')}
-        </AppText>
-      </View>
-      <AppText variant="heading" style={styles.accountTitle}>
-        {t('FLOW_ACCOUNT_TITLE')}
-      </AppText>
-      <AppText variant="body" style={styles.accountBody}>
-        <AppText variant="body" style={styles.accountBodyBold}>
-          {t('FLOW_ACCOUNT_BODY_BOLD')}
-        </AppText>
-        {t('FLOW_ACCOUNT_BODY_REST')}
-      </AppText>
-      <View style={styles.accountActions}>
-        <Button
-          label={t('FLOW_ACCOUNT_CREATE')}
-          onPress={onSignIn}
-        />
-        <Button
-          tone="dark"
-          label={t('FLOW_ACCOUNT_SIGN_IN')}
-          onPress={onSignIn}
-        />
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('FLOW_ACCOUNT_GUEST')}
-          onPress={onGuest}
-          hitSlop={8}
-          style={styles.guest}
-        >
-          <AppText variant="caption" style={styles.guestLabel}>
-            {t('FLOW_ACCOUNT_GUEST')}
+    <FlowFrame photo edgeToEdge>
+      <View style={styles.accountContainer}>
+        <View>
+          <Image
+            source={decentralandLogo}
+            style={styles.brandMark}
+            resizeMode="contain"
+          />
+          <AppText variant="heading" style={styles.flowTitle}>
+            {t('FLOW_ACCOUNT_TITLE')}
           </AppText>
-        </Pressable>
+          <AppText variant="body" style={styles.accountBody}>
+            {t('FLOW_ACCOUNT_TAGLINE')}
+          </AppText>
+        </View>
+        <View style={styles.accountActions}>
+          <View style={styles.accountButtons}>
+            <Button
+              big
+              fullWidth
+              label={t('FLOW_ACCOUNT_GUEST')}
+              onPress={onGuest}
+            />
+            <Button
+              big
+              fullWidth
+              tone="outline"
+              label={t('FLOW_ACCOUNT_SIGN_IN')}
+              onPress={onSignIn}
+            />
+          </View>
+          <TermsDisclaimer />
+        </View>
       </View>
-      <View style={styles.accountBottom} />
     </FlowFrame>
   );
 }
 
-const PROVIDERS: { key: Provider; label: I18nKey }[] = [
+const BRAND_PROVIDERS: { key: Provider; label: I18nKey }[] = [
   { key: 'google', label: 'FLOW_PROVIDER_GOOGLE' },
-  { key: 'apple', label: 'FLOW_PROVIDER_APPLE' },
-  { key: 'email', label: 'FLOW_PROVIDER_EMAIL' },
   { key: 'wallet', label: 'FLOW_PROVIDER_WALLET' },
+  { key: 'apple', label: 'FLOW_PROVIDER_APPLE' },
 ];
 
 export function SignInScreen({
@@ -128,30 +126,43 @@ export function SignInScreen({
   onBack: () => void;
 }) {
   return (
-    <FlowFrame onBack={onBack}>
-      <View style={styles.center}>
-        <AppText variant="heading" style={styles.title}>
+    <FlowFrame onBack={onBack} edgeToEdge>
+      <ScrollView
+        contentContainerStyle={styles.signInScroll}
+        showsVerticalScrollIndicator={false}
+      >
+        <AppText variant="heading" style={styles.flowTitle}>
           {t('FLOW_SIGN_IN_TITLE')}
-        </AppText>
-        <AppText variant="body" style={styles.copy}>
-          {t('FLOW_SIGN_IN_BODY')}
         </AppText>
         {error ? (
           <AppText variant="caption" style={styles.error}>
             {error}
           </AppText>
         ) : null}
-      </View>
-      <View style={styles.actions}>
-        {PROVIDERS.map(provider => (
-          <Button
-            key={provider.key}
-            label={t(provider.label)}
-            tone="secondary"
-            onPress={() => onProvider(provider.key)}
+        <View style={styles.actions}>
+          {BRAND_PROVIDERS.map(provider => (
+            <LoginButton
+              key={provider.key}
+              provider={provider.key}
+              label={t(provider.label)}
+              onPress={() => onProvider(provider.key)}
+            />
+          ))}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <AppText variant="caption" style={styles.dividerLabel}>
+              {t('FLOW_OR')}
+            </AppText>
+            <View style={styles.dividerLine} />
+          </View>
+          <LoginButton
+            provider="email"
+            label={t('FLOW_PROVIDER_EMAIL')}
+            onPress={() => onProvider('email')}
           />
-        ))}
-      </View>
+          <TermsDisclaimer />
+        </View>
+      </ScrollView>
     </FlowFrame>
   );
 }
@@ -180,6 +191,7 @@ export function WaitScreen({
         <Button
           label={t('FLOW_CANCEL')}
           tone="ghost"
+          fullWidth
           onPress={onCancel}
         />
       ) : null}
@@ -230,6 +242,7 @@ export function NamingScreen({
         <Button
           label={t('FLOW_LETS_GO')}
           disabled={!valid}
+          fullWidth
           onPress={() => onSubmit(name.trim())}
         />
       </KeyboardAvoidingView>
@@ -266,6 +279,7 @@ function TextStep({
   onBack: () => void;
 }) {
   const [value, setValue] = useState(initial);
+  const [focused, setFocused] = useState(false);
   return (
     <FlowFrame onBack={onBack}>
       <KeyboardAvoidingView
@@ -289,19 +303,26 @@ function TextStep({
         <TextInput
           value={value}
           onChangeText={setValue}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           placeholder={placeholder}
-          placeholderTextColor={colors.silver}
+          placeholderTextColor={colors.white50}
           autoCapitalize="none"
           autoCorrect={false}
           autoFocus
           keyboardType={keyboardType}
           maxLength={maxLength}
           editable={!busy}
-          style={[styles.input, styles.inputGap]}
+          style={[
+            styles.input,
+            styles.inputGap,
+            error ? styles.inputError : focused && styles.inputFocused,
+          ]}
         />
         <Button
           label={action}
           disabled={busy || !valid(value)}
+          fullWidth
           onPress={() => onSubmit(value.trim())}
         />
       </KeyboardAvoidingView>
@@ -361,19 +382,36 @@ export function CodeScreen({
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  signInScroll: {
+    flexGrow: 1,
+    justifyContent: 'space-between',
+    paddingTop: u(165),
+    paddingBottom: u(77),
+  },
+  flowTitle: {
+    fontSize: u(36),
+    lineHeight: u(43.5),
+    textAlign: 'center',
+    marginTop: u(18),
+  },
   logo: { width: u(160), height: u(160) },
-  logoSmall: { width: u(96), height: u(96), marginBottom: u(12) },
-  accountTop: { flex: 3 },
-  accountBottom: { flex: 2 },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: u(6) },
-  brandMark: { width: u(18), height: u(18) },
-  brandName: { fontFamily: 'Inter-Bold', fontSize: u(16) },
-  accountTitle: { fontSize: u(36), marginTop: u(12) },
-  accountBody: { fontSize: u(18), lineHeight: u(26), marginTop: u(8) },
-  accountBodyBold: { fontFamily: 'Inter-Bold', fontSize: u(18) },
-  accountActions: { gap: u(12), marginTop: u(60) },
-  guest: { alignSelf: 'center', paddingVertical: u(8) },
-  guestLabel: { color: colors.snow, textDecorationLine: 'underline' },
+  accountContainer: {
+    flex: 1,
+    justifyContent: 'space-between',
+    paddingTop: u(105),
+    paddingBottom: u(77),
+  },
+  brandMark: { width: u(55), height: u(55), alignSelf: 'center' },
+  accountBody: {
+    fontSize: u(20),
+    lineHeight: u(24),
+    marginTop: u(4),
+    textAlign: 'center',
+    maxWidth: u(267),
+    alignSelf: 'center',
+  },
+  accountActions: { gap: u(18.5) },
+  accountButtons: { gap: u(24) },
   title: { marginTop: u(16), textAlign: 'center' },
   titleLeft: { marginTop: u(4), marginBottom: u(8) },
   copy: {
@@ -382,20 +420,43 @@ const styles = StyleSheet.create({
     opacity: 0.85,
     paddingHorizontal: u(16),
   },
-  link: { marginTop: u(14), color: colors.lavender },
+  disclaimer: {
+    lineHeight: u(18),
+    textAlign: 'center',
+  },
+  disclaimerLink: {
+    fontFamily: 'Inter-Medium',
+    fontSize: u(15),
+    color: '#A0ABFF',
+    textDecorationLine: 'underline',
+  },
   error: { marginTop: u(12), color: colors.ruby },
-  actions: { gap: u(12) },
+  actions: { gap: u(23) },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: u(12),
+    marginVertical: u(4),
+  },
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.white30 },
+  dividerLabel: {
+    textTransform: 'none',
+    color: colors.pearl,
+    fontFamily: 'Inter-Regular',
+  },
   input: {
-    height: u(52),
-    borderRadius: radii.pill,
-    paddingHorizontal: u(20),
+    height: u(34),
+    borderRadius: u(6),
+    paddingHorizontal: u(16),
     color: colors.snow,
     fontFamily: 'Inter-Medium',
-    fontSize: u(16),
-    backgroundColor: colors.white10,
+    fontSize: u(15),
+    backgroundColor: colors.black40,
     borderWidth: 1,
-    borderColor: colors.white30,
+    borderColor: 'transparent',
   },
+  inputFocused: { borderColor: colors.lavender },
+  inputError: { borderColor: colors.ruby },
   inputGap: { marginBottom: u(16) },
   hint: { marginTop: u(8), marginBottom: u(16), textAlign: 'center' },
 });

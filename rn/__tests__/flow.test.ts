@@ -10,15 +10,8 @@ const run = (actions: FlowAction[], from: FlowState = initialFlow) =>
   actions.reduce(reduceFlow, from);
 
 describe('entry flow', () => {
-  it('goes splash → terms → account', () => {
-    expect(run([{ type: 'booted' }]).step).toBe('terms');
-    expect(run([{ type: 'booted' }, { type: 'acceptTerms' }]).step).toBe(
-      'account',
-    );
-  });
-
-  it('skips the terms the player already accepted', () => {
-    expect(run([{ type: 'booted', next: 'account' }]).step).toBe('account');
+  it('goes splash → account', () => {
+    expect(run([{ type: 'booted' }]).step).toBe('account');
   });
 
   it('a restored account with a name goes straight in, one without builds an avatar', () => {
@@ -34,13 +27,12 @@ describe('entry flow', () => {
         hasProfile: true,
         name: 'x',
       }).step,
-    ).toBe('terms');
+    ).toBe('account');
   });
 
   it('guest path skips naming and ends in the ftue', () => {
     const state = run([
       { type: 'booted' },
-      { type: 'acceptTerms' },
       { type: 'playAsGuest' },
       { type: 'guestReady' },
       { type: 'customizeAvatar' },
@@ -54,7 +46,6 @@ describe('entry flow', () => {
   it('new account goes through avatar and naming', () => {
     const state = run([
       { type: 'booted' },
-      { type: 'acceptTerms' },
       { type: 'chooseSignIn' },
       { type: 'chooseProvider', provider: 'google' },
       { type: 'authSucceeded', hasProfile: false, name: '' },
@@ -92,7 +83,7 @@ describe('entry flow', () => {
   });
 
   it('previewGuest only applies from the splash', () => {
-    const state = run([{ type: 'booted', next: 'account' }]);
+    const state = run([{ type: 'booted' }]);
     expect(reduceFlow(state, { type: 'previewGuest' })).toBe(state);
   });
 

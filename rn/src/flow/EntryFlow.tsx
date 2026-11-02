@@ -14,7 +14,6 @@ import {
   setAvatarName,
   startBrowserSignIn,
   startGuest,
-  termsAccepted,
   verifyEmailCode,
   welcome,
   whenSignedIn,
@@ -35,7 +34,6 @@ import {
   NamingScreen,
   SignInScreen,
   SplashScreen,
-  TermsScreen,
   WaitScreen,
 } from './screens';
 import { t } from '../i18n';
@@ -63,7 +61,7 @@ export function EntryFlow({
     const subscription = BackHandler.addEventListener(
       'hardwareBackPress',
       () => {
-        if (step === 'splash' || step === 'terms') {
+        if (step === 'splash' || step === 'account') {
           return false;
         }
         dispatch({ type: 'back' });
@@ -95,8 +93,12 @@ export function EntryFlow({
 
   useEffect(() => {
     let cancelled = false;
-    const succeeded = async () =>
-      !cancelled && dispatch({ type: 'authSucceeded', ...(await welcome()) });
+    const succeeded = async () => {
+      acceptTerms().catch(() => {});
+      if (!cancelled) {
+        dispatch({ type: 'authSucceeded', ...(await welcome()) });
+      }
+    };
     const failed = (error?: unknown) =>
       !cancelled &&
       dispatch({
@@ -153,6 +155,7 @@ export function EntryFlow({
       setEmailError(null);
       try {
         await verifyEmailCode(flow.email, code);
+        acceptTerms().catch(() => {});
         dispatch({ type: 'authSucceeded', ...(await welcome()) });
       } catch (e) {
         setEmailError(
@@ -188,7 +191,7 @@ export function EntryFlow({
       dispatch({ type: 'previewGuest' });
       return;
     }
-    dispatch({ type: 'booted', next: termsAccepted() ? 'account' : 'terms' });
+    dispatch({ type: 'booted' });
   }, []);
   const confirmAvatar = useCallback(
     () => dispatch({ type: 'avatarConfirmed' }),
@@ -198,21 +201,14 @@ export function EntryFlow({
   switch (step) {
     case 'splash':
       return <SplashScreen onDone={booted} />;
-    case 'terms':
-      return (
-        <TermsScreen
-          onAccept={() => {
-            acceptTerms().catch(() => {});
-            dispatch({ type: 'acceptTerms' });
-          }}
-        />
-      );
     case 'account':
       return (
         <AccountScreen
-          onGuest={() => dispatch({ type: 'playAsGuest' })}
+          onGuest={() => {
+            acceptTerms().catch(() => {});
+            dispatch({ type: 'playAsGuest' });
+          }}
           onSignIn={() => dispatch({ type: 'chooseSignIn' })}
-          onBack={back}
         />
       );
     case 'sign_in':
@@ -282,10 +278,7 @@ export function EntryFlow({
           onBack={back}
           footer={
             <View style={styles.footer}>
-              <Button
-                label={t('FLOW_CONTINUE')}
-                onPress={confirmAvatar}
-              />
+              <Button label={t('FLOW_CONTINUE')} onPress={confirmAvatar} />
             </View>
           }
         />

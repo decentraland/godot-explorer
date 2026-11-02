@@ -36,35 +36,22 @@ describe('entry flow Figma screens', () => {
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 
-  it('account screen shows the Get started copy', () => {
-    const tree = mount(
-      <AccountScreen
-        onGuest={jest.fn()}
-        onSignIn={jest.fn()}
-        onBack={jest.fn()}
-      />,
-    );
+  it('account screen shows the welcome copy', () => {
+    const tree = mount(<AccountScreen onGuest={jest.fn()} onSignIn={jest.fn()} />);
     const json = JSON.stringify(tree.toJSON());
-    expect(json).toContain('Get started!');
-    expect(json).toContain('Discover a virtual social world');
-    expect(json).toContain('CREATE ACCOUNT');
+    expect(json).toContain('Welcome to Decentraland');
+    expect(json).toContain('Discover a world shaped');
+    expect(json).toContain('PLAY AS GUEST');
     expect(json).toContain('SIGN IN');
   });
 
-  it('create account and sign in both open sign-in; guest link plays as guest', () => {
+  it('play as guest and sign in trigger their own handlers', () => {
     const onSignIn = jest.fn();
     const onGuest = jest.fn();
-    const tree = mount(
-      <AccountScreen
-        onGuest={onGuest}
-        onSignIn={onSignIn}
-        onBack={jest.fn()}
-      />,
-    );
-    press(tree, 'CREATE ACCOUNT');
+    const tree = mount(<AccountScreen onGuest={onGuest} onSignIn={onSignIn} />);
     press(tree, 'SIGN IN');
-    expect(onSignIn).toHaveBeenCalledTimes(2);
-    press(tree, 'Play as guest');
+    expect(onSignIn).toHaveBeenCalledTimes(1);
+    press(tree, 'PLAY AS GUEST');
     expect(onGuest).toHaveBeenCalledTimes(1);
   });
 });

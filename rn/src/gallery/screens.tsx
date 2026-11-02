@@ -4,7 +4,7 @@ import '../backpack/gallery';
 import '../discover/gallery';
 import '../flow/gallery';
 import '../ftue/gallery';
-import { AccountScreen, TermsScreen, WaitScreen } from '../flow/screens';
+import { AccountScreen, WaitScreen } from '../flow/screens';
 import '../hud/gallery';
 import '../menu/gallery';
 import '../profile/gallery';
@@ -13,15 +13,10 @@ import { registerPreview } from './registry';
 
 const noop = () => {};
 
-registerPreview('extra/flow-terms', {
-  title: 'Flow: terms',
-  orientation: 'portrait',
-  render: () => <TermsScreen onAccept={noop} />,
-});
 registerPreview('extra/flow-account', {
   title: 'Flow: account',
   orientation: 'portrait',
-  render: () => <AccountScreen onGuest={noop} onSignIn={noop} onBack={noop} />,
+  render: () => <AccountScreen onGuest={noop} onSignIn={noop} />,
 });
 registerPreview('extra/flow-wait', {
   title: 'Flow: wait',

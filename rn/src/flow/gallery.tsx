@@ -17,8 +17,6 @@ const noop = () => {};
     title: 'Flow: account home',
     orientation: 'portrait',
     notes: 'Entry-flow account screen shown after sign out or delete account',
-    render: () => (
-      <AccountScreen onGuest={noop} onSignIn={noop} onBack={noop} />
-    ),
+    render: () => <AccountScreen onGuest={noop} onSignIn={noop} />,
   }),
 );
