@@ -44,12 +44,19 @@ jobs:
         run: cargo clippy --features enable_inspector -- -D warnings
 
       - name: TLS crates in the lockfiles
-        # rustls < 0.23 and rustls-webpki < 0.103 get no security fixes (e.g. the eMudhra distrust).
+        # Floors: rustls 0.23.46 (Oct 2026 advisories), rustls-webpki 0.103.16 (eMudhra distrust).
         run: |
           old=$(awk '/^name = "(rustls|rustls-webpki)"$/ { name = $3; getline; print FILENAME, name, $3 }' Cargo.lock lib/Cargo.lock \
-            | grep -v -E '"rustls" "0\.23\.|"rustls-webpki" "0\.103\.' || true)
+            | tr -d '"' \
+            | while read -r file name version; do
+                floor=0.103.16
+                [ "$name" = rustls ] && floor=0.23.46
+                if [ "$(printf '%s\n' "$floor" "$version" | sort -V | head -n1)" != "$floor" ]; then
+                  echo "$file $name $version (needs >= $floor)"
+                fi
+              done)
           if [ -n "$old" ]; then
-            echo "::error::Unsupported rustls / rustls-webpki in a lockfile:"
+            echo "::error::rustls / rustls-webpki below the security floor in a lockfile:"
             echo "$old"
             exit 1
           fi

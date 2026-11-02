@@ -39,12 +39,13 @@ impl EthereumProvider {
         method: &str,
         params: &[serde_json::Value],
     ) -> Result<serde_json::Value, anyhow::Error> {
-        let mut socket = self.socket.lock().await;
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
 
-        // The socket is out of the Option while in use, so a timed-out or cancelled request
-        // drops it and the next call reconnects instead of reading a stale reply.
+        // Waiting for the lock counts against the timeout, so callers can't queue up behind a
+        // stalled node. The socket is out of the Option while in use: a timed-out or cancelled
+        // request drops it and the next call reconnects instead of reading a stale reply.
         let call = async {
+            let mut socket = self.socket.lock().await;
             let mut stream = match socket.take() {
                 Some(stream) => stream,
                 None => {
@@ -52,16 +53,27 @@ impl EthereumProvider {
                     tokio_tungstenite::connect_async(provider_url).await?.0
                 }
             };
-            let result = request(&mut stream, id, method, params).await;
-            if result.is_ok() {
-                socket.replace(stream);
-            }
-            result
+            let response = request(&mut stream, id, method, params).await?;
+            socket.replace(stream);
+            Ok(response)
         };
 
-        tokio::time::timeout(RPC_TIMEOUT, call)
+        let mut response = tokio::time::timeout(RPC_TIMEOUT, call)
             .await
-            .unwrap_or_else(|_| Err(anyhow::anyhow!("{method}: Ethereum RPC request timed out")))
+            .unwrap_or_else(|_| Err(anyhow::anyhow!("{method}: Ethereum RPC request timed out")))?;
+
+        if let Some(error) = response.get("error").filter(|error| !error.is_null()) {
+            let mut message = format!(
+                "{method} failed (code: {}, message: {}",
+                error["code"],
+                error["message"].as_str().unwrap_or_default()
+            );
+            if !error["data"].is_null() {
+                message.push_str(&format!(", data: {}", error["data"]));
+            }
+            anyhow::bail!("{message})");
+        }
+        Ok(response["result"].take())
     }
 }
 
@@ -83,22 +95,10 @@ async fn request(
         let Message::Text(text) = message? else {
             continue;
         };
-        let mut response: serde_json::Value = serde_json::from_str(&text)?;
-        if response["id"] != id {
-            continue;
+        let response: serde_json::Value = serde_json::from_str(&text)?;
+        if response["id"] == id {
+            return Ok(response);
         }
-        if let Some(error) = response.get("error").filter(|error| !error.is_null()) {
-            let mut message = format!(
-                "{method} failed (code: {}, message: {}",
-                error["code"],
-                error["message"].as_str().unwrap_or_default()
-            );
-            if !error["data"].is_null() {
-                message.push_str(&format!(", data: {}", error["data"]));
-            }
-            anyhow::bail!("{message})");
-        }
-        return Ok(response["result"].take());
     }
 
     anyhow::bail!("Ethereum RPC connection closed")
