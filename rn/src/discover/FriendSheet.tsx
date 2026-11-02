@@ -1,6 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { AppText, colors } from '../ds';
-import { u } from '../ds/scale';
+import { AppText, colors, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { SheetShell } from './SheetShell';
 import { ActionRow, Byline, Hero, JumpButton } from './SheetParts';

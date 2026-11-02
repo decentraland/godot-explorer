@@ -7,8 +7,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppText, colors, Icon, SearchField } from '../ds';
-import { u } from '../ds/scale';
+import { AppText, colors, Icon, SearchField, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { DiscoverEvent, Place } from './api';
 import { EventCard, PlaceCard } from './Cards';

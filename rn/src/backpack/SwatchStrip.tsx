@@ -7,10 +7,8 @@ import Svg, {
   RadialGradient,
   Stop,
 } from 'react-native-svg';
-import { colors, layout } from '../ds';
-import { hsvToHex } from '../ds/colorMath';
+import { colors, layout, hsvToHex, u } from '@dcl/ui-native';
 import { t } from '../i18n';
-import { u } from '../ds/scale';
 
 const SWATCH = 40;
 const RING = 44;

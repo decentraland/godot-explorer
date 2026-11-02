@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useWindowDimensions } from 'react-native';
 import { useNav } from '../app/NavProvider';
 import type { ScreenProps } from '../app/registry';
-import { EmptyState, Snap, useToast } from '../ds';
+import { EmptyState, Snap, useToast } from '@dcl/ui-native';
 import { core } from '../core';
 import { Control } from '../core/native';
 import { t } from '../i18n';

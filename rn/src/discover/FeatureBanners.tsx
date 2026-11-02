@@ -8,8 +8,8 @@ import {
   PageDots,
   Skeleton,
   SnapCarousel,
-} from '../ds';
-import { u } from '../ds/scale';
+  u,
+} from '@dcl/ui-native';
 import { t } from '../i18n';
 import { Thumb } from './Thumb';
 import type { Banner } from './types';

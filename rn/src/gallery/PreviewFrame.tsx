@@ -2,7 +2,7 @@ import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { LayoutChangeEvent, LogBox, StyleSheet, View } from 'react-native';
 import { signedInMockCoreForPreviews } from '../core';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
-import { colors } from '../ds';
+import { colors } from '@dcl/ui-native';
 import { Orientation, setOrientation } from '../platform/orientation';
 
 // The dev warning toast would sit in the corner of every capture.

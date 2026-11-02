@@ -1,6 +1,5 @@
 import { Share, StyleSheet, View } from 'react-native';
-import { AppText, Skeleton } from '../ds';
-import { u } from '../ds/scale';
+import { AppText, Skeleton, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { Place } from './api';
 import { placeJumpLink } from './eventTime';

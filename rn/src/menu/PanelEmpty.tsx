@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { AppText, colors, Icon, IconName, u } from '../ds';
+import { AppText, colors, Icon, IconName, u } from '@dcl/ui-native';
 
 /** Centered icon in a rounded outline, title and a two-line body (Social and Notifications states). */
 export function PanelEmpty({

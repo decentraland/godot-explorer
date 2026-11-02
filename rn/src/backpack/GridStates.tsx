@@ -1,9 +1,16 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { AppText, colors, Icon, IconName, SkeletonCard, layout } from '../ds';
+import {
+  AppText,
+  colors,
+  Icon,
+  IconName,
+  SkeletonCard,
+  layout,
+  u,
+} from '@dcl/ui-native';
 import { t } from '../i18n';
 import type { EmptyCopy } from './platformPolicy';
-import { u } from '../ds/scale';
 
 export const SKELETON_CELLS = 12;
 

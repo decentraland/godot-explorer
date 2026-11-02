@@ -1,7 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppText, colors, Icon, LinearFill } from '../ds';
-import { u } from '../ds/scale';
+import { AppText, colors, Icon, LinearFill, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { Place } from './api';
 import { getFlag } from './flags';

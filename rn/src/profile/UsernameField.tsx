@@ -1,6 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { AppText, colors, Dropdown, Tabs, TextField } from '../ds';
-import { u } from '../ds/scale';
+import { AppText, colors, Dropdown, Tabs, TextField, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { ClaimedSeal } from './ClaimedSeal';
 import { LIMITS, validateText } from './logic';

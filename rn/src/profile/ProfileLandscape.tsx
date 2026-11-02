@@ -1,8 +1,15 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { AvatarHole } from '../backpack/AvatarStage';
-import { AppText, colors, fonts, Icon, LinearFill, RadialFill } from '../ds';
-import { u } from '../ds/scale';
+import {
+  AppText,
+  colors,
+  fonts,
+  Icon,
+  LinearFill,
+  RadialFill,
+  u,
+} from '@dcl/ui-native';
 import { t } from '../i18n';
 import { AboutFields } from './AboutFields';
 import { EditButton } from './EditButton';

@@ -4,7 +4,7 @@ import { AppText } from './AppText';
 import { Icon } from './Icon';
 import { colors, fonts } from './tokens';
 import { u } from './scale';
-import { t } from '../i18n';
+import { t } from './i18n';
 
 export const counterLabel = (length: number, max: number): string =>
   `${length}/${max}`;

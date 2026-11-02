@@ -1,4 +1,4 @@
-import { u } from '../ds';
+import { u } from '@dcl/ui-native';
 
 export type Insets = {
   top: number;

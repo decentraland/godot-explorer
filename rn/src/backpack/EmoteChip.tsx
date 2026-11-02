@@ -1,7 +1,6 @@
 import { StyleSheet, View } from 'react-native';
-import { AppText, colors, Icon } from '../ds';
+import { AppText, colors, Icon, u } from '@dcl/ui-native';
 import { t } from '../i18n';
-import { u } from '../ds/scale';
 
 /** Name of the previewed emote above the slot row; "Equipped" replaces it right after an equip. */
 export function EmoteChip({

@@ -1,7 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { SvgXml } from 'react-native-svg';
-import { AppText, PrimaryButton } from '../ds';
-import { u } from '../ds/scale';
+import { AppText, PrimaryButton, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 
 const STROKE = '#C9A6DB';

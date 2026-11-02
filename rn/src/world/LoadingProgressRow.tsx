@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { AppText, colors, fonts, LinearFill, u } from '../ds';
+import { AppText, colors, fonts, LinearFill, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import type { LoadingProgress } from '../hud/types';
 import { percentLabel, progressLabel, progressValue } from './loadingModel';

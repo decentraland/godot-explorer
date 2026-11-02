@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ControlsFtueElement, TutorialStep } from '../core/native';
-import { u } from '../ds';
+import { u } from '@dcl/ui-native';
 import { registerPreview } from '../gallery/registry';
 import { GodotPlaceholder } from '../godot/GodotPlaceholder';
 import { hudInsets } from '../hud/layout';

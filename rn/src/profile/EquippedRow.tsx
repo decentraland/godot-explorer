@@ -1,8 +1,15 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { AppText, colors, fonts, Icon, ItemCard, rarityColors } from '../ds';
+import {
+  AppText,
+  colors,
+  fonts,
+  Icon,
+  ItemCard,
+  rarityColors,
+  u,
+} from '@dcl/ui-native';
 import type { I18nKey } from '../i18n';
 import { t } from '../i18n';
-import { u } from '../ds/scale';
 import type { EquippedItem } from './types';
 
 const CARD_WIDTH = 75;

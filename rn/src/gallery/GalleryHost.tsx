@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { AppText, colors, u } from '../ds';
+import { AppText, colors, u } from '@dcl/ui-native';
 import { GalleryList } from './GalleryList';
 import { PreviewFrame } from './PreviewFrame';
 import { getPreview } from './registry';

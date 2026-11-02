@@ -1,7 +1,6 @@
 import { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { AppText, colors } from '../ds';
-import { u } from '../ds/scale';
+import { AppText, colors, u } from '@dcl/ui-native';
 import { LoadMoreCard, PlaceSkeleton } from './MoreCards';
 import type { RailState } from './rails';
 

@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { u } from '../ds';
+import { u } from '@dcl/ui-native';
 import { ChatRow } from './ChatRow';
 import type { TokenizeContext } from './chatModel';
 import type { NotificationRow } from './notifications';

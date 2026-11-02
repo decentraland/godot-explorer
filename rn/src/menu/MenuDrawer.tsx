@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import type { DiscoverEvent, Place } from '../discover/api';
 import { recordPlayed, usePlayed } from '../discover/history';
-import { useToast } from '../ds';
+import { useToast } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { setOrientation } from '../platform/orientation';
 import { enterPlaceChecked } from '../modals/destination';

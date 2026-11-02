@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { AppText, colors, Icon, LinearFill, u } from '../ds';
+import { AppText, colors, Icon, LinearFill, u } from '@dcl/ui-native';
 import { formatUsers } from '../discover/format';
 import { t } from '../i18n';
 

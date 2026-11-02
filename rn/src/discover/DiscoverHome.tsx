@@ -11,7 +11,7 @@ import { CompactRow, FriendCard } from './MoreCards';
 import { Rail } from './Rail';
 import { isOffline, RailState, useRail } from './rails';
 import { useSeasonalSkin } from './seasonalSkin';
-import { u } from '../ds/scale';
+import { u } from '@dcl/ui-native';
 import { useOpeners } from './useOpeners';
 
 export type HomeLoad = { offline: boolean; reload: () => void };

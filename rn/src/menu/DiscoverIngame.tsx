@@ -9,7 +9,7 @@ import {
   LinearFill,
   PageDots,
   u,
-} from '../ds';
+} from '@dcl/ui-native';
 import type { DiscoverEvent, Place } from '../discover/api';
 import { t } from '../i18n';
 import { EventCard, PlaceCard, Thumb } from './Cards';

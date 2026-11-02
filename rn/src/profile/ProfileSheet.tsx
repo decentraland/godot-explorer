@@ -16,8 +16,8 @@ import {
   layout,
   Snap,
   snapHeights,
-} from '../ds';
-import { u } from '../ds/scale';
+  u,
+} from '@dcl/ui-native';
 import { t } from '../i18n';
 import { AboutFields } from './AboutFields';
 import { EditButton } from './EditButton';

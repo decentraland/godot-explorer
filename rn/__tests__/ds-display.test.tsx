@@ -21,9 +21,9 @@ import {
   colors,
   SCALE,
   indexFromOffset,
-} from '../src/ds';
-import { iconNames } from '../src/ds/Icon';
-import { demos } from '../src/ds/demo';
+  iconNames,
+} from '@dcl/ui-native';
+import { demos } from '../src/gallery/demos';
 
 function render(element: ReactElement) {
   let tree!: ReturnType<typeof create>;

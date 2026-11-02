@@ -1,4 +1,4 @@
-import { colors } from '../ds';
+import { colors } from '@dcl/ui-native';
 import { plural, t } from '../i18n';
 import type { MenuNotification } from './types';
 

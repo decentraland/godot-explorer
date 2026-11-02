@@ -1,6 +1,5 @@
 import { Linking, Pressable, Share, StyleSheet, View } from 'react-native';
-import { AppText, colors, Icon } from '../ds';
-import { u } from '../ds/scale';
+import { AppText, colors, Icon, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { DiscoverEvent } from './api';
 import { EventBadges } from './Cards';

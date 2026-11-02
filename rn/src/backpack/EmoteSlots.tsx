@@ -1,9 +1,8 @@
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { GradientView, Icon, colors, layout, radii } from '../ds';
+import { GradientView, Icon, colors, layout, radii, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { Emote, emoteIdOf } from './emotes';
 import { EmoteArt } from './ItemArt';
-import { u } from '../ds/scale';
 
 const SLOT = 56;
 /** Landscape tiles are smaller so the ten slots fit a 360dp-high viewport in two columns of five. */

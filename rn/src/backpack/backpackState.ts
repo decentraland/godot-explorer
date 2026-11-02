@@ -1,4 +1,4 @@
-import type { Snap } from '../ds';
+import type { Snap } from '@dcl/ui-native';
 import { SLOTS, Slot, TabKey, ColorTarget } from './taxonomy';
 import { ItemFilter } from './selection';
 

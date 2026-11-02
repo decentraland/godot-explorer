@@ -8,8 +8,8 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Dialog, TextField } from '../ds';
-import type { DialogButton } from '../ds';
+import { Dialog, TextField } from '@dcl/ui-native';
+import type { DialogButton } from '@dcl/ui-native';
 import { t } from '../i18n';
 import {
   announceUrgentModal,

@@ -1,6 +1,12 @@
 import { ReactElement } from 'react';
 import { act, create } from 'react-test-renderer';
-import { Dialog, Dropdown, PrimaryButton, Tabs, TextField } from '../src/ds';
+import {
+  Dialog,
+  Dropdown,
+  PrimaryButton,
+  Tabs,
+  TextField,
+} from '@dcl/ui-native';
 
 const render = (element: ReactElement) => {
   let tree!: ReturnType<typeof create>;

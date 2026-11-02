@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import fs from 'fs';
 import path from 'path';
-import { HsvSliders } from '../src/ds';
+import { HsvSliders } from '@dcl/ui-native';
 import { act, create } from 'react-test-renderer';
 import { ColorEditor } from '../src/backpack/ColorEditor';
 import { getBackpackApi, setBackpackApi } from '../src/backpack/api';

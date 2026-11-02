@@ -1,12 +1,11 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { colors, Icon } from '../ds';
+import { colors, Icon, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { BackpackHeader } from './BackpackHeader';
 import { FilterMenu } from './FilterMenu';
 import type { EmptyCopy } from './platformPolicy';
 import { BackpackController } from './useBackpack';
-import { u } from '../ds/scale';
 
 export type SubRow = 'tiles' | 'pills';
 

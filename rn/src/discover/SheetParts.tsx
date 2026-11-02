@@ -1,8 +1,7 @@
 import { Fragment, ReactNode } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SvgXml } from 'react-native-svg';
-import { AppText, colors, Icon, IconName } from '../ds';
-import { u } from '../ds/scale';
+import { AppText, colors, Icon, IconName, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { JumpGlyph } from './JumpGlyph';
 import { splitLinks } from './links';

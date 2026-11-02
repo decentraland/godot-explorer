@@ -47,3 +47,8 @@ export {
   rarityColors,
 } from './tokens';
 export type { Rarity } from './tokens';
+export { hexToHsv, hsvToHex } from './colorMath';
+export type { Hsv } from './colorMath';
+export { iconNames } from './Icon';
+export { setTranslator } from './i18n';
+export type { UiNativeKey } from './i18n';

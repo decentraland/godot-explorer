@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { LinearFill, RadialFill, u } from '../ds';
+import { LinearFill, RadialFill, u } from '@dcl/ui-native';
 
 const SKY = [
   { offset: 0, color: '#6B5AA8' },

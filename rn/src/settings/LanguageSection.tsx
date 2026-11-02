@@ -1,4 +1,4 @@
-import { Dropdown } from '../ds';
+import { Dropdown } from '@dcl/ui-native';
 import { setLocale, t } from '../i18n';
 import { LOCALES } from './keys';
 import type { SettingsModel } from './useSettings';

@@ -1,7 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppText, Icon } from '../ds';
-import { u } from '../ds/scale';
+import { AppText, Icon, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 
 export function DiscoverHeader({

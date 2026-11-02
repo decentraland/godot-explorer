@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Dialog, TextField } from '../ds';
-import { u } from '../ds/scale';
+import { Dialog, TextField, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { canSaveLink, LIMITS, validateText } from './logic';
 import type { ProfileLink } from './types';

@@ -7,8 +7,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BottomSheet, colors, Icon, LinearFill, Snap } from '../ds';
-import { u } from '../ds/scale';
+import { BottomSheet, colors, Icon, LinearFill, Snap, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 
 const GRADIENT_DP = 142;

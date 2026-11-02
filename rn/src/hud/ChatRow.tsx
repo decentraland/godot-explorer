@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, fonts, Icon, u } from '../ds';
+import { colors, fonts, Icon, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { parseBbcode } from './bbcode';
 import {

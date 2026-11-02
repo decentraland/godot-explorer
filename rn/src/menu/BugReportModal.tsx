@@ -7,9 +7,16 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { AppText, colors, Dropdown, Icon, LinearFill, u } from '../ds';
+import {
+  AppText,
+  colors,
+  Dropdown,
+  Icon,
+  LinearFill,
+  u,
+  counterLabel,
+} from '@dcl/ui-native';
 import { ArtFill } from './ArtFill';
-import { counterLabel } from '../ds/TextField';
 import { t } from '../i18n';
 import {
   addScreenshot,

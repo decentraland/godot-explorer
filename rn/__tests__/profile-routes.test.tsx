@@ -3,7 +3,7 @@ import { act, create, ReactTestRenderer } from 'react-test-renderer';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavProvider, useNav } from '../src/app/NavProvider';
 import { clearScreens, getScreen } from '../src/app/registry';
-import { ToastProvider } from '../src/ds';
+import { ToastProvider } from '@dcl/ui-native';
 import { createMockApi, mockApi, setProfileApi } from '../src/profile/api';
 import { ProfileEditRoute, ProfileTab } from '../src/profile/ProfileScreens';
 import {

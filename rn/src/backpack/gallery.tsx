@@ -1,6 +1,6 @@
 // Backpack previews, one per manifest id; see docs/rn-ui-spec/reports/backpack-{a,b}.md.
 import { useMemo } from 'react';
-import { BottomNav } from '../ds';
+import { BottomNav } from '@dcl/ui-native';
 import { registerPreview } from '../gallery/registry';
 import { BackpackScreen } from './BackpackScreen';
 import { LANDSCAPE, PORTRAIT, Spec } from './gallerySpecs';

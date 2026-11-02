@@ -1,5 +1,5 @@
 import { Image, Pressable, StyleSheet, View } from 'react-native';
-import { Badge, colors, Icon, u } from '../ds';
+import { Badge, colors, Icon, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { HUD_SIZES } from './layout';
 

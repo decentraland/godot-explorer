@@ -1,4 +1,4 @@
-import type { IconName } from '../ds';
+import type { IconName } from '@dcl/ui-native';
 import type { I18nKey } from '../i18n';
 import type { LoadingProgress } from '../hud/types';
 

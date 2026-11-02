@@ -1,6 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { Skeleton } from '../ds';
-import { u } from '../ds/scale';
+import { Skeleton, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 
 /** Placeholder for the name, address, button and About rows while the profile loads. */

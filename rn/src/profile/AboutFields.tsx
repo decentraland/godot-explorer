@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { AppText, colors, fonts, Icon, IconName } from '../ds';
+import { AppText, colors, fonts, Icon, IconName, u } from '@dcl/ui-native';
 import type { I18nKey } from '../i18n';
 import { t } from '../i18n';
 import {
@@ -10,7 +10,6 @@ import {
   RELATIONSHIPS,
 } from './options';
 import type { AboutKey } from './logic';
-import { u } from '../ds/scale';
 import type { Profile } from './types';
 
 const META: Record<AboutKey, { label: I18nKey; icon: IconName }> = {

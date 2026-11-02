@@ -1,6 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { AppText, colors, Icon, LinearFill } from '../ds';
-import { u } from '../ds/scale';
+import { AppText, colors, Icon, LinearFill, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { DiscoverEvent, Place } from './api';
 import { formatRate, formatUsers, startsIn } from './format';

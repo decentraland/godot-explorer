@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { AppText, HsvSliders, Icon, layout } from '../ds';
+import { AppText, HsvSliders, Icon, layout, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { isCustomColor } from './selection';
 import { SwatchStrip } from './SwatchStrip';
 import { colorKey, COLOR_TITLES, ColorTarget, PALETTES } from './taxonomy';
-import { u } from '../ds/scale';
 
 const SEND_INTERVAL_MS = 120;
 

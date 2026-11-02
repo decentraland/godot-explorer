@@ -1,4 +1,4 @@
-import type { IconName } from '../ds';
+import type { IconName } from '@dcl/ui-native';
 import { t } from '../i18n';
 import type { DiscoverEvent, Place } from './api';
 import { formatDuration, recurrenceKey } from './eventTime';

@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Badge, colors, Icon, IconName, LinearFill, u } from '../ds';
+import { Badge, colors, Icon, IconName, LinearFill, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { Avatar } from './PersonRow';
 import type { MenuSection } from './drawerState';

@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { AppText, colors, fonts, Switch, u } from '../ds';
+import { AppText, colors, fonts, Switch, u } from '@dcl/ui-native';
 
 const CAPTION_GAP = 22;
 

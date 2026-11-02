@@ -1,5 +1,5 @@
 import { act, create } from 'react-test-renderer';
-import { Pill } from '../src/ds';
+import { Pill } from '@dcl/ui-native';
 
 describe('Pill', () => {
   it('renders its label and icon', () => {

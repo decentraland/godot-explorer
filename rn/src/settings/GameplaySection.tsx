@@ -7,7 +7,7 @@ import {
   OutlinedButton,
   u,
   WarningBanner,
-} from '../ds';
+} from '@dcl/ui-native';
 import { emitIntent } from '../hud/hudSignals';
 import { t } from '../i18n';
 import type { CameraMode } from './keys';

@@ -1,4 +1,4 @@
-import { Slider } from '../ds';
+import { Slider } from '@dcl/ui-native';
 import { View } from 'react-native';
 import { t } from '../i18n';
 import { Group, SectionCaption } from './rows';

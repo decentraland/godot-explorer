@@ -6,7 +6,7 @@ import {
   ViewStyle,
   StyleProp,
 } from 'react-native';
-import { colors, RadialFill } from '../ds';
+import { colors, RadialFill } from '@dcl/ui-native';
 import { core } from '../core';
 import { CameraFocus, Control } from '../core/native';
 

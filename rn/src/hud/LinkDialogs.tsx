@@ -1,4 +1,4 @@
-import { Dialog } from '../ds';
+import { Dialog } from '@dcl/ui-native';
 import { t } from '../i18n';
 import type { Segment } from './chatModel';
 

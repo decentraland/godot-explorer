@@ -21,7 +21,7 @@ import { useAppWiring } from './src/app/wiring';
 import { core } from './src/core';
 import { useCoreState } from './src/core/useCoreState';
 import { useJumpIn } from './src/discover/sheetHooks';
-import { colors, ToastProvider } from './src/ds';
+import { colors, ToastProvider } from '@dcl/ui-native';
 import { runCoreSelfTest } from './src/core/selfTest';
 import { EntryFlow } from './src/flow/EntryFlow';
 

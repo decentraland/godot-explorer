@@ -1,12 +1,11 @@
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvatarHole, StageBackground } from '../backpack/AvatarStage';
-import { AppText, PrimaryButton } from '../ds';
+import { AppText, PrimaryButton, u } from '@dcl/ui-native';
 import { core } from '../core';
 import { Control } from '../core/native';
 import { useAvatar } from '../backpack/useAvatar';
 import { t } from '../i18n';
-import { u } from '../ds/scale';
 
 /**
  * Stage + the single Godot avatar window, with a spinner behind it until the avatar arrives. `inset`

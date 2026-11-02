@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { AppText, u } from '../ds';
+import { AppText, u } from '@dcl/ui-native';
 import { core } from '../core';
 import { onCoreEvents } from '../core/events';
 

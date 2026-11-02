@@ -17,7 +17,7 @@ import { onCoreEvents } from '../core/events';
 import { TutorialStep } from '../core/native';
 import type { AvatarState } from '../core/native';
 import { useCoreState } from '../core/useCoreState';
-import { colors, Dialog, fonts, u } from '../ds';
+import { colors, Dialog, fonts, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import type { I18nKey } from '../i18n';
 import { useChatOpen } from '../hud/hudSignals';

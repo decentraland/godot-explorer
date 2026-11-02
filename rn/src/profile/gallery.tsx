@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { BottomNav, colors, Dropdown, Snap } from '../ds';
-import { u } from '../ds/scale';
+import { BottomNav, colors, Dropdown, Snap, u } from '@dcl/ui-native';
 import { registerPreview } from '../gallery/registry';
 import { t } from '../i18n';
 import { EditProfile, EditProfileProps } from './EditProfile';

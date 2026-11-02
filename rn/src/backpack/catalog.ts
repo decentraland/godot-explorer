@@ -1,5 +1,5 @@
 import { core } from '../core';
-import { Rarity } from '../ds';
+import { Rarity } from '@dcl/ui-native';
 
 export const BASE_PREFIX = 'urn:decentraland:off-chain:base-avatars:';
 export const MALE = `${BASE_PREFIX}BaseMale`;

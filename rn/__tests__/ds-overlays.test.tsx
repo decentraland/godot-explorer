@@ -9,7 +9,7 @@ import {
   snapHeights,
   toastReducer,
   useToast,
-} from '../src/ds';
+} from '@dcl/ui-native';
 
 function render(element: ReactElement) {
   let tree!: ReturnType<typeof create>;

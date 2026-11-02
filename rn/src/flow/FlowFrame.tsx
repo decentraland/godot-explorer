@@ -1,8 +1,7 @@
 import { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, Icon, LinearFill } from '../ds';
-import { u } from '../ds/scale';
+import { colors, Icon, LinearFill, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 
 /** Magenta-to-purple full-screen backdrop (flat purple when `flat`) with safe-area padding and an optional back button. */

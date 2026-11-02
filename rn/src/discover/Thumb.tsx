@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
-import { colors, Icon, LinearFill } from '../ds';
-import { u } from '../ds/scale';
+import { colors, Icon, LinearFill, u } from '@dcl/ui-native';
 
 const PALETTE = [
   ['#8A5A2B', '#3C5BA8'],
