@@ -31,10 +31,9 @@ use crate::{
 
 // Collision layers (mirrors decentraland.sdk.components.ColliderLayer).
 const CL_PLAYER: u32 = 4;
-const CL_MAIN_PLAYER: u32 = 8;
 /// Bits used to tag an avatar collider. The local (main) player carries both
-/// CL_PLAYER and CL_MAIN_PLAYER; remote avatars carry only CL_PLAYER.
-const PLAYER_LAYERS: u32 = CL_PLAYER | CL_MAIN_PLAYER;
+/// `CL_PLAYER` and `CL_MAIN_PLAYER`; remote avatars carry only `CL_PLAYER`.
+const PLAYER_LAYERS: u32 = physics_layers::AVATAR_BITS;
 
 // ============================================================================
 // Global Monitor Registry for PhysicsServer3D Callbacks
@@ -604,7 +603,9 @@ fn create_or_update_trigger_area(
         // Attach shape to area
         physics_server.area_add_shape(area_rid, shape_rid);
 
-        // Configure collision layer/mask
+        // Configure collision layer/mask. The area keeps the raw SDK bits on its
+        // own layer, which is what an area-colliding raycast sees; its mask gains
+        // the avatar-hit layer, so avatar queries still match after the routing.
         physics_server.area_set_collision_layer(area_rid, collision_mask);
         physics_server
             .area_set_collision_mask(area_rid, physics_layers::query_mask(collision_mask));

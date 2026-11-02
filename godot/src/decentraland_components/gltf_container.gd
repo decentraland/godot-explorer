@@ -298,6 +298,15 @@ func get_static_body_3d(mesh_instance: MeshInstance3D):
 	return null
 
 
+## Scenes baked by an older build carry `backface_collision = true` inside the
+## saved PackedScene, in the local cache and in the published bucket alike, so
+## the bake alone does not reach them. The shape is shared, so this runs once.
+func _make_collider_one_sided(body_3d: StaticBody3D) -> void:
+	for child in body_3d.get_children():
+		if child is CollisionShape3D and child.shape is ConcavePolygonShape3D:
+			(child.shape as ConcavePolygonShape3D).backface_collision = false
+
+
 ## Visible meshes are baked WITHOUT a collider (see scene.rs
 ## `bake_lazy_collider_faces`): the faces live in the shared mesh's metadata and
 ## the StaticBody3D + ConcavePolygonShape3D are built here the first time an
@@ -346,6 +355,7 @@ func set_mask_colliders(
 			if body_3d == null and visible_cmask != 0:
 				body_3d = _ensure_lazy_collider(node)
 			if body_3d != null:
+				_make_collider_one_sided(body_3d)
 				# Check if this is an invisible collider mesh (metadata set during GLTF processing)
 				var invisible_mesh = (
 					body_3d.has_meta("invisible_mesh")
