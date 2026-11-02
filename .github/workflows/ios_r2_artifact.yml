@@ -251,6 +251,7 @@ jobs:
           # visionOS xcframeworks are copied by the exporter but unused by the iOS project.
           rm -rf exports/libgodot.visionos.*.xcframework
           # gzip -1: the export is mostly already-compressed assets, -6 spends ~100 s for few bytes.
+          set -o pipefail   # a tar failure must not hide behind gzip's exit status
           tar -cf - -C exports . | gzip -1 > export.tar.gz
           echo "Export tarball size: $(du -h export.tar.gz | cut -f1)"
 

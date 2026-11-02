@@ -4,6 +4,8 @@
 Usage: .github/scripts/ci-minutes.py [days]   (needs an authenticated `gh`)
 Counts only paid runners (warp-*, self-hosted excluded); cancelled/failed jobs count too, since
 they bill. Compare against the WarpBuild usage page to calibrate the $/min of each label.
+One jobs API call per run, so a wide window can hit GitHub's secondary rate limits. Android runs on
+ubuntu-latest (free) and no longer appears here.
 """
 import collections
 import datetime

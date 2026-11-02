@@ -39,7 +39,8 @@ inputs:
     description: >
       'true' when this distribution will upload to TestFlight: the allocator keeps the number pending
       until the upload (or an abandon) so deploys reach the store in build-number order. An allocator
-      without the feature ignores it.
+      without the feature ignores it. Allocating the same key again without it (the Android and iOS
+      build jobs do) leaves the pending state untouched.
     required: false
     default: 'false'
 

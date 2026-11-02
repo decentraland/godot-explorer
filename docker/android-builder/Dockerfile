@@ -19,7 +19,8 @@ ENV ANDROID_NDK=${ANDROID_NDK_HOME}
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ENV PATH="$JAVA_HOME/bin:${ANDROID_HOME}/cmdline-tools/latest/bin:$PATH"
 
-RUN dpkg --add-architecture i386 \
+RUN echo "builder image revision ${IMAGE_REVISION}" \
+    && dpkg --add-architecture i386 \
     && apt-get update -yqq \
     && apt-get install -y \
         openjdk-17-jdk libc6:i386 libgcc1:i386 libncurses6:i386 libstdc++6:i386 zlib1g:i386 \
@@ -31,6 +32,7 @@ RUN dpkg --add-architecture i386 \
 # Command-line tools, then one RUN per heavy package so each is its own layer (pulled in parallel).
 RUN mkdir -p ${ANDROID_HOME}/cmdline-tools \
     && wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdline-tools.zip \
+    && echo "2d2d50857e4eb553af5a6dc3ad507a17adf43d115264b1afc116f95c92e5e258  /tmp/cmdline-tools.zip" | sha256sum -c - \
     && unzip -q /tmp/cmdline-tools.zip -d /tmp/cmdline-tools \
     && mv /tmp/cmdline-tools/cmdline-tools ${ANDROID_HOME}/cmdline-tools/latest \
     && rm -rf /tmp/cmdline-tools /tmp/cmdline-tools.zip \

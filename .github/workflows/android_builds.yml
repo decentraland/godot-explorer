@@ -57,11 +57,6 @@ on:
       BUILD_NUMBER_SECRET:
         required: false
 
-permissions:
-  pull-requests: write
-  contents: read
-  packages: write
-
 concurrency:
   # `inputs.concurrency_key` (set by mobile_distribute's on-demand rebuild) isolates that run from
   # the push-triggered build so the two don't cancel each other; falls back to the original key.
@@ -74,6 +69,9 @@ jobs:
   builder-image:
     name: Android builder image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     timeout-minutes: 45
     outputs:
       image: ${{ steps.tag.outputs.image }}
@@ -122,6 +120,10 @@ jobs:
     name: Build Android
     needs: builder-image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      packages: read
     timeout-minutes: 50
     container:
       image: ${{ needs.builder-image.outputs.image }}
