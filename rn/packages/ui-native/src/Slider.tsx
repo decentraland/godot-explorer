@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   textDisabled: { color: colors.white30 },
   track: {
     height: u(20),
-    borderRadius: u(10),
+    borderRadius: u(4),
     backgroundColor: colors.black40,
     justifyContent: 'center',
   },
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    borderRadius: u(10),
+    borderRadius: u(4),
     backgroundColor: colors.ruby,
   },
   fillDisabled: { backgroundColor: colors.paleBlack, opacity: 0.8 },

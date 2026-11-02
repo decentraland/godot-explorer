@@ -193,7 +193,7 @@ Audited 2026-11-02 against `Control/Switch` 562:9023, `Control/Slider` 562:9048,
 | Switch Large | track 140×64, pad 4, knob 70×56, pill; Checked Ruby, off Black 40% | `size="lg"`: `u(70)`×`u(32)`, pad `u(2)`, knob `u(35)` × full height |
 | Switch Small | 110×56, pad 3.5, knob 60 | `size="sm"`: `u(55)`×`u(28)`, knob `u(30)` |
 | Switch disabled | on: whole control 50% + Gray knob at 90%; off: Black 20% track + Pale Black knob | `onDisabled` / `offDisabled` / `knob*Disabled` |
-| Slider | track 624×40 Black 40% (`radius.sm` 8 → `u(4)` on the thumb only; track is a pill), Ruby fill, thumb 32×50 Snow + 1px Pearl border + `Elevation/Down`; disabled: fill Pale Black 80%, thumb Pale Black | `track`/`fill`/`thumb` + `fillDisabled`/`thumbDisabled`; label row is `Input/Label` Value (label Inter Medium 30, value Inter Regular 30, both Snow) |
+| Slider | track 624×40 Black 40%, `radius.sm` 8 → `u(4)` on track, fill **and** thumb (the exported track SVG is an 8px rounded rect, not a pill), Ruby fill, thumb 32×50 Snow + 1px Pearl border + `Elevation/Down`; disabled: fill Pale Black 80%, thumb Pale Black | `track`/`fill`/`thumb` + `fillDisabled`/`thumbDisabled`; label row is `Input/Label` Value (label Inter Medium 30, value Inter Regular 30, both Snow) |
 | Checkbox | Large 48 / Small 30, Black 40% box, 1px Snow border, `rounded-[2px]`; Checked = Ruby border + Ruby fill inset 12.5% **in every size** (the Small checked *node* is Lavender Light — the usage description wins, same call as `Button/Reminder`) | `size="lg"` `u(24)` / `"sm"` `u(15)`, `padding: '12.5%'` for the fill, hitSlop to 44dp, label is the touch target too |
 
 ## Dropdowns page — `Dropdown` (one component covers `Input/Dropdown` + `DropdownLabeled` + `OptionsList` + `DropdownOption`)
@@ -244,7 +244,11 @@ Orientation from `useWindowDimensions`.
 `NavBar` 635:211 Portrait 720×180: pt 32, pb 40 (+ safe-area), px 64, gap 56, items `NavBar/Item`
 82 (`u(41)`), background `surface/navbar` rgba(26,9,37,0.9) (`colors.navbar`) with `NavBar/Portrait`
 (blur 4 + shadow 0/-4/4 Black 25%). Active = the gradient `Icon/NavBar` + the "Selected indicator"
-glow on the bar edge (a 74px Snow line + a 103×56 ellipse, mix-blend lighten). Landscape = a 100-wide
+on the bar edge: a 74×2 `#E8B9FF` line whose ends fade (stops 10%/50%/90%) over a 56×103 ellipse
+(Landscape 75×42, on the rail's *inner* edge) centred 4.5px outside the edge, `#DF9CFF`→`#865E99` 0%
+fading into the bar, blur 10, 60%, mix-blend lighten, clipped to the bar. In code the blur is a
+radial falloff (`SelectedIndicator` in `BottomNav.tsx`): react-native-svg's `FeGaussianBlur` on
+Android is a RenderScript blur capped at 25 device px, far below Figma's 10px σ at 3×. Landscape = a 100-wide
 left rail, py 40, gap 37, 64px items, blur 16. Items in Figma: Explore/Backpack/Settings/Profile
 (portrait), Social/Alerts/Backpack/Settings/Profile (landscape).
 
@@ -252,8 +256,9 @@ left rail, py 40, gap 37, 64px items, blur 16. Items in Figma: Explore/Backpack/
 
 One shadow, Shadow #161518 at 50%, blur 4, offset 0/±4: Down for things below their trigger
 (dropdown list, menu), Up for things above it or at the bottom of the screen (dropdown opening up,
-bars, sheets). RN: iOS values ÷ 2 (`shadowOffset` 0/±2, `shadowRadius` 2, `shadowOpacity` 0.5),
-Android `elevation: 4`; shadows only draw on a solid background. `Blur/Background` (blur 4 on
+bars, sheets). RN: `boxShadow` (new architecture, both platforms) with the values ÷ 2 — offset
+0/±`u(2)`, blur `u(2)`, `#16151880`; the old `shadow*` props are iOS-only and Android `elevation`
+drew nothing visible on the slider thumb. Shadows only draw on a solid background. `Blur/Background` (blur 4 on
 Black 40%) needs a blur library; without one the surface is Black 60% with no blur.
 
 ## States page — the rule every component follows

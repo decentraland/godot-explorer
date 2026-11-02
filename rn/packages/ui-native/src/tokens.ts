@@ -48,23 +48,16 @@ export const colors = {
 } as const;
 
 /** Figma `Elevation/Down|Up`: one shadow, 0/±4 offset, blur 4, Shadow at 50% — values ÷ 2 for
- * iOS; Android only takes `elevation`. Shadows only show on a solid background. */
+ * dp. `boxShadow` draws the same on both platforms (Android `elevation` ignores the colour). */
+const shadow = (offsetY: number) => ({
+  boxShadow: [
+    { offsetX: 0, offsetY, blurRadius: u(2), color: `${colors.shadow}80` },
+  ],
+});
 export const elevation = {
-  down: {
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 2,
-    elevation: 4,
-  },
-  up: {
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 2,
-    elevation: 4,
-  },
-} as const;
+  down: shadow(u(2)),
+  up: shadow(-u(2)),
+};
 
 /** Notification card title colours by category. */
 export const notificationTitle = {

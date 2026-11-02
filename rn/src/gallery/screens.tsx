@@ -9,6 +9,8 @@ import '../hud/gallery';
 import '../menu/gallery';
 import '../profile/gallery';
 import '../settings/gallery';
+import { StyleSheet, View } from 'react-native';
+import { BottomNav, colors } from '@dcl/ui-native';
 import { registerPreview } from './registry';
 
 const noop = () => {};
@@ -29,4 +31,42 @@ registerPreview('extra/flow-wait', {
   render: () => (
     <WaitScreen title="Signing you in" body="One moment" onCancel={noop} />
   ),
+});
+
+registerPreview('extra/nav-bar', {
+  title: 'NavBar: portrait bar',
+  orientation: 'portrait',
+  render: () => (
+    <View style={styles.navBar}>
+      <BottomNav
+        active="settings"
+        badges={{ explore: true }}
+        bottomInset={0}
+        onChange={noop}
+      />
+    </View>
+  ),
+});
+registerPreview('extra/nav-rail', {
+  title: 'NavBar: landscape rail',
+  orientation: 'landscape',
+  render: () => (
+    <View style={styles.navRail}>
+      <BottomNav
+        landscape
+        active="backpack"
+        badges={{ explore: true }}
+        onChange={noop}
+      />
+    </View>
+  ),
+});
+
+const styles = StyleSheet.create({
+  navBar: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: colors.modal,
+  },
+  navRail: { flex: 1, flexDirection: 'row', backgroundColor: colors.modal },
 });
