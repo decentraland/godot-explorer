@@ -1,8 +1,12 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use godot::prelude::*;
 
 use crate::avatars::scene_emote::SceneEmoteHash;
+use crate::content::font::admit_font_load;
 use crate::dcl::common::content_entity::TypedIpfsRef;
 
 #[derive(Debug, Default)]
@@ -14,6 +18,9 @@ pub struct ContentMappingAndUrl {
     // So the only way to access it is through the `get_hash` method
     //  which converts the input to lowercase
     content: HashMap<String, String>,
+
+    /// Custom font loads started by this scene, per font cache key.
+    font_loads: Mutex<HashMap<String, u8>>,
 }
 
 impl ContentMappingAndUrl {
@@ -28,6 +35,7 @@ impl ContentMappingAndUrl {
                 .into_iter()
                 .map(|v| (v.file.to_lowercase(), v.hash))
                 .collect(),
+            ..Default::default()
         }
     }
 
@@ -98,6 +106,11 @@ impl ContentMappingAndUrl {
         None
     }
 
+    /// Whether this scene may start another load of a custom font, within its budget.
+    pub fn admit_font_load(&self, cache_key: &str) -> bool {
+        admit_font_load(&mut self.font_loads.lock().unwrap(), cache_key)
+    }
+
     pub fn files(&self) -> &HashMap<String, String> {
         &self.content
     }
@@ -124,6 +137,7 @@ impl ContentMappingAndUrl {
         ContentMappingAndUrl {
             base_url: self.base_url.clone(),
             content,
+            ..Default::default()
         }
     }
 }
@@ -139,10 +153,7 @@ pub struct DclContentMappingAndUrl {
 impl IRefCounted for DclContentMappingAndUrl {
     fn init(_base: Base<RefCounted>) -> Self {
         DclContentMappingAndUrl {
-            inner: Arc::new(ContentMappingAndUrl {
-                base_url: "".into(),
-                content: HashMap::new(),
-            }),
+            inner: Arc::new(ContentMappingAndUrl::new()),
         }
     }
 }
