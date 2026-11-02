@@ -237,7 +237,10 @@ impl SocialServiceManager {
                             break;
                         }
                     }
-                    Err(e) => tracing::warn!("Skipping a {stream} event ({e}): {data}"),
+                    Err(e) => {
+                        tracing::warn!("Skipping a {stream} event ({e})");
+                        tracing::debug!("Skipped {stream} event body: {data}");
+                    }
                 }
             }
         });

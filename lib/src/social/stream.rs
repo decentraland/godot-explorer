@@ -199,15 +199,6 @@ impl SocialStream {
         Err(last_error)
     }
 
-    /// Closes the connection, ending every subscription.
-    pub fn close(&self) {
-        if let Ok(guard) = self.connection.try_lock() {
-            if let Some(connection) = guard.as_ref() {
-                connection.closed.cancel();
-            }
-        }
-    }
-
     async fn connection(&self) -> Result<Arc<Connection>> {
         let mut guard = self.connection.lock().await;
         if let Some(connection) = guard.as_ref() {
@@ -240,9 +231,13 @@ impl SocialStream {
     }
 }
 
+/// Dropping the stream (`DclSocialService::disconnect` drops its manager) closes the connection
+/// and ends every subscription. This is the only cancel from outside the connection's own task.
 impl Drop for SocialStream {
     fn drop(&mut self) {
-        self.close();
+        if let Some(connection) = self.connection.get_mut() {
+            connection.closed.cancel();
+        }
     }
 }
 
@@ -373,7 +368,8 @@ async fn run_connection(
     }
 
     // In this order so a reconnect, which only starts once `closed` is cancelled, is never
-    // reported as disconnected by the connection it replaces.
+    // reported as disconnected by the connection it replaces. The only other cancel is the
+    // stream's `Drop`, after which nobody reads `state` anymore.
     state.store(ConnectionState::Disconnected as u8, Ordering::Relaxed);
     closed.cancel();
     {
@@ -394,7 +390,8 @@ fn handle_server_message(
     let message: ServerMessage = match serde_json::from_str(text) {
         Ok(message) => message,
         Err(e) => {
-            tracing::warn!("Unexpected social stream message ({e}): {text}");
+            tracing::warn!("Unexpected social stream message ({e})");
+            tracing::debug!("Unexpected social stream message body: {text}");
             return;
         }
     };

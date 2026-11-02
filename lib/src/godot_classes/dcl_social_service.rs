@@ -769,7 +769,7 @@ impl DclSocialService {
     async fn async_get_friendship_status(
         manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
         address: String,
-    ) -> Result<(i32, String), String> {
+    ) -> Result<i32, String> {
         let manager_guard = manager.read().await;
         let mgr = manager_guard
             .as_ref()
@@ -780,7 +780,7 @@ impl DclSocialService {
             .await
             .map_err(|e| format!("Failed to get friendship status: {}", e))?;
 
-        Ok((response.status, String::new()))
+        Ok(response.status)
     }
 
     async fn async_subscribe_to_updates(
@@ -1041,17 +1041,16 @@ impl DclSocialService {
 
     fn resolve_status_promise(
         get_promise: impl Fn() -> Option<Gd<Promise>>,
-        result: Result<(i32, String), String>,
+        result: Result<i32, String>,
     ) {
         let Some(mut promise) = get_promise() else {
             return;
         };
 
         match result {
-            Ok((status, message)) => {
+            Ok(status) => {
                 let mut dict = VarDictionary::new();
                 dict.set("status", status);
-                dict.set("message", message);
                 promise.resolve_with_data_deferred(dict.to_variant());
             }
             Err(e) => {

@@ -2,10 +2,12 @@
 //! asset-bundle-registry (`POST /profiles`), the same source the service used before it stopped
 //! returning profiles.
 
-use std::collections::HashMap;
-use std::time::Duration;
+use std::collections::{HashMap, HashSet};
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, Result};
+use futures_util::future::join_all;
 use serde::Deserialize;
 use serde_json::json;
 
@@ -15,6 +17,7 @@ use super::types::FriendProfile;
 
 const REQUEST_TIMEOUT_SECS: u64 = 15;
 const MAX_ADDRESSES_PER_REQUEST: usize = 100;
+const CACHE_TTL: Duration = Duration::from_secs(5 * 60);
 
 #[derive(Deserialize)]
 struct RegistryProfile {
@@ -77,6 +80,7 @@ impl RegistryAvatar {
 pub struct ProfileResolver {
     url: String,
     http: reqwest::Client,
+    cache: Mutex<HashMap<String, (FriendProfile, Instant)>>,
 }
 
 impl ProfileResolver {
@@ -90,34 +94,79 @@ impl ProfileResolver {
             .build()
             .expect("reqwest client with a timeout always builds");
 
-        Self { url, http }
+        Self {
+            url,
+            http,
+            cache: Mutex::new(HashMap::new()),
+        }
     }
 
     /// One profile per address, in the same order. An address whose profile can't be resolved
     /// (missing, or the registry failing) gets [`FriendProfile::without_profile`], so a registry
     /// outage degrades names and pictures instead of hiding friends.
+    ///
+    /// Resolved profiles are cached for [`CACHE_TTL`], so the periodic list refreshes don't hit
+    /// the registry again; the addresses still missing are requested in concurrent chunks.
     pub async fn resolve(&self, addresses: &[String]) -> Vec<FriendProfile> {
-        let mut found = HashMap::new();
-        for chunk in addresses.chunks(MAX_ADDRESSES_PER_REQUEST) {
-            match self.fetch(chunk).await {
-                Ok(profiles) => found.extend(
-                    profiles
-                        .into_iter()
-                        .map(|profile| (profile.address.clone(), profile)),
-                ),
-                Err(e) => tracing::warn!("Failed to resolve {} profiles: {e}", chunk.len()),
+        let keys: Vec<String> = addresses.iter().map(|a| a.to_lowercase()).collect();
+        let mut found = self.cached(&keys);
+
+        let mut seen = HashSet::new();
+        let missing: Vec<String> = keys
+            .iter()
+            .filter(|key| !found.contains_key(*key) && seen.insert(*key))
+            .cloned()
+            .collect();
+
+        if !missing.is_empty() {
+            let chunks: Vec<&[String]> = missing.chunks(MAX_ADDRESSES_PER_REQUEST).collect();
+            let results = join_all(chunks.iter().map(|chunk| self.fetch(chunk))).await;
+
+            let mut fetched = Vec::new();
+            for (chunk, result) in chunks.into_iter().zip(results) {
+                match result {
+                    Ok(profiles) => fetched.extend(profiles),
+                    Err(e) => tracing::warn!("Failed to resolve {} profiles: {e}", chunk.len()),
+                }
             }
+            self.store(&fetched);
+            found.extend(
+                fetched
+                    .into_iter()
+                    .map(|profile| (profile.address.clone(), profile)),
+            );
         }
 
         addresses
             .iter()
-            .map(|address| {
+            .zip(&keys)
+            .map(|(address, key)| {
                 found
-                    .get(&address.to_lowercase())
+                    .get(key)
                     .cloned()
                     .unwrap_or_else(|| FriendProfile::without_profile(address.clone()))
             })
             .collect()
+    }
+
+    fn cached(&self, keys: &[String]) -> HashMap<String, FriendProfile> {
+        let cache = self.cache.lock().unwrap();
+        keys.iter()
+            .filter_map(|key| {
+                let (profile, stored_at) = cache.get(key)?;
+                (stored_at.elapsed() < CACHE_TTL).then(|| (key.clone(), profile.clone()))
+            })
+            .collect()
+    }
+
+    /// Only resolved profiles are cached, so a miss or a registry failure is retried next time.
+    fn store(&self, profiles: &[FriendProfile]) {
+        let mut cache = self.cache.lock().unwrap();
+        cache.retain(|_, (_, stored_at)| stored_at.elapsed() < CACHE_TTL);
+        let now = Instant::now();
+        for profile in profiles {
+            cache.insert(profile.address.clone(), (profile.clone(), now));
+        }
     }
 
     async fn fetch(&self, addresses: &[String]) -> Result<Vec<FriendProfile>> {
@@ -181,5 +230,25 @@ mod tests {
         let profile = nameless.into_friend_profile().unwrap();
         assert_eq!(profile.name, "0xabc");
         assert_eq!(profile.profile_picture_url, "");
+    }
+
+    #[tokio::test]
+    async fn serves_cached_profiles_and_falls_back_for_the_rest() {
+        // Nothing listens there, so whatever is not cached can only fall back.
+        let resolver = ProfileResolver::with_url("http://127.0.0.1:1/profiles".to_string());
+        resolver.store(&[FriendProfile {
+            address: "0xabc".to_string(),
+            name: "Abc".to_string(),
+            has_claimed_name: true,
+            profile_picture_url: "https://images/face.png".to_string(),
+        }]);
+
+        let profiles = resolver
+            .resolve(&["0xDEF".to_string(), "0xABC".to_string()])
+            .await;
+
+        assert_eq!(profiles[0].address, "0xDEF");
+        assert_eq!(profiles[0].name, "0xDEF");
+        assert_eq!(profiles[1].name, "Abc");
     }
 }

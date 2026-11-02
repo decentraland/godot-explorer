@@ -102,7 +102,7 @@ impl SocialApiClient {
         pagination: Option<Pagination>,
     ) -> Result<Paginated<Friend>> {
         self.get(
-            &format!("/v2/users/{address}/mutual-friends"),
+            &format!("/v2/users/{}/mutual-friends", address_segment(address)?),
             &pagination_query(pagination),
         )
         .await
@@ -119,8 +119,11 @@ impl SocialApiClient {
     }
 
     pub async fn get_friendship_status(&self, address: &str) -> Result<FriendshipStatusResponse> {
-        self.get(&format!("/v1/users/{address}/friendship-status"), &[])
-            .await
+        self.get(
+            &format!("/v1/users/{}/friendship-status", address_segment(address)?),
+            &[],
+        )
+        .await
     }
 
     pub async fn send_friendship_request(
@@ -144,7 +147,7 @@ impl SocialApiClient {
     ) -> Result<()> {
         self.send::<Value>(
             Method::PATCH,
-            &format!("/v1/friendship-requests/{address}"),
+            &format!("/v1/friendship-requests/{}", address_segment(address)?),
             json!({ "intention": intention.as_str() }),
         )
         .await
@@ -152,9 +155,14 @@ impl SocialApiClient {
     }
 
     pub async fn remove_friend(&self, address: &str) -> Result<()> {
-        self.request::<Value>(Method::DELETE, &format!("/v1/friends/{address}"), &[], None)
-            .await
-            .map(|_| ())
+        self.request::<Value>(
+            Method::DELETE,
+            &format!("/v1/friends/{}", address_segment(address)?),
+            &[],
+            None,
+        )
+        .await
+        .map(|_| ())
     }
 
     pub async fn get_blocked_users(
@@ -171,9 +179,14 @@ impl SocialApiClient {
     }
 
     pub async fn unblock_user(&self, address: &str) -> Result<()> {
-        self.request::<Value>(Method::DELETE, &format!("/v1/blocks/{address}"), &[], None)
-            .await
-            .map(|_| ())
+        self.request::<Value>(
+            Method::DELETE,
+            &format!("/v1/blocks/{}", address_segment(address)?),
+            &[],
+            None,
+        )
+        .await
+        .map(|_| ())
     }
 
     pub async fn get_blocking_status(&self) -> Result<BlockingStatus> {
@@ -254,5 +267,46 @@ fn pagination_query(pagination: Option<Pagination>) -> Vec<(&'static str, String
             vec![("limit", limit.to_string()), ("offset", offset.to_string())]
         }
         None => Vec::new(),
+    }
+}
+
+/// The addresses that end up in request paths come from profiles and comms peers, so anything
+/// that is not an Ethereum address is rejected before it can rewrite the (signed) request target.
+fn address_segment(address: &str) -> Result<&str> {
+    let is_address = address.len() == 42
+        && address
+            .strip_prefix("0x")
+            .is_some_and(|hex| hex.bytes().all(|b| b.is_ascii_hexdigit()));
+    if is_address {
+        Ok(address)
+    } else {
+        Err(anyhow!("Invalid address {address:?}"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn accepts_only_ethereum_addresses_as_path_segments() {
+        let address = "0x7cD5a9Bc6E4F2e3d1b0A9c8D7e6F5a4B3c2D1e0F";
+        assert_eq!(address_segment(address).unwrap(), address);
+
+        for invalid in [
+            "",
+            "0x",
+            "7cd5a9bc6e4f2e3d1b0a9c8d7e6f5a4b3c2d1e0fab",
+            "0x7cd5a9bc6e4f2e3d1b0a9c8d7e6f5a4b3c2d1e0",
+            "0x7cd5a9bc6e4f2e3d1b0a9c8d7e6f5a4b3c2d1e0f0",
+            "0x7cd5a9bc6e4f2e3d1b0a9c8d7e6f5a4b3c2d1e0?",
+            "0x7cd5a9bc6e4f2e3d1b0a9c8d7e6f5a4b3c2d1e#f",
+            "0x/../../../../../../../../../../../../../..",
+        ] {
+            assert!(
+                address_segment(invalid).is_err(),
+                "{invalid:?} was accepted"
+            );
+        }
     }
 }
