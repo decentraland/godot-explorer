@@ -9,8 +9,9 @@ use super::{
     install_attribution::{extract_token, get_string},
 };
 
-/// Tenjin SDK key. Empty disables the whole integration.
-const TENJIN_SDK_KEY: &str = "";
+/// Tenjin SDK keys, one app per platform. Empty disables the integration on that platform.
+const TENJIN_ANDROID_SDK_KEY: &str = "CZRCKUGYS3VFYXZXAFQGQYMFYXYUTRF7";
+const TENJIN_IOS_SDK_KEY: &str = "JC9AK9YLPSUAZGSDMU1EY6UKZSYKEW8I";
 
 /// Bound on waiting for `getAttributionInfo`: an organic install can stay pending, and the
 /// campaign watcher in `campaigns.gd` waits on this.
@@ -33,17 +34,30 @@ pub struct Attribution {
 
 impl Attribution {
     #[allow(clippy::const_is_empty)]
+    fn sdk_key() -> Option<&'static str> {
+        let key = if DclAndroidPlugin::is_available() {
+            TENJIN_ANDROID_SDK_KEY
+        } else if DclIosPlugin::is_available() {
+            TENJIN_IOS_SDK_KEY
+        } else {
+            return None;
+        };
+        Some(key).filter(|k| !k.is_empty())
+    }
+
     fn enabled() -> bool {
-        !TENJIN_SDK_KEY.is_empty()
-            && (DclAndroidPlugin::is_available() || DclIosPlugin::is_available())
+        Self::sdk_key().is_some()
     }
 
     /// Starts the SDK once the EULA is accepted. Runs every launch: the SDK counts sessions.
     pub fn start(&mut self, user_id: &str) {
-        if self.started || !Self::enabled() {
+        if self.started {
             return;
         }
-        let key = GString::from(TENJIN_SDK_KEY);
+        let Some(key) = Self::sdk_key() else {
+            return;
+        };
+        let key = GString::from(key);
         let user_id = GString::from(user_id);
         let ok = if DclAndroidPlugin::is_available() {
             DclAndroidPlugin::tenjin_start(key, user_id)
