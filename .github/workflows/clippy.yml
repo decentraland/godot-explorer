@@ -44,19 +44,27 @@ jobs:
         run: cargo clippy --features enable_inspector -- -D warnings
 
       - name: TLS crates in the lockfiles
-        # Floors: rustls 0.23.46 (Oct 2026 advisories), rustls-webpki 0.103.16 (eMudhra distrust).
+        # Floors: rustls 0.23.46 (Oct 2026 advisories), rustls-webpki 0.103.16 and webpki-roots
+        # 1.0.10 (eMudhra distrust). webpki-roots 0.26.11 is only a shim over 1.x. The old
+        # `webpki` verifier has no distrust list at all.
         run: |
-          old=$(awk '/^name = "(rustls|rustls-webpki)"$/ { name = $3; getline; print FILENAME, name, $3 }' Cargo.lock lib/Cargo.lock \
+          old=$(awk '/^name = "(rustls|rustls-webpki|webpki|webpki-roots)"$/ { name = $3; getline; print FILENAME, name, $3 }' Cargo.lock lib/Cargo.lock \
             | tr -d '"' \
             | while read -r file name version; do
+                if [ "$name" = webpki ]; then
+                  echo "$file webpki $version (use rustls-webpki)"
+                  continue
+                fi
                 floor=0.103.16
                 [ "$name" = rustls ] && floor=0.23.46
+                [ "$name" = webpki-roots ] && floor=1.0.10
+                [ "$name" = webpki-roots ] && [ "${version%.*}" = 0.26 ] && floor=0.26.11
                 if [ "$(printf '%s\n' "$floor" "$version" | sort -V | head -n1)" != "$floor" ]; then
                   echo "$file $name $version (needs >= $floor)"
                 fi
               done)
           if [ -n "$old" ]; then
-            echo "::error::rustls / rustls-webpki below the security floor in a lockfile:"
+            echo "::error::TLS crates below the security floor in a lockfile:"
             echo "$old"
             exit 1
           fi
