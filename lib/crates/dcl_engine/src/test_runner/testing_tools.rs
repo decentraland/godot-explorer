@@ -4,7 +4,7 @@
 
 use godot::classes::node::ProcessMode;
 use godot::classes::{
-    Camera3D, Control, DirAccess, FileAccess, Image, Input, InputEventScreenDrag,
+    Camera3D, CanvasItem, Control, DirAccess, FileAccess, Image, Input, InputEventScreenDrag,
     InputEventScreenTouch, Node, Node3D, RenderingServer,
 };
 use godot::prelude::*;
@@ -484,7 +484,7 @@ async fn capture(tools: &Gd<DclTestingTools>, request: &SnapshotRequest) -> Opti
     camera.set_global_position(request.camera_position);
     camera.look_at(request.camera_target);
 
-    crate::world::state::current().inspect(|w| w.ui_root.clone().set_visible(false));
+    let hud = hide_hud();
     freeze_avatars();
     for _ in 0..SETTLE_FRAMES {
         next_frame().await;
@@ -492,7 +492,9 @@ async fn capture(tools: &Gd<DclTestingTools>, request: &SnapshotRequest) -> Opti
     sleep(SETTLE_SECONDS).await;
     let image = window.get_texture().and_then(|texture| texture.get_image());
 
-    crate::world::state::current().inspect(|w| w.ui_root.clone().set_visible(true));
+    for mut item in hud {
+        item.set_visible(true);
+    }
     window.set_size(previous_size);
     if let Some(mut previous) = previous_camera {
         previous.make_current();
@@ -500,6 +502,26 @@ async fn capture(tools: &Gd<DclTestingTools>, request: &SnapshotRequest) -> Opti
     tools.clone().remove_child(&camera);
     camera.queue_free();
     image
+}
+
+/// Hides the explorer's own HUD for a capture and returns what it hid. The scene's UI stays: it is
+/// what a UI test checks.
+fn hide_hud() -> Vec<Gd<CanvasItem>> {
+    let mut hidden = Vec::new();
+    crate::world::state::current().inspect(|world| {
+        for child in world.ui_root.get_children().iter_shared() {
+            if child.get_name() == "SceneUIContainer" {
+                continue;
+            }
+            if let Ok(mut item) = child.try_cast::<CanvasItem>() {
+                if item.is_visible() {
+                    item.set_visible(false);
+                    hidden.push(item);
+                }
+            }
+        }
+    });
+    hidden
 }
 
 /// Still and hidden: the remote avatars and the player's.

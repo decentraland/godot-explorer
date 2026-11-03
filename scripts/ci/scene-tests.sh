@@ -74,6 +74,14 @@ elif grep -q 'Some tests fail' "$LOG"; then
 else
   RESULT=$(( CODE == 0 ? 1 : CODE ))
 fi
+# A Rust panic while the tests ran fails the run even when every test passed: the panic may have
+# cut a system short without failing its scene. The known crash on quit comes after the summary.
+PANICS="$(awk '/All test of all scene passed|Some tests fail/ { exit } /\[Rust:panic\]/' "$LOG")"
+if [ -n "$PANICS" ]; then
+  echo "Rust panics while the tests ran:" >&2
+  echo "$PANICS" | sed 's/\x1b\[[0-9;]*m//g' >&2
+  RESULT=1
+fi
 if [ "$CODE" != 0 ] && [ "$RESULT" != "$CODE" ]; then
   echo "warning: Godot exited with code $CODE after printing its summary" >&2
 fi

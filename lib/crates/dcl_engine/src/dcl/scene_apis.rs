@@ -180,6 +180,13 @@ pub enum RpcCall {
         strength: f32,
         frames: u32,
     },
+    /// Scene-test mode only: a shell command, a setting change or a debug-hub query (`kind`), with
+    /// its JSON `payload`; the reply is JSON.
+    TestCommand {
+        kind: String,
+        payload: String,
+        response: RpcResultSender<Result<String, String>>,
+    },
     /// Scene-test mode only: play a named touch gesture (`joystick`, `look`, `pinch`) through the
     /// mobile controls.
     SimulateGesture {

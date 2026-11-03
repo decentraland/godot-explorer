@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use deno_core::{anyhow::anyhow, error::AnyError, op2, OpDecl, OpState};
 use godot::builtin::{Vector2, Vector3};
 
@@ -19,6 +21,7 @@ pub fn ops() -> Vec<OpDecl> {
         op_log_test_plan(),
         op_simulate_input(),
         op_simulate_gesture(),
+        op_test_command(),
     ]
 }
 
@@ -151,4 +154,28 @@ fn op_simulate_gesture(
             frames,
         });
     Ok(())
+}
+
+#[op2(async)]
+#[string]
+async fn op_test_command(
+    state: Rc<RefCell<OpState>>,
+    #[string] kind: String,
+    #[string] payload: String,
+) -> Result<String, AnyError> {
+    if !state.borrow().borrow::<SceneEnv>().testing_enable {
+        return Err(anyhow::anyhow!("Testing mode not available"));
+    }
+    let (sx, rx) = tokio::sync::oneshot::channel::<Result<String, String>>();
+    state
+        .borrow_mut()
+        .borrow_mut::<Vec<RpcCall>>()
+        .push(RpcCall::TestCommand {
+            kind,
+            payload,
+            response: sx.into(),
+        });
+    rx.await
+        .map_err(|e| anyhow::anyhow!(e))?
+        .map_err(|e| anyhow!(e))
 }

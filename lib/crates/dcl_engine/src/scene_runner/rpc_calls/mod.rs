@@ -102,6 +102,18 @@ pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_ca
             } => crate::test_runner::testing_tools::simulate_input(
                 &action, pressed, strength, frames,
             ),
+            RpcCall::TestCommand {
+                kind,
+                payload,
+                response,
+            } => {
+                // Not inside this borrow of the scene manager: a query reads it.
+                crate::engine::local_task::spawn_local(async move {
+                    response.send(crate::test_runner::test_commands::test_command(
+                        &kind, &payload,
+                    ));
+                });
+            }
             RpcCall::SimulateGesture {
                 kind,
                 x,

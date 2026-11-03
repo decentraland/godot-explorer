@@ -56,6 +56,22 @@ pixel coordinates (`52,-72-touch-controls` is the example):
 - `look(context, { x: 300, y: 0 }, 20)` drags one finger across the camera area.
 - `pinch(context, 200, 20)` spreads two fingers apart in the camera area (negative closes them).
 
+### App commands and engine queries
+
+`testing-library/src/utils/engine.ts`, through the Godot-only `~system/Testing.testCommand`:
+
+- `query(cmd, args)` runs a read-only debug-hub query (`state`, `scenes`, `scene`, `entity`,
+  `ui_scene`, `ui_entity`, `avatars`, `avatar`, `app_ui`, with the hub's `filters`) and returns
+  its JSON, for engine state no SDK component exposes. Commands that change state are refused.
+- `setSetting(key, value)` changes a setting as the settings screen does (not saved), e.g.
+  `graphic_profile`.
+- `shell(control)` hands a shell command (`{ type: 'set_color', target: 'eyes', color: '#ff0000' }`)
+  to the core as the React Native app does. In scene-test mode the engine is not attached to the
+  core yet, so these reach the core but not the engine.
+
+A run also fails on any Rust panic before the summary line, and screenshots keep the scene's UI
+(only the explorer's own HUD is hidden). `52,-74-app-commands` is the example.
+
 A test fails when anything in it throws: a failed assert, a screenshot below 0.9995 similarity or with
 no reference image, or a timeout. A scene that never reports its plan and results fails the run too.
 

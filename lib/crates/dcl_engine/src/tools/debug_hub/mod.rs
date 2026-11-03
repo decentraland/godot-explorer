@@ -5,7 +5,7 @@
 
 mod bridge;
 mod collector;
-mod commands;
+pub(crate) mod commands;
 mod frames;
 mod json;
 mod socket;
