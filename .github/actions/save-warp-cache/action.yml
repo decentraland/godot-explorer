@@ -13,6 +13,11 @@ inputs:
     description: rust-key output from set-up-warp-cache.
     required: true
 
+  rust-hit:
+    description: rust-hit output from set-up-warp-cache; an exact hit skips the save.
+    required: false
+    default: 'false'
+
 runs:
   using: composite
   steps:
@@ -28,7 +33,7 @@ runs:
         key: ${{ inputs.cargo-key }}
 
     - name: WarpCache save - Rust Build (main only)
-      if: github.ref == 'refs/heads/main'
+      if: github.ref == 'refs/heads/main' && inputs.rust-hit != 'true'
       uses: WarpBuilds/cache/save@v1.4.6
       with:
         path: |

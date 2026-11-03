@@ -114,17 +114,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
 
 [[package]]
-name = "async-channel"
-version = "1.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81953c529336010edd6d8e358f886d9581267795c61b19475b71314bffa46d35"
-dependencies = [
- "concurrent-queue",
- "event-listener",
- "futures-core",
-]
-
-[[package]]
 name = "async-compression"
 version = "0.4.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -648,15 +637,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e8ccc4ea9f6acc32d102c0f6d471d11d913ad15f20c04de743374861fa1d414"
 
 [[package]]
-name = "concurrent-queue"
-version = "2.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ca0197aee26d1ae37445ee532fefce43251d24cc7c166799f4d46817f1d3973"
-dependencies = [
- "crossbeam-utils",
-]
-
-[[package]]
 name = "const-hex"
 version = "1.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -921,27 +901,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dcl-rpc"
-version = "2.3.7"
-source = "git+https://github.com/decentraland/rpc-rust?rev=aa2302d6918e2d1c7f2e298aa972d8a6bba6c389#aa2302d6918e2d1c7f2e298aa972d8a6bba6c389"
-dependencies = [
- "async-channel",
- "async-trait",
- "bytes",
- "futures-channel",
- "futures-util",
- "log",
- "proc-macro2",
- "prost 0.11.9",
- "prost-build 0.11.9",
- "quote",
- "rustls",
- "tokio",
- "tokio-tungstenite",
- "tokio-util",
-]
-
-[[package]]
 name = "dclgodot"
 version = "1.16.2"
 dependencies = [
@@ -952,7 +911,6 @@ dependencies = [
  "chrono",
  "cid",
  "cpal",
- "dcl-rpc",
  "deno_core",
  "ethers-core",
  "ethers-signers",
@@ -1328,12 +1286,6 @@ dependencies = [
  "thiserror 1.0.69",
  "tracing",
 ]
-
-[[package]]
-name = "event-listener"
-version = "2.5.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0206175f82b8d6bf6652ff7d71a1e27fd2e4efde587fd368662814d6ec1d9ce0"
 
 [[package]]
 name = "fastnoise-lite"

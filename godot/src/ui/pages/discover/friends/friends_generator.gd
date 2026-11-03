@@ -255,7 +255,7 @@ func _async_create_friend_card(friend: Dictionary) -> void:
 	var item = FRIEND_DISCOVER_CARD.instantiate()
 	item_container.add_child(item)
 	item.set_data(place_data)
-	item.item_pressed.connect(discover.on_friend_pressed)
+	item.item_pressed.connect(discover.on_friend_pressed.bind(item))
 
 	_current_addresses[address] = item
 
