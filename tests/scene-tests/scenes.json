@@ -10,6 +10,7 @@
     { "parcel": [52, -64], "name": "visibility", "tier": "render" },
     { "parcel": [52, -66], "name": "mesh-renderer", "tier": "render" },
     { "parcel": [52, -68], "name": "avatar-attach", "tier": "render" },
+    { "parcel": [52, -70], "name": "locomotion", "tier": "ecs" },
     { "parcel": [54, -52], "name": "material", "tier": "render" },
     { "parcel": [54, -54], "name": "text-shape", "tier": "render" },
     { "parcel": [54, -56], "name": "video-player", "tier": "disabled", "reason": "video events not working well" },

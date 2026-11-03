@@ -17,6 +17,7 @@ pub fn ops() -> Vec<OpDecl> {
         op_take_and_compare_snapshot(),
         op_log_test_result(),
         op_log_test_plan(),
+        op_simulate_input(),
     ]
 }
 
@@ -103,4 +104,26 @@ fn op_log_test_plan(state: &mut OpState, #[serde] body: SceneTestPlan) {
     state
         .borrow_mut::<Vec<RpcCall>>()
         .push(RpcCall::SceneTestPlan { body });
+}
+
+#[op2(fast)]
+fn op_simulate_input(
+    state: &mut OpState,
+    #[string] action: String,
+    pressed: bool,
+    strength: f32,
+    frames: u32,
+) -> Result<(), AnyError> {
+    if !state.borrow::<SceneEnv>().testing_enable {
+        return Err(anyhow::anyhow!("Testing mode not available"));
+    }
+    state
+        .borrow_mut::<Vec<RpcCall>>()
+        .push(RpcCall::SimulateInput {
+            action,
+            pressed,
+            strength,
+            frames,
+        });
+    Ok(())
 }

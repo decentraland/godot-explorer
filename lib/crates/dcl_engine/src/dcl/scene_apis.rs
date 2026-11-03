@@ -172,6 +172,14 @@ pub enum RpcCall {
     SceneTestResult {
         body: SceneTestResult,
     },
+    /// Scene-test mode only: press or release one of the player's input actions; a press with
+    /// `frames` > 0 is released by the engine after exactly that many frames.
+    SimulateInput {
+        action: String,
+        pressed: bool,
+        strength: f32,
+        frames: u32,
+    },
     SendAsync {
         body: CreateRequest,
         response: RpcResultSender<Result<serde_json::Value, String>>,

@@ -27,6 +27,26 @@ and moved from an unreleased SDK branch build to the released `@dcl/sdk` 7.31.0.
 | `render` | gltf-container, visibility, mesh-renderer, avatar-attach, material, text-shape, ui-background, ui-text | a renderer: they compare screenshots with `tests/snapshots/scenes/` |
 | `disabled` | video-player, avatar-shape, ui-button, ui-dropdown, nft-shape | never run; `scenes.json` says why |
 
+Scene tests run as a phone: `--scene-test` turns on mobile mode, so the touch controls and the
+mobile movement rules are live, and the graphics autotune stays off so screenshots don't vary.
+`scripts/ci/scene-tests.sh` also runs Godot with `--fixed-fps 60`, so every frame advances the same
+time and an input sequence replays to the same positions on any machine.
+
+### Simulated input
+
+`testing-library/src/utils/input.ts` drives the player with the actions the on-screen controls
+press (`ia_forward`, `ia_backward`, `ia_left`, `ia_right`, `ia_jump`, `ia_sprint`, `ia_walk`),
+through the Godot-only `~system/Testing.simulateInput` that exists only under `--scene-test`:
+
+- `hold(context, 'ia_forward', 60, 0.8)` pushes the joystick to 0.8 for exactly 60 frames (the
+  engine counts them and releases the action). Under 0.5 a movement action does nothing, like the
+  real stick's deadzone; from 0.5 to 1 the speed goes from walk to jog.
+- `tap(context, 'ia_jump')` is one press of one frame; `press` / `release` hold an action (such as
+  `ia_sprint`) around other holds.
+
+Measure at rest (start after the player has settled, read after it has stopped) and the numbers
+come out the same every run; `52,-70-locomotion` is the example.
+
 A test fails when anything in it throws: a failed assert, a screenshot below 0.9995 similarity or with
 no reference image, or a timeout. A scene that never reports its plan and results fails the run too.
 

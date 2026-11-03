@@ -3,7 +3,9 @@
 //! `--scene-test`.
 
 use godot::classes::node::ProcessMode;
-use godot::classes::{Camera3D, DirAccess, FileAccess, Image, Node, Node3D, RenderingServer};
+use godot::classes::{
+    Camera3D, DirAccess, FileAccess, Image, Input, Node, Node3D, RenderingServer,
+};
 use godot::prelude::*;
 
 use super::image_compare::{rgb_difference, rgb_similarity};
@@ -26,6 +28,17 @@ const STABLE_CHECKS: u32 = 3;
 const LOAD_CHECK_INTERVAL: f64 = 0.1;
 const SETTLE_FRAMES: u32 = 5;
 const SETTLE_SECONDS: f64 = 0.2;
+/// The player actions a scene test may press through `~system/Testing.simulateInput`: the ones
+/// the on-screen joystick and buttons press.
+const SIMULATED_ACTIONS: [&str; 7] = [
+    "ia_forward",
+    "ia_backward",
+    "ia_left",
+    "ia_right",
+    "ia_jump",
+    "ia_sprint",
+    "ia_walk",
+];
 
 /// A snapshot a scene asked the test run to take and compare.
 pub struct SnapshotRequest {
@@ -188,6 +201,8 @@ impl DclTestingTools {
         if !test.teleported {
             test.teleported = true;
             test.reset_timeout();
+            // A test that threw mid-hold must not keep walking the player into the next scene.
+            release_simulated_input();
             if let Some(mut body) = self.player_body.clone().filter(|b| b.is_instance_valid()) {
                 body.set_global_position(Vector3::new(
                     test.parcel.x as f32 * 16.0 + 8.0,
@@ -225,6 +240,41 @@ async fn realm_timeout(tools: Gd<DclTestingTools>) {
 }
 
 /// Takes the picture a scene asked for, compares it with its stored one and answers the scene.
+/// Presses (with a strength in 0..1) or releases one of the player's actions for a scene test. A
+/// press with `frames` > 0 is released after exactly that many frames, here on the main thread:
+/// the scene's own ticks run on another thread and would land a frame early or late.
+pub fn simulate_input(action: &str, pressed: bool, strength: f32, frames: u32) {
+    if !SIMULATED_ACTIONS.contains(&action) {
+        tracing::warn!("simulateInput: '{action}' is not a player action");
+        return;
+    }
+    let mut input = Input::singleton();
+    if !pressed {
+        input.action_release(action);
+        return;
+    }
+    input
+        .action_press_ex(action)
+        .strength(strength.clamp(0.0, 1.0))
+        .done();
+    if frames > 0 {
+        let action = action.to_string();
+        spawn_local(async move {
+            for _ in 0..frames {
+                next_frame().await;
+            }
+            Input::singleton().action_release(&action);
+        });
+    }
+}
+
+fn release_simulated_input() {
+    let mut input = Input::singleton();
+    for action in SIMULATED_ACTIONS {
+        input.action_release(action);
+    }
+}
+
 pub fn take_and_compare_snapshot(request: SnapshotRequest) {
     let tools = DclGlobal::singleton().bind().testing_tools.clone();
     defer(move || spawn_local(capture_and_answer(tools, request)));

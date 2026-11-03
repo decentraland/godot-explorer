@@ -54,7 +54,8 @@ for _ in $(seq 1 30); do
 done
 curl -fs "$REALM/about" >/dev/null || { echo "the scene-test realm did not come up on :$PORT" >&2; exit 1; }
 
-ARGS=(--path "$ROOT/godot")
+# A fixed frame step: the same input sequence moves the player the same way on any machine.
+ARGS=(--path "$ROOT/godot" --fixed-fps 60)
 [ "$HEADLESS" = 1 ] && ARGS+=(--headless)
 ARGS+=(--scene-test "$PARCELS" --realm "$REALM" --snapshot-folder "$ROOT/tests/snapshots/scenes")
 ARGS+=(${EXTRA[@]+"${EXTRA[@]}"})

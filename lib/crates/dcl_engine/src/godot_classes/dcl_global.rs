@@ -400,7 +400,8 @@ impl INode for DclGlobal {
         // (deep_link.rs).
         set_scene_perf_warnings_enabled(preview_mode);
 
-        let is_mobile = Os::singleton().has_feature("mobile") || force_mobile;
+        // Scene tests run as a phone: touch controls, mobile movement and pointer forwarding.
+        let is_mobile = Os::singleton().has_feature("mobile") || force_mobile || testing_scene_mode;
         let is_android = std::env::consts::OS == "android";
         let is_ios = std::env::consts::OS == "ios";
 

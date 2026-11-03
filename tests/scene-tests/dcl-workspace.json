@@ -9,6 +9,7 @@
     { "path": "52,-64-visibility" },
     { "path": "52,-66-mesh-renderer" },
     { "path": "52,-68-avatar-attach" },
+    { "path": "52,-70-locomotion" },
     { "path": "54,-52-material" },
     { "path": "54,-54-text-shape" },
     { "path": "54,-56-video-player" },

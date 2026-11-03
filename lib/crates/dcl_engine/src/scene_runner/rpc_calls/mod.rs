@@ -94,6 +94,14 @@ pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_ca
                     *test_entry = Some(body);
                 }
             }
+            RpcCall::SimulateInput {
+                action,
+                pressed,
+                strength,
+                frames,
+            } => crate::test_runner::testing_tools::simulate_input(
+                &action, pressed, strength, frames,
+            ),
             RpcCall::SendAsync { body, response } => {
                 DclGlobal::singleton()
                     .bind()
