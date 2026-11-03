@@ -83,7 +83,7 @@ Dispersión por corrida (para que se vea que no es un promedio tapando dos pobla
 
 **Avatares presentes.** Genesis Plaza estaba poblada en todas las corridas (jugadores reales, no
 bots): 5–10 avatares visibles por captura, contados a mano en `screen.png` de cada corrida. No hubo
-forma de fijar N (§8 de limitaciones), así que este bloque es "plaza poblada tal cual", no un test de
+forma de fijar N (§9 de limitaciones), así que este bloque es "plaza poblada tal cual", no un test de
 N avatares.
 
 **Diferencia de overlay a declarar.** En las corridas de 1.x quedó arriba el cartel de primer uso
@@ -125,7 +125,7 @@ entrar).
 `PSS` de mundo coincide con el del bloque de fps (2023 MB vs 2031 MB), lo que valida la muestra.
 El estado "después de salir del mundo" no se pudo medir con script: en 1.x el botón Atrás de Android
 no abandona el mundo (abre el overlay de menú), y en 2.x el control de salida está dentro del shell
-React Native, que se descubre a mano — ver §8 y el comando en el protocolo §9.4.
+React Native, que se descubre a mano — ver §9 y el comando en el protocolo §9.4.
 
 ## 4. Stress: entrar y salir 20 veces
 
@@ -167,12 +167,37 @@ captura de pantalla disponible tampoco se puede afirmar qué pantalla mostraba c
 dos columnas de footprint **no son comparables entre sí** (una app puede estar en su pantalla de
 bienvenida y la otra ya en el mundo): se dejan como referencia de arranque, no como resultado.
 
-## 6. Stress: soak, UI por pantalla, red degradada
+## 6. Hallazgos
+
+1. **La cola es lo único que separa a los dos builds, y 2.x la tiene peor.** Misma mediana y mismo
+   p95, pero el 1 % más lento de 2.x es 10.6 % peor y su p99 es 11.9 % más alto, con la CPU 10.3 %
+   más baja. No es falta de throughput: es hitching periódico. Los frames peores están en
+   `frames.csv` de cada corrida (máx 100 ms en 2.x vs 92 ms en 1.x) y las trazas de Perfetto los
+   ubican — candidato a investigar en una issue aparte: trabajo del hilo JS/RN intercalado con el
+   render, o GC.
+2. **El fps medio no es comparable con dynamic graphics ON.** Los dos builds se autolimitan a
+   ~18 fps en este teléfono. Para que el benchmark pueda ver diferencia haría falta un flag de
+   arranque que lo desactive (y, del lado 1.x, que el runner `gp_benchmark` sea invocable también en
+   2.x: hoy el shell RN usa `BOOT_ARGS` fijo y descarta los parámetros de engine del deeplink).
+   Sin eso, cualquier comparación de fps en móvil mide el cap, no el cliente.
+3. **2.x arranca y carga antes.** `[RenderReady]` t100 pasa de 7.7 s a 1.4 s y el arranque en frío
+   de 27.8 s a 19.4 s. El `t100` alto de 1.x viene de compilar pipelines en serie; el port a Rust los
+   compila en paralelo.
+4. **2.x usa menos memoria, no más.** −3.2 % de PSS en mundo y −12.4 % en el test de 20 entradas
+   (1917 → 1680 MB de mediana). Y ninguno de los dos fuga en 20 ciclos de entrar/salir.
+5. **Falta un punto de entrada sin tocar la pantalla.** Ni el `gp-benchmark` de 1.x ni el flujo de
+   invitado de 2.x se pueden disparar sin taps, y en iOS no hay inyección de input disponible en
+   esta máquina: para medir iOS (y para CI) hace falta un arranque de benchmark por deeplink que
+   entre al mundo con pose fija y sin flujo de login.
+6. **Cortar la red no da una plaza vacía**: los dos builds levantan un modal bloqueante de
+   "Connection lost" (ver §8). Una medición con y sin avatares necesita el flag de comms, no red off.
+
+## 7. Stress: soak, UI por pantalla, red degradada
 
 Pendiente en esta pasada; comandos listos en `2x-vs-1x-3206-protocol.md` §9.2–§9.5. El bloque de UI
-por pantalla necesita además el mapeo de pantallas del shell RN (ver §8).
+por pantalla necesita además el mapeo de pantallas del shell RN (ver §9).
 
-## 7. Intentos que no sirvieron (documentados para no repetirlos)
+## 8. Intentos que no sirvieron (documentados para no repetirlos)
 
 - **Plaza vacía cortando la red.** `NET_OFF_AFTER_READY=1` apaga Wi-Fi tras cargar el mundo para
   sacar los avatares remotos. Resultado: **los dos builds responden con el modal bloqueante
@@ -186,7 +211,7 @@ por pantalla necesita además el mapeo de pantallas del shell RN (ver §8).
   en este teléfono (`[DynamicGraphics] FPS limit changed, target=55.6ms`). Comparar fps medios es
   comparar el cap; por eso el resultado se apoya en p99/p1 y en la cola.
 
-## 8. Limitaciones declaradas
+## 9. Limitaciones declaradas
 
 1. **Dynamic graphics ON** en ambos (comportamiento de fábrica). No se forzó OFF desde Settings en
    ninguna de las dos apps: sin un flag de CLI equivalente (`graphic_profile`,
@@ -210,7 +235,7 @@ por pantalla necesita además el mapeo de pantallas del shell RN (ver §8).
 8. **Overlay de primer uso en 1.x**: ver §1. Las corridas de 1.x muestran el cartel de tutorial y
    los globos de movimiento/emotes; las de 2.x no. Es UI extra a favor de 2.x en la comparación.
 
-## 9. Qué haría falta para cerrar lo que falta
+## 10. Qué haría falta para cerrar lo que falta
 
 - **Plaza vacía**: un flag de arranque en 2.x que llegue al motor (hoy el shell RN ignora los
   parámetros de engine), o el runner `gp_benchmark` invocable también en 2.x. Con eso, el mismo
@@ -225,7 +250,7 @@ por pantalla necesita además el mapeo de pantallas del shell RN (ver §8).
 - **Soak 60–90 min, tap spam, red degradada**: comandos listos (§9.2–9.5 del protocolo), sin
   ejecutar.
 
-## 10. Datos crudos
+## 11. Datos crudos
 
 ```
 docs/bench/data/2x-vs-1x-3206/
@@ -239,7 +264,7 @@ docs/bench/data/2x-vs-1x-3206/
   iphone16e/launch/    1x-mode/ y 2x/: console-*.log + launch-*.json
 ```
 
-## 11. Reproducir
+## 12. Reproducir
 
 ```bash
 # 1) builds pinneados
