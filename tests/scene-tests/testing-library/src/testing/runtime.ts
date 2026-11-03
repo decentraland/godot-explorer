@@ -1,7 +1,6 @@
 /**
  * This module provides a createTestRuntime function that returns an object with a test function that can be used to define tests.
  */
-import { onEnterScene, onLeaveScene } from '@dcl/sdk/observables'
 import { IEngine, Transform } from '@dcl/ecs'
 import { assertEquals } from './assert'
 import type {
@@ -10,10 +9,9 @@ import type {
   TestHelpers,
   TestFunctionContext
 } from './types'
-import { PlayerIdentityData, engine } from '@dcl/sdk/ecs'
-import { getUserData } from '~system/UserIdentity'
+import { engine } from '@dcl/sdk/ecs'
+import { getSceneInformation } from '~system/Runtime'
 import { withInterval } from '../utils/helpers'
-import { getPlayersInScene } from '~system/Players'
 
 // This function creates a test runtime that can be used to define and run tests.
 // It takes a `TestingModule` instance (loaded from require('~system/Testing')) and an `IEngine` instance (from Decentraland's SDK).
@@ -295,43 +293,28 @@ function globalFail(error: any) {
   console.error(error)
 }
 
+// The released SDK's onEnterScene fires as soon as the player's entity reaches the scene's state,
+// which happens in every loaded scene wherever the player stands; the player's position decides.
 function getPlayerIsInside() {
-  let playerIsInside = false
-  let currentUserId: string | undefined = undefined
+  const PlayerTransform = engine.getComponent(Transform.componentId) as typeof Transform
+  let parcels: Array<{ x: number; z: number }> | null = null
 
-  getUserData({}).then((player) => {
-    if (player) {
-      currentUserId = player.data?.userId
-    }
-
-    getPlayersInScene({}).then((data) => {
-      for (const player of data.players) {
-        toggleState(player.userId, true)
-      }
+  getSceneInformation({}).then((info) => {
+    const scene = JSON.parse(info.metadataJson).scene as { base: string; parcels: string[] }
+    const [baseX, baseZ] = scene.base.split(',').map(Number)
+    parcels = scene.parcels.map((parcel) => {
+      const [x, z] = parcel.split(',').map(Number)
+      return { x: x - baseX, z: z - baseZ }
     })
-  })
-
-  function toggleState(userId: string, value: boolean) {
-    const currentPlayerAddress = PlayerIdentityData.getOrNull(
-      engine.PlayerEntity
-    )?.address
-    const primaryPlayerUserId = currentPlayerAddress || currentUserId
-    if (primaryPlayerUserId === userId) {
-      playerIsInside = value
-    }
-  }
-
-  onEnterScene.add((player) => {
-    toggleState(player.userId, true)
-  })
-
-  onLeaveScene.add((player) => {
-    toggleState(player.userId, false)
   })
 
   return {
     get() {
-      return playerIsInside
+      const transform = PlayerTransform.getOrNull(engine.PlayerEntity)
+      if (parcels === null || transform === null) return false
+      const x = Math.floor(transform.position.x / 16)
+      const z = Math.floor(transform.position.z / 16)
+      return parcels.some((parcel) => parcel.x === x && parcel.z === z)
     }
   }
 }
