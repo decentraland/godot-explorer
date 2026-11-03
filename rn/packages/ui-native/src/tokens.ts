@@ -3,6 +3,9 @@ import { u } from './scale';
 export const colors = {
   ruby: '#FF2D55',
   rubyPressed: '#E1002B',
+  rubyDisabled: 'rgba(255,45,85,0.5)',
+  /** Figma `ruby[200]` — `Input/Counter` at its limit. */
+  ruby200: '#FF5F77',
   orange: '#FF7439',
   shadow: '#161518',
   pearl: '#ECEBED',
@@ -19,6 +22,8 @@ export const colors = {
   cardLight: '#B48CD7',
   glass: 'rgba(105,31,169,0.4)',
   glassPressed: 'rgba(105,31,169,0.6)',
+  /** `Button/Discover` Disabled. */
+  glass20: 'rgba(105,31,169,0.2)',
   scrim: 'rgba(0,0,0,0.4)',
   white70: 'rgba(255,255,255,0.7)',
   white50: 'rgba(252,252,252,0.5)',
@@ -27,16 +32,24 @@ export const colors = {
   white10: 'rgba(255,255,255,0.1)',
   mythic: '#FF4BED',
   iconHud: '#DFD0FF',
-  teal: '#2FCF9A',
-  periwinkle: '#9D8CFF',
+  teal: '#22C1C1',
+  periwinkle: '#A0ABFF',
+  /** Figma `text/link` (`Button/Link`), the Periwinkle swatch. */
+  link: '#A0ABFF',
   fieldDark: '#2B0847',
   panelDark: '#1F0033',
   rowSelected: '#7B3AA0',
   violetSquare: '#45146E',
+  black10: 'rgba(0,0,0,0.1)',
   black20: 'rgba(0,0,0,0.2)',
   black30: 'rgba(0,0,0,0.3)',
   black40: 'rgba(0,0,0,0.4)',
   black60: 'rgba(0,0,0,0.6)',
+  black70: 'rgba(0,0,0,0.7)',
+  white: '#FFFFFF',
+  white40: 'rgba(255,255,255,0.4)',
+  snow10: 'rgba(252,252,252,0.1)',
+  snow70: 'rgba(252,252,252,0.7)',
   lavender70: 'rgba(232,185,255,0.7)',
   paleBlack: '#43404A',
   danger: '#FB3B3B',
@@ -45,26 +58,21 @@ export const colors = {
   menu: '#1B002D',
   navbar: 'rgba(26,9,37,0.9)',
   black25: 'rgba(0,0,0,0.25)',
+  /** `Modal/Dialog` `Link=True` text. */
+  sky: '#32CEFF',
 } as const;
 
 /** Figma `Elevation/Down|Up`: one shadow, 0/±4 offset, blur 4, Shadow at 50% — values ÷ 2 for
- * iOS; Android only takes `elevation`. Shadows only show on a solid background. */
+ * dp. `boxShadow` draws the same on both platforms (Android `elevation` ignores the colour). */
+const shadow = (offsetY: number) => ({
+  boxShadow: [
+    { offsetX: 0, offsetY, blurRadius: u(2), color: `${colors.shadow}80` },
+  ],
+});
 export const elevation = {
-  down: {
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 2,
-    elevation: 4,
-  },
-  up: {
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 2,
-    elevation: 4,
-  },
-} as const;
+  down: shadow(u(2)),
+  up: shadow(-u(2)),
+};
 
 /** Notification card title colours by category. */
 export const notificationTitle = {
@@ -80,7 +88,7 @@ export const rarityColors = {
   rare: { dark: '#34CE76', light: '#73FFAF' },
   epic: { dark: '#438FFF', light: '#81D1FF' },
   legendary: { dark: '#A14BF3', light: '#DF9CFF' },
-  exotic: { dark: '#CAFF73', light: '#E4FFB8' },
+  exotic: { dark: '#9CD71E', light: '#E4FFB8' },
   mythic: { dark: '#FF4BED', light: '#F6C1FF' },
   unique: { dark: '#FEA217', light: '#FFF280' },
 } as const;
@@ -93,6 +101,50 @@ export const radii = {
   sheet: u(12),
   button: u(8),
 } as const;
+
+/** The Figma "Spacing & Sizes" page (values ÷ 2): the page asks for these names, never the raw
+ * number. `radii` above is the older alias set (card = lg, button = xl, sheet = 2xl). */
+export const space = {
+  none: 0,
+  '3xs': u(2),
+  '2xs': u(3),
+  xs: u(4),
+  sm: u(6),
+  md: u(8),
+  lg: u(12),
+  xl: u(16),
+  '2xl': u(24),
+} as const;
+export const radius = {
+  xs: u(2),
+  sm: u(4),
+  md: u(5),
+  lg: u(6),
+  xl: u(8),
+  '2xl': u(12),
+  pill: 999,
+} as const;
+export const controlHeight = {
+  lg: u(48),
+  md: u(37),
+  sm: u(27),
+  pillLg: u(30),
+  pillMd: u(28),
+  tag: u(21),
+  badge: u(16),
+} as const;
+export const iconSize = {
+  buttonLg: 16,
+  buttonMd: 14,
+  buttonSm: 12,
+  iconButton: 20,
+  pill: 16,
+  tag: 13,
+} as const;
+/** `border/thin` is 2 Figma px = 1dp (button and input outlines); `minTouchTarget` 88 px = 44dp,
+ * extend smaller controls with `hitSlop`. */
+export const border = { thin: 1 } as const;
+export const minTouchTarget = 44;
 
 export const fonts = {
   regular: 'Inter-Regular',

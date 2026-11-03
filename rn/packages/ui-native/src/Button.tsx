@@ -1,8 +1,17 @@
-import { ActivityIndicator, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { AppText } from './AppText';
 import { Icon, IconName } from './Icon';
 import { PressableBase } from './internal/PressableBase';
-import { colors, radii } from './tokens';
+import { Spinner } from './Spinner';
+import {
+  border,
+  colors,
+  controlHeight,
+  fonts,
+  iconSize,
+  radius,
+  space,
+} from './tokens';
 import { u } from './scale';
 
 export type ButtonTone =
@@ -36,7 +45,7 @@ export function Button({
   /** `tone="reminder"` only — the reminder is set. */
   selected?: boolean;
   /** Figma `Button/Primary|Secondary` `Size=Large` — hero CTAs (entry-flow, Settings actions).
-   * Only height and label size change between sizes, not the corner radius. */
+   * Height, radius, label and icon size all change per size (96/16, 74/12 or 10, 54/8). */
   big?: boolean;
   /** `Size=Small` — compact inline actions. The default (neither flag) is `Size=Medium`. */
   small?: boolean;
@@ -60,6 +69,12 @@ export function Button({
       ? colors.textDisabled
       : colors.snow;
   const fontSize = big || reminder ? u(15) : small ? u(11) : u(12);
+  const glyph = big
+    ? iconSize.buttonLg
+    : small
+    ? iconSize.buttonSm
+    : iconSize.buttonMd;
+  const medium = !big && !small && !reminder;
   return (
     <PressableBase
       onPress={onPress}
@@ -69,6 +84,7 @@ export function Button({
       style={pressed => [
         styles.button,
         (big || reminder) && styles.big,
+        medium && styles.medium,
         small && styles.small,
         fullWidth && styles.fullWidth,
         tone === 'primary' && styles.primary,
@@ -101,21 +117,20 @@ export function Button({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={colors.snow} />
+        <Spinner size={big ? 16 : small ? 12 : 14} />
       ) : (
         <>
           {icon && (
-            <Icon
-              name={icon}
-              size={reminder ? 27 : big ? 20 : 16}
-              color={labelColor}
-            />
+            <Icon name={icon} size={reminder ? 27 : glyph} color={labelColor} />
           )}
-          <AppText variant="button" style={{ color: labelColor, fontSize }}>
+          <AppText
+            variant="button"
+            style={[styles.label, { color: labelColor, fontSize }]}
+          >
             {label}
           </AppText>
           {trailingIcon && (
-            <Icon name={trailingIcon} size={14} color={labelColor} />
+            <Icon name={trailingIcon} size={glyph} color={labelColor} />
           )}
         </>
       )}
@@ -125,37 +140,40 @@ export function Button({
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: u(37),
-    paddingHorizontal: u(12),
-    borderRadius: radii.button,
+    minHeight: controlHeight.md,
+    paddingHorizontal: space.lg,
+    borderRadius: radius.xl,
+    gap: space.xs,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  big: { minHeight: u(46) },
-  small: { minHeight: u(27) },
+  big: { minHeight: controlHeight.lg },
+  medium: { borderRadius: radius.lg },
+  small: { minHeight: controlHeight.sm, borderRadius: radius.sm },
+  label: { fontFamily: fonts.bold, textTransform: 'uppercase' },
   fullWidth: { alignSelf: 'stretch' },
   primary: { backgroundColor: colors.ruby },
   secondary: { backgroundColor: colors.black40 },
   outline: {
     backgroundColor: colors.black40,
-    borderWidth: 2,
+    borderWidth: border.thin,
     borderColor: colors.snow,
   },
   dark: { backgroundColor: colors.black40 },
   reminder: {
     backgroundColor: colors.glass,
-    borderRadius: u(6),
-    borderWidth: 2,
-    borderColor: 'transparent',
-    gap: u(4),
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.snow,
   },
   reminderSelected: {
     backgroundColor: colors.black20,
+    borderWidth: border.thin,
     borderColor: colors.ruby,
   },
   reminderPressed: { backgroundColor: colors.glassPressed },
-  withIcon: { flexDirection: 'row', gap: u(8) },
-  primaryDisabled: { backgroundColor: 'rgba(255,45,85,0.5)' },
+  withIcon: { flexDirection: 'row' },
+  primaryDisabled: { backgroundColor: colors.rubyDisabled },
   secondaryDisabled: { backgroundColor: colors.black30 },
   outlineDisabled: {
     backgroundColor: colors.black30,

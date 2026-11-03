@@ -7,6 +7,7 @@ export { BottomSheet } from './BottomSheet';
 export { Button } from './Button';
 export { Checkbox } from './Checkbox';
 export { Chip } from './Chip';
+export { CodeSlots } from './CodeSlots';
 export type { ButtonTone } from './Button';
 export { indexFromOffset, PageDots, SnapCarousel } from './Carousel';
 export { CollapsibleSection } from './CollapsibleSection';
@@ -23,6 +24,7 @@ export { Icon } from './Icon';
 export type { IconName } from './Icon';
 export { IconButton } from './IconButton';
 export { ItemCard, SkeletonCard } from './ItemCard';
+export { LinkButton } from './LinkButton';
 export { LinkRow } from './LinkRow';
 export { LoginButton } from './LoginButton';
 export type { LoginProvider } from './LoginButton';
@@ -36,6 +38,7 @@ export type { Snap, SnapConfig, SnapHeights } from './sheetMath';
 export { Skeleton } from './Skeleton';
 export { SlotTile } from './SlotTile';
 export { Slider, sliderValueFromX } from './Slider';
+export { Spinner } from './Spinner';
 export { Switch } from './Switch';
 export { Tabs } from './Tabs';
 export { EventBadge, EventTimeTag } from './Tags';
@@ -45,12 +48,18 @@ export { ToastBubble, ToastProvider, toastReducer, useToast } from './Toast';
 export { WarningBanner } from './WarningBanner';
 export { SCALE, u } from './scale';
 export {
+  border,
   colors,
+  controlHeight,
   elevation,
   fonts,
+  iconSize,
   layout,
+  minTouchTarget,
   notificationTitle,
   radii,
+  radius,
+  space,
   rarityColors,
 } from './tokens';
 export type { Rarity } from './tokens';

@@ -2,7 +2,7 @@ import { Image, StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
 import { Icon } from './Icon';
 import { PressableBase } from './internal/PressableBase';
-import { colors, radii } from './tokens';
+import { colors, fonts, radii } from './tokens';
 import { u } from './scale';
 
 const walletConnectLogo = require('../assets/wallet-connect.png');
@@ -11,19 +11,22 @@ export type LoginProvider = 'google' | 'apple' | 'wallet' | 'email';
 
 /** Figma's `Button/Entry` family — the Sign In screen's provider buttons. One real component with
  * four `Type`s (Google/Apple/Wallet/Mail), not four bespoke buttons: Google/Apple/Wallet share the
- * white/`DCL Shadow` styling ("light"), Mail is the one dark variant (Figma's own note: "Mail usa
- * variant=secondary"). Icon-to-label gap is per-brand in Figma (46px Wallet vs. 4px Google/Apple),
- * not a single shared value. */
+ * white/`DCL Shadow` styling ("light"), Mail is the one dark variant (Figma's own note: "Mail uses
+ * variant=secondary"). Icon-to-label gap is per-brand in Figma (10px Wallet, 8px Mail, 4px
+ * Google/Apple), not a single shared value. */
 export function LoginButton({
   provider,
   label,
   onPress,
   disabled = false,
+  fullWidth = false,
 }: {
   provider: LoginProvider;
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  /** Figma's `Fill container` width mode (default is `Hug`). */
+  fullWidth?: boolean;
 }) {
   const spec = PROVIDER[provider];
   const contentColor = spec.dark && disabled ? colors.textDisabled : spec.color;
@@ -34,6 +37,7 @@ export function LoginButton({
       accessibilityLabel={label}
       style={pressed => [
         styles.button,
+        fullWidth && styles.fullWidth,
         {
           backgroundColor: disabled
             ? spec.disabledBg
@@ -135,8 +139,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: u(12),
     borderRadius: radii.button,
   },
+  fullWidth: { alignSelf: 'stretch' },
   content: { flexDirection: 'row', alignItems: 'center' },
   icon: { width: u(18), height: u(18) },
-  label: { textTransform: 'uppercase' },
+  label: { fontFamily: fonts.bold, textTransform: 'uppercase' },
   lightDisabledContent: { opacity: 0.6 },
 });

@@ -1,5 +1,6 @@
 /** The catalogue keys the components read. The host installs its translator; without one a key
- * renders as itself. */
+ * renders as itself. Keys take no `{placeholder}` params: the first string that needs one widens
+ * this contract, not just the catalogue. */
 export type UiNativeKey =
   | 'APP_BACK'
   | 'APP_CREDITS'

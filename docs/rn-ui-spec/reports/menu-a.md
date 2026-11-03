@@ -1,6 +1,6 @@
 # Report: menu-a (manifest seq 273-299)
 
-Source: Figma file `nxP78pUCEHj3BY0meiXipe`, page `2:60` ("menu"). All 27 screenshots captured and viewed (`docs/rn-ui-spec/shots/menu/`). 1600x720 landscape frames except 279, 289 and 291 (720x1600 portrait). `get_design_context` was not called (Figma MCP quota throttled to about 3 calls/min); values are measured from the PNGs plus `rn/src/ds/tokens.ts`. Counterpart report for seq 300-326: menu-b.
+Source: Figma file `nxP78pUCEHj3BY0meiXipe`, page `2:60` ("menu"). All 27 screenshots captured and viewed (`docs/rn-ui-spec/shots/menu/`). 1600x720 landscape frames except 279, 289 and 291 (720x1600 portrait). `get_design_context` was not called (Figma MCP quota throttled to about 3 calls/min); values are measured from the PNGs plus `rn/packages/ui-native/src/tokens.ts`. Counterpart report for seq 300-326: menu-b.
 
 ## 1. Screen inventory
 
@@ -96,7 +96,7 @@ Not an RN UI design: a screenshot of the external Google Form in an iOS in-app b
 
 ## 4. Reusable components / tokens
 
-- Present in `rn/src/ds`: colors purple350/450/500/550, ruby, lavender, orange, glass, scrim, white10/30/70, `radii`, Inter font set, `AppText`, `Icon`+`iconSvgs`, `IconButton`, `PrimaryButton`, `Pill`, `Tabs` (underline), `ItemCard`, `Gradient`.
+- Present in `rn/packages/ui-native/src`: colors purple350/450/500/550, ruby, lavender, orange, glass, scrim, white10/30/70, `radii`, Inter font set, `AppText`, `Icon`+`iconSvgs`, `IconButton`, `PrimaryButton`, `Pill`, `Tabs` (underline), `ItemCard`, `Gradient`.
 - New for this area: `DrawerShell` (rail + gradient panel + safe-area-aware position), `RailButton` (with unread dot), `KebabMenu` popover, `PlaceCard`/`EventCard` (rn/src/discover/Cards.tsx likely reusable - verify), `StatusPill` (LIVE, user-count, Trending, Featured, IN X MINS), `ModalSplit` (image + info + CTA), `OutlinedButton`, `CollapsibleSection`, `FriendRow`, `ActionSquareButton` (jump/accept/decline/cancel with pressed colors), `EmptyState`, `CoachMark` + scrim overlay, `BugReportForm` pieces (Dropdown, TextArea with counter, ScreenshotSlot). Missing icons: compass, people-heart, bell, backpack, gear (filled+outline), share-nodes, flag, bug, bell-outline, check, X, chevrons, person-plus, person-count, thumbs-up, hand, emote, chat.
 - Token additions: pill greens (#34CE76 exists as rarity rare.dark), cyan name color #73D3D3 (rarity common.dark), verified badge pink, modal gradient stops #4F1580 -> #8F2BAE, rail fill.
 

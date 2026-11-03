@@ -25,7 +25,7 @@ import {
   indexFromOffset,
   iconNames,
 } from '@dcl/ui-native';
-import { demos } from '../src/gallery/demos';
+import { demos } from './fixtures/demos';
 
 function render(element: ReactElement) {
   let tree!: ReturnType<typeof create>;
@@ -51,8 +51,10 @@ describe('tokens', () => {
   it('has the new Figma colours', () => {
     expect(colors.mythic).toBe('#FF4BED');
     expect(colors.iconHud).toBe('#DFD0FF');
-    expect(colors.teal).toBe('#2FCF9A');
-    expect(colors.periwinkle).toBe('#9D8CFF');
+    expect(colors.teal).toBe('#22C1C1');
+    expect(colors.periwinkle).toBe('#A0ABFF');
+    expect(colors.link).toBe('#A0ABFF');
+    expect(colors.rubyDisabled).toBe('rgba(255,45,85,0.5)');
     expect(colors.fieldDark).toBe('#2B0847');
   });
 });
@@ -125,7 +127,9 @@ describe('ActionSquareButton', () => {
 
 describe('Tags and Chip', () => {
   it('renders each event time kind and the live player count', () => {
-    const live = text(render(<EventTimeTag kind="live" label="Live" players={12} />));
+    const live = text(
+      render(<EventTimeTag kind="live" label="Live" players={12} />),
+    );
     expect(live).toContain('Live');
     expect(live).toContain('12');
     expect(
@@ -134,9 +138,9 @@ describe('Tags and Chip', () => {
     expect(text(render(<EventTimeTag kind="date" label="Nov 12" />))).toContain(
       'Nov 12',
     );
-    expect(text(render(<EventBadge type="featured" label="Featured" />))).toContain(
-      'Featured',
-    );
+    expect(
+      text(render(<EventBadge type="featured" label="Featured" />)),
+    ).toContain('Featured');
   });
 
   it('Chip presses and removes', () => {

@@ -1,6 +1,6 @@
 # Report: settings-landscape (manifest seq 259-272)
 
-Source: Figma file `l6t9Qs4ZueQdFhE6Gcp6hZ`, page `1002:2897` ("Settings landscape"). All 14 screenshots captured and viewed (`docs/rn-ui-spec/shots/settings-landscape/`). Frames are 1600x720 landscape (a phone held sideways, scene blurred behind), 640x1180 / 544xN content crops, and small fragments. The Figma MCP quota throttled bursts (about 3 calls per minute); `get_design_context` was NOT called, so tokens below are measured from the PNGs or taken from `rn/src/ds/tokens.ts`.
+Source: Figma file `l6t9Qs4ZueQdFhE6Gcp6hZ`, page `1002:2897` ("Settings landscape"). All 14 screenshots captured and viewed (`docs/rn-ui-spec/shots/settings-landscape/`). Frames are 1600x720 landscape (a phone held sideways, scene blurred behind), 640x1180 / 544xN content crops, and small fragments. The Figma MCP quota throttled bursts (about 3 calls per minute); `get_design_context` was NOT called, so tokens below are measured from the PNGs or taken from `rn/packages/ui-native/src/tokens.ts`.
 
 ## 1. Screen inventory
 
@@ -65,8 +65,8 @@ TEMPORARY FILES; "Current Cache Size" value "0.5 GB"; progress bar; "Max Cache S
 
 ## 4. Reusable components / tokens
 
-Colors (all already in `rn/src/ds/tokens.ts`): ruby #FF2D55 (toggle/slider fill/links), shadow #161518 (dropdown + button fill), lavender #E8B9FF, cardLight #B48CD7 (active tab, headers), gray #CFCDD4 (hints), purple550 #24033B (warning in 266), scrim. Not in tokens: panel grey ~#232228 (settings sheet surface; menu drawers use purple instead), toggle off track ~#1E1D21.
-New DS components needed (none exist in `rn/src/ds`): `Toggle`, `Slider`, `Dropdown` (+ options popover), `SettingsSection` header with rule, `WarningBox`, `ProgressBar`, `OutlinedButton` (PrimaryButton exists but is ruby fill), `LinkRow` (external-link/copy icon), scrollable `PillTabs` (existing `Tabs.tsx` is uppercase text with underline, not pills). Existing: `AppText`, `Icon`/`iconSvgs` (need icons: monitor, speaker, gamepad, person, box, external-link, copy, exit, alert-triangle, chevrons, check), `IconButton`.
+Colors (all already in `rn/packages/ui-native/src/tokens.ts`): ruby #FF2D55 (toggle/slider fill/links), shadow #161518 (dropdown + button fill), lavender #E8B9FF, cardLight #B48CD7 (active tab, headers), gray #CFCDD4 (hints), purple550 #24033B (warning in 266), scrim. Not in tokens: panel grey ~#232228 (settings sheet surface; menu drawers use purple instead), toggle off track ~#1E1D21.
+New DS components needed (none exist in `rn/packages/ui-native/src`): `Toggle`, `Slider`, `Dropdown` (+ options popover), `SettingsSection` header with rule, `WarningBox`, `ProgressBar`, `OutlinedButton` (PrimaryButton exists but is ruby fill), `LinkRow` (external-link/copy icon), scrollable `PillTabs` (existing `Tabs.tsx` is uppercase text with underline, not pills). Existing: `AppText`, `Icon`/`iconSvgs` (need icons: monitor, speaker, gamepad, person, box, external-link, copy, exit, alert-triangle, chevrons, check), `IconButton`.
 
 ## 5. Legacy counterpart
 

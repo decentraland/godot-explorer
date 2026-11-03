@@ -3,7 +3,7 @@
 Plan: `~/.claude/plans/great-now-lets-plan-floofy-thacker.md`. Verification: Android phone only (Moto edge 60 pro).
 
 ## Done
-- Design system (`rn/src/ds`), route stack (`rn/src/app`), i18n table, gallery + `dclrn://preview/<id>` deep link, `tools/ui-spec/rn_capture.sh` (retries when the device has not rotated).
+- Design system (`rn/packages/ui-native/src`), route stack (`rn/src/app`), i18n table, gallery + `dclrn://preview/<id>` deep link, `tools/ui-spec/rn_capture.sh` (retries when the device has not rotated).
 - Screens for all areas: loading + HUD, Discover, Backpack, Profile, Settings (revamp shell), in-HUD menu, entry flow. All 286 Figma frames have a preview (`__tests__/gallery-coverage`).
 - Request/response bridge (`rn/src/bridge`, `godot/src/rn_bridge`); security review fixed a `fetch.signed` allowlist bypass and a header override.
 - Capture pass 2: 293 previews, none in the wrong orientation; compare sheets in `docs/rn-ui-spec/out/`.
