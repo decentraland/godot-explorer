@@ -11,7 +11,14 @@ import {
   View,
 } from 'react-native';
 import { core } from '../core';
-import { AppText, colors, Button, LoginButton, u } from '@dcl/ui-native';
+import {
+  AppText,
+  colors,
+  Button,
+  LoginButton,
+  Spinner,
+  u,
+} from '@dcl/ui-native';
 import { FlowFrame } from './FlowFrame';
 import { isValidName, Provider } from './flowMachine';
 import { I18nKey, t } from '../i18n';
@@ -163,6 +170,21 @@ export function SignInScreen({
           <TermsDisclaimer />
         </View>
       </ScrollView>
+    </FlowFrame>
+  );
+}
+
+/** Figma `ACCOUNT_GUEST_CREATE` (1800:9275): the guest account being created over the Account
+ * Home photo. */
+export function GuestCreateScreen() {
+  return (
+    <FlowFrame photo edgeToEdge>
+      <View style={styles.guestCreate}>
+        <Spinner size={75} accessibilityLabel={t('FLOW_GUEST_WAIT_TITLE')} />
+        <AppText variant="heading" style={styles.guestCreateTitle}>
+          {t('FLOW_GUEST_WAIT_TITLE')}
+        </AppText>
+      </View>
     </FlowFrame>
   );
 }
@@ -386,7 +408,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'space-between',
     paddingTop: u(165),
-    paddingBottom: u(77),
+    paddingBottom: u(82.5),
   },
   flowTitle: {
     fontSize: u(36),
@@ -395,22 +417,35 @@ const styles = StyleSheet.create({
     marginTop: u(18),
   },
   logo: { width: u(160), height: u(160) },
+  guestCreate: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: u(12),
+  },
+  guestCreateTitle: {
+    fontSize: u(19),
+    lineHeight: u(23),
+    textAlign: 'center',
+    width: u(174),
+  },
   accountContainer: {
     flex: 1,
     justifyContent: 'space-between',
-    paddingTop: u(105),
-    paddingBottom: u(77),
+    paddingTop: u(110),
+    paddingBottom: u(82.5),
   },
   brandMark: { width: u(55), height: u(55), alignSelf: 'center' },
   accountBody: {
     fontSize: u(20),
     lineHeight: u(24),
-    marginTop: u(4),
+    marginTop: u(10),
     textAlign: 'center',
     maxWidth: u(267),
     alignSelf: 'center',
+    color: colors.white,
   },
-  accountActions: { gap: u(18.5) },
+  accountActions: { gap: u(24) },
   accountButtons: { gap: u(24) },
   title: { marginTop: u(16), textAlign: 'center' },
   titleLeft: { marginTop: u(4), marginBottom: u(8) },
@@ -423,11 +458,10 @@ const styles = StyleSheet.create({
   disclaimer: {
     lineHeight: u(18),
     textAlign: 'center',
+    color: colors.snow,
   },
   disclaimerLink: {
-    fontFamily: 'Inter-Medium',
-    fontSize: u(15),
-    color: '#A0ABFF',
+    color: colors.link,
     textDecorationLine: 'underline',
   },
   error: { marginTop: u(12), color: colors.ruby },

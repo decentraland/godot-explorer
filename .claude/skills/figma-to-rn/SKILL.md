@@ -19,7 +19,7 @@ The entry flow shipped looking nothing like `Mobile-Entry-Flow` because it was p
 
 ## Units
 
-Figma frames are **720×1600 px = 360×800 dp at 2x**. In code, write the Figma px **divided by 2** inside `u()` (`rn/packages/ui-native/src/scale.ts`), which scales by `min(width,height)/360`.
+Figma frames are **720×1600 px = 360×800 dp at 2x**. In code, write the Figma px **divided by 2** inside `u()` (`rn/packages/ui-native/src/scale.ts`), which scales so the 360×800 frame fits the phone: `min(min(w,h)/360, max(w,h)/800)`. Reviews compare Figma and device aligned by height, so verify that way (see `rn/.claude/skills/figma-to-rn/`, the detailed playbook with `scripts/text_rows.sh`).
 
 | Figma px | code |
 |---|---|

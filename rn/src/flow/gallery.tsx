@@ -1,5 +1,5 @@
 import { registerPreview } from '../gallery/registry';
-import { AccountScreen, SplashScreen } from './screens';
+import { AccountScreen, GuestCreateScreen, SplashScreen } from './screens';
 
 const noop = () => {};
 
@@ -12,6 +12,12 @@ const noop = () => {};
     render: () => <SplashScreen onDone={noop} />,
   }),
 );
+registerPreview('extra/flow-guest-create', {
+  title: 'Flow: guest create',
+  orientation: 'portrait',
+  notes: 'Entry flow: the guest account being created after Play as Guest',
+  render: () => <GuestCreateScreen />,
+});
 ['738-8278', '738-8261'].forEach(node =>
   registerPreview(`settings-portrait__account-home__${node}`, {
     title: 'Flow: account home',

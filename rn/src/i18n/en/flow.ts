@@ -1,7 +1,7 @@
 /** Entry flow (splash, account, sign-in, avatar, naming). Godot's equivalents are upper-cased, so these are FLOW_* keys. */
 export const flow = {
   FLOW_TERMS_DISCLAIMER:
-    "By continuing, you agree to Decentraland's {tos}, {privacy} and {content}.",
+    'By continuing, you agree to Decentraland’s {tos}, {privacy}, and {content}.',
   FLOW_TERMS_OF_SERVICE: 'Terms of Service',
   FLOW_PRIVACY_POLICY: 'Privacy Policy',
   FLOW_CONTENT_POLICY: 'Content Policy',
@@ -31,8 +31,7 @@ export const flow = {
   FLOW_CODE_INVALID: 'That code is not right. Try again.',
   FLOW_AUTH_WAIT_TITLE: 'Signing you in',
   FLOW_AUTH_WAIT_BODY: 'Hang tight while we finish up.',
-  FLOW_GUEST_WAIT_TITLE: 'Getting you ready',
-  FLOW_GUEST_WAIT_BODY: 'Setting up your guest session.',
+  FLOW_GUEST_WAIT_TITLE: 'Getting you ready…',
   FLOW_CANCEL: 'Cancel',
   FLOW_CONTINUE: 'Continue',
   FLOW_NAME_TITLE: 'Choose your name',

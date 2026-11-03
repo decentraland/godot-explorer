@@ -31,6 +31,7 @@ import {
   AccountScreen,
   CodeScreen,
   EmailScreen,
+  GuestCreateScreen,
   NamingScreen,
   SignInScreen,
   SplashScreen,
@@ -250,13 +251,7 @@ export function EntryFlow({
         />
       );
     case 'guest_wait':
-      return (
-        <WaitScreen
-          title={t('FLOW_GUEST_WAIT_TITLE')}
-          body={t('FLOW_GUEST_WAIT_BODY')}
-          onCancel={back}
-        />
-      );
+      return <GuestCreateScreen />;
     case 'welcome_back':
       return (
         <WelcomeBackScreen

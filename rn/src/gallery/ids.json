@@ -880,6 +880,11 @@
     "orientation": "portrait"
   },
   {
+    "id": "extra/flow-guest-create",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
     "id": "settings-portrait__account-home__738-8278",
     "source": "settings-portrait",
     "orientation": "portrait"
@@ -1595,7 +1600,7 @@
     "orientation": "landscape"
   },
   {
-    "id": "extra/flow-terms",
+    "id": "extra/ds-buttons",
     "source": "extra",
     "orientation": "portrait"
   },
@@ -1608,5 +1613,15 @@
     "id": "extra/flow-wait",
     "source": "extra",
     "orientation": "portrait"
+  },
+  {
+    "id": "extra/nav-bar",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/nav-rail",
+    "source": "extra",
+    "orientation": "landscape"
   }
 ]
