@@ -25,7 +25,7 @@ futures-lite = "1.12.0"
 hyper = { version = "1.0.0-rc.3", features = ["full"] }
 hyper-util = { version = "0.1.0-rc.1", features = ["tokio"], optional = true }
 http-body-util = "0.1.0-rc.2"
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "blocking", "stream", "gzip", "brotli"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "blocking", "stream", "gzip", "brotli", "http2", "charset"] }
 regex = "*"
 urn = "0.7.0"
 
