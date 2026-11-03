@@ -70,6 +70,43 @@ the scene tests run. The builder image and `ubuntu-latest` are both Ubuntu 24.04
 either. `mobile_distribute.yml` calls `android_builds.yml` without `run_scene_tests`, so its
 on-demand rebuilds skip the tests.
 
+## Two modes: automated tests and QA
+
+Every scene serves both, decided by the build:
+
+| Build | Where | What the scene does |
+|---|---|---|
+| development (`npm run build`, the serve script) | the local realm CI and `--scene-test` use | runs its `test()` blocks and reports to the explorer |
+| production (`--production`, the World deploy) | the QA World | `test()` does nothing; a panel lists the scene's manual QA steps |
+
+The steps come from `showQaSteps(title, steps)` (`testing-library/src/qa/panel.tsx`) in the scene's
+`main()`. An empty list says the scene has automated checks only. In QA mode the panel takes the
+scene's UI renderer, so a scene that sets one up for QA builds its own panel instead.
+
+## QA World
+
+`.github/workflows/scene_tests_world.yml` deploys the scenes with `scripts/ci/deploy-scene-tests.mjs`:
+
+- **Push to `main`** (scene tests changed) or manual run: every scene, at its own parcels.
+- **PR with the `qa-scene` label**: only the scenes the PR changed (all of them when it changed
+  `testing-library`), moved together into the PR's 20x20 zone on the World's west half, redeployed
+  on every push. The run summary lists each scene's mobile and desktop links.
+- **PR closed**: the zone is undeployed.
+
+The World is set by the repository variable `SCENE_TESTS_WORLD` (`mobile1.dcl.eth`: its own scene
+stands on 0,0, which neither the test parcels nor the zones touch). Deploys sign with the secret
+`SCENE_TESTS_DEPLOYER_KEY`, the key of a wallet on the World's deployment list (not the owner's).
+The key lives only in that secret: deploys run in CI, never from a shell. Without the variable or
+the secret the jobs only leave a notice; fork PRs never deploy.
+
+To see which scenes a deploy would put where, with their links (no key needed):
+
+```bash
+(cd tests/scene-tests && npm ci)
+SCENE_TESTS_WORLD=mobile1.dcl.eth node scripts/ci/deploy-scene-tests.mjs deploy --dry-run
+SCENE_TESTS_WORLD=mobile1.dcl.eth node scripts/ci/deploy-scene-tests.mjs deploy --zone 3207 --dry-run
+```
+
 ## Add a scene test
 
 1. Copy the closest scene folder to a free parcel, e.g. `54,-70-my-component`, and set `scene.json`'s
@@ -79,6 +116,8 @@ on-demand rebuilds skip the tests.
    `testing-library/src/testing`. Prefer state checks (`assertEquals`, `assertComponentValue`); use
    `assertSnapshot('screenshot/$explorer_snapshot_<name>.png', cameraPosition, cameraTarget)` only
    when the change is visual.
-3. Add the scene to `scenes.json` with tier `ecs` (no screenshots) or `render`.
-4. Run it with `scripts/ci/scene-tests.sh --tier <tier> --windowed`. For a new screenshot, copy the
+3. In the scene's `main()`, call `showQaSteps('<name>', [...])` with the steps QA should follow by
+   hand in the World, or `[]` when the automated tests cover it.
+4. Add the scene to `scenes.json` with tier `ecs` (no screenshots) or `render`.
+5. Run it with `scripts/ci/scene-tests.sh --tier <tier> --windowed`. For a new screenshot, copy the
    capture from `tests/snapshots/scenes/comparison/` into `tests/snapshots/scenes/` after checking it.

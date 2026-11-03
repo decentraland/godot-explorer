@@ -1,0 +1,115 @@
+name: 🧪 Scene tests QA World
+# Deploys the scene tests to the QA World (repository variable SCENE_TESTS_WORLD): every scene on
+# pushes to main, and a PR's changed scenes into its own zone while it carries the qa-scene label;
+# the zone is cleared when the PR closes. Signs with the SCENE_TESTS_DEPLOYER_KEY secret (a wallet
+# on the World's deployment list). Without the variable or the secret the jobs only leave a notice.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tests/scene-tests/**'
+      - 'scripts/ci/deploy-scene-tests.mjs'
+  pull_request:
+    types: [labeled, synchronize, closed]
+  workflow_dispatch:
+
+concurrency:
+  group: scene-tests-world-${{ github.event.pull_request.number || 'main' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  SCENE_TESTS_WORLD: ${{ vars.SCENE_TESTS_WORLD }}
+
+jobs:
+  deploy:
+    name: Deploy to the QA World
+    if: >-
+      github.event_name != 'pull_request'
+      || (github.event.action != 'closed'
+          && contains(github.event.pull_request.labels.*.name, 'qa-scene')
+          && github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check the World and deployer key
+        id: key
+        env:
+          DCL_PRIVATE_KEY: ${{ secrets.SCENE_TESTS_DEPLOYER_KEY }}
+        run: |
+          if [ -z "$SCENE_TESTS_WORLD" ] || [ -z "$DCL_PRIVATE_KEY" ]; then
+            echo "::notice title=QA World not deployed::Set the SCENE_TESTS_WORLD variable and the SCENE_TESTS_DEPLOYER_KEY secret."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.key.outputs.ready == 'true'
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # the PR's changed scenes come from a diff against its base
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        if: steps.key.outputs.ready == 'true'
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: tests/scene-tests/package-lock.json
+      - name: Install the scene tests
+        if: steps.key.outputs.ready == 'true'
+        working-directory: tests/scene-tests
+        run: npm ci --no-audit --no-fund
+      - name: Deploy
+        if: steps.key.outputs.ready == 'true'
+        env:
+          DCL_PRIVATE_KEY: ${{ secrets.SCENE_TESTS_DEPLOYER_KEY }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ -n "$PR_NUMBER" ]; then
+            node scripts/ci/deploy-scene-tests.mjs deploy --zone "$PR_NUMBER" --base "origin/$BASE_REF"
+          else
+            node scripts/ci/deploy-scene-tests.mjs deploy
+          fi
+
+  undeploy:
+    name: Clear the PR's QA zone
+    if: >-
+      github.event_name == 'pull_request'
+      && github.event.action == 'closed'
+      && contains(github.event.pull_request.labels.*.name, 'qa-scene')
+      && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check the World and deployer key
+        id: key
+        env:
+          DCL_PRIVATE_KEY: ${{ secrets.SCENE_TESTS_DEPLOYER_KEY }}
+        run: |
+          if [ -z "$SCENE_TESTS_WORLD" ] || [ -z "$DCL_PRIVATE_KEY" ]; then
+            echo "::notice title=QA World not deployed::Set the SCENE_TESTS_WORLD variable and the SCENE_TESTS_DEPLOYER_KEY secret."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.key.outputs.ready == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.key.outputs.ready == 'true'
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: tests/scene-tests/package-lock.json
+      - name: Install the scene tests
+        if: steps.key.outputs.ready == 'true'
+        working-directory: tests/scene-tests
+        run: npm ci --no-audit --no-fund
+      - name: Undeploy
+        if: steps.key.outputs.ready == 'true'
+        env:
+          DCL_PRIVATE_KEY: ${{ secrets.SCENE_TESTS_DEPLOYER_KEY }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node scripts/ci/deploy-scene-tests.mjs undeploy --zone "$PR_NUMBER"
