@@ -93,6 +93,11 @@ func _ready():
 	places_favorites.generator.report_loading_status.connect(
 		_on_report_loading_status.bind(places_favorites)
 	)
+	# Not in _get_active_carousels(), so it doesn't change the messages; its report only re-sends
+	# the DISCOVER snapshot once My Places has loaded.
+	places_my_places.generator.report_loading_status.connect(
+		_on_report_loading_status.bind(places_my_places)
+	)
 
 
 ## Consumes StreakManager's queued modal (set in-world by credit_jump_in(), issue #3018) and
@@ -179,19 +184,26 @@ func on_friend_pressed(data, card: PlaceItem = null):
 	friend_jump_in.open_panel()
 
 
-# Keys and 0-based slots match the DISCOVER event's `carousels`; read back by the PLACE_DETAILS
-# and PLACE_DETAIL_CLICK tracking.
-func _set_card_origin(data: Dictionary, card: PlaceItem) -> void:
-	var container := card.get_parent()
+# Carousel node -> key, shared by the DISCOVER event's `carousels` and the `carousel` that
+# PLACE_DETAILS / PLACE_DETAIL_CLICK log, so the two always join. `featured` is a SnapCarousel
+# and is handled on its own.
+func _carousel_keys() -> Dictionary:
 	# search_param, not search_text: search_text follows keystrokes before a search is submitted.
 	var searching: bool = not places_most_active.generator.search_param.is_empty()
-	var carousel_keys := {
+	return {
+		friends_online: "friends",
 		last_visited: "last_visited",
 		places_most_active: "search" if searching else "most_active",
+		events: "events",
 		places_favorites: "favorites",
 		places_my_places: "my_places",
-		friends_online: "friends",
 	}
+
+
+# 0-based slots count PlaceItem siblings, the same way _collect_carousel_data() does.
+func _set_card_origin(data: Dictionary, card: PlaceItem) -> void:
+	var container := card.get_parent()
+	var carousel_keys := _carousel_keys()
 	# Both keys or neither: a slot without its carousel would read as a real position.
 	for carousel in carousel_keys:
 		if carousel.item_container == container:
@@ -674,13 +686,9 @@ func _update_global_messages() -> void:
 
 func _collect_carousel_data() -> Dictionary:
 	var result := {}
-	var carousel_map := {
-		"most_active": places_most_active,
-		"events": events,
-		"last_visited": last_visited,
-	}
-	for key in carousel_map:
-		var carousel = carousel_map[key]
+	var carousel_keys := _carousel_keys()
+	for carousel in carousel_keys:
+		var key: String = carousel_keys[carousel]
 		if not carousel.visible:
 			continue
 		var items := []
