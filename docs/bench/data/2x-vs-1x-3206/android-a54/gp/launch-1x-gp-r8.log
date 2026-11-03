@@ -1,0 +1,25 @@
+11-03 11:23:31.288 I/godot   (15037): [MemMonitor] total_ram=7436MB app_budget=4089MB WARNING<=500MB CRITICAL<=300MB swap_total=8191MB
+11-03 11:23:31.288 I/godot   (15037): [MemMonitor] background memory monitor started
+11-03 11:23:31.288 I/godot   (15037): [MemMonitor] available=3460MB footprint=617MB swap=12MB level=0
+11-03 11:23:31.514 I/godot   (15037): [Startup] global._ready start: 220ms
+11-03 11:23:31.520 I/godot   (15037): [Startup] global._async_clear_cache start: 227ms
+11-03 11:23:31.521 I/godot   (15037): [Startup] global._async_clear_cache end: 227ms
+11-03 11:23:31.542 I/godot   (15037): [Startup] global._ready end: 248ms
+11-03 11:23:31.545 I/godot   (15037): [Startup] main._ready: 78ms
+11-03 11:23:32.160 I/godot   (15037): [Startup] main.start: 693ms
+11-03 11:23:32.165 I/godot   (15037): [Startup] main._start: 698ms
+11-03 11:23:32.842 I/godot   (15037): [Startup] lobby._ready start: 1548ms
+11-03 11:23:32.843 I/godot   (15037): [Startup] lobby.show_dcl_splash_screen: 1549ms
+11-03 11:23:33.292 I/godot   (15037): [MemMonitor] available=3048MB footprint=1030MB swap=11MB level=0
+11-03 11:23:35.296 I/godot   (15037): [MemMonitor] available=2693MB footprint=1385MB swap=11MB level=0
+11-03 11:23:37.301 I/godot   (15037): [MemMonitor] available=2485MB footprint=1593MB swap=11MB level=0
+11-03 11:23:39.315 I/godot   (15037): [MemMonitor] available=2290MB footprint=1788MB swap=11MB level=0
+11-03 11:23:41.319 I/godot   (15037): [MemMonitor] available=2216MB footprint=1862MB swap=11MB level=0
+11-03 11:23:43.327 I/godot   (15037): [MemMonitor] available=2157MB footprint=1921MB swap=11MB level=0
+11-03 11:23:45.335 I/godot   (15037): [MemMonitor] available=2177MB footprint=1901MB swap=11MB level=0
+11-03 11:23:46.486 I/godot   (15037): [RenderReady] {"anti_aliasing":0,"async_shaders":true,"bloom_quality":0,"frames":62,"from_profile":0,"in_view":52,"launch_count":2,"max_frame_ms":181,"menu_ms":0,"not_drawn":0,"pipelines_draw":0,"pipelines_mesh":15,"pipelines_specialization":108,"pipelines_surface":17,"position":"0,-2","profile":0,"ready_at_start_pct":58,"reason":"loading","samples":64,"scene_id":"bafkreig5z6onyvwk4hrklg7einxgspq3nqr54a5zpbnfp53vpkigyatu2a","shadow_quality":0,"t100_ms":4173,"t50_ms":149,"t90_ms":3455}
+11-03 11:23:47.341 I/godot   (15037): [MemMonitor] available=2081MB footprint=1997MB swap=11MB level=0
+11-03 11:23:49.345 I/godot   (15037): [MemMonitor] available=2114MB footprint=1964MB swap=11MB level=0
+11-03 11:23:51.350 I/godot   (15037): [MemMonitor] available=2086MB footprint=1992MB swap=11MB level=0
+11-03 11:23:53.354 I/godot   (15037): [MemMonitor] available=2040MB footprint=2038MB swap=11MB level=0
+11-03 11:23:55.359 I/godot   (15037): [MemMonitor] available=2028MB footprint=2050MB swap=11MB level=0

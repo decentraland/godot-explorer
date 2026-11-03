@@ -1,0 +1,7 @@
+{
+  "build": "1x",
+  "label": "1x-gp-smoke-r2",
+  "am_total_time_ms": 330,
+  "cold_launch_to_render_ready_ms": 27562,
+  "settle_seconds": 25
+}
