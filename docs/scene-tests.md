@@ -23,8 +23,8 @@ and moved from an unreleased SDK branch build to the released `@dcl/sdk` 7.31.0.
 
 | Tier | Scenes | Needs |
 |---|---|---|
-| `ecs` | raycast, transform, billboard, camera-mode, engine-info | nothing: state checks only, runs headless |
-| `render` | gltf-container, visibility, mesh-renderer, avatar-attach, material, text-shape, ui-background, ui-text | a renderer: they compare screenshots with `tests/snapshots/scenes/` |
+| `ecs` | raycast, transform, billboard, camera-mode, engine-info, gltf-container, visibility, mesh-renderer, avatar-attach, locomotion, touch-controls, app-commands, text-shape, ui-background, ui-text | nothing: state checks only, runs headless |
+| `render` | material | a renderer: they compare screenshots with `tests/snapshots/scenes/` |
 | `disabled` | video-player, avatar-shape, ui-button, ui-dropdown, nft-shape | never run; `scenes.json` says why |
 
 Scene tests run as a phone: `--scene-test` turns on mobile mode, so the touch controls and the
@@ -68,6 +68,19 @@ pixel coordinates (`52,-72-touch-controls` is the example):
 - `shell(control)` hands a shell command (`{ type: 'set_color', target: 'eyes', color: '#ff0000' }`)
   to the core as the React Native app does. In scene-test mode the engine is not attached to the
   core yet, so these reach the core but not the engine.
+
+What the engine made of an entity, without a screenshot:
+
+| Helper | Returns |
+|---|---|
+| `renderedNode(entity)` | whether the node exists and is visible, its position in scene coordinates (wherever an `AvatarAttach` or a parent put it), the bounds of everything it draws, glTF meshes included |
+| `renderedMesh(entity)` | the `MeshRenderer` mesh class and visibility |
+| `renderedModel(entity)` | the `GltfContainer` source, loading state and visibility |
+| `renderedText(entity)` | the `TextShape` label: text, size, colours, outline, alignment, font |
+| `renderedUi(entity)` | a UI entity's rect in pixels, its background (colour, texture, nine-slice margins, stretch mode, UVs) and text |
+
+`settled(context, read, done)` re-reads one of them each tick until it holds, since the engine
+applies a component a few ticks after the scene sets it.
 
 A run also fails on any Rust panic before the summary line, and screenshots keep the scene's UI
 (only the explorer's own HUD is hidden). `52,-74-app-commands` is the example.
@@ -166,9 +179,16 @@ SCENE_TESTS_WORLD=mobile1.dcl.eth node scripts/ci/deploy-scene-tests.mjs deploy 
    `parcels`/`base`, the folder's `package.json` `name`, and add the folder to the root
    `package.json` `workspaces` and `dcl-workspace.json`.
 2. Write the tests in `src/tests/<component>/index.test.ts` with `test()` from
-   `testing-library/src/testing`. Prefer state checks (`assertEquals`, `assertComponentValue`); use
-   `assertSnapshot('screenshot/$explorer_snapshot_<name>.png', cameraPosition, cameraTarget)` only
-   when the change is visual.
+   `testing-library/src/testing`. Check, in this order, the first that can see what is tested:
+   1. SDK state the explorer writes back: `GltfContainerLoadingState`, `RaycastResult`,
+      `TweenState`, `PointerEventsResult`, the player's and camera's `Transform`.
+   2. An engine query through the helpers above (`renderedText`, `renderedUi`, ...).
+   3. A screenshot, only when the look itself is tested: materials, lighting, shaders, glyphs,
+      texture sampling. `assertSnapshot('screenshot/$explorer_snapshot_<name>.png', cameraPosition,
+      cameraTarget)`, in a `render` scene.
+
+   A glTF that fails to load is checked by its loading state, not by a picture. A known bug gets a
+   `skipTest` that expects the correct result, with a comment naming the issue.
 3. In the scene's `main()`, call `showQaSteps('<name>', [...])` with the steps QA should follow by
    hand in the World, or `[]` when the automated tests cover it.
 4. Add the scene to `scenes.json` with tier `ecs` (no screenshots) or `render`.

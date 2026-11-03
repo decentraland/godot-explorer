@@ -1,102 +1,49 @@
-import { MeshRenderer, Transform } from '@dcl/sdk/ecs'
+import { Entity, MeshRenderer, PBMeshRenderer, Transform } from '@dcl/sdk/ecs'
 import { Vector3 } from '@dcl/sdk/math'
 import { customAddEntity } from 'testing-library/src/utils/entity'
-import { assertSnapshot } from 'testing-library/src/utils/snapshot-test'
+import { renderedMesh, renderedNode, settled } from 'testing-library/src/utils/engine'
 import { test } from 'testing-library/src/testing'
+import { assertEquals } from 'testing-library/src/testing/assert'
+import { TestFunctionContext } from 'testing-library/src/testing/types'
 
-test('mesh-renderer clean previous tests', async function (context) {
+// Sizes are in the entity's own space, before its Transform scale.
+async function expectMesh(
+  context: TestFunctionContext,
+  mesh: PBMeshRenderer['mesh'],
+  kind: string,
+  size: [number, number, number]
+): Promise<Entity> {
   customAddEntity.clean()
-  await context.helpers.waitNTicks(100)
+  const entity = customAddEntity.addEntity()
+  Transform.create(entity, { position: Vector3.create(8, 2, 8), scale: Vector3.create(2, 2, 2) })
+  MeshRenderer.create(entity, { mesh })
+  const rendered = await settled(context, () => renderedMesh(entity), (m) => m?.kind === kind)
+  assertEquals(rendered, { kind, visible: true }, `${mesh?.$case} mesh`)
+  assertEquals((await renderedNode(entity)).bounds?.size, size, `${mesh?.$case} size`)
+  return entity
+}
+
+test('mesh-renderer: box', async function (context) {
+  await expectMesh(context, { $case: 'box', box: { uvs: [] } }, 'ArrayMesh', [1, 1, 1])
 })
 
-test('mesh-renderer: box - if exist a reference snapshot should match with it', async function (context) {
-  const cube = customAddEntity.addEntity()
-  Transform.create(cube, {
-    position: Vector3.create(8, 2, 8),
-    scale: Vector3.create(2, 2, 2)
-  })
-  MeshRenderer.create(cube, {
-    mesh: {
-      $case: 'box',
-      box: { uvs: [] }
-    }
-  })
-
-  await context.helpers.waitNTicks(1)
-
-  await assertSnapshot(
-    'screenshot/$explorer_snapshot_mesh_renderer_box.png',
-    Vector3.create(6, 3.5, 6),
-    Vector3.create(8, 1.75, 8)
-  )
+test('mesh-renderer: sphere', async function (context) {
+  await expectMesh(context, { $case: 'sphere', sphere: {} }, 'SphereMesh', [1, 1, 1])
 })
 
-test('mesh-renderer: sphere - if exist a reference snapshot should match with it', async function (context) {
-  customAddEntity.clean()
-  const sphere = customAddEntity.addEntity()
-  Transform.create(sphere, {
-    position: Vector3.create(8, 2, 8),
-    scale: Vector3.create(2, 2, 2)
-  })
-  MeshRenderer.create(sphere, {
-    mesh: {
-      $case: 'sphere',
-      sphere: { uvs: [] }
-    }
-  })
-
-  await context.helpers.waitNTicks(1)
-
-  await assertSnapshot(
-    'screenshot/$explorer_snapshot_mesh_renderer_sphere.png',
-    Vector3.create(7, 3.5, 7),
-    Vector3.create(8, 1.75, 8)
-  )
+test('mesh-renderer: cylinder with a narrower top', async function (context) {
+  await expectMesh(context, { $case: 'cylinder', cylinder: { radiusBottom: 1, radiusTop: 0.5 } }, 'ArrayMesh', [2, 1, 2])
 })
 
-test('mesh-renderer: cylinder - if exist a reference snapshot should match with it', async function (context) {
-  customAddEntity.clean()
-  const cylinder = customAddEntity.addEntity()
-  Transform.create(cylinder, {
-    position: Vector3.create(8, 2, 8),
-    scale: Vector3.create(2, 2, 2)
-  })
-  MeshRenderer.create(cylinder, {
-    mesh: {
-      $case: 'cylinder',
-      cylinder: { radiusBottom: 1, radiusTop: 0.5 }
-    }
-  })
-
-  await context.helpers.waitNTicks(1)
-
-  await assertSnapshot(
-    'screenshot/$explorer_snapshot_mesh_renderer_cylinder.png',
-    Vector3.create(5, 3.5, 5),
-    Vector3.create(8, 2, 8)
-  )
+test('mesh-renderer: plane', async function (context) {
+  await expectMesh(context, { $case: 'plane', plane: { uvs: [] } }, 'ArrayMesh', [1, 1, 0])
 })
 
-test('mesh-renderer: plane - if exist a reference snapshot should match with it', async function (context) {
-  customAddEntity.clean()
-  const plane = customAddEntity.addEntity()
-  Transform.create(plane, {
-    position: Vector3.create(8, 2, 8),
-    scale: Vector3.create(2, 2, 2)
-  })
-  MeshRenderer.create(plane, {
-    mesh: {
-      $case: 'plane',
-      plane: { uvs: [] }
-    }
-  })
-
-  await context.helpers.waitNTicks(2)
-
-  await assertSnapshot(
-    'screenshot/$explorer_snapshot_mesh_renderer_plane.png',
-    Vector3.create(6.5, 3.5, 5.5),
-    Vector3.create(8, 2, 8)
-  )
+test('mesh-renderer: changing the shape replaces the mesh, removing it clears it', async function (context) {
+  const entity = await expectMesh(context, { $case: 'box', box: { uvs: [] } }, 'ArrayMesh', [1, 1, 1])
+  MeshRenderer.setSphere(entity)
+  assertEquals((await settled(context, () => renderedMesh(entity), (m) => m?.kind === 'SphereMesh'))?.kind, 'SphereMesh')
+  MeshRenderer.deleteFrom(entity)
+  assertEquals(await settled(context, () => renderedMesh(entity), (m) => m === null), null, 'mesh after removal')
   customAddEntity.clean()
 })

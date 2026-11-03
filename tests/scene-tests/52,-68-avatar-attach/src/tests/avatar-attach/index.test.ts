@@ -1,134 +1,57 @@
-import {
-  AvatarAnchorPointType,
-  AvatarAttach,
-  EngineInfo,
-  MeshRenderer,
-  engine
-} from '@dcl/sdk/ecs'
+import { AvatarAnchorPointType, AvatarAttach, Entity, MeshRenderer, Transform, engine } from '@dcl/sdk/ecs'
 import { Vector3 } from '@dcl/sdk/math'
 import { customAddEntity } from 'testing-library/src/utils/entity'
-import { assertSnapshot } from 'testing-library/src/utils/snapshot-test'
+import { renderedNode } from 'testing-library/src/utils/engine'
 import { test } from 'testing-library/src/testing'
+import { assert } from 'testing-library/src/testing/assert'
+import { TestFunctionContext } from 'testing-library/src/testing/types'
 import { assertMovePlayerTo } from 'testing-library/src/utils/helpers'
 
-// TODO: Ensure the main player avattar isn't hidden
+function attach(anchorPointId: AvatarAnchorPointType): Entity {
+  const entity = customAddEntity.addEntity()
+  AvatarAttach.create(entity, { anchorPointId })
+  MeshRenderer.setSphere(entity)
+  return entity
+}
 
-test('avatar-attach: attach an entity on left hand', async function (context) {
-  await context.helpers.waitTicksUntil(() => {
-    const tickNumber = EngineInfo.getOrNull(engine.RootEntity)?.tickNumber ?? 0
-    if (tickNumber > 100) {
-      return true
-    } else {
-      return false
-    }
-  })
+// Where the attached node is, relative to the player's position (their feet).
+async function offsetFromPlayer(context: TestFunctionContext, entity: Entity): Promise<Vector3> {
+  await context.helpers.waitNTicks(10)
+  const position = (await renderedNode(entity)).position
+  assert(position !== null, 'the attached entity has no node')
+  return Vector3.subtract(position!, Transform.get(engine.PlayerEntity).position)
+}
+
+function describe(offset: Vector3): string {
+  return `(${offset.x.toFixed(2)}, ${offset.y.toFixed(2)}, ${offset.z.toFixed(2)})`
+}
+
+// Facing +z, the avatar's left is -x. Ranges, not exact values: the idle animation moves the hands.
+const ANCHORS: Array<[string, AvatarAnchorPointType, (offset: Vector3) => boolean]> = [
+  ['position', AvatarAnchorPointType.AAPT_POSITION, (o) => Vector3.length(o) < 0.05],
+  ['name tag', AvatarAnchorPointType.AAPT_NAME_TAG, (o) => o.y > 2 && o.y < 3 && Math.hypot(o.x, o.z) < 0.3],
+  ['left hand', AvatarAnchorPointType.AAPT_LEFT_HAND, (o) => o.x < -0.15 && o.x > -0.6 && o.y > 0.6 && o.y < 1.3],
+  ['right hand', AvatarAnchorPointType.AAPT_RIGHT_HAND, (o) => o.x > 0.15 && o.x < 0.6 && o.y > 0.6 && o.y < 1.3]
+]
+
+async function expectAnchors(context: TestFunctionContext, entities: Entity[]): Promise<void> {
+  for (const [index, [name, , near]] of ANCHORS.entries()) {
+    const offset = await offsetFromPlayer(context, entities[index])
+    assert(near(offset), `${name}: ${describe(offset)} from the player`)
+  }
+}
+
+test('avatar-attach: each anchor puts the entity on the avatar', async function (context) {
   customAddEntity.clean()
-  const attachedEntity = customAddEntity.addEntity()
-  AvatarAttach.create(attachedEntity, {
-    anchorPointId: AvatarAnchorPointType.AAPT_LEFT_HAND
-  })
-  MeshRenderer.create(attachedEntity, {
-    mesh: {
-      $case: 'sphere',
-      sphere: { uvs: [] }
-    }
-  })
-
-  await assertMovePlayerTo(
-    context,
-    Vector3.create(8, 0, 8),
-    Vector3.create(8, 1, 16)
-  )
-
+  await assertMovePlayerTo(context, Vector3.create(8, 0, 8), Vector3.create(8, 1, 16))
   await context.helpers.waitNTicks(50)
-
-  await assertSnapshot(
-    'screenshot/$explorer_snapshot_avatar_attach_1.png',
-    Vector3.create(8, 1, 11),
-    Vector3.create(8, 1, 8)
-  )
+  await expectAnchors(context, ANCHORS.map(([, anchor]) => attach(anchor)))
 })
 
-test('avatar-attach: attach an entity on right hand', async function (context) {
-  customAddEntity.clean()
-  const attachedEntity = customAddEntity.addEntity()
-  AvatarAttach.create(attachedEntity, {
-    anchorPointId: AvatarAnchorPointType.AAPT_RIGHT_HAND
-  })
-  MeshRenderer.create(attachedEntity, {
-    mesh: {
-      $case: 'sphere',
-      sphere: { uvs: [] }
-    }
-  })
-
-  await assertMovePlayerTo(
-    context,
-    Vector3.create(8, 0, 8),
-    Vector3.create(8, 1, 16)
-  )
-
+test('avatar-attach: attached entities follow the player', async function (context) {
+  const entities = ANCHORS.map(([, anchor]) => attach(anchor))
+  await assertMovePlayerTo(context, Vector3.create(4, 0, 4), Vector3.create(4, 1, 12))
   await context.helpers.waitNTicks(50)
-
-  await assertSnapshot(
-    'screenshot/$explorer_snapshot_avatar_attach_2.png',
-    Vector3.create(8, 1, 11),
-    Vector3.create(8, 1, 8)
-  )
-})
-
-test('avatar-attach: attach an entity on tag name', async function (context) {
+  await expectAnchors(context, entities)
   customAddEntity.clean()
-  const attachedEntity = customAddEntity.addEntity()
-  AvatarAttach.create(attachedEntity, {
-    anchorPointId: AvatarAnchorPointType.AAPT_NAME_TAG
-  })
-  MeshRenderer.create(attachedEntity, {
-    mesh: {
-      $case: 'sphere',
-      sphere: { uvs: [] }
-    }
-  })
-
-  await assertMovePlayerTo(
-    context,
-    Vector3.create(8, 0, 8),
-    Vector3.create(8, 1, 16)
-  )
-
-  await context.helpers.waitNTicks(50)
-
-  await assertSnapshot(
-    'screenshot/$explorer_snapshot_avatar_attach_3.png',
-    Vector3.create(8, 1, 11),
-    Vector3.create(8, 1, 8)
-  )
-})
-
-test('avatar-attach: attach an entity on position', async function (context) {
-  customAddEntity.clean()
-  const attachedEntity = customAddEntity.addEntity()
-  AvatarAttach.create(attachedEntity, {
-    anchorPointId: AvatarAnchorPointType.AAPT_POSITION
-  })
-  MeshRenderer.create(attachedEntity, {
-    mesh: {
-      $case: 'sphere',
-      sphere: { uvs: [] }
-    }
-  })
-
-  await assertMovePlayerTo(
-    context,
-    Vector3.create(8, 0, 8),
-    Vector3.create(8, 1, 16)
-  )
-
-  await context.helpers.waitNTicks(50)
-
-  await assertSnapshot(
-    'screenshot/$explorer_snapshot_avatar_attach_4.png',
-    Vector3.create(8, 1, 11),
-    Vector3.create(8, 1, 8)
-  )
 })

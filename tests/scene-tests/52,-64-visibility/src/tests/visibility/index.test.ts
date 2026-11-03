@@ -1,65 +1,47 @@
-import {
-  EngineInfo,
-  MeshRenderer,
-  Transform,
-  VisibilityComponent,
-  engine
-} from '@dcl/sdk/ecs'
+import { Entity, MeshRenderer, Transform, VisibilityComponent } from '@dcl/sdk/ecs'
 import { Vector3 } from '@dcl/sdk/math'
 import { customAddEntity } from 'testing-library/src/utils/entity'
-import { assertSnapshot } from 'testing-library/src/utils/snapshot-test'
+import { renderedMesh, settled } from 'testing-library/src/utils/engine'
 import { test } from 'testing-library/src/testing'
+import { assertEquals } from 'testing-library/src/testing/assert'
+import { TestFunctionContext } from 'testing-library/src/testing/types'
 
-test('visibility: true - if exist a reference snapshot should match with it', async function (context) {
-  await context.helpers.waitTicksUntil(() => {
-    const tickNumber = EngineInfo.getOrNull(engine.RootEntity)?.tickNumber ?? 0
-    if (tickNumber > 100) {
-      return true
-    } else {
-      return false
-    }
-  }, 10000)
+function cube(visible: boolean | undefined): Entity {
+  const entity = customAddEntity.addEntity()
+  Transform.create(entity, { position: Vector3.create(8, 1, 8) })
+  MeshRenderer.setBox(entity)
+  if (visible !== undefined) VisibilityComponent.create(entity, { visible })
+  return entity
+}
 
+async function meshVisible(context: TestFunctionContext, entity: Entity, expected: boolean) {
+  const mesh = await settled(context, () => renderedMesh(entity), (m) => m?.visible === expected)
+  assertEquals(mesh?.visible, expected, 'mesh visible')
+}
+
+test('visibility: visible true draws the mesh', async function (context) {
   customAddEntity.clean()
-  const cube = customAddEntity.addEntity()
-  Transform.create(cube, {
-    position: Vector3.create(8, 1, 8)
-  })
-  MeshRenderer.create(cube, {
-    mesh: {
-      $case: 'box',
-      box: { uvs: [] }
-    }
-  })
-  VisibilityComponent.create(cube, { visible: true })
-
-  await context.helpers.waitNTicks(1)
-
-  await assertSnapshot(
-    'screenshot/$explorer_snapshot_visibility_true.png',
-    Vector3.create(6, 2, 6),
-    Vector3.create(8, 1, 8)
-  )
+  await meshVisible(context, cube(true), true)
 })
 
-test('visibility: false - if exist a reference snapshot should match with it', async function (context) {
+test('visibility: visible false hides the mesh', async function (context) {
   customAddEntity.clean()
-  const cube = customAddEntity.addEntity()
-  Transform.create(cube, {
-    position: Vector3.create(8, 1, 8)
-  })
-  MeshRenderer.create(cube, {
-    mesh: {
-      $case: 'box',
-      box: { uvs: [] }
-    }
-  })
-  VisibilityComponent.create(cube, { visible: false })
-  await context.helpers.waitNTicks(1)
+  await meshVisible(context, cube(false), false)
+})
 
-  await assertSnapshot(
-    'screenshot/$explorer_snapshot_visibility_false.png',
-    Vector3.create(6, 2, 6),
-    Vector3.create(8, 1, 8)
-  )
+test('visibility: no component draws the mesh', async function (context) {
+  customAddEntity.clean()
+  await meshVisible(context, cube(undefined), true)
+})
+
+test('visibility: toggling it hides and shows the mesh again', async function (context) {
+  customAddEntity.clean()
+  const entity = cube(true)
+  await meshVisible(context, entity, true)
+  VisibilityComponent.getMutable(entity).visible = false
+  await meshVisible(context, entity, false)
+  VisibilityComponent.getMutable(entity).visible = true
+  await meshVisible(context, entity, true)
+  VisibilityComponent.deleteFrom(entity)
+  await meshVisible(context, entity, true)
 })
