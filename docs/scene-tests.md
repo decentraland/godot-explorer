@@ -84,7 +84,15 @@ and a built client library (`cargo run -- build`).
 scripts/ci/scene-tests.sh                 # ecs tier, headless: exits 0 when every scene passed
 scripts/ci/scene-tests.sh --tier all      # every enabled scene
 scripts/ci/scene-tests.sh --windowed      # watch it run
+scripts/ci/scene-tests.sh --scene locomotion,touch-controls   # only these (names in scenes.json)
+scripts/ci/scene-tests.sh --scene locomotion --watch          # rerun on every save or library build
 ```
+
+To reproduce a bug and iterate on its fix: write the failing case, then keep
+`scripts/ci/scene-tests.sh --scene <name> --watch` running. Saving a test scene rebuilds only that
+scene (about 3 s) and reruns it; `cargo run -- build` after an engine change reruns it too. One
+scene's run takes about 5 s, Godot's start included. Add `--windowed` to watch it, or
+`-- --rust-log='dclgodot::player=debug,warn'` for one module's logs.
 
 Or keep the realm up and use xtask, which builds the client first:
 

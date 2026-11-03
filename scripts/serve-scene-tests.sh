@@ -26,28 +26,100 @@ if ! command -v npm >/dev/null 2>&1 && [ -s "${NVM_DIR:-$HOME/.nvm}/nvm.sh" ]; t
   . "${NVM_DIR:-$HOME/.nvm}/nvm.sh" >/dev/null
 fi
 
-# The export embeds the base URL, so the port is part of what the build depends on.
-source_hash() {
-  {
-    echo "port=$PORT"
-    find . -type f \
-      -not -path '*/node_modules/*' -not -path './static/*' -not -path '*/bin/*' -not -name '.DS_Store' -not -name main.crdt \
-      -print0 | LC_ALL=C sort -z | xargs -0 shasum
-  } | shasum | cut -d' ' -f1
+hash_of() {
+  find "$@" -type f \
+    -not -path '*/node_modules/*' -not -path '*/bin/*' -not -name '.DS_Store' -not -name main.crdt \
+    -print0 2>/dev/null | LC_ALL=C sort -z | xargs -0 shasum | shasum | cut -d' ' -f1
 }
 
-HASH="$(source_hash)"
-if [ -f static/.source-hash ] && [ "$(cat static/.source-hash)" = "$HASH" ]; then
-  echo "Scene tests unchanged, reusing static/"
-else
-  if [ ! -d node_modules ] || [ package-lock.json -nt node_modules ]; then
-    npm ci --no-audit --no-fund
+# Each scene is built and exported on its own, and only when its folder changed; a change to what
+# they all share (or to the port, which the export embeds) redoes every one. The realm in static/
+# is then assembled from the per-scene exports. The hashes and exports live outside static/.
+HASHES=.build-hashes
+EXPORTS=.exports
+mkdir -p "$HASHES" "$EXPORTS"
+SHARED="$(hash_of testing-library package.json package-lock.json)-port-$PORT"
+if [ "$(cat "$HASHES/shared" 2>/dev/null)" != "$SHARED" ]; then
+  rm -rf "${HASHES:?}"/scene-* "${EXPORTS:?}"/*
+fi
+
+if [ ! -d node_modules ] || [ package-lock.json -nt node_modules ]; then
+  npm ci --no-audit --no-fund
+fi
+
+build_scene() {
+  local scene="$1" hash="$2"
+  (cd "$scene" && npx sdk-commands build --skip-install >/dev/null) || { echo "Building $scene failed" >&2; return 1; }
+  rm -rf "${EXPORTS:?}/$scene"
+  npx sdk-commands export-static --dir "$scene" --destination "$EXPORTS/$scene" \
+    --realmName scene-explorer-tests --baseUrl "http://localhost:$PORT/" >/dev/null || return 1
+  echo "$hash" > "$HASHES/scene-$scene"
+  echo "Built $scene"
+}
+
+PENDING=()
+for scene in */; do
+  scene="${scene%/}"
+  # scene folders are named x,y-name
+  [[ "$scene" =~ ^-?[0-9]+,-?[0-9]+- ]] && [ -f "$scene/scene.json" ] || continue
+  HASH="$(hash_of "$scene")"
+  if [ "$(cat "$HASHES/scene-$scene" 2>/dev/null)" != "$HASH" ] || [ ! -d "$EXPORTS/$scene" ]; then
+    PENDING+=("$scene" "$HASH")
   fi
-  npm run build
-  rm -rf static
-  npx sdk-commands export-static --destination static/ --realmName scene-explorer-tests \
-    --baseUrl "http://localhost:$PORT/"
-  echo "$HASH" > static/.source-hash
+done
+CHANGED=0
+JOBS="$(sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 4)"
+# In batches of one per core (bash 3.2 on macOS has no `wait -n`).
+FAILED=0
+PIDS=()
+for ((i = 0; i < ${#PENDING[@]}; i += 2)); do
+  build_scene "${PENDING[i]}" "${PENDING[i + 1]}" &
+  PIDS+=($!)
+  CHANGED=1
+  if [ "${#PIDS[@]}" -ge "$JOBS" ] || [ $((i + 2)) -ge "${#PENDING[@]}" ]; then
+    for pid in "${PIDS[@]}"; do wait "$pid" || FAILED=1; done
+    PIDS=()
+  fi
+done
+[ "$FAILED" = 0 ] || { echo "Some scene tests did not build" >&2; exit 1; }
+echo "$SHARED" > "$HASHES/shared"
+
+# Scenes removed from the suite leave the realm too.
+for exported in "$EXPORTS"/*/; do
+  [ -d "$exported" ] || continue
+  exported="$(basename "$exported")"
+  if [ ! -d "$exported" ]; then
+    rm -rf "${EXPORTS:?}/$exported" "$HASHES/scene-$exported"
+    CHANGED=1
+  fi
+done
+
+if [ "$CHANGED" = 1 ] || [ ! -f static/scene-explorer-tests/about ]; then
+  python3 -I - "$EXPORTS" static <<'EOF'
+import json, os, shutil, sys
+exports, static = sys.argv[1], sys.argv[2]
+shutil.rmtree(static, ignore_errors=True)
+about, urns = None, []
+for scene in sorted(os.listdir(exports)):
+    root = os.path.join(exports, scene)
+    for folder, _, files in os.walk(root):
+        relative = os.path.relpath(folder, root)
+        os.makedirs(os.path.join(static, relative), exist_ok=True)
+        for name in files:
+            if relative == "scene-explorer-tests" and name == "about":
+                scene_about = json.load(open(os.path.join(folder, name)))
+                about = about or scene_about
+                urns += scene_about["configurations"]["scenesUrn"]
+                continue
+            target = os.path.join(static, relative, name)
+            if not os.path.exists(target):
+                os.link(os.path.join(folder, name), target)
+about["configurations"]["scenesUrn"] = urns
+json.dump(about, open(os.path.join(static, "scene-explorer-tests", "about"), "w"))
+print(f"Assembled the realm in {static}/ ({len(urns)} scenes)")
+EOF
+else
+  echo "Scene tests unchanged, reusing static/"
 fi
 
 if [ "$SERVE" = 1 ]; then

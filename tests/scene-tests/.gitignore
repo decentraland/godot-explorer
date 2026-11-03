@@ -13,3 +13,6 @@ yarn.lock
 static
 main.crdt
 scene-tests.log
+
+.build-hashes
+.exports
