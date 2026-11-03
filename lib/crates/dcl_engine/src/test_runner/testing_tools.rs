@@ -4,7 +4,8 @@
 
 use godot::classes::node::ProcessMode;
 use godot::classes::{
-    Camera3D, DirAccess, FileAccess, Image, Input, Node, Node3D, RenderingServer,
+    Camera3D, Control, DirAccess, FileAccess, Image, Input, InputEventScreenDrag,
+    InputEventScreenTouch, Node, Node3D, RenderingServer,
 };
 use godot::prelude::*;
 
@@ -265,6 +266,124 @@ pub fn simulate_input(action: &str, pressed: bool, strength: f32, frames: u32) {
             }
             Input::singleton().action_release(&action);
         });
+    }
+}
+
+/// First touch index of a simulated gesture, clear of the ones a real screen hands out first.
+const GESTURE_TOUCH: i32 = 20;
+/// Where a simulated look or pinch happens, as a fraction of the screen: the open camera area
+/// right of the joystick's zone and above the action buttons.
+const LOOK_POINT: (f32, f32) = (0.62, 0.35);
+const PINCH_POINTS: [(f32, f32); 2] = [(0.56, 0.35), (0.72, 0.35)];
+
+/// A named touch gesture for a scene test, played through the real mobile controls as touch
+/// events: `joystick` pushes the stick toward `x,y` by `strength` and holds it `frames` frames;
+/// `look` drags one finger by `x,y` pixels over `frames`; `pinch` spreads two fingers by `x`
+/// pixels (negative closes them) over `frames`.
+pub fn simulate_gesture(kind: &str, x: f32, y: f32, strength: f32, frames: u32) {
+    let Some(ui) = globals::explorer()
+        .and_then(|explorer| explorer.upcast::<Node>().get_node_or_null("UI"))
+        .and_then(|node| node.try_cast::<Control>().ok())
+    else {
+        tracing::warn!("simulateGesture: the explorer UI is not loaded");
+        return;
+    };
+    let size = ui.get_viewport_rect().size;
+    let at = |(fx, fy): (f32, f32)| Vector2::new(size.x * fx, size.y * fy);
+    let frames = frames.max(1);
+    let gesture = match kind {
+        "joystick" => {
+            let Some(joystick) = ui.get_node_or_null("VirtualJoystick_Left") else {
+                tracing::warn!("simulateGesture: no joystick in the explorer UI");
+                return;
+            };
+            let Some(area) = joystick
+                .get_node_or_null("ActiveArea")
+                .and_then(|node| node.try_cast::<Control>().ok())
+            else {
+                return;
+            };
+            let reach = joystick
+                .get("clampzone_size")
+                .try_to::<f32>()
+                .unwrap_or(75.0);
+            let start = area.get_global_rect().center();
+            let push = Vector2::new(x, y).normalized_or_zero() * strength.clamp(0.0, 1.0) * reach;
+            Gesture {
+                fingers: vec![(start, start + push)],
+                move_frames: 1,
+                hold_frames: frames,
+            }
+        }
+        "look" => {
+            let start = at(LOOK_POINT);
+            Gesture {
+                fingers: vec![(start, start + Vector2::new(x, y))],
+                move_frames: frames,
+                hold_frames: 0,
+            }
+        }
+        "pinch" => {
+            let [a, b] = PINCH_POINTS.map(at);
+            let half = Vector2::new(x / 2.0, 0.0);
+            Gesture {
+                fingers: vec![(a, a - half), (b, b + half)],
+                move_frames: frames,
+                hold_frames: 0,
+            }
+        }
+        _ => {
+            tracing::warn!("simulateGesture: unknown gesture '{kind}'");
+            return;
+        }
+    };
+    // Touches arrive in window pixels; the viewport maps them back to the canvas the UI lives in.
+    let to_window = ui.get_viewport_transform();
+    spawn_local(play_gesture(gesture, to_window));
+}
+
+struct Gesture {
+    /// Each finger's start and end, in canvas coordinates.
+    fingers: Vec<(Vector2, Vector2)>,
+    move_frames: u32,
+    hold_frames: u32,
+}
+
+async fn play_gesture(gesture: Gesture, to_window: Transform2D) {
+    let mut input = Input::singleton();
+    let index = |finger: usize| GESTURE_TOUCH + finger as i32;
+    for (finger, (start, _)) in gesture.fingers.iter().enumerate() {
+        let mut touch = InputEventScreenTouch::new_gd();
+        touch.set_index(index(finger));
+        touch.set_position(to_window * *start);
+        touch.set_pressed(true);
+        input.parse_input_event(&touch);
+    }
+    next_frame().await;
+    for step in 1..=gesture.move_frames {
+        let t = step as f32 / gesture.move_frames as f32;
+        let previous = (step - 1) as f32 / gesture.move_frames as f32;
+        for (finger, (start, end)) in gesture.fingers.iter().enumerate() {
+            let now = to_window * start.lerp(*end, t);
+            let before = to_window * start.lerp(*end, previous);
+            let mut drag = InputEventScreenDrag::new_gd();
+            drag.set_index(index(finger));
+            drag.set_position(now);
+            drag.set_relative(now - before);
+            drag.set_screen_relative(now - before);
+            input.parse_input_event(&drag);
+        }
+        next_frame().await;
+    }
+    for _ in 0..gesture.hold_frames {
+        next_frame().await;
+    }
+    for (finger, (_, end)) in gesture.fingers.iter().enumerate() {
+        let mut touch = InputEventScreenTouch::new_gd();
+        touch.set_index(index(finger));
+        touch.set_position(to_window * *end);
+        touch.set_pressed(false);
+        input.parse_input_event(&touch);
     }
 }
 

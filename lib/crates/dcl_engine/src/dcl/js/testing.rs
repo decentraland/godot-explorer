@@ -18,6 +18,7 @@ pub fn ops() -> Vec<OpDecl> {
         op_log_test_result(),
         op_log_test_plan(),
         op_simulate_input(),
+        op_simulate_gesture(),
     ]
 }
 
@@ -122,6 +123,30 @@ fn op_simulate_input(
         .push(RpcCall::SimulateInput {
             action,
             pressed,
+            strength,
+            frames,
+        });
+    Ok(())
+}
+
+#[op2(fast)]
+fn op_simulate_gesture(
+    state: &mut OpState,
+    #[string] kind: String,
+    x: f32,
+    y: f32,
+    strength: f32,
+    frames: u32,
+) -> Result<(), AnyError> {
+    if !state.borrow::<SceneEnv>().testing_enable {
+        return Err(anyhow::anyhow!("Testing mode not available"));
+    }
+    state
+        .borrow_mut::<Vec<RpcCall>>()
+        .push(RpcCall::SimulateGesture {
+            kind,
+            x,
+            y,
             strength,
             frames,
         });

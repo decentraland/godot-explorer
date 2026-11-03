@@ -1,5 +1,5 @@
 import { type TestFunctionContext } from '../testing/types'
-import { simulateInput } from '~system/Testing'
+import { simulateGesture, simulateInput } from '~system/Testing'
 
 // Godot's ~system/Testing extension, live only under --scene-test: it presses the same actions as
 // the on-screen joystick and buttons.
@@ -38,4 +38,42 @@ export async function hold(context: TestFunctionContext, action: PlayerAction, f
 /** One press of one frame, like a tap on the button. */
 export async function tap(context: TestFunctionContext, action: PlayerAction): Promise<void> {
   await hold(context, action, 1)
+}
+
+// Godot's ~system/Testing extension for touch gestures, played through the real mobile controls.
+declare module '~system/Testing' {
+  export function simulateGesture(body: {
+    gesture: 'joystick' | 'look' | 'pinch'
+    direction?: { x: number; y: number }
+    delta?: { x: number; y: number }
+    spread?: number
+    strength?: number
+    frames?: number
+  }): Promise<object>
+}
+
+/**
+ * Pushes the on-screen joystick toward `direction` (screen axes: `{ x: 0, y: -1 }` is forward) by
+ * `strength` (0..1) and holds it for `frames` frames, then lets go.
+ */
+export async function joystick(
+  context: TestFunctionContext,
+  direction: { x: number; y: number },
+  strength: number,
+  frames: number
+): Promise<void> {
+  await simulateGesture({ gesture: 'joystick', direction, strength, frames })
+  await context.helpers.waitNTicks(frames + 4)
+}
+
+/** Drags one finger across the camera area by `delta` pixels over `frames` frames. */
+export async function look(context: TestFunctionContext, delta: { x: number; y: number }, frames: number): Promise<void> {
+  await simulateGesture({ gesture: 'look', delta, frames })
+  await context.helpers.waitNTicks(frames + 4)
+}
+
+/** Spreads two fingers apart by `spread` pixels over `frames` frames (negative pinches them). */
+export async function pinch(context: TestFunctionContext, spread: number, frames: number): Promise<void> {
+  await simulateGesture({ gesture: 'pinch', spread, frames })
+  await context.helpers.waitNTicks(frames + 4)
 }

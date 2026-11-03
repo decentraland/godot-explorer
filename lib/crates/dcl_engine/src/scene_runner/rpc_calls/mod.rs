@@ -102,6 +102,13 @@ pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_ca
             } => crate::test_runner::testing_tools::simulate_input(
                 &action, pressed, strength, frames,
             ),
+            RpcCall::SimulateGesture {
+                kind,
+                x,
+                y,
+                strength,
+                frames,
+            } => crate::test_runner::testing_tools::simulate_gesture(&kind, x, y, strength, frames),
             RpcCall::SendAsync { body, response } => {
                 DclGlobal::singleton()
                     .bind()

@@ -47,6 +47,15 @@ through the Godot-only `~system/Testing.simulateInput` that exists only under `-
 Measure at rest (start after the player has settled, read after it has stopped) and the numbers
 come out the same every run; `52,-70-locomotion` is the example.
 
+Touch gestures go through the real mobile input code as touch events, via
+`~system/Testing.simulateGesture`; the engine places them on the real controls, so tests hold no
+pixel coordinates (`52,-72-touch-controls` is the example):
+
+- `joystick(context, { x: 0, y: -1 }, 1, 60)` touches the joystick's area, pushes it forward fully
+  and holds it 60 frames.
+- `look(context, { x: 300, y: 0 }, 20)` drags one finger across the camera area.
+- `pinch(context, 200, 20)` spreads two fingers apart in the camera area (negative closes them).
+
 A test fails when anything in it throws: a failed assert, a screenshot below 0.9995 similarity or with
 no reference image, or a timeout. A scene that never reports its plan and results fails the run too.
 

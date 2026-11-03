@@ -180,6 +180,15 @@ pub enum RpcCall {
         strength: f32,
         frames: u32,
     },
+    /// Scene-test mode only: play a named touch gesture (`joystick`, `look`, `pinch`) through the
+    /// mobile controls.
+    SimulateGesture {
+        kind: String,
+        x: f32,
+        y: f32,
+        strength: f32,
+        frames: u32,
+    },
     SendAsync {
         body: CreateRequest,
         response: RpcResultSender<Result<serde_json::Value, String>>,
