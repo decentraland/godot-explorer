@@ -1,23 +1,13 @@
-use std::{
-    sync::atomic::{AtomicU64, Ordering},
-    time::Duration,
-};
-
-use futures_util::{SinkExt, StreamExt};
-use tokio::{net::TcpStream, sync::Mutex};
-use tokio_tungstenite::{tungstenite::Message, MaybeTlsStream, WebSocketStream};
+use std::time::Duration;
 
 use crate::urls;
-
-type RpcSocket = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
 const RPC_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// JSON-RPC client for the Ethereum node behind `urls::ethereum_rpc`, used by scenes'
-/// `sendAsync`. Requests are serialized on one lazily opened WebSocket.
+/// `sendAsync`. Each request is its own HTTPS POST, so scenes don't wait on each other.
 pub struct EthereumProvider {
-    socket: Mutex<Option<RpcSocket>>,
-    next_id: AtomicU64,
+    client: reqwest::Client,
 }
 
 impl Default for EthereumProvider {
@@ -28,10 +18,11 @@ impl Default for EthereumProvider {
 
 impl EthereumProvider {
     pub fn new() -> Self {
-        Self {
-            socket: Mutex::new(None),
-            next_id: AtomicU64::new(1),
-        }
+        let client = reqwest::Client::builder()
+            .timeout(RPC_TIMEOUT)
+            .build()
+            .expect("fail trying to build reqwest client");
+        Self { client }
     }
 
     pub async fn send_async(
@@ -39,30 +30,35 @@ impl EthereumProvider {
         method: &str,
         params: &[serde_json::Value],
     ) -> Result<serde_json::Value, anyhow::Error> {
-        let id = self.next_id.fetch_add(1, Ordering::Relaxed);
-
-        // Waiting for the lock counts against the timeout, so callers can't queue up behind a
-        // stalled node. The socket is out of the Option while in use: a timed-out or cancelled
-        // request drops it and the next call reconnects instead of reading a stale reply.
-        let call = async {
-            let mut socket = self.socket.lock().await;
-            let mut stream = match socket.take() {
-                Some(stream) => stream,
-                None => {
-                    let provider_url = urls::ethereum_rpc_with_project("kernel-local");
-                    tokio_tungstenite::connect_async(provider_url).await?.0
-                }
-            };
-            let response = request(&mut stream, id, method, params).await?;
-            socket.replace(stream);
-            Ok(response)
-        };
-
-        let mut response = tokio::time::timeout(RPC_TIMEOUT, call)
+        let body = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": method,
+            "params": params,
+        });
+        let response = self
+            .client
+            .post(urls::ethereum_rpc_with_project("kernel-local"))
+            .json(&body)
+            .send()
             .await
-            .unwrap_or_else(|_| Err(anyhow::anyhow!("{method}: Ethereum RPC request timed out")))?;
+            .map_err(|e| {
+                if e.is_timeout() {
+                    anyhow::anyhow!("{method}: Ethereum RPC request timed out")
+                } else {
+                    anyhow::anyhow!("{method} failed: {e}")
+                }
+            })?;
+        let status = response.status();
+        let text = response.text().await?;
 
+        let Ok(mut response) = serde_json::from_str::<serde_json::Value>(&text) else {
+            anyhow::bail!("{method} failed (HTTP {status}): {text}");
+        };
         if let Some(error) = response.get("error").filter(|error| !error.is_null()) {
+            if !error.is_object() {
+                anyhow::bail!("{method} failed: {error}");
+            }
             let mut message = format!(
                 "{method} failed (code: {}, message: {}",
                 error["code"],
@@ -73,33 +69,9 @@ impl EthereumProvider {
             }
             anyhow::bail!("{message})");
         }
-        Ok(response["result"].take())
-    }
-}
-
-async fn request(
-    socket: &mut RpcSocket,
-    id: u64,
-    method: &str,
-    params: &[serde_json::Value],
-) -> Result<serde_json::Value, anyhow::Error> {
-    let body = serde_json::json!({
-        "jsonrpc": "2.0",
-        "id": id,
-        "method": method,
-        "params": params,
-    });
-    socket.send(Message::Text(body.to_string())).await?;
-
-    while let Some(message) = socket.next().await {
-        let Message::Text(text) = message? else {
-            continue;
-        };
-        let response: serde_json::Value = serde_json::from_str(&text)?;
-        if response["id"] == id {
-            return Ok(response);
+        match response.get_mut("result") {
+            Some(result) => Ok(result.take()),
+            None => anyhow::bail!("{method} failed (HTTP {status}): {text}"),
         }
     }
-
-    anyhow::bail!("Ethereum RPC connection closed")
 }
