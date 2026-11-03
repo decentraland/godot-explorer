@@ -10,6 +10,7 @@ import {
   alreadySignedIn,
   authCode,
   cancelSignIn,
+  nameTag,
   sendEmailCode,
   setAvatarName,
   startBrowserSignIn,
@@ -281,8 +282,8 @@ export function EntryFlow({
     case 'avatar_naming':
       return (
         <NamingScreen
-          initial={flow.name}
-          preview={<PreviewFill />}
+          tag={nameTag()}
+          preview={<PreviewArea inset={false} />}
           onBack={back}
           onSubmit={name => {
             setAvatarName(name);
@@ -303,15 +304,6 @@ export function EntryFlow({
   }
 }
 
-function PreviewFill() {
-  return (
-    <View style={styles.previewFill}>
-      <PreviewArea inset={false} />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   footer: { padding: u(24), paddingBottom: u(32), backgroundColor: '#161518' },
-  previewFill: { flex: 1, marginVertical: u(8) },
 });

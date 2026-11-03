@@ -17,4 +17,9 @@ export const flow: Partial<Record<keyof typeof en, string>> = {
   FLOW_AVATAR_CHOOSE_LOOK: 'Elige tu look',
   FLOW_AVATAR_EDIT: 'EDITAR',
   FLOW_AVATAR_NEXT: 'SIGUIENTE',
+  FLOW_NAME_TITLE: 'Elige tu nombre',
+  FLOW_NAME_HINT: 'Por seguridad, evita usar tu nombre real',
+  FLOW_NAME_INVALID: 'Solo letras, números y espacios',
+  FLOW_NAME_RANDOMIZE: 'Nombre aleatorio',
+  FLOW_LETS_GO: 'Vamos',
 };

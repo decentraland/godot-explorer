@@ -116,8 +116,7 @@ export function reduceFlow(state: FlowState, action: FlowAction): FlowState {
     case 'customizeAvatar':
       return go(state, 'avatar_customize');
     case 'avatarConfirmed':
-      // Guests never pick a name (as in the lobby); accounts do.
-      return go(state, state.guest ? 'ftue' : 'avatar_naming');
+      return go(state, 'avatar_naming');
     case 'named':
       return go(state, 'ftue', { name: action.name });
     case 'finish':
@@ -157,7 +156,9 @@ export const PREVIEW_STEPS: readonly Step[] = [
   'welcome_back',
 ];
 
-/** Name rule from the lobby naming screen: 3–15 letters or digits. */
-export const NAME_PATTERN = /^[A-Za-z0-9]{3,15}$/;
+/** Name rule from the lobby's field: letters, digits and inner spaces, 15 characters at most. */
+export const NAME_MAX = 15;
+export const NAME_PATTERN = /^[A-Za-z0-9]+( +[A-Za-z0-9]+)*$/;
 
-export const isValidName = (name: string) => NAME_PATTERN.test(name.trim());
+export const isValidName = (name: string) =>
+  name.length <= NAME_MAX && NAME_PATTERN.test(name);

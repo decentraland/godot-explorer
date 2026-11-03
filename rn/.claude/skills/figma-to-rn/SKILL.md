@@ -150,6 +150,20 @@ a resolution matching its native Figma size, download it as a PNG, and use it as
 — same technique as this file's existing photo backgrounds. This gets the exact rendered colors
 including the blur, at the cost of one more bundled asset.
 
+**A baked background that only exists composed inside screen frames** (the avatar stage: brand
+solid + `Background/Avatar`, whose glows use `mix-blend-multiply`/`plus-lighter` and SVG blur
+filters) cannot be exported from Figma by MCP: `get_screenshot` of the instance flattens it over
+the canvas grey (`#1E1E1E` corners), the DS master has no brand base, and every screen frame has
+the avatar on top. Rebuild it instead: take the `get_design_context` markup of the background
+layers verbatim (Tailwind classes, inline gradient data URIs, the blurred SVG assets), put it in
+an HTML file with the Tailwind play CDN, screenshot it with the repo's `playwright-core` through
+Chrome (`chromium.launch({ channel: 'chrome' })`, viewport 720×1600) and compare pixel colours
+with the frame screenshot at avatar-free spots. Two traps: the generated code keeps the
+component's native box (1372×1475) inside the scaled instance box (1604×1724), so wrap it in a CSS
+`scale()`; and a `get_metadata` `y` outside the frame (1811 for a 1724-tall instance in a 1600
+frame) means the instance is flipped — add `scale(s, -s)`. The stage matched within 2–5 RGB units
+everywhere; the ATLAS page's "Background" export is an older, flatter design, not the HIFI one.
+
 ## 2d. Icons and other assets — use the design's asset, found in the design system first
 
 Never redraw a glyph the design already provides, even when a look-alike is one path away. For
@@ -182,7 +196,9 @@ button whose fill, border, and radius all trace back to existing tokens (`colors
 ## 4. Layout — spacing, gaps, padding
 
 **Prefer `get_metadata`'s resolved positions over a Tailwind `gap-[Npx]`/`pb-[Npx]` class when they
-disagree.** A real contradiction surfaced this session: one screen's exported `pb-[350px]` didn't
+disagree.** A fixed-height footer (`Footer-Buttons` h 200, `pt 18`, `pb 40`) puts its button at
+`y + 18` and leaves 86 below it, not the 40 the class says: measure from the child's `y` and
+`height` to the frame edge.** A real contradiction surfaced this session: one screen's exported `pb-[350px]` didn't
 match what the metadata's actual child positions implied. Compute gaps directly:
 `gap = nextChild.y - (prevChild.y + prevChild.height)`, `padding = frame.height -
 (lastChild.y + lastChild.height)`. Metadata is ground truth; the CSS class is a convenience that
@@ -282,6 +298,13 @@ landmark (a ruby button) `magick img -crop <region> +repage -fuzz 8% -fill black
 scaling **by height** (the reviewer's alignment); scaling by width only agrees when the phone has
 the frame's aspect ratio.
 
+**Measuring glyph-only landmarks.** A crisp device render keeps descenders inside the mask while a
+blurry Figma export drops them, so a text row's band is taller on the device and its centroid sits
+2-3px lower for the same real position: compare the *band top* too, or use a row without
+descenders. For an icon-only button (the naming dice), size the `Icon` from the glyph's extent
+inside its viewBox against Figma's bounding box (44 of 54 → `size = box / 0.81`) and confirm with
+the band height of the glyph on both images, not the button's box.
+
 **Device loop (no rebuild).** The emulator carries the no-godot mock build (`[CoreSelfTest] no
 native core`), hot-reloaded by Metro on 8081; a registered preview opens with
 `adb shell am start -a android.intent.action.VIEW -d "dclrn://preview/<id>"` (the normal boot may
@@ -290,7 +313,10 @@ shot.png` captures it. Force-stop the app before reopening a preview whose code 
 react-native-web capture (`tools/ui-spec/ci_capture.sh … --ids <id>`) is the CI view of the same
 screen; its `?preview=` needs the gallery host to mount `preview-ready`, which a careless merge once
 dropped — if every capture times out, diff `rn/src/gallery/GalleryHost.tsx` against `main` first.
-Entry-flow previews register as `extra/<name>` ids: `docs/rn-ui-spec/manifest.json` does not know
+The whole flow runs on the mock too: `adb shell am start -n
+org.decentraland.godotexplorer/com.godot.game.GodotAppLauncher` and `adb shell input tap x y`
+through the steps (a recovered mock session boots into Avatar Create). Entry-flow previews
+register as `extra/<name>` ids: `docs/rn-ui-spec/manifest.json` does not know
 the Mobile-Entry-Flow file, and the gallery test rejects other prefixes.
 
 ## 6. Iteration discipline

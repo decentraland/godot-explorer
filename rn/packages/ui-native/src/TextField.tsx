@@ -45,7 +45,7 @@ export function TextField({
   onClear?: () => void;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   keyboardType?: 'default' | 'url' | 'email-address' | 'numeric';
-  /** Counter under the box instead of beside the label. */
+  /** Counter under the box, on one row with the helper or error (the Name field). */
   counterBelow?: boolean;
   /** Helper under the label instead of under the box (an error still shows under the box). */
   helperAbove?: boolean;
@@ -137,16 +137,33 @@ export function TextField({
           </Pressable>
         )}
       </View>
-      {hint && (
-        <AppText
-          variant="caption"
-          style={[styles.hint, !!error && styles.errorText]}
-        >
-          {hint}
-        </AppText>
-      )}
-      {counterBelow && counter && (
-        <View style={styles.counterBelow}>{counter}</View>
+      {counterBelow && counter ? (
+        <View style={styles.descriptionRow}>
+          {hint ? (
+            <AppText
+              variant="caption"
+              style={[
+                styles.hint,
+                styles.hintInRow,
+                !!error && styles.errorText,
+              ]}
+            >
+              {hint}
+            </AppText>
+          ) : (
+            <View />
+          )}
+          {counter}
+        </View>
+      ) : (
+        hint && (
+          <AppText
+            variant="caption"
+            style={[styles.hint, !!error && styles.errorText]}
+          >
+            {hint}
+          </AppText>
+        )
       )}
     </View>
   );
@@ -195,12 +212,19 @@ const styles = StyleSheet.create({
   },
   counter: { fontFamily: fonts.regular, fontSize: u(10), color: colors.pearl },
   counterMax: { color: colors.ruby200 },
-  counterBelow: { marginTop: u(4) },
+  descriptionRow: {
+    marginTop: u(4),
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: u(8),
+  },
   hint: {
     marginTop: u(4),
     fontFamily: fonts.regular,
     fontSize: u(10),
     color: colors.pearl,
   },
+  hintInRow: { marginTop: 0, flexShrink: 1 },
   errorText: { color: colors.danger },
 });

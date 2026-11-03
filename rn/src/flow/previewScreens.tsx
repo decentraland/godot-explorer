@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  ImageBackground,
   Pressable,
   ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AvatarHole, StageBackground } from '../backpack/AvatarStage';
+import { AvatarHole } from '../backpack/AvatarStage';
 import { AppText, colors, Icon, LinearFill, Button, u } from '@dcl/ui-native';
 import { useAvatar } from '../backpack/useAvatar';
 import {
@@ -17,6 +18,21 @@ import {
   PresetAvatar,
 } from './presetAvatars';
 import { t } from '../i18n';
+
+const stageBackground = require('../assets/avatar-stage-background.png');
+
+/** Figma `Background/Avatar` over the brand purple, as the HIFI avatar screens compose it.
+ * Stretched, not covered: the glow and floor keep the frame's vertical proportions on every
+ * phone, and a few percent of anisotropy is invisible on a blurred gradient. */
+export function StageImage() {
+  return (
+    <ImageBackground
+      source={stageBackground}
+      style={StyleSheet.absoluteFill}
+      resizeMode="stretch"
+    />
+  );
+}
 
 /**
  * Stage + the single Godot avatar window, with a spinner behind it until the avatar arrives. `inset`
@@ -27,7 +43,7 @@ export function PreviewArea({ inset = true }: { inset?: boolean }) {
   const avatar = useAvatar();
   return (
     <View style={styles.area}>
-      <StageBackground />
+      <StageImage />
       {!avatar && (
         <View style={styles.loading}>
           <ActivityIndicator color="#FCFCFC" />

@@ -62,5 +62,8 @@ export async function acceptTerms(): Promise<void> {
   await core().setAnalyticsConsent(true);
 }
 
+/** The `#1234` after a name: the last four characters of the address. */
+export const nameTag = () => (core().address() ?? '').slice(-4);
+
 export const setAvatarName = (name: string) =>
   core().control(new Control.SetName({ name }));

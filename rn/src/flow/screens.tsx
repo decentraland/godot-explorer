@@ -4,6 +4,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Linking,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,15 +16,19 @@ import {
   AppText,
   colors,
   Button,
+  Icon,
   LoginButton,
   Spinner,
+  TextField,
   u,
 } from '@dcl/ui-native';
 import { FlowFrame } from './FlowFrame';
-import { isValidName, Provider } from './flowMachine';
+import { isValidName, NAME_MAX, Provider } from './flowMachine';
+import { randomName } from './randomName';
 import { I18nKey, t } from '../i18n';
 
 const logo = require('../assets/logo.png');
+const avatarShadow = require('../assets/avatar-shadow.png');
 const decentralandLogo = require('../assets/decentraland_logo.png');
 
 export function SplashScreen({ onDone }: { onDone: () => void }) {
@@ -221,56 +226,93 @@ export function WaitScreen({
   );
 }
 
+/** Figma `AVATAR_NAMING` (1897:13029): the name field with its `#tag` and a dice over the avatar
+ * stage, LET'S GO at the bottom. */
 export function NamingScreen({
   initial,
+  tag,
   preview,
   onSubmit,
   onBack,
 }: {
-  initial: string;
+  /** Seeds the field; a random name when absent, as the lobby did. */
+  initial?: string;
+  /** The account's `#1234` suffix. */
+  tag: string;
   preview: ReactNode;
   onSubmit: (name: string) => void;
   onBack: () => void;
 }) {
-  const [name, setName] = useState(initial);
-  const valid = isValidName(name);
+  const [name, setName] = useState(() => initial ?? randomName());
   return (
-    <FlowFrame onBack={onBack}>
-      <KeyboardAvoidingView
-        style={styles.fill}
-        behavior="padding"
-        keyboardVerticalOffset={u(48)}
+    <View style={styles.fill}>
+      {preview}
+      <Image source={avatarShadow} style={styles.namingShadow} />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('APP_BACK')}
+        onPress={onBack}
+        hitSlop={12}
+        style={styles.namingBack}
       >
-        <AppText variant="heading" style={styles.titleLeft}>
+        <Icon name="back" size={30} />
+      </Pressable>
+      <View style={styles.naming}>
+        <AppText variant="heading" style={styles.namingTitle}>
           {t('FLOW_NAME_TITLE')}
         </AppText>
-        {preview}
-        <TextInput
-          value={name}
-          onChangeText={setName}
-          placeholder={t('FLOW_NAME_PLACEHOLDER')}
-          placeholderTextColor={colors.silver}
-          autoCapitalize="none"
-          autoCorrect={false}
-          maxLength={15}
-          style={styles.input}
-        />
-        <AppText
-          variant="caption"
-          style={[styles.hint, !valid && name.length > 0 && styles.error]}
-        >
-          {t('FLOW_NAME_HINT')}
-        </AppText>
+        <View style={styles.namingRow}>
+          <View style={styles.fill}>
+            <TextField
+              label=""
+              value={name}
+              onChangeText={setName}
+              maxLength={NAME_MAX}
+              showCounter
+              counterBelow
+              helper={t('FLOW_NAME_HINT')}
+              error={nameError(name)}
+              autoCapitalize="none"
+              suffix={
+                tag ? (
+                  <AppText variant="body" style={styles.namingTag}>
+                    {`#${tag}`}
+                  </AppText>
+                ) : undefined
+              }
+            />
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('FLOW_NAME_RANDOMIZE')}
+            onPress={() => setName(randomName())}
+            style={styles.namingDice}
+          >
+            <Icon name="dice" size={26} />
+          </Pressable>
+        </View>
+      </View>
+      <View style={styles.namingFooter}>
         <Button
-          label={t('FLOW_LETS_GO')}
-          disabled={!valid}
+          big
           fullWidth
-          onPress={() => onSubmit(name.trim())}
+          label={t('FLOW_LETS_GO')}
+          disabled={!isValidName(name)}
+          onPress={() => onSubmit(name)}
         />
-      </KeyboardAvoidingView>
-    </FlowFrame>
+      </View>
+    </View>
   );
 }
+
+const nameError = (name: string): string | undefined => {
+  if (name.length === 0 || isValidName(name)) {
+    return undefined;
+  }
+  return /^\s|\s$/.test(name)
+    ? t('INPUTS_NO_EDGE_SPACES')
+    : t('FLOW_NAME_INVALID');
+};
 
 /** One text field and a button: the email address, then the code it was sent. */
 function TextStep({
@@ -448,7 +490,6 @@ const styles = StyleSheet.create({
   accountActions: { gap: u(24) },
   accountButtons: { gap: u(24) },
   title: { marginTop: u(16), textAlign: 'center' },
-  titleLeft: { marginTop: u(4), marginBottom: u(8) },
   copy: {
     marginTop: u(8),
     textAlign: 'center',
@@ -492,5 +533,39 @@ const styles = StyleSheet.create({
   inputFocused: { borderColor: colors.lavender },
   inputError: { borderColor: colors.ruby },
   inputGap: { marginBottom: u(16) },
-  hint: { marginTop: u(8), marginBottom: u(16), textAlign: 'center' },
+  namingBack: { position: 'absolute', top: u(43), left: u(24) },
+  /** Figma's blurred ellipse under the feet (318×45 plus its blur), centred at (337.5, 1288). */
+  namingShadow: {
+    position: 'absolute',
+    left: u(70.75),
+    top: u(614.25),
+    width: u(196.2),
+    height: u(59.65),
+  },
+  naming: {
+    position: 'absolute',
+    top: u(102),
+    left: u(33),
+    right: u(36),
+    gap: u(5),
+  },
+  namingTitle: { fontSize: u(18), lineHeight: u(18) },
+  namingRow: { flexDirection: 'row', alignItems: 'flex-start', gap: u(6.5) },
+  namingTag: { fontSize: u(12), lineHeight: u(12), color: colors.snow },
+  namingDice: {
+    width: u(34.35),
+    height: u(34),
+    borderRadius: u(5.5),
+    backgroundColor: colors.ruby,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  namingFooter: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: u(24),
+    paddingBottom: u(43),
+  },
 });
