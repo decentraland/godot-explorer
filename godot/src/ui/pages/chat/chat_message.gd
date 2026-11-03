@@ -23,6 +23,7 @@ const SEP_HEADER_TO_MESSAGE := "[font_size=22]\u2004\u200a[/font_size]"
 const MY_MENTION_COLOR = "#FC03EC"
 const MY_MENTION_BORDER := Color(0.988235, 0.011765, 0.92549)
 const MENTION_COLOR = "#FFD700"
+const REGEX_SPECIAL_CHARS = ["\\", ".", "^", "$", "*", "+", "?", "(", ")", "[", "]", "{", "}", "|"]
 
 const BG_OTHER := Color(0, 0, 0, 0.4)
 const BG_OWN := Color(0, 0, 0, 0.7)
@@ -164,45 +165,52 @@ func _apply_message_background() -> void:
 func make_urls_clickable(text: String) -> String:
 	var processed_text = text
 
-	var mention_regex = RegEx.new()
-	mention_regex.compile(r"@([^#\s]+)(?:#([0-9a-fA-F]{4}))?")
+	var mention_lookup = _get_mention_lookup() if "@" in processed_text else {}
+	if not mention_lookup.is_empty():
+		var match_keys: Array = mention_lookup.keys()
+		match_keys.sort_custom(func(a, b): return a.length() > b.length())
+		var escaped_names: Array = []
+		for match_key in match_keys:
+			escaped_names.append(_regex_escape(match_key))
 
-	var mention_results = mention_regex.search_all(processed_text)
-	for i in range(mention_results.size() - 1, -1, -1):
-		var mention_match = mention_results[i]
-		var full_mention = mention_match.get_string()
-		var start_pos = mention_match.get_start()
-		var end_pos = mention_match.get_end()
+		var mention_regex = RegEx.new()
+		# (*UCP): this fork compiles PCRE2 with SUPPORT_UNICODE but doesn't pass PCRE2_UCP at
+		# compile() (regex.cpp), so plain \w is ASCII-only and would read e.g. "ï" in "Anaïs" as
+		# a word boundary — the (*UCP) verb turns on Unicode-aware \w for this pattern only.
+		mention_regex.compile(r"(*UCP)(?i)(?<![\w.-])@(" + "|".join(escaped_names) + r")(?![\w#])")
 
-		var username = mention_match.get_string(1)
+		var mention_results = mention_regex.search_all(processed_text)
+		for i in range(mention_results.size() - 1, -1, -1):
+			var mention_match = mention_results[i]
+			var start_pos = mention_match.get_start()
+			var end_pos = mention_match.get_end()
+			var typed_name = mention_match.get_string(1)
 
-		var user_tag = ""
-		if mention_match.get_group_count() > 1:
-			var tag_match = mention_match.get_string(2)
-			if tag_match != null and tag_match != "":
-				user_tag = tag_match
+			var canonical_name = mention_lookup.get(typed_name.to_lower(), "")
+			if canonical_name.is_empty():
+				continue
 
-		var unique_name = ("@" + username) if user_tag.is_empty() else full_mention
+			var unique_name = "@" + canonical_name
 
-		if _is_valid_mention(unique_name):
-			var clickable_mention = (
-				"[url=mention:%s][color=%s]%s[/color][/url]"
-				% [unique_name, MENTION_COLOR, full_mention]
-			)
-			processed_text = (
-				processed_text.substr(0, start_pos)
-				+ clickable_mention
-				+ processed_text.substr(end_pos)
-			)
+			if _is_valid_mention(unique_name):
+				var clickable_mention = (
+					"[url=mention:%s][color=%s]%s[/color][/url]"
+					% [unique_name, MENTION_COLOR, unique_name]
+				)
+				processed_text = (
+					processed_text.substr(0, start_pos)
+					+ clickable_mention
+					+ processed_text.substr(end_pos)
+				)
 
-		if _is_mentioning_me(unique_name):
-			var mention_colored = "[color=%s]%s[/color]" % [MY_MENTION_COLOR, full_mention]
-			processed_text = (
-				processed_text.substr(0, start_pos)
-				+ mention_colored
-				+ processed_text.substr(end_pos)
-			)
-			_apply_mention_style()
+			if _is_mentioning_me(unique_name):
+				var mention_colored = "[color=%s]%s[/color]" % [MY_MENTION_COLOR, unique_name]
+				processed_text = (
+					processed_text.substr(0, start_pos)
+					+ mention_colored
+					+ processed_text.substr(end_pos)
+				)
+				_apply_mention_style()
 
 	# World regex runs before URL regex so .dcl.eth names get wrapped first.
 	# The URL regex won't re-wrap them because _is_safe_url rejects BBCode chars.
@@ -328,6 +336,65 @@ func _sanitize_for_display(t: String) -> String:
 	sanitized = sanitized.replace("[", "\\[")
 	sanitized = sanitized.replace("]", "\\]")
 	return sanitized
+
+
+func _regex_escape(s: String) -> String:
+	var escaped = s
+	for special_char in REGEX_SPECIAL_CHARS:
+		escaped = escaped.replace(special_char, "\\" + special_char)
+	return escaped
+
+
+## Maps every lowercased string a user might type after "@" to the correctly-cased
+## "name" or "name#tag" to mention. Besides the full name (with tag, for an unclaimed
+## profile), the bare name alone also resolves — but only when it names exactly one
+## nearby profile, so a tag typed to break a tie between two same-named guests still
+## has to be typed.
+func _get_mention_lookup() -> Dictionary:
+	var full_identities = {}
+
+	if Global.avatars:
+		var avatars = Global.avatars.get_avatars()
+		for avatar in avatars:
+			if avatar and avatar.has_method("get_avatar_name"):
+				var avatar_name = avatar.get_avatar_name()
+				if not avatar_name.is_empty():
+					full_identities[avatar_name] = true
+
+	var me = Global.player_identity.get_profile_or_null()
+	if me:
+		var my_name = me.get_name()
+		if not me.has_claimed_name():
+			my_name = my_name + "#" + me.get_user_id().right(4)
+		if not my_name.is_empty():
+			full_identities[my_name] = true
+
+	var base_name_owners = {}
+	for full_identity in full_identities:
+		var base_name_lower = _base_name_lower(full_identity)
+		if base_name_lower.is_empty():
+			continue
+		base_name_owners[base_name_lower] = base_name_owners.get(base_name_lower, 0) + 1
+
+	var lookup = {}
+	for full_identity in full_identities:
+		lookup[full_identity.to_lower()] = full_identity
+		var base_name_lower = _base_name_lower(full_identity)
+		if not base_name_lower.is_empty() and base_name_owners[base_name_lower] == 1:
+			lookup[base_name_lower] = full_identity
+
+	return lookup
+
+
+## Lowercased name part before "#tag", or "" for a degenerate identity (an empty display
+## name, so the identity is just "#tag" or the literal "#") — `split("#", false)` drops
+## the empty leading part in both cases, so parts[0] would otherwise be the tag itself,
+## or out of range entirely for "#".
+func _base_name_lower(full_identity: String) -> String:
+	if full_identity.begins_with("#"):
+		return ""
+	var parts = full_identity.split("#", false)
+	return parts[0].to_lower() if not parts.is_empty() else ""
 
 
 func _is_valid_mention(mention: String) -> bool:

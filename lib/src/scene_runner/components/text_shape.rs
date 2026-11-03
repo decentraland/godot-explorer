@@ -1,3 +1,4 @@
+use crate::content::content_mapping::{ContentMappingAndUrlRef, DclContentMappingAndUrl};
 use crate::{
     dcl::{
         components::SceneComponentId,
@@ -57,7 +58,7 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     }
                 };
 
-                let params = build_text_shape_params(&new_value);
+                let params = build_text_shape_params(&new_value, &scene.content_mapping);
                 text_shape_node.call("apply", &[params.to_variant()]);
             }
         }
@@ -69,11 +70,20 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 /// Rust path used.
 fn build_text_shape_params(
     value: &crate::dcl::components::proto_components::sdk::components::PbTextShape,
+    content_mapping: &ContentMappingAndUrlRef,
 ) -> VarDictionary {
     let mut params = VarDictionary::new();
     params.set("text", value.text.clone());
 
     set_opt_int(&mut params, "font", value.font);
+    let font_src = value.font_src.as_deref().map(str::trim).unwrap_or_default();
+    params.set("font_src", font_src);
+    if !font_src.is_empty() {
+        params.set(
+            "content_mapping",
+            DclContentMappingAndUrl::from_ref(content_mapping.clone()),
+        );
+    }
     set_opt_float(&mut params, "font_size", value.font_size);
     set_opt_bool(&mut params, "font_auto_size", value.font_auto_size);
     set_opt_int(&mut params, "text_align", value.text_align);
