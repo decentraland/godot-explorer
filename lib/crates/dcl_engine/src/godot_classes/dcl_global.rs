@@ -240,6 +240,8 @@ pub struct DclGlobal {
     /// sandbox auto-switch must not override that explicit choice.
     #[var(pub)]
     pub dcl_env_explicit: bool,
+    /// `finish_boot` has created the app services (the scene fetcher among them).
+    pub is_boot_finished: bool,
 
     // The player's camera and its mode, kept here for the code that has no handle on the player.
     #[var(pub)]
@@ -480,6 +482,7 @@ impl INode for DclGlobal {
             deep_link_obj: crate::godot_classes::dcl_parse_deep_link::DclParseDeepLink::new_gd(),
             deep_link_url: GString::new(),
             dcl_env_explicit: false,
+            is_boot_finished: false,
             player_camera_node: None,
             current_camera_mode: crate::player::body::CameraMode::ThirdPerson.to_i32(),
             camera_mode_blocked: false,
@@ -503,6 +506,9 @@ impl DclGlobal {
     /// A chat line, for the shell's chat. `address` is `system` for the app's own notices.
     #[signal]
     pub fn on_chat_message(address: GString, message: GString, timestamp: f64);
+
+    #[signal]
+    pub fn boot_finished();
 
     #[signal]
     pub fn loading_started();

@@ -6,6 +6,7 @@
 #   scripts/ci/scene-tests.sh                  ecs tier (no screenshots), headless
 #   scripts/ci/scene-tests.sh --tier all       every enabled scene
 #   scripts/ci/scene-tests.sh --windowed       watch it run
+#   scripts/ci/scene-tests.sh -- --rust-log=debug   extra Godot arguments after --
 #
 # Godot comes from $GODOT4_BIN or `cargo run -- install` (.bin/godot/godot4_bin). The per-scene
 # summary also goes to $GITHUB_STEP_SUMMARY when it is set.
@@ -14,10 +15,12 @@ set -euo pipefail
 TIER=ecs
 HEADLESS=1
 PORT=7666
+EXTRA=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --tier) TIER="$2"; shift 2 ;;
     --windowed) HEADLESS=0; shift ;;
+    --) shift; EXTRA=("$@"); break ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -54,6 +57,7 @@ curl -fs "$REALM/about" >/dev/null || { echo "the scene-test realm did not come 
 ARGS=(--path "$ROOT/godot")
 [ "$HEADLESS" = 1 ] && ARGS+=(--headless)
 ARGS+=(--scene-test "$PARCELS" --realm "$REALM" --snapshot-folder "$ROOT/tests/snapshots/scenes")
+ARGS+=(${EXTRA[@]+"${EXTRA[@]}"})
 
 echo "Running the '$TIER' scene tests: $PARCELS"
 set +e

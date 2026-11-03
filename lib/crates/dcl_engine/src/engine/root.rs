@@ -3,7 +3,7 @@
 
 use std::time::Instant;
 
-use godot::classes::{InputMap, Os};
+use godot::classes::{object::ConnectFlags, InputMap, Os};
 use godot::prelude::*;
 
 use crate::app::{audio_settings, general_settings, graphics};
@@ -158,11 +158,23 @@ impl DclRoot {
 
     #[func]
     fn start_mode(&mut self) {
+        let global = DclGlobal::singleton();
+        // The explorer needs the scene fetcher, which `finish_boot` creates only after awaiting
+        // the cache clear: that can land frames after this deferred call.
+        if !global.bind().is_boot_finished {
+            let mut me = self.to_gd();
+            global
+                .signals()
+                .boot_finished()
+                .builder()
+                .flags(ConnectFlags::ONE_SHOT)
+                .connect(move || me.bind_mut().start_mode());
+            return;
+        }
         godot_print!(
             "[Startup] root.start_mode: {}ms",
             self.started.elapsed().as_millis()
         );
-        let global = DclGlobal::singleton();
         let flags = {
             let cli = global.bind().get_cli();
             let cli = cli.bind();
