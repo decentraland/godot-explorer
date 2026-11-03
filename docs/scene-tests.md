@@ -51,6 +51,25 @@ cargo run -- run --stest --stest-tier ecs # terminal 2
 `--stest` fills in `--scene-test`, `--realm` and `--snapshot-folder` from `scenes.json` unless they are
 given after `--`. The scene build is reused while nothing under `tests/scene-tests/` changes.
 
+## In CI
+
+Every push and PR runs the `ecs` tier as the "🧪 Scene tests / Scene tests (ECS)" check, with the
+per-scene summary on the run page and the Godot log as the `scene-tests-log` artifact.
+
+`android_builds.yml` builds each library once and every other job downloads it:
+
+| Job | Runner | Does |
+|---|---|---|
+| `linux-lib` | `ubuntu-latest` | builds the Linux `libdclgodot.so`, uploads `libdclgodot-linux-release` |
+| `android-lib` | WarpBuild, builder image | builds the Android `libdclgodot.so` (unstripped), uploads `libdclgodot-android-release` |
+| `scene-tests` | `ubuntu-latest` | needs `linux-lib`; runs `scripts/ci/scene-tests.sh --tier ecs` (`scene_tests.yml`) |
+| `build` (Build Android) | WarpBuild, builder image | needs both libraries; imports, exports, signs and uploads the APK/AAB |
+
+The Linux library is the Godot editor's GDExtension for the import and export as well as the client
+the scene tests run. The builder image and `ubuntu-latest` are both Ubuntu 24.04, so it loads in
+either. `mobile_distribute.yml` calls `android_builds.yml` without `run_scene_tests`, so its
+on-demand rebuilds skip the tests.
+
 ## Add a scene test
 
 1. Copy the closest scene folder to a free parcel, e.g. `54,-70-my-component`, and set `scene.json`'s

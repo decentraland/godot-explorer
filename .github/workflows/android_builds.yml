@@ -27,6 +27,13 @@ on:
         required: false
         type: string
         default: ''
+      run_scene_tests:
+        description: >
+          Also run the scene tests (tests/scene-tests) on this commit's Linux library. runner.yml
+          sets it; mobile_distribute's on-demand rebuild does not.
+        required: false
+        type: boolean
+        default: false
     secrets:
       ANDROID_KEYSTORE_BASE64:
         required: true
@@ -68,8 +75,42 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build Android
+  # The Linux library is the Godot editor's GDExtension for the import and export below, and the
+  # client the scene tests run. Built once, on the free runner: same Ubuntu 24.04 as the builder
+  # image, so the .so loads in its container too.
+  linux-lib:
+    name: Linux library
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
+        with:
+          toolchain: "1.94"
+      - name: Set up cache
+        uses: ./.github/actions/set-up-cache
+      - name: Install dependencies
+        uses: ./.github/actions/install-deps
+      - name: Cargo install
+        run: cargo run -- install
+      - name: Set prod flag
+        uses: ./.github/actions/set-prod-flag
+        with:
+          ref: ${{ inputs.ref || github.head_ref }}
+      - name: Build
+        run: cargo run -- build --release --features disable_telemetry ${{ env.PROD_FLAG }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libdclgodot-linux-release
+          path: lib/target/libdclgodot_linux/libdclgodot.so
+          retention-days: 1
+          compression-level: 1
+          if-no-files-found: error
+
+  android-lib:
+    name: Android library
     runs-on: warp-ubuntu-latest-x64-4x
     timeout-minutes: 35
     container:
@@ -96,13 +137,13 @@ jobs:
           toolchain: "1.94"
           components: clippy, rustfmt
 
-      # Cache the Rust build (host + Android target) so the dep tree isn't recompiled from
-      # scratch every push. Use the WarpBuild-native cache (raw target/, NO cleaning): the v8
-      # crate's prebuilt static lib (librusty_v8.a) lives under target/.../build/v8-*/out, and
-      # rust-cache's cleanup strips it while keeping v8's fingerprint → warm builds then fail to
-      # link. set-up-warp-cache keeps the full target/, so the lib survives (matches the iOS leg).
-      # Restore runs on every branch; the save (below) only writes on main, so PRs restore from
-      # main's cache without paying the multi-minute save on each push.
+      # Cache the Rust build so the dep tree isn't recompiled from scratch every push. Use the
+      # WarpBuild-native cache (raw target/, NO cleaning): the v8 crate's prebuilt static lib
+      # (librusty_v8.a) lives under target/.../build/v8-*/out, and rust-cache's cleanup strips it
+      # while keeping v8's fingerprint → warm builds then fail to link. set-up-warp-cache keeps the
+      # full target/, so the lib survives (matches the iOS leg). Restore runs on every branch; the
+      # save (below) only writes on main, so PRs restore from main's cache without paying the
+      # multi-minute save on each push.
       # WarpBuild's cache action shells out to wget; the builder image may not ship it.
       - name: Ensure wget (WarpCache dependency)
         run: command -v wget >/dev/null 2>&1 || (apt-get update && apt-get install -y wget)
@@ -116,7 +157,7 @@ jobs:
         run: |
           rustup target add aarch64-linux-android
       - name: Cargo install
-        run: cargo run -- install --targets android linux
+        run: cargo run -- install
 
       # Pass the real branch so release* PRs / on-demand rebuilds bake --prod: `inputs.ref` when
       # mobile_distribute rebuilds a specific commit, `head_ref` on PR events (where github.ref is
@@ -128,8 +169,7 @@ jobs:
           ref: ${{ inputs.ref || github.head_ref }}
 
       # Allocate the store build number (Cloudflare Worker, idempotent per commit SHA). MUST run
-      # BEFORE the lib build so build.rs bakes it into the version string (GODOT_EXPLORER_VERSION),
-      # and so the APK + AAB exports below stamp the same versionCode for this commit.
+      # BEFORE the lib build so build.rs bakes it into the version string (GODOT_EXPLORER_VERSION).
       - name: Compute build number
         uses: ./.github/actions/compute-build-number
         with:
@@ -137,19 +177,130 @@ jobs:
           secret: ${{ secrets.BUILD_NUMBER_SECRET }}
           allocated-by: android
 
-      - name: Build Rust libraries
-        run: |
-          cargo run -- build --release ${{ env.PROD_FLAG }}
-          cargo run -- build --release --target android ${{ env.PROD_FLAG }}
-          cargo run -- import-assets
+      - name: Build Rust library
+        run: cargo run -- build --release --target android ${{ env.PROD_FLAG }}
 
-      # Persist the freshly built target/ — no-op off main (see save-warp-cache). Placed right
-      # after the build so a later export/sign failure can't lose a valid cache.
+      # Persist the freshly built target/ — no-op off main (see save-warp-cache).
       - name: Save build cache (main only)
         uses: ./.github/actions/save-warp-cache
         with:
           cargo-key: ${{ steps.cache.outputs.cargo-key }}
           rust-key: ${{ steps.cache.outputs.rust-key }}
+
+      # Unstripped: the AAB embeds its symbols and the Sentry step uploads it with sources. The
+      # checkpoints are the version strings build.rs wrote, which the export job's Sentry step reads.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libdclgodot-android-release
+          path: |
+            lib/target/libdclgodot_android/libdclgodot.so
+            .build.version
+            .build.sentry_release
+          include-hidden-files: true
+          retention-days: 1
+          compression-level: 1
+          if-no-files-found: error
+
+  scene-tests:
+    name: 🧪 Scene tests
+    needs: linux-lib
+    if: inputs.run_scene_tests
+    uses: ./.github/workflows/scene_tests.yml
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}
+
+  build:
+    name: Build Android
+    needs: [linux-lib, android-lib]
+    runs-on: warp-ubuntu-latest-x64-4x
+    timeout-minutes: 35
+    container:
+      # image generated at: https://github.com/decentraland/godot-docker-builder
+      image: quay.io/decentraland/dcl-godot-android-builder:394c180223d3e2ad410d191147e9e2ad39884c0b
+      volumes:
+        - /home/user/.cache/devgodot:/github/home/.cache/devgodot
+      # WarpBuild's cache action authenticates via this token, which exists on the runner
+      # host but is NOT propagated into the container unless forwarded explicitly. Without
+      # it the cache step is a silent no-op ("Authentication token is invalid"). See:
+      # https://github.com/WarpBuilds/cache#running-inside-a-container
+      env:
+        WARPBUILD_RUNNER_VERIFICATION_TOKEN: ${{ env.WARPBUILD_RUNNER_VERIFICATION_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}
+      - name: Add safe directory
+        run: |
+          git config --global --add safe.directory $GITHUB_WORKSPACE
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
+        with:
+          toolchain: "1.94"
+          components: clippy, rustfmt
+
+      # Both libraries come from the jobs above; this job only compiles the xtask, whose
+      # target/ and cargo registry are cached on their own (a few hundred MB, not the 2.8 GB build).
+      # WarpBuild's cache action shells out to wget; the builder image may not ship it.
+      - name: Ensure wget (WarpCache dependency)
+        run: command -v wget >/dev/null 2>&1 || (apt-get update && apt-get install -y wget)
+      - name: Restore xtask cache
+        id: xtask-cache
+        uses: WarpBuilds/cache/restore@v1.4.6
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-xtask-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-xtask-
+
+      - name: Cargo install
+        run: cargo run -- install --targets android linux
+
+      # Pass the real branch so release* PRs / on-demand rebuilds bake --prod: `inputs.ref` when
+      # mobile_distribute rebuilds a specific commit, `head_ref` on PR events (where github.ref is
+      # refs/pull/N/merge and would always map to --staging). Both empty on plain pushes → the
+      # action falls back to github.ref, unchanged behavior.
+      - name: Set prod flag
+        uses: ./.github/actions/set-prod-flag
+        with:
+          ref: ${{ inputs.ref || github.head_ref }}
+
+      # The same number android-lib baked into the library (idempotent per commit SHA), so the
+      # APK + AAB exports below stamp the same versionCode for this commit.
+      - name: Compute build number
+        uses: ./.github/actions/compute-build-number
+        with:
+          sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}
+          secret: ${{ secrets.BUILD_NUMBER_SECRET }}
+          allocated-by: android
+
+      - name: Download Linux library
+        uses: actions/download-artifact@v4
+        with:
+          name: libdclgodot-linux-release
+          path: lib/target/libdclgodot_linux
+      - name: Download Android library
+        uses: actions/download-artifact@v4
+        with:
+          name: libdclgodot-android-release
+          path: .
+
+      - name: Import assets
+        run: cargo run -- import-assets
+
+      - name: Save xtask cache (main only)
+        if: github.ref == 'refs/heads/main' && steps.xtask-cache.outputs.cache-hit != 'true'
+        uses: WarpBuilds/cache/save@v1.4.6
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ steps.xtask-cache.outputs.cache-primary-key }}
 
       # The shipping app is the React Native app in rn/: `cargo run -- export` builds it from the
       # Godot export, and its Gradle build bundles the JS with Node.

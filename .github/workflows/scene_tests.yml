@@ -1,0 +1,59 @@
+name: 🧪 Scene tests
+on:
+  workflow_call:
+    inputs:
+      sha:
+        description: Commit to test; its Linux library comes from the caller's linux-lib job.
+        required: true
+        type: string
+
+jobs:
+  ecs:
+    name: Scene tests (ECS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha }}
+
+      # Only the xtask is compiled here (Godot install and asset import); the library is downloaded.
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
+        with:
+          toolchain: "1.94"
+      - name: Set up cache
+        uses: ./.github/actions/set-up-cache
+      # The library links the same system libraries it was built against.
+      - name: Install dependencies
+        uses: ./.github/actions/install-deps
+      - name: Install Godot
+        run: cargo run -- install
+
+      - name: Download Linux library
+        uses: actions/download-artifact@v4
+        with:
+          name: libdclgodot-linux-release
+          path: lib/target/libdclgodot_linux
+
+      - name: Import assets
+        uses: ./.github/actions/import-assets
+        with:
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: tests/scene-tests/package-lock.json
+
+      - name: Run the ECS tier
+        run: scripts/ci/scene-tests.sh --tier ecs
+
+      - name: Upload the Godot log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scene-tests-log
+          path: tests/scene-tests/scene-tests.log
+          retention-days: 7
+          if-no-files-found: ignore

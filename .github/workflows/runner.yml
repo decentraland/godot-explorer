@@ -4,8 +4,6 @@ on:
     branches:
       - main
       - release
-      # Long-lived 2.0.0 integration branch: its push builds save the warm Rust cache its PRs restore.
-      - 2.x
   pull_request:
 
 concurrency:
@@ -31,6 +29,8 @@ jobs:
   android-build:
     name: 🤖 Android
     uses: ./.github/workflows/android_builds.yml
+    with:
+      run_scene_tests: true
     secrets:
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
