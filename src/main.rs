@@ -28,6 +28,7 @@ mod path;
 mod platform;
 mod rn_app;
 mod run;
+mod scene_tests;
 mod tests;
 mod ui;
 mod update_snapshots;
@@ -293,6 +294,13 @@ fn main() -> Result<(), anyhow::Error> {
                         .long("stest")
                         .help("run scene-tests")
                         .takes_value(false),
+                )
+                .arg(
+                    Arg::new("stest-tier")
+                        .long("stest-tier")
+                        .help("scene tests to run: ecs, render or all (needs scripts/serve-scene-tests.sh)")
+                        .takes_value(true)
+                        .default_value("all"),
                 )
                 .arg(
                     Arg::new("ctest")
@@ -881,6 +889,12 @@ fn main() -> Result<(), anyhow::Error> {
                 extras.push("--emulate-ios".to_string());
             }
 
+            if sm.is_present("stest") && !extras.iter().any(|arg| arg == "--scene-test") {
+                extras.extend(scene_tests::scene_test_args(
+                    sm.value_of("stest-tier").unwrap_or("all"),
+                )?);
+            }
+
             run::run(
                 sm.is_present("editor"),
                 sm.is_present("itest"),
@@ -1058,8 +1072,6 @@ fn main() -> Result<(), anyhow::Error> {
 }
 
 pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
-    let scene_snapshot_folder = Path::new("./tests/snapshots/scenes");
-    let scene_snapshot_folder = scene_snapshot_folder.canonicalize()?;
     let client_snapshot_folder = Path::new("./tests/snapshots/client");
     let client_snapshot_folder = client_snapshot_folder.canonicalize()?;
 
@@ -1096,38 +1108,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
 
     run::run(false, true, vec![], false, false, false)?;
 
-    let scene_test_realm: &str = "http://localhost:7666/scene-explorer-tests";
-    let scene_test_coords: Vec<[i32; 2]> = vec![
-        [52, -52], // raycast
-        [52, -54], // transform
-        [52, -56], // billboard
-        [52, -58], // camera-mode
-        [52, -60], // engine-info
-        [52, -62], // gltf-container
-        [52, -64], // visibility
-        [52, -66], // mesh-renderer
-        [52, -68], // avatar-attach
-        [54, -52], // material
-        [54, -54], // text-shape
-        // TODO: video events not working well
-        // [54, -56], // video-player
-        [54, -58], // ui-background
-        [54, -60], // ui-text
-    ];
-    let scene_test_coords_str = serde_json::ser::to_string(&scene_test_coords)
-        .expect("failed to serialize scene_test_coords");
-
-    let extra_args = [
-        "--scene-test",
-        scene_test_coords_str.as_str(),
-        "--realm",
-        scene_test_realm,
-        "--snapshot-folder",
-        scene_snapshot_folder.to_str().unwrap(),
-    ]
-    .iter()
-    .map(|it| it.to_string())
-    .collect();
+    let extra_args = scene_tests::scene_test_args("all")?;
 
     run::build(false, false, vec![], Some(build_envs.clone()), None)?;
 

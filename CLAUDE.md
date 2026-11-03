@@ -60,7 +60,8 @@ cargo run -- run --no-default-features --features use_livekit,use_deno
 
 # Run tests
 cargo run -- run --itest                  # Integration tests
-cargo run -- run --stest                  # Scene tests
+scripts/ci/scene-tests.sh                 # Scene tests, ecs tier (docs/scene-tests.md)
+cargo run -- run --stest --stest-tier all # Scene tests via xtask, with scripts/serve-scene-tests.sh running
 ```
 
 ### Android Development

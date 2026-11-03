@@ -1,0 +1,15 @@
+node_modules
+bin
+*.swp
+*.*~
+export
+**/.DS_Store
+*/node_modules
+node_modules/
+.pnpm-store
+ipfs
+yarn.lock
+**/tsconfig.tsbuildinfo
+static
+main.crdt
+scene-tests.log
