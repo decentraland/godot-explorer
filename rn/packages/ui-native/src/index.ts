@@ -55,6 +55,7 @@ export {
   fonts,
   iconSize,
   layout,
+  lightRainbow,
   minTouchTarget,
   notificationTitle,
   radii,

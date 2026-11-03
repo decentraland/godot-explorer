@@ -62,6 +62,13 @@ export const colors = {
   sky: '#32CEFF',
 } as const;
 
+/** Figma `DCL/Gradients/Light Rainbow` stops, for `LinearFill`. */
+export const lightRainbow = [
+  { offset: 0, color: '#FFBC5B' },
+  { offset: 0.505, color: '#FF2D55' },
+  { offset: 1, color: '#C640CD' },
+];
+
 /** Figma `Elevation/Down|Up`: one shadow, 0/±4 offset, blur 4, Shadow at 50% — values ÷ 2 for
  * dp. `boxShadow` draws the same on both platforms (Android `elevation` ignores the colour). */
 const shadow = (offsetY: number) => ({

@@ -10,7 +10,15 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvatarHole } from '../backpack/AvatarStage';
-import { AppText, colors, Icon, LinearFill, Button, u } from '@dcl/ui-native';
+import {
+  AppText,
+  colors,
+  Icon,
+  lightRainbow,
+  LinearFill,
+  Button,
+  u,
+} from '@dcl/ui-native';
 import { useAvatar } from '../backpack/useAvatar';
 import {
   applyPresetAvatar,
@@ -20,14 +28,22 @@ import {
 import { t } from '../i18n';
 
 const stageBackground = require('../assets/avatar-stage-background.png');
+const createBackground = require('../assets/avatar-create-background.png');
+const createShadow = require('../assets/avatar-create-shadow.png');
 
-/** Figma `Background/Avatar` over the brand purple, as the HIFI avatar screens compose it.
- * Stretched, not covered: the glow and floor keep the frame's vertical proportions on every
- * phone, and a few percent of anisotropy is invisible on a blurred gradient. */
-export function StageImage() {
+/** Figma `Background/Avatar` over the brand background, as the HIFI avatar screens compose it:
+ * `full` fills the screen (Naming, Welcome Back), `create` is the Glow background with the stage
+ * scaled into the top half, above the Selection sheet. Stretched, not covered: the glow and floor
+ * keep the frame's vertical proportions on every phone, and a few percent of anisotropy is
+ * invisible on a blurred gradient. */
+export function StageImage({
+  variant = 'full',
+}: {
+  variant?: 'full' | 'create';
+}) {
   return (
     <ImageBackground
-      source={stageBackground}
+      source={variant === 'create' ? createBackground : stageBackground}
       style={StyleSheet.absoluteFill}
       resizeMode="stretch"
     />
@@ -39,11 +55,17 @@ export function StageImage() {
  * leaves room for a full-screen screen's title and buttons; a screen that sizes the area itself
  * turns it off.
  */
-export function PreviewArea({ inset = true }: { inset?: boolean }) {
+export function PreviewArea({
+  inset = true,
+  stage = 'full',
+}: {
+  inset?: boolean;
+  stage?: 'full' | 'create';
+}) {
   const avatar = useAvatar();
   return (
     <View style={styles.area}>
-      <StageImage />
+      <StageImage variant={stage} />
       {!avatar && (
         <View style={styles.loading}>
           <ActivityIndicator color="#FCFCFC" />
@@ -82,6 +104,15 @@ function PresetCard({
       ) : (
         <ActivityIndicator color={colors.snow} />
       )}
+      {selected && (
+        <LinearFill
+          stops={lightRainbow}
+          start={{ x: -0.1, y: 0.2 }}
+          end={{ x: 1.1, y: 0.8 }}
+          stroke={u(2)}
+          radius={u(8)}
+        />
+      )}
     </Pressable>
   );
 }
@@ -95,7 +126,6 @@ export function AvatarCreateScreen({
   onContinue: () => void;
   onBack: () => void;
 }) {
-  const insets = useSafeAreaInsets();
   const avatar = useAvatar();
   const [presets, setPresets] = useState<PresetAvatar[]>([]);
   const [selected, setSelected] = useState(0);
@@ -121,13 +151,14 @@ export function AvatarCreateScreen({
 
   return (
     <View style={styles.fill}>
-      <PreviewArea inset={false} />
+      <PreviewArea inset={false} stage="create" />
+      <Image source={createShadow} style={styles.avatarShadow} />
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={t('APP_BACK')}
         onPress={onBack}
         hitSlop={12}
-        style={[styles.avatarBack, { top: insets.top + u(20) }]}
+        style={styles.avatarBack}
       >
         <Icon name="back" size={30} />
       </Pressable>
@@ -145,6 +176,9 @@ export function AvatarCreateScreen({
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
+            alwaysBounceHorizontal
+            overScrollMode="always"
+            style={styles.presetScroll}
             contentContainerStyle={styles.presetRow}
           >
             {(presets.length ? presets : [null, null, null, null]).map(
@@ -159,12 +193,7 @@ export function AvatarCreateScreen({
             )}
           </ScrollView>
         </View>
-        <View
-          style={[
-            styles.avatarFooter,
-            { paddingBottom: insets.bottom + u(20) },
-          ]}
-        >
+        <View style={styles.avatarFooter}>
           <View style={styles.avatarFooterButtons}>
             <View style={styles.avatarEditButton}>
               <Button
@@ -248,24 +277,49 @@ const styles = StyleSheet.create({
     gap: u(12),
   },
   centered: { textAlign: 'center' },
-  avatarBack: { position: 'absolute', left: u(24) },
-  avatarSheet: { position: 'absolute', bottom: 0, left: 0, right: 0 },
+  avatarBack: { position: 'absolute', left: u(24), top: u(43) },
+  /** Figma's blurred ellipse under the feet (240×34 plus its blur), centred at (343, 820). */
+  avatarShadow: {
+    position: 'absolute',
+    left: u(97.5),
+    top: u(387.5),
+    width: u(148),
+    height: u(45),
+  },
+  avatarSheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopLeftRadius: u(12),
+    borderTopRightRadius: u(12),
+    boxShadow: [
+      { offsetX: 0, offsetY: -u(2), blurRadius: u(1), color: colors.black25 },
+    ],
+  },
   avatarDetail: {
     alignItems: 'center',
-    gap: u(22),
+    gap: u(19.5),
     paddingTop: u(20),
-    paddingBottom: u(15),
-    paddingHorizontal: u(24),
+    paddingBottom: u(14),
     borderTopLeftRadius: u(12),
     borderTopRightRadius: u(12),
     overflow: 'hidden',
   },
   avatarChooseTitle: {
+    marginTop: u(2.5),
     fontSize: u(18),
-    lineHeight: u(18),
+    lineHeight: u(17),
     textAlign: 'center',
   },
-  presetRow: { flexDirection: 'row', gap: u(12) },
+  /** Edge to edge, so a dragged card leaves through the screen edge, not the margin. */
+  presetScroll: { alignSelf: 'stretch' },
+  presetRow: {
+    flexDirection: 'row',
+    gap: u(12),
+    paddingHorizontal: u(24),
+    paddingBottom: u(3),
+  },
   presetCard: {
     width: u(80),
     height: u(180),
@@ -274,19 +328,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+    boxShadow: [
+      { offsetX: 0, offsetY: u(2), blurRadius: u(1), color: colors.black25 },
+    ],
   },
-  presetCardSelected: {
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    borderWidth: u(2),
-    borderColor: '#FFBC5B',
-  },
+  presetCardSelected: { backgroundColor: colors.black70 },
   presetThumbnail: { width: '100%', height: '100%' },
   avatarFooter: {
     backgroundColor: colors.purple500,
     paddingTop: u(9),
     paddingHorizontal: u(24),
+    paddingBottom: u(43),
   },
   avatarFooterButtons: { flexDirection: 'row', gap: u(9) },
-  avatarEditButton: { flex: 1 },
-  avatarNextButton: { flex: 2 },
+  avatarEditButton: { width: u(103) },
+  avatarNextButton: { flex: 1 },
 });

@@ -305,6 +305,11 @@ descenders. For an icon-only button (the naming dice), size the `Icon` from the 
 inside its viewBox against Figma's bounding box (44 of 54 → `size = box / 0.81`) and confirm with
 the band height of the glyph on both images, not the button's box.
 
+**Emulator at the Figma frame size (the project standard).** `npm run emulator:figma` pins the
+emulator to 720×1600 at 320 dpi, a 360×800dp @2x display: `SCALE` is 1, a screenshot is the same
+size as the frame PNG and every number compares 1:1 with no scaling or aspect-ratio argument
+(`npm run emulator:reset` restores the phone). Verify there first, then on the real aspect ratio.
+
 **Device loop (no rebuild).** The emulator carries the no-godot mock build (`[CoreSelfTest] no
 native core`), hot-reloaded by Metro on 8081; a registered preview opens with
 `adb shell am start -a android.intent.action.VIEW -d "dclrn://preview/<id>"` (the normal boot may
