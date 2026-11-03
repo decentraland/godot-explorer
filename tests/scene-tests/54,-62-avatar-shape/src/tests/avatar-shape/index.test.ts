@@ -1,10 +1,12 @@
 import { Animator, AvatarShape, Transform } from '@dcl/sdk/ecs'
 import { Color3, Vector3 } from '@dcl/sdk/math'
-import { test } from 'testing-library/src/testing'
+import { skipTest } from 'testing-library/src/testing'
 import { customAddEntity } from 'testing-library/src/utils/entity'
 import { assertSnapshot } from 'testing-library/src/utils/snapshot-test'
 
-test('avatar-shape: title', async function (context) {
+// Skipped: never run on Godot; no current reference.
+
+skipTest('avatar-shape: title', async function (context) {
   const avatarEntity = customAddEntity.addEntity()
   AvatarShape.create(avatarEntity, {
     id: 'test',

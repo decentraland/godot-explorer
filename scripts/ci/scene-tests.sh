@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
 # Runs the scene tests in tests/scene-tests/ against an already built client library, the same
-# way locally and in CI. Exits 0 when every scene of the tier reported and passed.
+# way locally and in CI. Exits 0 when every scene reported and passed.
 #
-#   scripts/ci/scene-tests.sh                  ecs tier (no screenshots), headless
-#   scripts/ci/scene-tests.sh --tier all       every enabled scene
-#   scripts/ci/scene-tests.sh --windowed       watch it run
+#   scripts/ci/scene-tests.sh                  every scene, headless: render tests are skipped
+#   scripts/ci/scene-tests.sh --render         with a window, and fails if a render test is skipped
+#   scripts/ci/scene-tests.sh --windowed       watch it run (render tests run too)
 #   scripts/ci/scene-tests.sh --scene locomotion,touch-controls   only these scenes (names in scenes.json)
 #   scripts/ci/scene-tests.sh --scene locomotion --watch   rerun on every save or library rebuild
 #   scripts/ci/scene-tests.sh -- --rust-log=debug   extra Godot arguments after --
@@ -14,9 +14,9 @@
 # summary also goes to $GITHUB_STEP_SUMMARY when it is set.
 set -euo pipefail
 
-TIER=ecs
 SCENES=""
 HEADLESS=1
+REQUIRE_RENDER=0
 PORT=7666
 EXTRA=()
 WATCH=0
@@ -26,9 +26,9 @@ for arg in "$@"; do
 done
 while [ $# -gt 0 ]; do
   case "$1" in
-    --tier) TIER="$2"; shift 2 ;;
     --scene) SCENES="${SCENES:+$SCENES,}$2"; shift 2 ;;
     --windowed) HEADLESS=0; shift ;;
+    --render) HEADLESS=0; REQUIRE_RENDER=1; shift ;;
     --watch) WATCH=1; shift ;;
     --) shift; EXTRA=("$@"); break ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
@@ -72,26 +72,18 @@ fi
 GODOT="${GODOT4_BIN:-$ROOT/.bin/godot/godot4_bin}"
 LOG="$SUITE/scene-tests.log"
 
-# Same rule as src/scene_tests.rs: disabled scenes never run; `all` takes every other one. Scenes
-# named with --scene run whatever their tier, a disabled one included (with a warning).
-PARCELS="$(python3 -I - "$SUITE/scenes.json" "$TIER" "$SCENES" <<'EOF'
+# Same list as src/scene_tests.rs: every scene, or the ones named with --scene. A scene that
+# cannot run yet stays in the list with its tests as skipTest.
+PARCELS="$(python3 -I - "$SUITE/scenes.json" "$SCENES" <<'EOF'
 import json, sys
 scenes = json.load(open(sys.argv[1]))["scenes"]
-tier, names = sys.argv[2], [name for name in sys.argv[3].split(",") if name]
-if names:
-    by_name = {s["name"]: s for s in scenes}
-    unknown = [name for name in names if name not in by_name]
-    if unknown:
-        sys.exit(f"unknown scene {', '.join(unknown)}; scenes: {', '.join(by_name)}")
-    for name in names:
-        if by_name[name]["tier"] == "disabled":
-            print(f"warning: {name} is disabled ({by_name[name].get('reason', '')})", file=sys.stderr)
-    picked = [by_name[name]["parcel"] for name in names]
-else:
-    picked = [s["parcel"] for s in scenes if s["tier"] != "disabled" and tier in ("all", s["tier"])]
-if not picked:
-    sys.exit(f"no scenes in tier '{tier}' (expected ecs, render or all)")
-print(json.dumps(picked, separators=(",", ":")))
+names = [name for name in sys.argv[2].split(",") if name]
+by_name = {s["name"]: s for s in scenes}
+unknown = [name for name in names if name not in by_name]
+if unknown:
+    sys.exit(f"unknown scene {', '.join(unknown)}; scenes: {', '.join(by_name)}")
+picked = [by_name[name] for name in names] if names else scenes
+print(json.dumps([s["parcel"] for s in picked], separators=(",", ":")))
 EOF
 )"
 
@@ -113,7 +105,7 @@ ARGS=(--path "$ROOT/godot" --fixed-fps 60)
 ARGS+=(--scene-test "$PARCELS" --realm "$REALM" --snapshot-folder "$ROOT/tests/snapshots/scenes")
 ARGS+=(${EXTRA[@]+"${EXTRA[@]}"})
 
-echo "Running the ${SCENES:-$TIER} scene tests: $PARCELS"
+echo "Running the scene tests: $PARCELS"
 set +e
 "$GODOT" "${ARGS[@]}" 2>&1 | tee "$LOG"
 CODE=${PIPESTATUS[0]}
@@ -135,14 +127,24 @@ if [ -n "$PANICS" ]; then
   echo "$PANICS" | sed 's/\x1b\[[0-9;]*m//g' >&2
   RESULT=1
 fi
+# Skipped tests never fail a run, but they are counted so none is forgotten; a --render run
+# exists to draw, so a render test skipped there fails it.
+UNRENDERED="$(grep -c '⏭️ Skipped (no renderer)' "$LOG" || true)"
+SKIPPED="$(grep -c '⏭️ Skipped [^(]' "$LOG" || true)"
+if [ "$REQUIRE_RENDER" = 1 ] && [ "$UNRENDERED" != 0 ]; then
+  echo "--render: $UNRENDERED render tests were skipped (Godot did not draw)" >&2
+  RESULT=1
+fi
 if [ "$CODE" != 0 ] && [ "$RESULT" != "$CODE" ]; then
   echo "warning: Godot exited with code $CODE after printing its summary" >&2
 fi
 
 SUMMARY="$(grep -E '🟢|🔴|All test of all scene passed|Some tests fail' "$LOG" || echo "No scene reported (exit code $CODE); see $LOG")"
+SUMMARY="$SUMMARY
+Skipped: $UNRENDERED render tests (no renderer), $SKIPPED switched off (skipTest)"
 if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
   {
-    echo "### Scene tests (${SCENES:-$TIER})"
+    echo "### Scene tests${SCENES:+ ($SCENES)}"
     echo '```'
     echo "$SUMMARY"
     echo '```'

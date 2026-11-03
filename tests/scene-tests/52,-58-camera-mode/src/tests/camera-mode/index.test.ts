@@ -11,6 +11,7 @@ import { assertComponentValue } from 'testing-library/src/testing/assert'
 import { createAreaMode } from 'testing-library/src/utils/camera-mode-area'
 import { customAddEntity } from 'testing-library/src/utils/entity'
 import { assertMovePlayerTo } from 'testing-library/src/utils/helpers'
+import { TestFunctionContext } from 'testing-library/src/testing/types'
 
 const sceneCenter: Vector3 = Vector3.create(8, 0, 8)
 const cameraTarget: Vector3 = Vector3.create(16, 1, 8)
@@ -18,6 +19,28 @@ const floorColorFP: Color4 = Color4.Red()
 const areaColorFP: Color4 = Color4.create(1, 0, 0, 0.3)
 const floorColorTP: Color4 = Color4.Blue()
 const areaColorTP: Color4 = Color4.create(0, 0, 1, 0.3)
+
+
+// The engine switches the camera 0-8 ticks after the player enters or leaves an area.
+async function modeBecomes(context: TestFunctionContext, mode: number, maxTicks = 120): Promise<void> {
+  for (let tick = 0; tick < maxTicks; tick++) {
+    if (CameraMode.get(engine.CameraEntity).mode === mode) return
+    await context.helpers.waitNTicks(1)
+  }
+}
+
+// The mode once it has not changed for 20 ticks.
+async function settledMode(context: TestFunctionContext, maxTicks = 300): Promise<number> {
+  let mode = CameraMode.get(engine.CameraEntity).mode
+  let stable = 0
+  for (let tick = 0; tick < maxTicks && stable < 20; tick++) {
+    await context.helpers.waitNTicks(1)
+    const now = CameraMode.get(engine.CameraEntity).mode
+    stable = now === mode ? stable + 1 : 0
+    mode = now
+  }
+  return mode
+}
 
 test('camera-mode: should be 0 (first-person)', async function (context) {
   // Comment the behavior below and uncomment this one to run the test manually
@@ -55,7 +78,7 @@ test('camera-mode: should be 0 (first-person)', async function (context) {
   // Player is moved to inside of the cameraModeArea
   await assertMovePlayerTo(context, sceneCenter, cameraTarget)
 
-  await context.helpers.waitNTicks(5)
+  await modeBecomes(context, 0)
 
   assertComponentValue(engine.CameraEntity, CameraMode, {
     // Expect first person camera mode
@@ -85,7 +108,7 @@ test('camera-mode: should be 1 (third-person)', async function (context) {
   // Player is moved to inside of the cameraModeArea
   await assertMovePlayerTo(context, sceneCenter, cameraTarget)
 
-  await context.helpers.waitNTicks(5)
+  await modeBecomes(context, 1)
 
   assertComponentValue(engine.CameraEntity, CameraMode, {
     // Expect third person camera mode
@@ -99,10 +122,7 @@ test('camera-mode: transform.scale should not has effect in camera-mode-area.are
   // Player is moved to origin where camera isn't forced
   await assertMovePlayerTo(context, Vector3.One(), cameraTarget)
 
-  await context.helpers.waitNTicks(5)
-
-  const camera = CameraMode.get(engine.CameraEntity)
-  const cameraMode: number = camera.mode
+  const cameraMode: number = await settledMode(context)
   let modeToSet: number = 0
 
   // Set mode to CameraModeArea according the camera mode
@@ -129,7 +149,8 @@ test('camera-mode: transform.scale should not has effect in camera-mode-area.are
   // Player is moved to inside of the scaled cameraModeArea
   await assertMovePlayerTo(context, Vector3.create(8, 0, 5.5), cameraTarget)
 
-  await context.helpers.waitNTicks(5)
+  // Long enough for a wrongly scaled area to switch the mode (a switch takes a few ticks).
+  await context.helpers.waitNTicks(60)
 
   assertComponentValue(engine.CameraEntity, CameraMode, {
     // Expect cameraMode without forcing because scale in Transform component shouldn't affect the areaCameraMode
@@ -158,7 +179,7 @@ test('camera-mode: transform.rotation should has effect in camera-mode-area.area
   // Player is moved to inside of the cameraModeArea (rotated 90° to the floor)
   await assertMovePlayerTo(context, Vector3.create(8, 0, 10), cameraTarget)
 
-  await context.helpers.waitNTicks(5)
+  await modeBecomes(context, 0)
 
   assertComponentValue(engine.CameraEntity, CameraMode, {
     // Expect first person camera mode
@@ -199,7 +220,7 @@ test('camera-mode: camera-mode-area should alternate according the area wich pla
   // Only inside bigest one
   await assertMovePlayerTo(context, Vector3.create(3, 0, 3), cameraTarget)
 
-  await context.helpers.waitNTicks(10)
+  await modeBecomes(context, 0)
 
   assertComponentValue(engine.CameraEntity, CameraMode, {
     mode: 0
@@ -210,7 +231,7 @@ test('camera-mode: camera-mode-area should alternate according the area wich pla
   // Inside bigest one and medium one
   await assertMovePlayerTo(context, Vector3.create(6, 0, 6), cameraTarget)
 
-  await context.helpers.waitNTicks(10)
+  await modeBecomes(context, 1)
 
   assertComponentValue(engine.CameraEntity, CameraMode, {
     mode: 1
@@ -221,7 +242,7 @@ test('camera-mode: camera-mode-area should alternate according the area wich pla
   // Inside all of them
   await assertMovePlayerTo(context, sceneCenter, cameraTarget)
 
-  await context.helpers.waitNTicks(10)
+  await modeBecomes(context, 0)
 
   assertComponentValue(engine.CameraEntity, CameraMode, {
     mode: 0
@@ -232,7 +253,7 @@ test('camera-mode: camera-mode-area should alternate according the area wich pla
   // Outside all of them
   await assertMovePlayerTo(context, Vector3.create(1, 0, 1), cameraTarget)
 
-  await context.helpers.waitNTicks(10)
+  await modeBecomes(context, 0)
 
   assertComponentValue(engine.CameraEntity, CameraMode, {
     mode: 0

@@ -10,14 +10,23 @@ declare let require: any
  * @public
  */
 /* @__PURE__ */
-export const test: TestDefinitionFunction = DEBUG
-  ? /* @__PURE__ */ createTestFunction()
-  : /* @__PURE__ */ () => {}
+const runtime = DEBUG ? /* @__PURE__ */ createRuntime() : undefined
 
-// This is for skip test that we don't implement yet
-export const skipTest: TestDefinitionFunction = () => {}
+export const test: TestDefinitionFunction = runtime?.test ?? (() => {})
 
-function createTestFunction() {
+/**
+ * A test that needs a renderer, such as a screenshot: it runs when Godot draws and is left out of
+ * headless runs, so a scene keeps its state checks and its pictures together.
+ */
+export const renderTest: TestDefinitionFunction = runtime?.renderTest ?? (() => {})
+
+/**
+ * A test switched off: a known bug (its comment names the issue) or a scene that cannot run yet.
+ * It never runs, and each run logs it as skipped so it is not forgotten.
+ */
+export const skipTest: TestDefinitionFunction = runtime?.skipTest ?? (() => {})
+
+function createRuntime() {
   let testingModule: TestingModule
   try {
     testingModule = /* @__PURE__ */ require('~system/Testing')
@@ -44,6 +53,5 @@ function createTestFunction() {
     }
   }
 
-  const runtime = createTestRuntime(testingModule, engine)
-  return runtime.test
+  return createTestRuntime(testingModule, engine)
 }

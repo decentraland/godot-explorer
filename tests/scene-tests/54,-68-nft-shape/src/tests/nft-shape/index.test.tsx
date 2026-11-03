@@ -1,4 +1,4 @@
-import { test } from 'testing-library/src/testing'
+import { skipTest } from 'testing-library/src/testing'
 
 import { NftShape, Transform } from '@dcl/sdk/ecs'
 import { Color3, Vector3 } from '@dcl/sdk/math'
@@ -32,7 +32,8 @@ const FRAME_STYLES: string[] = [
 ]
 
 FRAME_STYLES.forEach((value: string, index: number) => {
-  test(`nft-shape: frame number ${value}`, async function (context) {
+  // Skipped: never run on Godot; needs remote NFT content.
+  skipTest(`nft-shape: frame number ${value}`, async function (context) {
     customAddEntity.clean()
     const nft = customAddEntity.addEntity()
 

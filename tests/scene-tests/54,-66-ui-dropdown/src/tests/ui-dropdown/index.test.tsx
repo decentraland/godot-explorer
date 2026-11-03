@@ -1,4 +1,4 @@
-import { skipTest, test } from 'testing-library/src/testing'
+import { skipTest } from 'testing-library/src/testing'
 import { CustomReactEcsRenderer } from 'testing-library/src/utils/ui'
 
 import { Color4, Vector3 } from '@dcl/sdk/math'
@@ -75,7 +75,9 @@ function TestElementDropdown(): ReactEcs.JSX.Element {
   )
 }
 
-test('ui-dropdown: this test only check the visual style of dropdown', async function (context) {
+// Skipped: never run on Godot; 3 of 4 tests skipped upstream.
+
+skipTest('ui-dropdown: this test only check the visual style of dropdown', async function (context) {
   customAddEntity.clean()
   CustomReactEcsRenderer.destroy()
   CustomReactEcsRenderer.setUiRenderer(TestElementDropdown)

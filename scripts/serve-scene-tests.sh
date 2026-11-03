@@ -115,6 +115,9 @@ for scene in sorted(os.listdir(exports)):
             if not os.path.exists(target):
                 os.link(os.path.join(folder, name), target)
 about["configurations"]["scenesUrn"] = urns
+# Navigation asks the content server which scene is at the start parcel; a remote one makes every
+# run depend on production (and time out when it is slow). The local server answers it.
+about["content"]["publicUrl"] = about["configurations"]["scenesUrn"][0].split("baseUrl=")[1].rstrip("/") + "/content"
 json.dump(about, open(os.path.join(static, "scene-explorer-tests", "about"), "w"))
 print(f"Assembled the realm in {static}/ ({len(urns)} scenes)")
 EOF
@@ -131,7 +134,18 @@ import functools, http.server, sys
 port, root = int(sys.argv[1]), sys.argv[2]
 class Server(http.server.ThreadingHTTPServer):
     request_queue_size = 128
-handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=root)
+class Handler(http.server.SimpleHTTPRequestHandler):
+    # The parcel lookup (`POST <content>/entities/active`): no scene outside the realm's own list.
+    def do_POST(self):
+        self.rfile.read(int(self.headers.get("Content-Length") or 0))
+        found = self.path.endswith("/entities/active")
+        self.send_response(200 if found else 404)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", "2" if found else "0")
+        self.end_headers()
+        if found:
+            self.wfile.write(b"[]")
+handler = functools.partial(Handler, directory=root)
 Server(("127.0.0.1", port), handler).serve_forever()
 EOF
 fi

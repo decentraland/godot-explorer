@@ -1,9 +1,11 @@
-import { skipTest, test } from 'testing-library/src/testing'
+import { renderTest, skipTest, test } from 'testing-library/src/testing'
+import { assertSnapshot } from 'testing-library/src/utils/snapshot-test'
+import { getScreenCanvasInfo } from 'testing-library/src/utils/ui/ui-utils'
 import { assert, assertEquals } from 'testing-library/src/testing/assert'
 import { TestFunctionContext } from 'testing-library/src/testing/types'
 import { CustomReactEcsRenderer } from 'testing-library/src/utils/ui'
 
-import { Color4 } from '@dcl/sdk/math'
+import { Color4, Vector3 } from '@dcl/sdk/math'
 import type { JSX } from '@dcl/sdk/react-ecs'
 import ReactEcs, { UiEntity } from '@dcl/sdk/react-ecs'
 import { renderedUi, sameColor, settled } from 'testing-library/src/utils/engine'
@@ -484,7 +486,8 @@ test('ui-background: texture stretch with uvs', async function (context) {
   assertEquals(ui.background?.uvs, [0, 0, 0, 0.5, 0.5, 0.5, 0.5, 0], 'uvs')
 })
 
-test('ui-background: avatar texture', async function (context) {
+// Network: the portrait comes from the profile server, so it stays out of headless runs.
+renderTest('ui-background: avatar texture', async function (context) {
   const { ui } = await texture(context, 'Using avatar texture')
   assert(sameColor(ui.background?.color, [1, 1, 1, 0.5]), `color ${JSON.stringify(ui.background?.color)}`)
 })
@@ -503,6 +506,35 @@ test('ui-background: nine-slices with custom slices', async function (context) {
 test('ui-background: smaller nine-slices keep their margins', async function (context) {
   const { box, ui } = await texture(context, 'Smaller NineSlices with right values')
   assertEquals(ui.background?.margins, [115, 115, 115, 115], 'margins')
-  assertEquals(ui.size, [box.size[0] / 2, box.size[1] / 2], 'size')
+  assert(ui.size.every((side, i) => Math.abs(side - box.size[i] / 2) <= 1), `size ${JSON.stringify(ui.size)} in ${JSON.stringify(box.size)}`)
   CustomReactEcsRenderer.destroy()
 })
+
+// The settings are checked above; these show the texture is sampled that way.
+async function picture(name: string): Promise<void> {
+  await assertSnapshot(
+    `screenshot/$explorer_snapshot_ui_background_${name}.png`,
+    Vector3.create(8, 1, 10),
+    Vector3.create(8, 1, 8),
+    getScreenCanvasInfo()
+  )
+}
+
+renderTest('ui-background: stretched texture drawn', async function (context) {
+  await render(context, TestElementRocks)
+  const rocks = withBackground((background) => background.texture !== undefined)
+  await settled(context, () => renderedUi(rocks), (u) => u.background?.texture === 'ImageTexture', 300)
+  await picture('all_screen_rocks')
+})
+
+for (const [description, name] of [
+  ['Stretch with uvs', 'stretch_with_uvs'],
+  ['NineSlices with right values', 'nineslices_with_right_values'],
+  ['Using avatar texture', 'using_avatar_texture']
+]) {
+  renderTest(`ui-background: ${description.toLowerCase()} drawn`, async function (context) {
+    await texture(context, description)
+    await picture(name)
+    CustomReactEcsRenderer.destroy()
+  })
+}

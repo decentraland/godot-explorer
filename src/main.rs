@@ -296,13 +296,6 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(false),
                 )
                 .arg(
-                    Arg::new("stest-tier")
-                        .long("stest-tier")
-                        .help("scene tests to run: ecs, render or all (needs scripts/serve-scene-tests.sh)")
-                        .takes_value(true)
-                        .default_value("all"),
-                )
-                .arg(
                     Arg::new("ctest")
                         .long("ctest")
                         .help("run client tests")
@@ -890,9 +883,7 @@ fn main() -> Result<(), anyhow::Error> {
             }
 
             if sm.is_present("stest") && !extras.iter().any(|arg| arg == "--scene-test") {
-                extras.extend(scene_tests::scene_test_args(
-                    sm.value_of("stest-tier").unwrap_or("all"),
-                )?);
+                extras.extend(scene_tests::scene_test_args()?);
             }
 
             run::run(
@@ -1108,7 +1099,7 @@ pub fn coverage_with_itest(devmode: bool) -> Result<(), anyhow::Error> {
 
     run::run(false, true, vec![], false, false, false)?;
 
-    let extra_args = scene_tests::scene_test_args("all")?;
+    let extra_args = scene_tests::scene_test_args()?;
 
     run::build(false, false, vec![], Some(build_envs.clone()), None)?;
 

@@ -38,7 +38,9 @@ export function createTestRuntime(
   let currentTestNumber = 0
 
   // array to hold the scheduled tests
-  const scheduledTests: TestPlanEntry[] = []
+  let scheduledTests: TestPlanEntry[] = []
+  const renderTests = new Set<string>()
+  const skippedTests: string[] = []
 
   // an array of promises that are resolved on the next frame (after the current frame is finished)
   const nextTickFuture: Array<(dt: number) => void> = []
@@ -248,18 +250,31 @@ export function createTestRuntime(
     }
   }
 
+  // Render tests need pixels: a headless run (no renderer) leaves them out of the plan. An
+  // explorer without `testCommand` is taken to have a renderer.
+  async function dropRenderTestsWhenHeadless(): Promise<void> {
+    if (!renderTests.size || testingModule.testCommand === undefined) return
+    const state = await testingModule.testCommand({ kind: 'query', payload: { cmd: 'state' } })
+    if (state?.headless !== true) return
+    for (const name of renderTests) console.log(`⏭️ Skipped (no renderer) ${name}`)
+    scheduledTests = scheduledTests.filter(($) => !renderTests.has($.name))
+  }
+
   // schedule the test runner start for the next frame
   nextTickFuture.push(() => {
     // once we run the next tick, the test runtime becomes frozen. that means no new
     // test definitions are accepted
     runtimeFrozen = true
 
-    if (!scheduledTests.length) return
+    for (const name of skippedTests) console.log(`⏭️ Skipped ${name}`)
 
-    // inform the test runner about the plans for this test run
-    testingModule
-      .plan({ tests: scheduledTests })
-      .then(scheduleNextRun)
+    dropRenderTestsWhenHeadless()
+      .then(async () => {
+        // inform the test runner about the plans for this test run, even an empty one: a scene
+        // that never sends its plan fails the run
+        await testingModule.plan({ tests: scheduledTests })
+        scheduleNextRun()
+      })
       .catch(globalFail)
   })
 
@@ -275,8 +290,22 @@ export function createTestRuntime(
     scheduledTests.push({ fn, name })
   }
 
+  /** A test that is switched off (a known bug, a scene that cannot run yet): logged, never run. */
+  function skipTest(name: string, _fn: TestFunction) {
+    if (runtimeFrozen) throw new Error("New tests can't be added at this stage.")
+    skippedTests.push(name)
+  }
+
+  /** A test that needs a renderer (a screenshot): it runs only when Godot draws. */
+  function renderTest(name: string, fn: TestFunction) {
+    test(name, fn)
+    renderTests.add(name)
+  }
+
   return {
-    test
+    test,
+    renderTest,
+    skipTest
   }
 }
 

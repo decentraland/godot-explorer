@@ -2,7 +2,8 @@ import { Entity, Font, PBTextShape, TextAlignMode, TextShape, Transform } from '
 import { Color4, Vector3 } from '@dcl/sdk/math'
 import { customAddEntity } from 'testing-library/src/utils/entity'
 import { renderedText, settled } from 'testing-library/src/utils/engine'
-import { test } from 'testing-library/src/testing'
+import { renderTest, test } from 'testing-library/src/testing'
+import { assertSnapshot } from 'testing-library/src/utils/snapshot-test'
 import { TestFunctionContext } from 'testing-library/src/testing/types'
 import { assert, assertEquals } from 'testing-library/src/testing/assert'
 
@@ -58,3 +59,19 @@ test('text-shape: changing the text updates the label', async function (context)
   assertEquals((await settled(context, () => renderedText(entity), (l) => l?.text === 'after'))?.text, 'after')
   customAddEntity.clean()
 })
+
+// What the label is set to is checked above; these show it is drawn that way.
+const PICTURES: Array<[string, PBTextShape, string]> = [
+  ['outline drawn', { text: 'Text with\nred outline', fontSize: 2, outlineColor: Color4.Red(), outlineWidth: 0.1 }, 'text_shape_3'],
+  ['monospace glyphs drawn', { text: 'Monospace', fontSize: 2, font: Font.F_MONOSPACE }, 'text_shape_4'],
+  ['middle right anchored', { text: 'Middle Right', fontSize: 2, textAlign: TextAlignMode.TAM_MIDDLE_RIGHT }, 'text_shape_6']
+]
+
+for (const [name, shape, picture] of PICTURES) {
+  renderTest(`text-shape: ${name}`, async function (context) {
+    await label(context, shape)
+    await context.helpers.waitNTicks(1)
+    await assertSnapshot(`screenshot/$explorer_snapshot_${picture}.png`, Vector3.create(8, 1, 7), Vector3.create(8, 1, 8))
+    customAddEntity.clean()
+  })
+}

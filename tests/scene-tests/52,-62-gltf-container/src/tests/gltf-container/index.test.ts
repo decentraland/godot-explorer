@@ -2,7 +2,8 @@ import { Entity, GltfContainer, GltfContainerLoadingState, LoadingState, Transfo
 import { Vector3 } from '@dcl/sdk/math'
 import { customAddEntity } from 'testing-library/src/utils/entity'
 import { renderedModel, renderedNode } from 'testing-library/src/utils/engine'
-import { test } from 'testing-library/src/testing'
+import { renderTest, test } from 'testing-library/src/testing'
+import { assertSnapshot } from 'testing-library/src/utils/snapshot-test'
 import { assert, assertEquals } from 'testing-library/src/testing/assert'
 import { TestFunctionContext } from 'testing-library/src/testing/types'
 
@@ -43,5 +44,14 @@ test('gltf-container: a missing model reports NOT_FOUND and draws nothing', asyn
   const missing = await load(context, 'src/assets/models/missing.glb')
   assertEquals(GltfContainerLoadingState.get(missing).currentState, LoadingState.NOT_FOUND, 'SDK loading state')
   assertEquals((await renderedNode(missing)).bounds, null, 'bounds')
+  customAddEntity.clean()
+})
+
+// The loading state and bounds say the model is there; only a picture shows its textures.
+renderTest('gltf-container: avocado looks textured', async function (context) {
+  const avocado = await load(context, 'src/assets/models/avocado.glb')
+  await expectLoaded(avocado, 'src/assets/models/avocado.glb', [1.28, 1.89, 0.83])
+  await context.helpers.waitNTicks(1)
+  await assertSnapshot('screenshot/$explorer_snapshot_gltfcontainer_avocado.png', Vector3.create(8, 1, 10), Vector3.create(8, 1, 8))
   customAddEntity.clean()
 })

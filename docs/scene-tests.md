@@ -10,22 +10,39 @@ and reports every result back to the explorer through `~system/Testing`.
 |---|---|
 | `tests/scene-tests/<x,y-name>/` | one scene per component, e.g. `52,-52-raycast` |
 | `tests/scene-tests/testing-library/` | `test()`, asserts, `assertSnapshot` and helpers shared by the scenes |
-| `tests/scene-tests/scenes.json` | every scene's parcel and tier; the one list xtask and the scripts read |
-| `tests/snapshots/scenes/` | reference screenshots for the `render` tier |
+| `tests/scene-tests/scenes.json` | every scene's parcel and name; the one list xtask and the scripts read |
+| `tests/snapshots/scenes/` | reference screenshots for the render tests |
 | `scripts/serve-scene-tests.sh` | builds the scenes as a static realm and serves it on `localhost:7666` |
-| `scripts/ci/scene-tests.sh` | serves the realm, runs Godot on a tier and writes the summary |
+| `scripts/ci/scene-tests.sh` | serves the realm, runs Godot on the scenes and writes the summary |
 
 The suite was copied from the archived
 [decentraland/scene-explorer-tests](https://github.com/decentraland/scene-explorer-tests) at 2b82e41
 and moved from an unreleased SDK branch build to the released `@dcl/sdk` 7.31.0.
 
-## Tiers
+## Three kinds of test
 
-| Tier | Scenes | Needs |
+Every scene in `scenes.json` runs on every run; what each test needs decides whether it runs.
+
+| Declared with | Runs | Used for |
 |---|---|---|
-| `ecs` | raycast, transform, billboard, camera-mode, engine-info, gltf-container, visibility, mesh-renderer, avatar-attach, locomotion, touch-controls, app-commands, text-shape, ui-background, ui-text | nothing: state checks only, runs headless |
-| `render` | material | a renderer: they compare screenshots with `tests/snapshots/scenes/` |
-| `disabled` | video-player, avatar-shape, ui-button, ui-dropdown, nft-shape | never run; `scenes.json` says why |
+| `test()` | always | state checks: SDK state the explorer writes back, engine queries |
+| `renderTest()` | when Godot draws (`--windowed`, `--render`); a headless run skips it | screenshots compared with `tests/snapshots/scenes/` |
+| `skipTest()` | never | a known bug (its comment names the issue) or a scene that cannot run yet |
+
+All three come from `testing-library/src/testing`. A headless run (the PR job) runs the state
+checks and skips the pictures; the scene asks the engine whether Godot draws. Skips never fail a
+run, but every one is logged (`⏭️ Skipped ...`) and counted in the summary, so a switched-off
+test is not forgotten. `--render` runs with a window and fails if any render test was still
+skipped: a job meant to draw cannot pass without drawing.
+
+Switched off today: the pinch camera switch (touch-controls) and `flexGrow` next to an undefined
+sibling (ui-background), both known bugs; and every test in video-player (video events not working
+well), avatar-shape (never run on Godot, no current reference), ui-button and ui-dropdown (never
+run on Godot, most tests skipped upstream) and nft-shape (needs remote NFT content).
+
+The realm the tests run on is offline: its `about` points the content server at the local one,
+which answers the start-parcel lookup itself, so a run never asks Decentraland's servers which
+scene stands at a parcel (it used to, and timed out whenever they were slow).
 
 Scene tests run as a phone: `--scene-test` turns on mobile mode, so the touch controls and the
 mobile movement rules are live, and the graphics autotune stays off so screenshots don't vary.
@@ -94,9 +111,9 @@ Needs Node (the scripts load nvm when `npm` is not on `PATH`), Godot from `cargo
 and a built client library (`cargo run -- build`).
 
 ```bash
-scripts/ci/scene-tests.sh                 # ecs tier, headless: exits 0 when every scene passed
-scripts/ci/scene-tests.sh --tier all      # every enabled scene
-scripts/ci/scene-tests.sh --windowed      # watch it run
+scripts/ci/scene-tests.sh                 # headless: exits 0 when every scene passed
+scripts/ci/scene-tests.sh --windowed      # watch it run; render tests run too
+scripts/ci/scene-tests.sh --render        # with a window, failing if a render test is skipped
 scripts/ci/scene-tests.sh --scene locomotion,touch-controls   # only these (names in scenes.json)
 scripts/ci/scene-tests.sh --scene locomotion --watch          # rerun on every save or library build
 ```
@@ -111,7 +128,7 @@ Or keep the realm up and use xtask, which builds the client first:
 
 ```bash
 scripts/serve-scene-tests.sh              # terminal 1: build if changed, serve :7666
-cargo run -- run --stest --stest-tier ecs # terminal 2
+cargo run -- run --stest                  # terminal 2
 ```
 
 `--stest` fills in `--scene-test`, `--realm` and `--snapshot-folder` from `scenes.json` unless they are
@@ -119,7 +136,7 @@ given after `--`. The scene build is reused while nothing under `tests/scene-tes
 
 ## In CI
 
-Every push and PR runs the `ecs` tier as the "🧪 Scene tests / Scene tests (ECS)" check, with the
+Every push and PR runs the scene tests headless as the "🧪 Scene tests / Scene tests" check, with the
 per-scene summary on the run page and the Godot log as the `scene-tests-log` artifact.
 
 `android_builds.yml` builds each library once and every other job downloads it:
@@ -128,7 +145,7 @@ per-scene summary on the run page and the Godot log as the `scene-tests-log` art
 |---|---|---|
 | `linux-lib` | `ubuntu-latest` | builds the Linux `libdclgodot.so`, uploads `libdclgodot-linux-release` |
 | `android-lib` | WarpBuild, builder image | builds the Android `libdclgodot.so` (unstripped), uploads `libdclgodot-android-release` |
-| `scene-tests` | `ubuntu-latest` | needs `linux-lib`; runs `scripts/ci/scene-tests.sh --tier ecs` (`scene_tests.yml`) |
+| `scene-tests` | `ubuntu-latest` | needs `linux-lib`; runs `scripts/ci/scene-tests.sh`, headless (`scene_tests.yml`) |
 | `build` (Build Android) | WarpBuild, builder image | needs both libraries; imports, exports, signs and uploads the APK/AAB |
 
 The Linux library is the Godot editor's GDExtension for the import and export as well as the client
@@ -185,12 +202,12 @@ SCENE_TESTS_WORLD=mobile1.dcl.eth node scripts/ci/deploy-scene-tests.mjs deploy 
    2. An engine query through the helpers above (`renderedText`, `renderedUi`, ...).
    3. A screenshot, only when the look itself is tested: materials, lighting, shaders, glyphs,
       texture sampling. `assertSnapshot('screenshot/$explorer_snapshot_<name>.png', cameraPosition,
-      cameraTarget)`, in a `render` scene.
+      cameraTarget)`, in a `renderTest`, next to the scene's state checks.
 
    A glTF that fails to load is checked by its loading state, not by a picture. A known bug gets a
    `skipTest` that expects the correct result, with a comment naming the issue.
 3. In the scene's `main()`, call `showQaSteps('<name>', [...])` with the steps QA should follow by
    hand in the World, or `[]` when the automated tests cover it.
-4. Add the scene to `scenes.json` with tier `ecs` (no screenshots) or `render`.
-5. Run it with `scripts/ci/scene-tests.sh --tier <tier> --windowed`. For a new screenshot, copy the
+4. Add the scene to `scenes.json` (`{ "parcel": [x, y], "name": "<name>" }`).
+5. Run it with `scripts/ci/scene-tests.sh --scene <name>`, and `--windowed` for its render tests. For a new screenshot, copy the
    capture from `tests/snapshots/scenes/comparison/` into `tests/snapshots/scenes/` after checking it.

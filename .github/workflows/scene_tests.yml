@@ -36,8 +36,8 @@ jobs:
             echo "::notice title=Scene tests skipped::This PR changes nothing on the Godot side."
           fi
 
-  ecs:
-    name: Scene tests (ECS)
+  scenes:
+    name: Scene tests
     needs: changes
     if: needs.changes.outputs.godot == 'true'
     runs-on: ubuntu-latest
@@ -76,8 +76,8 @@ jobs:
           cache: npm
           cache-dependency-path: tests/scene-tests/package-lock.json
 
-      - name: Run the ECS tier
-        run: scripts/ci/scene-tests.sh --tier ecs
+      - name: Run the scene tests
+        run: scripts/ci/scene-tests.sh
 
       - name: Upload the Godot log
         if: always()

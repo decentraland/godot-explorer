@@ -35,4 +35,6 @@ export type TestingModule = {
   logTestResult: typeof logTestResult
   plan: typeof plan
   setCameraTransform: typeof setCameraTransform
+  // Godot only: app commands and debug-hub queries (utils/engine.ts).
+  testCommand?: (body: { kind: string; payload: unknown }) => Promise<any>
 }

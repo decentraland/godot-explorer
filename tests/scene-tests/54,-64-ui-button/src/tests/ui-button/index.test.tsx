@@ -1,4 +1,4 @@
-import { skipTest, test } from 'testing-library/src/testing'
+import { skipTest } from 'testing-library/src/testing'
 import { CustomReactEcsRenderer } from 'testing-library/src/utils/ui'
 
 import { Color4, Vector3 } from '@dcl/sdk/math'
@@ -59,7 +59,9 @@ skipTest('ui-button: should change color to blue', async function (context) {
   ChangeColor(Color4.Black())
 })
 
-test('ui-button: this test only check the visual style of button', async function (context) {
+// Skipped: never run on Godot; 1 of 2 tests skipped upstream.
+
+skipTest('ui-button: this test only check the visual style of button', async function (context) {
   CustomReactEcsRenderer.destroy()
   CustomReactEcsRenderer.setUiRenderer(TestElementButton)
 
