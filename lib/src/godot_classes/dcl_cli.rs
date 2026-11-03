@@ -780,6 +780,18 @@ impl DclCli {
                 category: "Environment".to_string(),
             },
             ArgDefinition {
+                name: "--social-api-url".to_string(),
+                description: "Use another social service HTTP API, e.g. http://192.168.1.10:3101 for a social-service running on a laptop in the same network".to_string(),
+                arg_type: ArgType::Value("<url>".to_string()),
+                category: "Environment".to_string(),
+            },
+            ArgDefinition {
+                name: "--social-stream-url".to_string(),
+                description: "Use another social service real-time stream, e.g. ws://192.168.1.10:8085/v1/stream".to_string(),
+                arg_type: ArgType::Value("<url>".to_string()),
+                category: "Environment".to_string(),
+            },
+            ArgDefinition {
                 name: "--no-pipe-logging".to_string(),
                 description: "Disable piping Rust logs to Godot console (use platform default: stdout/logcat/oslog)".to_string(),
                 arg_type: ArgType::Flag,
@@ -1107,6 +1119,18 @@ impl INode for DclCli {
                 }
             })
             .unwrap_or_default();
+        // Read by the social client from any thread, so they go straight to a static.
+        let social_url_override = |key: &str| {
+            args_map
+                .get(key)
+                .and_then(|v| v.as_deref())
+                .unwrap_or_default()
+                .to_string()
+        };
+        crate::urls::set_social_url_overrides(
+            &social_url_override("--social-api-url"),
+            &social_url_override("--social-stream-url"),
+        );
         let dcl_env = args_map
             .get("--dclenv")
             .and_then(|v| v.as_ref())
