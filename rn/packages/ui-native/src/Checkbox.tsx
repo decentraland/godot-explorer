@@ -36,12 +36,18 @@ export function Checkbox({
         style={[
           styles.box,
           { width: box, height: box },
-          checked && styles.boxChecked,
+          checked && (size === 'sm' ? styles.boxCheckedSm : styles.boxChecked),
           disabled && styles.boxDisabled,
         ]}
       >
         {checked && (
-          <View style={[styles.fill, disabled && styles.fillDisabled]} />
+          <View
+            style={[
+              styles.fill,
+              size === 'sm' && styles.fillSm,
+              disabled && styles.fillDisabled,
+            ]}
+          />
         )}
       </View>
       <AppText style={[styles.label, disabled && styles.labelDisabled]}>
@@ -61,11 +67,14 @@ const styles = StyleSheet.create({
     padding: '12.5%',
   },
   boxChecked: { borderColor: colors.ruby },
+  /** The Small checked node is Lavender Light, not Ruby. */
+  boxCheckedSm: { borderColor: colors.lavender },
   boxDisabled: {
     backgroundColor: colors.black30,
     borderColor: colors.textDisabled,
   },
   fill: { flex: 1, borderRadius: u(1), backgroundColor: colors.ruby },
+  fillSm: { backgroundColor: colors.lavender },
   fillDisabled: { backgroundColor: colors.textDisabled },
   label: {
     flexShrink: 1,

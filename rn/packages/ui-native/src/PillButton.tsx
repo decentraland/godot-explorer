@@ -7,8 +7,8 @@ import { colors, radii } from './tokens';
 import { u } from './scale';
 
 /** Figma's `Pill` — a selectable filter chip. `big` is the Large size (60dp tall, used for the
- * main mode switch, e.g. Wearables/Emotes); the default is Medium (56dp, sub-filters). Colors are
- * fixed per size×selected combination, not a free tone — matches the real component exactly. */
+ * main mode switch, e.g. Wearables/Emotes); the default is Medium (56dp, sub-filters). Selected is
+ * Lavender Light + Shadow text in every size (the States page rule). */
 export function PillButton({
   label,
   icon,
@@ -25,19 +25,11 @@ export function PillButton({
   badge?: boolean;
   onPress: () => void;
 }) {
-  const bg = big
-    ? selected
-      ? colors.ruby
-      : colors.black40
-    : selected
-    ? colors.lavender
-    : colors.white20;
-  const textColor = big
-    ? selected
-      ? colors.snow
-      : colors.pearl
-    : selected
+  const bg = selected ? colors.lavender : big ? colors.black40 : colors.white20;
+  const textColor = selected
     ? colors.shadow
+    : big
+    ? colors.pearl
     : colors.white70;
   return (
     <PressableBase
@@ -53,10 +45,7 @@ export function PillButton({
       {icon && <Icon name={icon} size={16} color={textColor} />}
       <AppText
         variant="button"
-        style={[
-          big ? styles.bigText : styles.mediumText,
-          { color: textColor },
-        ]}
+        style={[big ? styles.bigText : styles.mediumText, { color: textColor }]}
       >
         {label}
       </AppText>

@@ -44,9 +44,14 @@ const MODAL_ICON = {
   success: 'modalSuccess',
 } as const;
 
-const GLOW = [
-  { offset: 0, color: '#B83CE0', opacity: 0.85 },
-  { offset: 1, color: '#B83CE0', opacity: 0 },
+/** `surface/modal-glow`: two blurred Mythic blobs, the top one opaque and the bottom one at 50%. */
+const GLOW_TOP = [
+  { offset: 0, color: colors.mythic, opacity: 0.85 },
+  { offset: 1, color: colors.mythic, opacity: 0 },
+];
+const GLOW_BOTTOM = [
+  { offset: 0, color: colors.mythic, opacity: 0.5 },
+  { offset: 1, color: colors.mythic, opacity: 0 },
 ];
 
 /** Height of the on-screen keyboard while `active`, so the card can stay above it. */
@@ -76,6 +81,7 @@ export function Dialog({
   visible,
   title,
   body,
+  link,
   icon,
   buttons,
   onRequestClose,
@@ -84,6 +90,8 @@ export function Dialog({
   visible: boolean;
   title: string;
   body?: string;
+  /** Figma `Link=True`: an underlined sky-blue line under the body (two lines at most). */
+  link?: { label: string; onPress: () => void };
   icon?: DialogIcon;
   buttons: DialogButton[];
   onRequestClose: () => void;
@@ -107,21 +115,39 @@ export function Dialog({
           onPress={onRequestClose}
         />
         <View
-          style={[styles.card, landscape ? styles.cardLandscape : styles.cardPortrait]}
+          style={[
+            styles.card,
+            landscape ? styles.cardLandscape : styles.cardPortrait,
+          ]}
           accessibilityViewIsModal
         >
           <View style={styles.clip}>
-            <RadialFill stops={GLOW} cx={1} cy={0} rx={0.7} ry={0.35} />
-            <RadialFill stops={GLOW} cx={0.5} cy={1.05} rx={0.6} ry={0.22} />
+            <RadialFill stops={GLOW_TOP} cx={1} cy={0} rx={0.7} ry={0.35} />
+            <RadialFill
+              stops={GLOW_BOTTOM}
+              cx={0.5}
+              cy={1.05}
+              rx={0.6}
+              ry={0.22}
+            />
           </View>
           <View style={[styles.content, landscape && styles.contentLandscape]}>
             <View style={styles.text}>
               <AppText style={styles.title}>{title}</AppText>
               {body && <AppText style={styles.body}>{body}</AppText>}
+              {link && (
+                <Pressable accessibilityRole="link" onPress={link.onPress}>
+                  <AppText numberOfLines={2} style={styles.link}>
+                    {link.label}
+                  </AppText>
+                </Pressable>
+              )}
             </View>
             {children}
             {buttons.length > 0 && (
-              <View style={[styles.buttons, landscape && styles.buttonsLandscape]}>
+              <View
+                style={[styles.buttons, landscape && styles.buttonsLandscape]}
+              >
                 {buttons.map((button, i) => (
                   <View
                     key={button.label}
@@ -192,6 +218,13 @@ const styles = StyleSheet.create({
     lineHeight: u(18),
     color: colors.snow,
     textAlign: 'center',
+  },
+  link: {
+    marginTop: u(5),
+    fontSize: u(10),
+    color: colors.sky,
+    textAlign: 'center',
+    textDecorationLine: 'underline',
   },
   buttons: { flexDirection: 'row', alignItems: 'center', gap: u(16) },
   buttonsLandscape: { gap: u(20) },

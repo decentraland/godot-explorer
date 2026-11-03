@@ -59,7 +59,8 @@ export function Dropdown({
   const selected = options.find(o => o.value === value);
   const locked = disabled || readOnly;
   const isOpen = open && !locked;
-  const listHeight = u(FIELD_HEIGHT) * Math.min(options.length, maxVisibleRows);
+  const rows = Math.min(options.length, maxVisibleRows);
+  const listHeight = u(FIELD_HEIGHT) * rows + u(4) * (rows - 1);
 
   const list = isOpen && (
     <View
@@ -212,7 +213,12 @@ const styles = StyleSheet.create({
   textSelected: { color: colors.lavender },
   optionIcon: { marginLeft: u(4) },
   spacer: { flex: 1 },
-  helper: { marginTop: u(5), fontSize: u(11), color: colors.pearl },
+  helper: {
+    marginTop: u(5),
+    paddingBottom: u(4),
+    fontSize: u(11),
+    color: colors.pearl,
+  },
   errorText: { color: colors.danger },
   list: {
     position: 'absolute',

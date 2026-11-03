@@ -1,10 +1,13 @@
+import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Icon } from './Icon';
 import { colors, fonts } from './tokens';
 import { u } from './scale';
 import { t } from './i18n';
 
-/** Search-mode header: optional back chevron, input, clear X when there is text; `framed` is the outlined box. */
+/** Figma `Input/Search` (540×68: Black 40%, radius 12, `Icon/Base` search 56, Lavender Light
+ * border while focused) with the optional back chevron of `Header` SearchOpen; `framed` only
+ * widens the gap after the chevron. */
 export function SearchField({
   value,
   onChangeText,
@@ -22,6 +25,7 @@ export function SearchField({
   autoFocus?: boolean;
   framed?: boolean;
 }) {
+  const [focused, setFocused] = useState(false);
   return (
     <View style={styles.row}>
       {onBack && (
@@ -35,20 +39,18 @@ export function SearchField({
           <Icon name="chevronLeft" size={22} />
         </Pressable>
       )}
-      <View style={[styles.field, framed && styles.framed]}>
-        <Icon
-          name="search"
-          size={framed ? 22 : 18}
-          color={framed ? colors.snow : colors.lavender}
-        />
+      <View style={[styles.field, focused && styles.focused]}>
+        <Icon name="search" size={28} />
         <TextInput
           value={value}
           onChangeText={onChangeText}
           onSubmitEditing={() => onSubmit?.(value)}
           placeholder={placeholder}
-          placeholderTextColor={colors.white70}
+          placeholderTextColor={colors.white50}
           returnKeyType="search"
           autoFocus={autoFocus}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           style={styles.input}
         />
         {value.length > 0 && (
@@ -58,7 +60,7 @@ export function SearchField({
             hitSlop={8}
             onPress={() => onChangeText('')}
           >
-            <Icon name="close" size={16} color={colors.lavender} />
+            <Icon name="close" size={20} />
           </Pressable>
         )}
       </View>
@@ -72,23 +74,19 @@ const styles = StyleSheet.create({
   backFramed: { marginRight: u(20) },
   field: {
     flex: 1,
-    height: u(40),
-    borderRadius: u(20),
-    paddingHorizontal: u(14),
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.glass,
-  },
-  framed: {
     height: u(34),
     borderRadius: u(6),
+    paddingHorizontal: u(5),
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.black40,
     borderWidth: 1,
-    borderColor: colors.lavender,
-    backgroundColor: 'rgba(30,0,60,0.55)',
+    borderColor: 'transparent',
   },
+  focused: { borderColor: colors.lavender },
   input: {
     flex: 1,
-    marginHorizontal: u(8),
+    marginHorizontal: u(4),
     padding: 0,
     fontFamily: fonts.medium,
     fontSize: u(15),

@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: u(32),
     backgroundColor: colors.navbar,
     boxShadow: [
-      { offsetX: 0, offsetY: -u(2), blurRadius: u(2), color: '#00000080' },
+      { offsetX: 0, offsetY: -u(2), blurRadius: u(2), color: colors.black25 },
     ],
   },
   rail: {

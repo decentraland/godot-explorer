@@ -1,9 +1,16 @@
 # Design System Mobile (Figma reference)
 
-File: `Jis8xv58qaDNy53OCGLeoh` ("Design System Mobile"). Pages: Colors, Buttons, Fonts, Icons, Tags,
-Names, Inputs, Loader, Safe areas. This is the source every screen's components (buttons, colors,
+File: `Jis8xv58qaDNy53OCGLeoh` ("Design System Mobile"). Pages: Colors, Buttons, Icons, Fonts, Tags,
+Names, Inputs, Dropdowns, Modals, Tabs, Loader, Controls, Headers, Menu, Backgrounds, Spacing & Sizes,
+Elevation, Motion, States, Safe areas. This is the source every screen's components (buttons, colors,
 text fields) ultimately trace back to — check here **before** re-deriving a spec from a specific
 screen's node, and before assuming a value is screen-specific when it might be a shared token.
+Last full pass (every component set read through `get_design_context` metadata, no screenshots):
+**2026-11-03**. **Conflict rule (decided 2026-11-03): the drawn component wins.** When a node's
+values contradict its usage description or a spec string, implement the node — the design gets
+its approval visually, a description is text the designer can forget to update. Descriptions are
+still the source for the intended RN API and for behaviour the nodes cannot show. Re-run it page by page when the designer announces changes; the node ids below are
+the component *sets*, so one call per set returns every variant.
 
 `get_variable_defs` does not work headlessly for this file (requires an active desktop-app
 selection) — use `get_metadata` instead; color names/hex are readable directly from node *names*
@@ -16,15 +23,19 @@ Confirmed exact matches already in `tokens.ts`: `ruby #FF2D55`, `orange #FF7439`
 entire `rarityColors` table (common/uncommon/rare/epic/legendary/exotic/mythic/unique, both dark and
 light variants) — all verified exact.
 
-**Found drift**: `colors.periwinkle` in `tokens.ts` is `#9D8CFF`, but Figma's actual "Periwinkle"
-swatch is `#A0ABFF` — the *correct* value is already used ad hoc in `notificationTitle.social` and
-was hand-typed (not token-referenced) for the entry-flow disclaimer's link color. Don't silently
-"fix" the shared `periwinkle` token without checking its other call sites first (icon colors, HUD
-elements may intentionally differ) — flag it, confirm impact, then fix in one pass.
-
-Not yet reconciled: `colors.lavender` (`#E8B9FF`) doesn't match any swatch found so far (Figma's
-"Lavender" in the Secondary section is `#C640CD`, closer to `colors.magenta`) — needs a closer look
-if a screen ever needs it.
+Fixed 2026-11-03 to the Colors page swatches: `periwinkle` `#A0ABFF` (was `#9D8CFF`; also exposed as
+`colors.link` = Figma `text/link`), `teal` `#22C1C1` (was `#2FCF9A`; Toast icon + Trending card),
+`rarityColors.exotic.dark` `#9CD71E` (was `#CAFF73`). Name drift kept on purpose (renaming touches
+dozens of call sites): code `lavender` = Figma **Lavender Light** `#E8B9FF` (`action/selected`, focus
+rings, selected pills), code `magenta` = Figma **Lavender** `#C640CD`, code `white30`/`white50` =
+Figma **Snow 30%/50%** (`rgba(252,252,252,…)`) while `white20`/`white70` are true White alphas.
+Added: `rubyDisabled` (Ruby 50%), `ruby200` `#FF5F77` (counter at its limit), `black10`, `black70`,
+`white`, `white40`, `snow10`, `snow70`. Still untokenised (no consumer): Almost White `#E5E5E5`,
+Yellow `#FFC95B`, Melon `#FFA25A`, Violet `#A524B3`, Cloudy Sky `#716B7C`, Grass `#28AC00`, Red
+`#E00000` (only as `menuPaths.delete.fill`), Mint `#34C070`, Light Ruby `#FF859C`, Ruby Peach
+`#FFE5EA`, and the **System** scales (Success 100–500 `#C1EECF #65D890 #34CE77 #00B453 #00A146`,
+Error `#FFCDD4 #E97177 #FB3B3B #EC303A #CC1D2C` — 300 is `colors.danger`, Warning `#FFCD88 #FFB95B
+#FE9C2A #F38025 #EC7122`). The palette bar gradient starts at `#FFBC5B`, not Yellow.
 
 Full purple scale (50→550): `#F3ECF9 #DCCBEC #C5AADF #AE8AD2 #966AC5 #7F48B7 #691FA9 #57178B #460F6F
 #350854 #24033B`. Full vivid-pink scale (50→550): `#F8BDC8 #FDA0AF #FF8194 #FF5F77 #FF2D55 #DF2447
@@ -44,8 +55,9 @@ skill file, not just something inferred from entry-flow examples.
 | H4 | 28p | Semi |
 | H5 | 30p | Medium |
 | H6 / Subheaders | 24p | Bold |
-| Botones (Big) | 30p | Bold |
-| Botones (Medium) | 24p | Bold |
+| Btn/Large (Botones Big) | 30p | Bold, **uppercase** |
+| Btn/Medium | 24p | Bold, uppercase |
+| Btn/Small | 22p | Bold, uppercase |
 | Body 1 | 26p | Regular |
 | Body 2 | 26p | Semi |
 | Body 3 | 24p | Semi |
@@ -54,7 +66,17 @@ skill file, not just something inferred from entry-flow examples.
 | Caption 1 | 24p | Regular |
 | Caption 2 | 22p | Regular |
 | Caption 3 | 18p | Regular |
-| Tags | 18p | Semi |
+| Tags | 18p | Semi, uppercase |
+| Input (= H5) | 30p | Medium |
+| Input/Value | 30p | Regular |
+| Input/Suffix | 24p | **Light** (no `Inter-Light` face is bundled; `UsernameField`'s `#1234` suffix stays Regular until it is) |
+| Input/Code | 48p | Semi |
+| Link | 24p | Medium, underline |
+| Tab/Label | 28p | Semi, uppercase |
+| Header/Credits | 32p | Medium |
+
+Body 1/2 have lineHeight 34, B4 (the row labelled "Body 3") 30; everything else is 100%. The style
+names `B3`/`B4` are swapped relative to the page labels "Body 3"/"Body 4" — go by the values.
 
 Cross-check against `rn/packages/ui-native/src/AppText.tsx` variants (sizes in Figma-px, i.e. `u()` output × 2):
 - `title` (`u21`→42p) = **H2**.
@@ -64,8 +86,9 @@ Cross-check against `rn/packages/ui-native/src/AppText.tsx` variants (sizes in F
   `get_design_context`), so `dividerLabel` needed an explicit `fontFamily: 'Inter-Regular'`
   override rather than inheriting `caption`'s medium weight. Any other screen using `variant="caption"`
   for body-adjacent copy (not an uppercase label) should get the same check.
-- `button` (`u15`→30p) = **Botones (Big)**, Bold — matches the "Btn" named style found repeatedly
-  on entry-flow screens (`lineHeight: 100`, `letterSpacing: 0`).
+- `button` (`u15`→30p) is SemiBold and natural case because card/name labels reuse it; the real
+  **Btn/\*** style (Bold + uppercase, "Buttons - uppercase always" on the Fonts page) is applied by
+  `Button`, `LoginButton` and `LinkButton` themselves (`styles.label`), not by the variant.
 - `body` (`u15`→30p) does **not** match any of Body 1–5 (26/26/24/20/20p) — the entry-flow's 30p
   "Legal"/disclaimer text is a one-off larger size for this specific flow, not the general app's
   body scale. Don't assume `variant="body"`'s default always matches a screen's "Body" Figma label;
@@ -74,113 +97,94 @@ Cross-check against `rn/packages/ui-native/src/AppText.tsx` variants (sizes in F
   this table — both are oversized hero/display text specific to full-bleed screens, not part of the
   general in-app type scale. Expected, not a bug.
 
-## Buttons page — component spec strings (read directly off the page, no need to re-derive)
+## Buttons page — `Button`, `PillButton`, `IconButton`, `LoginButton`, `LinkButton`
 
-`Button/Primary` (large) text label literally states: **"Height 96px Width Responsive Corner 16px
-Font 30pt Bold Uppercase Icon 32x32"** — i.e. `minHeight: u(48)`, `borderRadius: u(8)`
-(= `radii.button`, already correct), `fontSize: u(15)` Bold, **uppercase is a component-level style
-property**, not baked into translated strings (see the main skill's §2b — Account Home's
-`FLOW_ACCOUNT_GUEST: 'PLAY AS GUEST'` hardcoded-caps pattern should eventually be replaced with a
-`textTransform: 'uppercase'` style + natural-case translation string, matching how Sign In's
-provider buttons were fixed).
+Audited 2026-11-03 against the sets `Button/Primary` 1:17, `Button/Secondary` 2:767, `Button/Entry`
+244:492, `Button/Discover` 4:1222, `Button/Filter` 4:1554, `Button/Social` 300:383, `Button/Pill`
+10:293, `Button/Reminder` 594:589, `Button/Link` 706:4763, "Width — Hug vs Fill" 505:343. The page's
+spec strings ("Height 96px Width Responsive Corner 16px Font 30pt Bold Uppercase Icon 32x32" …) are
+older than the nodes: where they disagree the nodes win (Entry says "Icon 32x32", the logos are 36).
 
-`Button/Entry` (the Google/Apple/Wallet/Mail provider buttons used on Sign In) is a **separate**
-component family from `Button/Primary` — don't assume its icon size (confirmed 36×36 via the
-specific screen instances, not 32×32 like generic `Button/Primary` with an icon) carries over to
-other icon-bearing buttons; check the specific component family's own symbols.
-
-States present for every button family: `Default` / `Pressed` / `Disabled` (and `Google`/`Apple`/
-`Wallet`/`Mail` as `Type` for `Button/Entry`) — `rn/packages/ui-native/src/PrimaryButton.tsx`'s `disabled`/`pressed`
-styles already cover the first two; pressed/disabled *colors* per type haven't been cross-checked
-against these symbols yet.
-
-Width model: the library's base components are "Hug contents" (width = text + 24px/side padding);
-screens stretch them to "Fill container" explicitly (confirmed via `w-full` on the actual screen
-instances) — matches how `rn/src/flow/screens.tsx` already lays these out (full-width Pressable in
-a block container), no change needed there.
-
-### Button/Secondary — has an explicit Figma-authored usage note
-
-Node `2:767`'s Figma description (visible via `get_design_context`, written by the design team in
-Spanish) literally says: *"Botón secundario sobre overlay negro 40%. Outline=True agrega borde de
-2px. React Native: `<Button variant="secondary" | "outline" size="lg|md|sm" leadingIcon={...} />`"*
-— i.e. there are exactly two variants, both `bg-[rgba(0,0,0,0.4)]` (`colors.black40`),
-`rounded-[16px]` (`radii.button`): **`Outline=False`** has no border, **`Outline=True`** adds
-`border-2` `#FCFCFC` (`colors.snow`). Both are `Btn/Large` (Bold, 30px, uppercase, `lineHeight:100`
-literal, `letterSpacing:0`).
-
-Cross-checked against `rn/packages/ui-native/src/PrimaryButton.tsx`'s `ButtonTone` union:
-- `outline` tone already matches `Outline=True` (border color `colors.snow` ✓) — the one deviation,
-  `rgba(0,0,0,0.6)` instead of the library's default `0.4`, is a **confirmed screen-specific
-  override** (verified exact against Account Home's and Sign In's own screen nodes earlier in this
-  survey), not a bug — leave it.
-- `secondary` tone was wrong on both axes (`colors.white10` + `1px` `colors.white30` border matches
-  no real Figma variant) — **fixed** to `{ backgroundColor: colors.black40 }`, matching
-  `Outline=False`. Only two call sites (`src/discover/MessageState.tsx`,
-  `src/backpack/ConnectionLost.tsx`) — fixed without a full visual pass on those two screens since
-  the new value traces exactly to the documented spec; worth a quick look next time either screen
-  is touched.
-- `dark` tone (`{ backgroundColor: colors.black40 }`, used e.g. by Avatar Create's "EDIT" button)
-  was *already* a correct match for `Outline=False` before this fix — `secondary` and `dark` are
-  now visually identical. Not merged/deduplicated (that's a naming decision, not a color-accuracy
-  one) — flagging so a future pass doesn't rediscover this as "two tones that do the same thing"
-  without context.
-
-### Open finding: `PrimaryButton` may be missing `textTransform: 'uppercase'` app-wide
-
-Every button family's named text style (`Btn`/`Btn/Large`) is `Bold` + `uppercase` at the
-**component** level in Figma — not something each caller's translation string should bake in. But
-`rn/packages/ui-native/src/PrimaryButton.tsx`'s label (`<AppText variant="button">`) has no `textTransform` at all,
-and nothing in `AppText`'s shared `button` variant sets one either (can't add it there — that
-variant is reused by unrelated card/name labels elsewhere that must stay natural case, see the main
-skill's §2b). The result is **inconsistent casing across the app depending on whether a given
-translation string happens to be hardcoded uppercase**: confirmed two near-identical "try again"
-strings, `BACKPACK_TRY_AGAIN: 'Try again'` vs `COMMON_TRY_AGAIN: 'TRY AGAIN'`, both rendered through
-the same `PrimaryButton`. `PrimaryButton` is used broadly (`Dialog.tsx`, `EmptyState.tsx`,
-`MessageState.tsx`, `ConnectionLost.tsx`, every entry-flow screen) — **not fixed**, since adding
-`textTransform: 'uppercase'` to `PrimaryButton`'s own label would be a visible behavior change
-across every screen that uses it, most of which haven't been visually re-verified in this pass.
-Surface this to the user/team before touching it; if approved, the fix is a single `textTransform`
-line on `PrimaryButton`'s label plus reverting any translation strings that hardcoded caps as a
-workaround (`FLOW_ACCOUNT_GUEST`, `COMMON_TRY_AGAIN`, etc.) back to natural case.
-
-## Inputs page — Text Field component (applied to `rn/src/flow/screens.tsx`'s `TextStep`)
-
-Real spec, confirmed via `get_design_context` on `Default`/`Focus`/`Error` state instances of the
-single-line `Input-Field`:
-
-| State | Style |
-|---|---|
-| Default | `bg-[rgba(0,0,0,0.4)]` (= `colors.black40`), `rounded-[12px]` (= `u(6)`), `p-[16px]` (= `u(8)`), no border |
-| Focus | + `border` `1px` `#E8B9FF` — this is literally `DCL/Rarities/Legendary Light`, i.e. **the same hex as `colors.lavender`**, just reused as a focus-ring color. Resolves the earlier "unreconciled" `lavender` token — it's correct, just semantically double-purposed. |
-| Error | + `border` `1px` `#FF2D55` (`colors.ruby`) |
-| Text | `Inter:Medium` `30px` (= `u(15)`) = the **H5** type-scale row, `lineHeight: 100` literal, matches `fontFamily: 'Inter-Medium'` already used |
-| Placeholder | `rgba(252,252,252,0.5)` — added as `colors.white50` (didn't exist before) |
-
-Was previously wrong on every axis: `radii.pill` (should be `u(6)`, not a pill), `colors.white10`
-background (should be `colors.black40`), `fontSize: u(16)` (should be `u(15)`), a permanent visible
-border regardless of state (should be transparent/no border by default, colored border only on
-focus/error). Fixed: `input`/`inputFocused`/`inputError` styles in `screens.tsx`, wired through
-`TextInput`'s `onFocus`/`onBlur` plus the existing `error` prop. A multiline/long variant also
-exists (`h-[216px]`, counter text `0/300` in `Inter:Regular` `20px` `#ECEBED`) — not yet needed by
-any current screen, but same `black40`/`rounded-12` base applies if one shows up.
-
-## Icons page — categories and base sizes (not individually imported)
-
-Four component families, each its own base size — **don't assume one family's icon size carries
-over to another** (already bit us once: `Button/Entry`'s provider icons are 36×36, not the generic
-32×32 quoted in `Button/Primary`'s spec string):
-
-| Family | Base size | Covers |
+| Component | Figma | Code |
 |---|---|---|
-| `Icon/NavBar` | 82×82 (`u41`) | bottom tab bar: Explore/Backpack/Social/Settings/Alerts/Profile/Chat, each Active/Default |
-| `Icon/Menu` | 22×22 (`u11`) | context-menu glyphs (Block/Report/Kick/Ban/Copy/Translate/…, ~35 icons) |
-| `Icon/Base` | 54×54 (`u27`) | general UI icons (Back/Close/Check/Chevron/Search/Filter/Email/Wallet/Chat/Emote/…, ~40, each `Filled=False/True`). Home in code: `fillPaths` in `rn/packages/ui-native/src/iconSvgs.ts` (`bell`, `check` so far); `Icon.tsx`'s `baseStrokes`/`strokePaths` are hand-drawn stand-ins for this family, replace with the real asset whenever a screen touches one (SKILL.md §2d) |
-| `Logo/Connect` | 64×64 (`u32`) | brand marks: Discord, X, Apple, Google, WalletConnect — the *master* asset size; the actual Sign In screen instance scales these down to 36×36, which is the number that matters for implementation (see the main skill's §2b/Buttons section), not this 64×64 library default |
+| Button sizes | Large **fixed 96**, Medium 74, Small 54; px 24 (`space/lg`); gap 8 (`space/xs`) on every variant | `minHeight u(48)`/`u(37)`/`u(27)`, `paddingHorizontal u(12)`, `gap u(4)` |
+| Button radius | Large 16 (`radius/xl`); Medium 12 (`radius/lg`); Small 8 (`radius/sm`) | `radii.button` / `medium` / `small` |
+| Button icons | leading 32 / 28 / 24 (`icon/button-lg|md|sm`), `Icn/JumpIn` trailing at the same sizes; Reminder icon 54 | `iconSize` 16/14/12 dp, reminder 27 |
+| Button label | `Btn/Large|Medium|Small` Inter **Bold** 30/24/22, lh 100%, **uppercase**; Snow, Disabled `text/disabled` Silver 50% | `styles.label` (bold + uppercase) over `AppText variant="button"` |
+| Primary | Ruby / Pressed `#E1002B` / Disabled Ruby 50% | `ruby` / `rubyPressed` / `rubyDisabled` |
+| Secondary · Outline | Black 40% / Pressed Black 60% / Disabled Black 30%; Outline adds a 2px Snow border, Silver 50% when disabled | `secondary` + `outline`; `dark` is a code-only alias of `secondary` |
+| Primary `Text=False` 316:282 | 54×54 Ruby square, radius 8, `Icn/JumpIn` 24 | `IconButton variant="primary"` |
+| Reminder 594:589 | control/lg 96, px 24, py 16, gap 8, radius 12; Default purple 40% + **1px Snow border**; Pressed purple 60% (same border, Snow text); Selected Black 20% + 2px Ruby border + Ruby text/check | `tone="reminder"` (`selected` swaps border and colours) |
+| Entry 244:492 | 96 tall, radius 16, px 24; Google/Apple/Wallet Snow bg + Shadow text, logo 36 (gap 4, Wallet 10), Pressed White 70%, Disabled White 10% + content at 60%; Mail = Secondary with `Icon/Base` 38 + gap 8 | `LoginButton` |
+| Discover 4:1222 | 94×96 radius 16, `Icon/Base` 52; purple 40% / Pressed **60%** / Selected 70% + Lavender Light icon / Disabled 20% + Snow 30% icon | `IconButton variant="filled" big` |
+| Filter 4:1554 | 60×60 radius 10, `Icon/Base` 40; Black 40% / Pressed 60% / **Selected Lavender Light + Shadow icon** / Disabled Black 30% + Silver 50% icon; Active = badge at top −4 / right −4 | `IconButton variant="filled"` |
+| Social 300:383 | 54×54 radius 8, 2px border, `Icon/Base` 40; Black 40% / Pressed 60% with the border **and icon** in Ruby (Cancel) or Rare Light (Accept) / Disabled Black 30% + Silver 50% | `IconButton variant="outline" accentColor` |
+| Pill 10:293 | Large 60 / Medium 56, pl 14 pr 16 py 8 gap 4, icon 32; Large Default Black 40% + Pearl B2 26/34; Medium Default White 20% + White 70% B4 24/30; **Selected = Lavender Light + Shadow in every size** (States page); badge 22 at −4/−4 | `PillButton` |
+| Link 706:4763 | 54 tall, hug, no padding; `Link` Inter Medium 24 underline, `text/link` `#A0ABFF`; Pressed label at 70%; Disabled Silver 50% | `LinkButton` |
+| Width | Hug by default (text + 24/side); "Fill container" = `fullWidth` | `alignSelf: 'stretch'` |
 
-Don't bulk-import every icon as an SVG asset — pull one on demand when a screen actually needs it,
-same as every other asset-handling rule in this skill. But when you do pull one, it is the Figma
-asset itself, never a redrawn approximation (SKILL.md §2d).
+Designer conflicts, re-read 2026-11-03 after the designer's pass: `Button/Reminder` Pressed is now
+purple 60% + Snow border + Snow text (code `glassPressed`) and the Medium radius is 12 on Primary and
+Secondary alike — both resolved. Still open: `Button/Pill` Large `Icon=False` nodes carry B4 24/30
+while the `Icon=True` nodes say 26/34 — node vs node, code keeps 26/34 until the designer settles it;
+`Button/Entry`'s spec string says "Icon 32x32" but the logos are 36 and the Mail icon 38 (code: 36/38).
+Code-only: `tone="ghost"` (no Figma source, generic 50% dim), `loading` (renders `Spinner`),
+`LoginButton fullWidth`. The reference page `extra/ds-buttons` (`rn/src/gallery/dsButtons.tsx`) draws
+this page with the real components; Pressed is seen by pressing (no `pressed` prop, by decision).
+
+## Inputs page — `TextField`, `SearchField`, `CodeSlots` (`rn/packages/ui-native/src/`)
+
+Audited 2026-11-03 against `Input/Field` 562:4820, `Input/Labeled` 562:4890, `Input/UniqueName`
+562:4908, `Input/Counter` 562:5035, `Input/CodeSlots` 562:5058, `Input/Search` 562:5083 and
+`Input/Label` 562:6682 (on the Dropdowns page). Every error colour on this page is
+`status/danger` `#FB3B3B` (`colors.danger`), never Ruby.
+
+| Part | Figma | Code |
+|---|---|---|
+| Field box | 624 fill × 68 (single line), **p 16 all sides**, gap 10, radius 12, Black 40%; text `Input` Medium 30 Snow; placeholder `text/placeholder` Snow 50% | `minHeight u(34)`, `paddingHorizontal u(8)`, `gap u(5)`, `u(6)`, `black40`, `white50` |
+| Focus | 1px Lavender Light border; `Icon/Base` close 40 Snow at the right (Focus/SingleLine grows to 72 because the icon overflows the padding — Focus/Name pins 68; code keeps 68) | `focused`, clear `size={20}` |
+| Error | 1px `#FB3B3B`; message under the box Regular 20 `#FB3B3B` | `error`, `hint` + `errorText` |
+| Disabled | Black 30% bg (`surface/overlayDisabled`), text and placeholder White 20%, label White 30% — a palette state, not a dim | `boxDisabled`, `textDisabled`, `labelDisabled` |
+| Multiline | fixed 216 tall, `items-start`, p 16; counter `B3` Regular 20 Pearl 8 below ("0/300"), `#FB3B3B` at the limit in the Error node | `inputMultiline minHeight u(108)`, `counter` (Regular `u(10)` Pearl, `marginTop u(4)`), `counterMax` = `Input/Counter`'s `ruby[200]` `#FF5F77` |
+| Name | 68 box + a Regular 20 Pearl row 8 below: helper left, "0/15" right; suffix `#1234` `Input/Suffix` Light 24 in the text colour | `UsernameField` keeps the suffix Regular (no Inter Light face) and the helper above — screen-level follow-up |
+| Labeled | `Input` Medium 30 **Snow** label, gap 20 to the field; Disabled label White 30%; `Button=True` adds a `Button/Secondary` Outline Medium (radius 10) after the field, gap 16 | `label` Medium Snow, `marginBottom u(10)`; no `button` prop yet |
+| Label/Description | label + `Caption2` Regular 22 Pearl, gap 10, pb 8 | `helperAbove` `u(11)` Pearl, `marginBottom u(5)`, `paddingBottom u(4)` |
+| Search 562:5083 | 540×68, **px 10**, radius 12, Black 40%; `Icon/Base` search **56** Snow, gap 8; text Medium 30 Snow, placeholder Snow 50%; Typing/Focus = 1px Lavender Light border + `Icon/Base` close 40 Snow | `SearchField`: one look for every call site (the old `glass` pill and the always-bordered `framed` box are gone; `framed` only widens the gap after the back chevron) |
+| CodeSlots 562:5058 | 84×130 per digit, radius 16, Black 40%, 1px Shadow border; Typing = Lavender Light border + Black 70% + a 1px White caret 50 tall; Filled = Pearl border + `Input/Code` Semi Bold 48 Snow; Error = `#FB3B3B` border and digit | `CodeSlots` (hidden `TextInput`, `oneTimeCode`); the gap between slots is not specified in Figma — `u(8)` |
+| UniqueName 562:4908 | Dropdown field with `Icon/NameVerified` 32 after the name; Blocked = Gray text, no badge, no chevron; Focus = 1px Lavender Light border; Disabled Black 30% (`surface/overlayDisabled`) + White 20% | `UsernameField` → `Dropdown` with a hand-drawn `ClaimedSeal` — swap for the Figma asset and add Blocked when that screen is next touched |
+| Counter 562:5035 | `B3` Regular 20 Pearl, "0/300"; Max = `ruby[200]` `#FF5F77` | `counterLabel` + `counter`/`counterMax` |
+| Label/ExternalLink | label + `Icn/NewChat` 32, gap 16, h 40 | not built (no consumer) |
+
+Designer conflicts, re-read 2026-11-03 after the designer's pass — resolved: the standalone
+`Input/Counter` is now `B3` 20 like the one inside `Input/Field`; `Input/UniqueName` Disabled is
+Black 30% like `Input/Field`; `Input/Search` Focus holds a value ("Search" in Snow), so the clear
+button only ever appears with text (what code does). Still open: Error/SingleLine 562:4837 has no
+message row although the description promises one (code shows it); `Input/Dropdown` Disabled stays
+Black 20% while `Input/Field` is Black 30% (code follows each node); `Input/Labeled Button=True`
+keeps the nested field at a fixed 624 instead of fill.
+The entry flow's own inputs (`rn/src/flow/screens.tsx` `TextStep`, pill / White 10%) predate this
+component and are the entry-flow branch's job.
+
+## Icons page — every family is imported (`iconSvgs.ts`)
+
+Audited 2026-11-03: `Icon/Base` 48:3563 (54, Filled=False/True, 40 glyphs → `basePaths`),
+`Icon/Menu` 42:3274 (22, 46 glyphs → `menuPaths` + 8 multi-path SVG strings), `Icon/NavBar` 17:228
+(82, 7 types × Active → `navBarPaths` + the profile SVGs), `Icon/Settings` 606:112 (32, 6 →
+`settingsPaths`; Gameplay is hidden in Figma), `Icon/Modal` 562:7607 (90×68, 8 → `modal*Svg`),
+`Logo/Connect` 17:386 (64, 5 → `logoPaths` + SVG strings), `Badge/Notification` 501:24 (22),
+`Icon/Credits` 681:67 (40, multicolour → `creditsSvg`). Nothing on the page is missing from code;
+13 hand-drawn strokes (`plus`, `arrowRight`, `minus`, `bulb`, `hand`, `externalLink`, `kebab`,
+`eye`, `eyeOff`, `lock`, `star`, `flame`, `upArrow`), `chevronRight` and `profileRing` are code-only.
+Sizes per family are the base sizes; the consuming component sets the drawn size (`Button` 32/28/24,
+`IconButton` 52/40, `Header` 60, `Search` 56, `Dropdown` 40, `Tabs` 32, `NavBar` 82/64).
+
+Re-export candidates (nodes edited after the export): `Icon/Base` Share/Like/Dislike (vectors
+640:1659–1680), `Icon/NavBar` Social inactive mask 641:903 and the Profile ring 641:2726, `Icon/Modal`
+Block (641:830–833). The NavBar description says Active uses "the nav gradient"; the exported active
+glyphs are flat `#E8B9FF` and code paints them so.
+
+Don't bulk-import assets outside these families; when a screen needs one, it is the Figma asset
+itself, never a redrawn approximation (SKILL.md §2d).
 
 ## Controls page — `Switch`, `Slider`, `Checkbox` (`rn/packages/ui-native/src/`)
 
@@ -194,7 +198,7 @@ Audited 2026-11-02 against `Control/Switch` 562:9023, `Control/Slider` 562:9048,
 | Switch Small | 110×56, pad 3.5, knob 60 | `size="sm"`: `u(55)`×`u(28)`, knob `u(30)` |
 | Switch disabled | on: whole control 50% + Gray knob at 90%; off: Black 20% track + Pale Black knob | `onDisabled` / `offDisabled` / `knob*Disabled` |
 | Slider | track 624×40 Black 40%, `radius.sm` 8 → `u(4)` on track, fill **and** thumb (the exported track SVG is an 8px rounded rect, not a pill), Ruby fill, thumb 32×50 Snow + 1px Pearl border + `Elevation/Down`; disabled: fill Pale Black 80%, thumb Pale Black | `track`/`fill`/`thumb` + `fillDisabled`/`thumbDisabled`; label row is `Input/Label` Value (label Inter Medium 30, value Inter Regular 30, both Snow) |
-| Checkbox | Large 48 / Small 30, Black 40% box, 1px Snow border, `rounded-[2px]`; Checked = Ruby border + Ruby fill inset 12.5% **in every size** (the Small checked *node* is Lavender Light — the usage description wins, same call as `Button/Reminder`) | `size="lg"` `u(24)` / `"sm"` `u(15)`, `padding: '12.5%'` for the fill, hitSlop to 44dp, label is the touch target too |
+| Checkbox | Large 48 / Small 30, Black 40% box, 1px Snow border, `rounded-[2px]`; Checked = Ruby border + Ruby fill inset 12.5% **in every size** (the Small checked *node* is Lavender Light and the node wins: `size="sm"` checks in Lavender Light) | `size="lg"` `u(24)` / `"sm"` `u(15)`, `padding: '12.5%'` for the fill, hitSlop to 44dp, label is the touch target too |
 
 ## Dropdowns page — `Dropdown` (one component covers `Input/Dropdown` + `DropdownLabeled` + `OptionsList` + `DropdownOption`)
 
@@ -204,6 +208,8 @@ Audited 2026-11-02 against `Control/Switch` 562:9023, `Control/Slider` 562:9048,
 | States | Focus/Open: 1px Lavender Light border · Disabled: Black 20% bg, White 20% text, label White 30% · ReadOnly: no chevron, Gray text · Error: 1px `status/danger` #FB3B3B + message | `fieldOpen` / `fieldDisabled` + `textDisabled` + `labelDisabled` / `readOnly` prop / `error` prop (`colors.danger`) |
 | Label | `Input/Label`: Medium 30 Snow, gap 20 to the field | `u(15)` medium, `marginBottom: u(10)` |
 | Options list | `surface/menu` #1B002D, 1px border (Down node says `alpha.violet70`, Up node says `border/menu` = Lavender Light 70% — the theme token wins), radius 12, padding 8, gap 8, `Elevation/Down` or `/Up` | `colors.menu`, `colors.lavender70`, `u(6)`/`u(4)`/`u(4)`, `elevation.down|up` |
+| Scroll height | 388 = p 8×2 + 5 rows × 68 + 4 gaps × 8 | `listHeight` counts the gaps (5 rows + 4 × `u(4)`) |
+| Action=Button / Action=Copy | a `Button/Secondary` Outline Medium or an `Icon/Menu` copy after the field, gap 16 | not built (no consumer) |
 | Option | 68 tall, px 16, radius 12; Selected = Black 40% bg + Lavender Light text + `Icon/Base` Check 40 | `row`/`rowSelected`/`textSelected`, check `size={20}` |
 
 The old `variant="settings"` (tighter paddings) is gone: the Figma field already is the tight one.
@@ -219,8 +225,19 @@ Snow; text gap 16; CTAs gap 32 (40 landscape) = `Button/Secondary` hugging + `Bu
 (the last button gets `flex: 1` + `fullWidth`). `Icon/Modal` (90×68) sits centred over the top edge
 at `top: -34px`. Scrim: Black 40% + blur 6 in Figma; RN has no blur so it is the documented fallback
 Black 60% (`colors.black60`), which is also what `Modal/Scrim`'s description calls `surface/scrim`.
-Orientation comes from `useWindowDimensions`; the old `rounded`/`width` props are gone. The Link,
-Checkbox, Input and InputLabel blocks are the caller's `children` (`TextField`, `Checkbox`).
+Orientation comes from `useWindowDimensions`; the old `rounded`/`width` props are gone.
+Re-read 2026-11-03: the glow blobs are **Mythic `#FF4BED`** (top opaque, bottom at 50%, blur σ
+66.7/33.3 in the export; `GLOW_TOP`/`GLOW_BOTTOM` in `Dialog.tsx`), the top ellipse centred 33px
+outside the right edge / 9px below the top, the bottom frame 520×79 sitting 13px above the bottom
+edge. `Link=True` = `B3` Regular 20 underline **`#32CEFF`** (`colors.sky`), two lines max, gap 10
+under the body → `Dialog link={{ label, onPress }}`. Checkbox and Input blocks stay the caller's
+`children` (`Checkbox size="sm"` 30×30 radius 2; `TextField`). The Input variants (562:7756 with
+label 520×458, 562:7771 with icon 520×414; frames fixed by the designer on 2026-11-03) tighten the
+content gap to 38 and the text gap to 24 (with label) / 32 — not modelled, the caller passes the
+field as `children`. "Cancel" there is a standard `Button/Secondary` Black 40% and the confirm
+`Button/Primary` starts Disabled.
+`Modal-Background` 671:4363 (Portrait 520×466 with the 458 card inset / Landscape 720×404) is the
+same card with the same blobs and no content — not built.
 
 ## Tabs page — `Tabs`
 
@@ -235,22 +252,42 @@ count pill (no Figma source — a code-only extension).
 `Header` 624:57. Portrait 720×176: pt 40, pb 24 (30 with Back), px 48; title H1 Bold 48 → `u(24)`;
 Back = `Icon/Base` 60 → `size={30}` + gap 8; Actions gap 32 → `u(16)`: Search 60, `Badge/Credits`
 (h 60, px 18, gap 10, Black 40% pill, `Icon/Credits` 40 + Medium 32 amount), Ticket 54 (Back only).
-SearchOpen: Back + `Input/Search` filling (gap 24, pb 20) — rendered with the DS `SearchField`.
-Landscape 528×74: title Bold 44 → `u(22)`; TitleButton = `Button/Secondary` Outline → `tone="outline"`.
-Orientation from `useWindowDimensions`.
+SearchOpen: Back + `Input/Search` filling (gap 24, pb 20, **bottom-aligned**: the 60 icon against
+the 68 field) — rendered with the DS `SearchField`, now the `Input/Search` look (see Inputs).
+Landscape 528×74: title Bold 44 → `u(22)`; TitleButton = `Button/Secondary` Outline → `tone="outline"`
+(border `border/thin` 2px = 1dp). Orientation from `useWindowDimensions`. The description lists a
+Portrait "Title" type the set does not have (code renders it anyway). `Badge/Credits` 681:148
+confirmed: 107×60, px 18, gap 10, `surface/overlay` pill, `Icon/Credits` 40 ("do not recolor") +
+`Header/Credits` Medium 32 Snow; the Ticket (54) only appears with Credits in Figma, code shows it
+whenever `onBack && onTicket`.
 
 ## Menu page — `BottomNav`
 
 `NavBar` 635:211 Portrait 720×180: pt 32, pb 40 (+ safe-area), px 64, gap 56, items `NavBar/Item`
 82 (`u(41)`), background `surface/navbar` rgba(26,9,37,0.9) (`colors.navbar`) with `NavBar/Portrait`
-(blur 4 + shadow 0/-4/4 Black 25%). Active = the gradient `Icon/NavBar` + the "Selected indicator"
+(blur 16 + shadow 0/-4/4 **Black 25%** = `colors.black25`; since the designer's 2026-11-03 pass the
+Portrait fill is `surface/navbar` as well — `colors.navbar` in both orientations). Active = the gradient `Icon/NavBar` + the "Selected indicator"
 on the bar edge: a 74×2 `#E8B9FF` line whose ends fade (stops 10%/50%/90%) over a 56×103 ellipse
 (Landscape 75×42, on the rail's *inner* edge) centred 4.5px outside the edge, `#DF9CFF`→`#865E99` 0%
 fading into the bar, blur 10, 60%, mix-blend lighten, clipped to the bar. In code the blur is a
 radial falloff (`SelectedIndicator` in `BottomNav.tsx`): react-native-svg's `FeGaussianBlur` on
 Android is a RenderScript blur capped at 25 device px, far below Figma's 10px σ at 3×. Landscape = a 100-wide
 left rail, py 40, gap 37, 64px items, blur 16. Items in Figma: Explore/Backpack/Settings/Profile
-(portrait), Social/Alerts/Backpack/Settings/Profile (landscape).
+(portrait); the Landscape rail shows **six** (Explore, Social, Alerts, Backpack, Settings, Profile —
+649px of content in a 640 rail, so it clips). The app has four destinations; `NavKey` stays four
+until Social/Alerts exist as screens.
+
+## Spacing & Sizes page — `space`, `radius`, `controlHeight`, `iconSize`, `border`, `minTouchTarget`
+
+Page header: "Values in Figma units (2x). In React Native they are divided by 2: always use the
+package tokens (space, radius, controlHeight, iconSize), never the raw number." Added to `tokens.ts`
+on 2026-11-03 (`radii` stays as the older alias set): `space` none/3xs/2xs/xs/sm/md/lg/xl/2xl =
+0/4/6/8/12/16/24/32/48; `radius` xs/sm/md/lg/xl/2xl/pill = 4/8/10/12/16/24/999; `controlHeight`
+lg/md/sm/pillLg/pillMd/tag/badge = 96/74/54/60/56/42/32; `iconSize` buttonLg/Md/Sm/iconButton/pill/tag
+= 32/28/24/40/32/26 (dp values, not `u()`-scaled: icons are drawn sizes); `border.thin` = 2px = 1dp
+("button and input outline" — outline buttons were 2dp); `minTouchTarget` 88 = 44dp (extend
+smaller controls with `hitSlop`). `Button` and `IconButton` consume them; the rest of the package
+still carries the same numbers inline and can migrate file by file.
 
 ## Elevation page — `elevation.down` / `elevation.up` in `tokens.ts`
 
@@ -263,22 +300,27 @@ Black 40%) needs a blur library; without one the surface is Black 60% with no bl
 
 ## States page — the rule every component follows
 
-Default → Pressed (one step darker of the same colour, handled by `Pressable`, never a prop) →
+Each state uses a Color-collection token, never a hex: Default (`action/primary`,
+`surface/overlay`, `surface/subtle-strong`) → Pressed (`action/primary-pressed`,
+`surface/overlay-pressed`: one step darker of the same colour, handled by `Pressable`, never a prop) →
 Focus (1px Lavender Light border while the keyboard is open) → Selected (Lavender Light bg + Shadow
-text, or Lavender Light text + check in lists) → Disabled (bg at 50% + Silver 50% text, no touch,
-not announced as actionable) → Error (red border + message, never colour alone). Mobile only: no
+text, or Lavender Light text + check in lists) → Disabled (Black 30% `surface/overlay-disabled` +
+Silver 50% text, no touch, not announced as actionable) → Error (red border + message, never colour alone). Mobile only: no
 hover, no keyboard focus. Resolved on the page: Pill Selected is Lavender Light in every size;
 Input/Field, CodeSlots and Dropdown errors use `status/danger`; `Button/Filter` has a Pressed;
-`Button/Discover` Pressed is one step darker (purple 60%).
+`Button/Discover` Pressed is one step darker (purple 60%). The Disabled rule was rewritten to Black
+30% (`surface/overlay-disabled`) on 2026-11-03 and now matches every Disabled node (`black30`).
 
 ## Tags page — `EventTimeTag`, `EventBadge` (`Tags.tsx`); `Tag/Category` not built
 
 `Tag/EventTime` 35:761: label `Tag/Label` Semi Bold 20 uppercase, px 8, py 4, `rounded-[4px]`;
 Live = Ruby/Snow + the Players box (Shadow bg, h 30, gap 2, Green #30CD00 dot 10, `Icn/PlayersOutline`
 22, `Tag/Count` Medium 20); StartingSoon = Snow bg, Ruby text + Ruby border; InMinutes/InHours/
-InDays/Date = Snow bg, Shadow text + border. `Tag/Event` 35:785: h 32, same padding/radius, Snow
-B5 label on a gradient — Trending `-73°` #22C1C1 → #34C070, Featured `148°` #FFBC5B → #FF2D55 50% →
-#C640CD (`LinearFill`). `Tag/Category` 35:591 (h 42, White 10% pill, 26px MapPins icon + Tags Semi
+InDays/Date = Snow bg, Shadow text + border (0.68px in Figma; 1dp hairline in code). `Tag/Event`
+35:785: h 32, same padding/radius, Snow B5 label (not uppercase) on a gradient — Trending CSS
+`-73.2°` #22C1C1 → #34C070, Featured CSS `147.6°` #FFBC5B → #FF2D55 50% → #C640CD. `LinearFill`'s
+`angle` is 0 = top→bottom, so a CSS angle θ becomes `180 − θ` (253 / 32); the old 17 / 148 ran the
+Featured gradient bottom-left→top-right. `Tag/Category` 35:591 (h 42, White 10% pill, 26px MapPins icon + Tags Semi
 Bold 18 uppercase) needs the 12 MapPins icons, which are not an `Icon/*` family — left for the
 Discover pass; `src/discover/CategoryChips.tsx` is the current stand-in.
 
@@ -294,9 +336,14 @@ is ported.
 `Background` 676:6 (Plain/Glow × Portrait/Landscape) and `Background/Avatar` 677:2 are baked images
 (blurred glows, §2c of the skill): each screen downloads the sub-node it uses as a PNG.
 
-## Loader page — empty
+## Loader page — `Spinner`; `Loader/Logo` not built
 
-No content on this page as of this survey. Nothing to extract.
+`Loader/Spinner` 562:8817: 150×150, a 16px Black 40% ring with a Ruby arc (≈135°) that rotates
+360° every 1s, linear, infinite; slower under Reduce Motion; `ActivityIndicator` in `action/primary`
+is the documented fallback. Code: `Spinner` (`size` in dp, stroke keeps 16/150), used by
+`Button loading`. `Loader/Logo` 562:8818 is a 154×154 raster of the Decentraland logo with a pulse
+at `motion.duration.slow` (no value defined on the Motion page, still PROPOSAL); `LoadingCover`
+keeps its own `logo.png` until design exports the vector.
 
 ## Safe areas page — reference only, not actionable in RN
 

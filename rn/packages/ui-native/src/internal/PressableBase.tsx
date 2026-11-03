@@ -19,7 +19,8 @@ export function PressableBase({
   accessibilityLabel: string;
   accessibilityState?: Record<string, boolean>;
   style: (pressed: boolean) => StyleProp<ViewStyle>;
-  children: ReactNode;
+  /** A function gets the live `pressed` flag, for icons that change colour while pressed. */
+  children: ReactNode | ((pressed: boolean) => ReactNode);
 }) {
   return (
     <Pressable
@@ -30,7 +31,9 @@ export function PressableBase({
       onPress={onPress}
       style={({ pressed }) => style(pressed)}
     >
-      {children}
+      {typeof children === 'function'
+        ? ({ pressed }) => children(pressed)
+        : children}
     </Pressable>
   );
 }

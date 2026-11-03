@@ -74,9 +74,10 @@ export function EventBadge({
 }) {
   return (
     <View style={[styles.tag, styles.badge]}>
+      {/* Figma CSS angles −73.2° / 147.6°; `LinearFill` is 0 = top→bottom, so angle = 180 − θ. */}
       <LinearFill
         stops={type === 'trending' ? TRENDING : FEATURED}
-        angle={type === 'trending' ? 17 : 148}
+        angle={type === 'trending' ? 253 : 32}
       />
       <AppText style={[styles.badgeLabel, styles.textSnow]}>{label}</AppText>
     </View>

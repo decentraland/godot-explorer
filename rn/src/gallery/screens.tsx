@@ -11,10 +11,10 @@ import '../profile/gallery';
 import '../settings/gallery';
 import { StyleSheet, View } from 'react-native';
 import { BottomNav, colors } from '@dcl/ui-native';
+import './dsButtons';
 import { registerPreview } from './registry';
 
 const noop = () => {};
-
 registerPreview('extra/flow-terms', {
   title: 'Flow: terms',
   orientation: 'portrait',
@@ -32,7 +32,6 @@ registerPreview('extra/flow-wait', {
     <WaitScreen title="Signing you in" body="One moment" onCancel={noop} />
   ),
 });
-
 registerPreview('extra/nav-bar', {
   title: 'NavBar: portrait bar',
   orientation: 'portrait',
