@@ -172,7 +172,8 @@ export async function renderedText(entity: Entity): Promise<{
  * A scene UI entity as laid out: its rect in viewport pixels, and what its `UiBackground` and
  * `UiText` draw (each `null` when the entity has none). A texture is its `res://` path, or
  * `ImageTexture` for one the scene loaded; `stretch` is per axis: 0 stretch, 1 tile,
- * 2 tile to fit (nine-slices); `uvs` are set when a texture is drawn through custom UVs.
+ * 2 tile to fit (nine-slices); `uvs` are set when a texture is drawn through custom UVs; `radii`
+ * are the corner radii it is clipped to, in pixels: [top left, top right, bottom right, bottom left].
  */
 export async function renderedUi(entity: Entity): Promise<{
   present: boolean
@@ -186,6 +187,7 @@ export async function renderedUi(entity: Entity): Promise<{
     margins: [number, number, number, number]
     stretch: [number, number]
     uvs: number[] | null
+    radii: [number, number, number, number]
   } | null
   text: { text: string; color: Rgba; fontSize: number; font: string | null } | null
 }> {
@@ -200,7 +202,8 @@ export async function renderedUi(entity: Entity): Promise<{
         'patch_margin_right',
         'patch_margin_bottom',
         'axis_stretch_horizontal',
-        'axis_stretch_vertical'
+        'axis_stretch_vertical',
+        'material:shader_parameter/corner_radii'
       ],
       'bkg/UVChild': ['visible', 'texture', 'material:shader_parameter/uvs_0', 'material:shader_parameter/uvs_1'],
       text: ['text', 'theme_override_colors/font_color', 'theme_override_font_sizes/font_size', 'theme_override_fonts/font']
@@ -210,6 +213,8 @@ export async function renderedUi(entity: Entity): Promise<{
   const bkg = node?.bkg
   const uvChild = node?.['bkg/UVChild']
   const drawsUvs = uvChild?.visible === true
+  // No rounding: the background has no clip material, so no radii to read.
+  const radii = bkg?.['material:shader_parameter/corner_radii']
   const text = node?.text
   return {
     present: node?.present === true,
@@ -227,7 +232,8 @@ export async function renderedUi(entity: Entity): Promise<{
             stretch: [bkg.axis_stretch_horizontal, bkg.axis_stretch_vertical],
             uvs: drawsUvs
               ? [...uvChild['material:shader_parameter/uvs_0'], ...uvChild['material:shader_parameter/uvs_1']]
-              : null
+              : null,
+            radii: Array.isArray(radii) ? (radii as [number, number, number, number]) : [0, 0, 0, 0]
           },
     text:
       text === undefined
