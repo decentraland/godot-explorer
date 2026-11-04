@@ -156,8 +156,9 @@ jobs:
       - name: Install Android targets
         run: |
           rustup target add aarch64-linux-android
+      # The Android dependencies (.bin/android_deps) the Android build checks for.
       - name: Cargo install
-        run: cargo run -- install
+        run: cargo run -- install --targets android
 
       # Pass the real branch so release* PRs / on-demand rebuilds bake --prod: `inputs.ref` when
       # mobile_distribute rebuilds a specific commit, `head_ref` on PR events (where github.ref is
