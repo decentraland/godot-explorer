@@ -265,7 +265,8 @@ func _on_jump_in_world(realm: String):
 	Global.async_join_world(realm)
 
 
-func _get_ui_location() -> String:
+# Shared with menu.gd so every DISCOVER event carries the same `location`.
+static func get_ui_location() -> String:
 	return "in_game" if Global.get_explorer() else "pre_game"
 
 
@@ -287,7 +288,7 @@ func _on_visibility_changed():
 		_show_device_support_modal_if_needed()
 		Global.set_orientation_portrait()
 		Global.metrics.track_screen_viewed(
-			"DISCOVER", JSON.stringify({"location": _get_ui_location()})
+			"DISCOVER", JSON.stringify({"location": get_ui_location()})
 		)
 		_show_low_spec_warning_if_needed()
 		if Global.get_explorer():
@@ -674,7 +675,7 @@ func _update_global_messages() -> void:
 				. metrics
 				. track_screen_viewed(
 					"DISCOVER",
-					JSON.stringify({"location": _get_ui_location(), "carousels": carousels_data}),
+					JSON.stringify({"location": get_ui_location(), "carousels": carousels_data}),
 				)
 			)
 
