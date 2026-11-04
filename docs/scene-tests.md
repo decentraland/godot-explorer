@@ -174,6 +174,11 @@ The steps come from `showQaSteps(title, steps)` (`testing-library/src/qa/panel.t
 `main()`. An empty list says the scene has automated checks only. In QA mode the panel takes the
 scene's UI renderer, so a scene that sets one up for QA builds its own panel instead.
 
+To see a scene as QA does, run `scripts/qa-scene.sh <name>`: it serves production builds
+(`serve-scene-tests.sh --production`, port 7667) and opens the client on the scene; Ctrl-C closes
+both. `--screenshot <file.png>` saves a screenshot once the scene loaded and closes them, through
+the debug hub (started when none runs); it fails within a minute if the scene does not load.
+
 ## QA World
 
 `.github/workflows/scene_tests_world.yml` deploys the scenes with `scripts/ci/deploy-scene-tests.mjs`:

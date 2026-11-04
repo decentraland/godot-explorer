@@ -11,8 +11,10 @@ ipfs
 yarn.lock
 **/tsconfig.tsbuildinfo
 static
+static-production
 main.crdt
 scene-tests.log
+qa-scene.log
 
-.build-hashes
-.exports
+.build-hashes*
+.exports*
