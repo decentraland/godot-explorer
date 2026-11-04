@@ -95,6 +95,7 @@ What the engine made of an entity, without a screenshot:
 | `renderedModel(entity)` | the `GltfContainer` source, loading state and visibility |
 | `renderedText(entity)` | the `TextShape` label: text, size, colours, outline, alignment, font |
 | `renderedUi(entity)` | a UI entity's rect in pixels, its background (colour, texture, nine-slice margins, stretch mode, UVs) and text |
+| `renderedDropdown(entity)` | a `UiDropdown`'s options, selected index (-1 for none) and the button's text |
 
 `settled(context, read, done)` re-reads one of them each tick until it holds, since the engine
 applies a component a few ticks after the scene sets it.
@@ -172,7 +173,8 @@ Every scene serves both, decided by the build:
 
 The steps come from `showQaSteps(title, steps)` (`testing-library/src/qa/panel.tsx`) in the scene's
 `main()`. An empty list says the scene has automated checks only. In QA mode the panel takes the
-scene's UI renderer, so a scene that sets one up for QA builds its own panel instead.
+scene's UI renderer; a repro the steps refer to (buttons, the component under test) goes in its
+third argument, drawn under the steps.
 
 ## QA World
 
