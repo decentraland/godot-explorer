@@ -9,8 +9,11 @@ export const isQaMode = !DEBUG
 
 const NO_MANUAL_STEPS = 'Automated checks only: nothing to test by hand here.'
 
-/** Shows the scene's manual QA steps in QA mode; does nothing under the test runner. */
-export function showQaSteps(title: string, steps: string[]): void {
+/**
+ * Shows the scene's manual QA steps in QA mode; does nothing under the test runner. `content` is
+ * drawn under the steps, for a repro the steps refer to (buttons, the component under test).
+ */
+export function showQaSteps(title: string, steps: string[], content?: () => ReactEcs.JSX.Element): void {
   if (!isQaMode) return
   let open = true
   const lines = steps.length > 0 ? steps.map((step, index) => `${index + 1}. ${step}`) : [NO_MANUAL_STEPS]
@@ -19,7 +22,8 @@ export function showQaSteps(title: string, steps: string[]): void {
     <UiEntity
       uiTransform={{
         positionType: 'absolute',
-        position: { top: '12%', left: '3%' },
+        // Clear of the joystick (bottom left) and the action buttons (bottom right).
+        position: { top: '8%', left: '26%' },
         width: '40%',
         flexDirection: 'column',
         padding: 16
@@ -53,6 +57,7 @@ export function showQaSteps(title: string, steps: string[]): void {
             />
           ))
         : null}
+      {open && content ? content() : null}
     </UiEntity>
   ))
 }

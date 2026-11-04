@@ -241,6 +241,19 @@ export async function renderedUi(entity: Entity): Promise<{
   }
 }
 
+/** A scene `UiDropdown` as the engine shows it: its options, the selected one (-1 for none) and the button's text. */
+export async function renderedDropdown(
+  entity: Entity
+): Promise<{ options: string[]; selected: number; text: string } | null> {
+  const count: number | undefined = (await entityNode(entity, { dropdown: ['item_count'] }, true))?.dropdown
+    ?.item_count
+  if (count === undefined) return null
+  const items = Array.from({ length: count }, (_, i) => `popup/item_${i}/text`)
+  const dropdown = (await entityNode(entity, { dropdown: ['selected', 'text', ...items] }, true))?.dropdown
+  if (dropdown === undefined) return null
+  return { options: items.map((item) => dropdown[item]), selected: dropdown.selected, text: dropdown.text }
+}
+
 /** True when every channel is within `tolerance` (colours come back as floats). */
 export function sameColor(actual: Rgba | null | undefined, expected: Rgba, tolerance = 0.01): boolean {
   return actual != null && actual.every((channel, i) => Math.abs(channel - expected[i]) <= tolerance)
