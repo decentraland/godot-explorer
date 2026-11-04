@@ -2,7 +2,7 @@ name: 🧪 Scene tests QA World
 # Deploys the scene tests to the QA World (repository variable SCENE_TESTS_WORLD): every scene on
 # pushes to main, and a PR's changed scenes into its own zone while it carries the qa-scene label;
 # the zone is cleared when the PR closes. Signs with the SCENE_TESTS_DEPLOYER_KEY secret (a wallet
-# on the World's deployment list). Without the variable or the secret the jobs only leave a notice.
+# on the World's deployment list). Without the variable or the secret the jobs fail.
 on:
   push:
     branches: [main]
@@ -35,34 +35,27 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Check the World and deployer key
-        id: key
         env:
           DCL_PRIVATE_KEY: ${{ secrets.SCENE_TESTS_DEPLOYER_KEY }}
         run: |
           if [ -z "$SCENE_TESTS_WORLD" ] || [ -z "$DCL_PRIVATE_KEY" ]; then
-            echo "::notice title=QA World not deployed::Set the SCENE_TESTS_WORLD variable and the SCENE_TESTS_DEPLOYER_KEY secret."
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "::error title=QA World not configured::Set the SCENE_TESTS_WORLD variable and the SCENE_TESTS_DEPLOYER_KEY secret."
+            exit 1
           fi
       - uses: actions/checkout@v4
-        if: steps.key.outputs.ready == 'true'
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           # the PR's changed scenes come from a diff against its base
           fetch-depth: 0
       - uses: actions/setup-node@v4
-        if: steps.key.outputs.ready == 'true'
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: tests/scene-tests/package-lock.json
       - name: Install the scene tests
-        if: steps.key.outputs.ready == 'true'
         working-directory: tests/scene-tests
         run: npm ci --no-audit --no-fund
       - name: Deploy
-        if: steps.key.outputs.ready == 'true'
         env:
           DCL_PRIVATE_KEY: ${{ secrets.SCENE_TESTS_DEPLOYER_KEY }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -85,30 +78,23 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Check the World and deployer key
-        id: key
         env:
           DCL_PRIVATE_KEY: ${{ secrets.SCENE_TESTS_DEPLOYER_KEY }}
         run: |
           if [ -z "$SCENE_TESTS_WORLD" ] || [ -z "$DCL_PRIVATE_KEY" ]; then
-            echo "::notice title=QA World not deployed::Set the SCENE_TESTS_WORLD variable and the SCENE_TESTS_DEPLOYER_KEY secret."
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "::error title=QA World not configured::Set the SCENE_TESTS_WORLD variable and the SCENE_TESTS_DEPLOYER_KEY secret."
+            exit 1
           fi
       - uses: actions/checkout@v4
-        if: steps.key.outputs.ready == 'true'
       - uses: actions/setup-node@v4
-        if: steps.key.outputs.ready == 'true'
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: tests/scene-tests/package-lock.json
       - name: Install the scene tests
-        if: steps.key.outputs.ready == 'true'
         working-directory: tests/scene-tests
         run: npm ci --no-audit --no-fund
       - name: Undeploy
-        if: steps.key.outputs.ready == 'true'
         env:
           DCL_PRIVATE_KEY: ${{ secrets.SCENE_TESTS_DEPLOYER_KEY }}
           PR_NUMBER: ${{ github.event.pull_request.number }}

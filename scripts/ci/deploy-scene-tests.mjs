@@ -20,11 +20,12 @@ const SUITE = path.join(ROOT, 'tests/scene-tests')
 const SDK_COMMANDS = path.join(SUITE, 'node_modules/.bin/sdk-commands')
 const WORLDS = (process.env.WORLDS_SERVER || 'https://worlds-content-server.decentraland.org').replace(/\/+$/, '')
 
-// A PR's zone: 20x20 parcels on the World's west half (x -150..-31), away from the merged scenes'
-// own parcels. Two PRs share a zone only when their numbers are 90 apart.
-const ZONE_SIZE = 20
-const ZONE_COLUMNS = 6
-const ZONE_ROWS = 15
+// A PR's zone: 30x30 parcels on the World's west half (x -150..-31), away from the merged scenes'
+// own parcels; a change to what all scenes share deploys all of them, which span 3x23. Two PRs
+// share a zone only when their numbers are 40 apart.
+const ZONE_SIZE = 30
+const ZONE_COLUMNS = 4
+const ZONE_ROWS = 10
 
 const require = createRequire(path.join(SUITE, 'package.json'))
 const { Authenticator } = require('@dcl/crypto')
