@@ -100,6 +100,9 @@ function deployScene(world, key, { folder, parcels, base }) {
   const sceneJson = JSON.parse(original)
   sceneJson.worldConfiguration = { name: world }
   sceneJson.scene = { ...sceneJson.scene, parcels, base }
+  // Worlds rejects a thumbnail the deployment does not include.
+  const thumbnail = sceneJson.display?.navmapThumbnail
+  if (thumbnail && !fs.existsSync(path.join(SUITE, folder, thumbnail))) delete sceneJson.display.navmapThumbnail
   fs.writeFileSync(sceneJsonPath, JSON.stringify(sceneJson, null, 2))
   const cwd = path.join(SUITE, folder)
   try {
