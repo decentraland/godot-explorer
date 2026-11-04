@@ -136,15 +136,19 @@ given after `--`. The scene build is reused while nothing under `tests/scene-tes
 
 ## In CI
 
-Every push and PR runs the scene tests headless as the "🧪 Scene tests / Scene tests" check, with the
-per-scene summary on the run page and the Godot log as the `scene-tests-log` artifact.
+Every push and PR runs the scene tests headless as the "🛠️ Build & scene tests / 🧪 Scene tests /
+Headless" check, with the per-scene summary on the run page and the Godot log as the
+`scene-tests-log` artifact. A PR that changes nothing on the Godot side (the `changes` job matches
+its files against `lib/`, `godot/`, `src/`, the suite, its scripts and the workflows and actions
+they use) skips both the tests and the Linux library.
 
 `android_builds.yml` builds each library once and every other job downloads it:
 
 | Job | Runner | Does |
 |---|---|---|
+| `changes` | `ubuntu-latest` | on PRs, whether any changed file is on the Godot side |
 | `builder-image` | `ubuntu-latest` | pushes the ghcr builder image (`docker/android-builder`) when its Dockerfile changed |
-| `linux-lib` | `ubuntu-latest` | builds the Linux `libdclgodot.so`, uploads `libdclgodot-linux-release` |
+| `linux-lib` | `ubuntu-latest` | needs `changes`; builds the Linux `libdclgodot.so`, uploads `libdclgodot-linux-release` |
 | `android-lib` | `ubuntu-latest`, builder image | builds the Android `libdclgodot.so` (unstripped), uploads `libdclgodot-android-release` |
 | `scene-tests` | `ubuntu-latest` | needs `linux-lib`; runs `scripts/ci/scene-tests.sh`, headless (`scene_tests.yml`) |
 | `build` (Build Android) | `ubuntu-latest`, builder image | needs both libraries; imports, exports, signs and uploads the APK/AAB |

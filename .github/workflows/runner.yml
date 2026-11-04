@@ -29,7 +29,7 @@ jobs:
   # PRs build Android only through the `build` label (mobile_distribute.yml); here they run the
   # Linux library and the scene tests.
   android-build:
-    name: 🤖 Android
+    name: 🛠️ Build & scene tests
     permissions:
       contents: read
       pull-requests: write

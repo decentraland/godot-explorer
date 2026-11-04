@@ -131,11 +131,41 @@ jobs:
           cache-from: type=registry,ref=ghcr.io/decentraland/godot-explorer/android-builder:buildcache
           cache-to: type=registry,ref=ghcr.io/decentraland/godot-explorer/android-builder:buildcache,mode=max
 
+  # The scene tests exercise the Godot side only: a PR that changes nothing there (the React Native
+  # app, docs, unrelated CI) skips them and the Linux library they need. Pushes always run them.
+  changes:
+    name: Godot-side changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      godot: ${{ steps.files.outputs.godot }}
+    steps:
+      - id: files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ -z "$PR_NUMBER" ]; then
+            echo "godot=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files=$(gh api "repos/$REPO/pulls/$PR_NUMBER/files" --paginate --jq '.[].filename')
+          godot_side='^(lib/|godot/|src/|tests/scene-tests/|scripts/ci/scene-tests\.sh|scripts/serve-scene-tests\.sh|Cargo\.(toml|lock)$|rust-toolchain\.toml$|\.github/workflows/(scene_tests|android_builds|runner)\.yml$|\.github/actions/(install-deps|import-assets|set-up-cache|set-prod-flag)/)'
+          if printf '%s\n' "$files" | grep -qE "$godot_side"; then
+            echo "godot=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "godot=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Scene tests skipped::This PR changes nothing on the Godot side."
+          fi
+
   # The Linux library is the Godot editor's GDExtension for the import and export below, and the
   # client the scene tests run. Built once, on the free runner: same Ubuntu 24.04 as the builder
   # image, so the .so loads in its container too.
   linux-lib:
     name: Linux library
+    needs: changes
+    if: inputs.build_android || needs.changes.outputs.godot == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -271,8 +301,8 @@ jobs:
 
   scene-tests:
     name: 🧪 Scene tests
-    needs: linux-lib
-    if: inputs.run_scene_tests
+    needs: [changes, linux-lib]
+    if: inputs.run_scene_tests && needs.changes.outputs.godot == 'true'
     uses: ./.github/workflows/scene_tests.yml
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}

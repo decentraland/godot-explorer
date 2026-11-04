@@ -3,43 +3,13 @@ on:
   workflow_call:
     inputs:
       sha:
-        description: Commit to test; its Linux library comes from the caller's linux-lib job.
+        description: Commit to test. The caller builds its Linux library and decides whether the tests run.
         required: true
         type: string
 
 jobs:
-  # The scene tests exercise the Godot side only: a PR that changes nothing there (the React Native
-  # app, docs, unrelated CI) skips them. Pushes always run them.
-  changes:
-    name: Godot-side changes
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      godot: ${{ steps.files.outputs.godot }}
-    steps:
-      - id: files
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          REPO: ${{ github.repository }}
-        run: |
-          if [ -z "$PR_NUMBER" ]; then
-            echo "godot=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          files=$(gh api "repos/$REPO/pulls/$PR_NUMBER/files" --paginate --jq '.[].filename')
-          godot_side='^(lib/|godot/|src/|tests/scene-tests/|scripts/ci/scene-tests\.sh|scripts/serve-scene-tests\.sh|Cargo\.(toml|lock)$|rust-toolchain\.toml$|\.github/workflows/(scene_tests|android_builds)\.yml$)'
-          if printf '%s\n' "$files" | grep -qE "$godot_side"; then
-            echo "godot=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "godot=false" >> "$GITHUB_OUTPUT"
-            echo "::notice title=Scene tests skipped::This PR changes nothing on the Godot side."
-          fi
-
   scenes:
-    name: Scene tests
-    needs: changes
-    if: needs.changes.outputs.godot == 'true'
+    name: Headless
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
