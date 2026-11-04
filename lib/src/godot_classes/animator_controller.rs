@@ -281,6 +281,11 @@ impl MultipleAnimationController {
             self.playing_anims.remove(&anim.clip);
         }
 
+        // A clip dropped from `states` without being listed as stopped would
+        // otherwise hold its slot forever and starve new clips of an index.
+        self.playing_anims
+            .retain(|clip, _| playing_animation.iter().any(|anim| &anim.clip == clip));
+
         for (param, value) in changes {
             self.base_mut().set(&param, &value);
         }
