@@ -298,6 +298,22 @@ const backgroundTextureTests = [
         height={'50%'}
       />
     )
+  },
+  {
+    description: 'NineSlices with overflowing slices',
+    value: (
+      <UiItem
+        texture={{
+          src: nineSlicesTextureSource,
+          wrapMode: 'repeat',
+          filterMode: 'bi-linear'
+        }}
+        textureMode="nine-slices"
+        textureSlices={{ top: 0.2, right: 0.6, bottom: 0.9, left: 0.7 }}
+        width={'100%'}
+        height={'100%'}
+      />
+    )
   }
 ]
 
@@ -495,12 +511,20 @@ renderTest('ui-background: avatar texture', async function (context) {
 // The 9slice texture is 256 px: default slices are a third (85 px), the custom ones 115/256.
 test('ui-background: nine-slices with default slices', async function (context) {
   const { ui } = await texture(context, 'NineSlices with default textureSlices')
-  assertEquals([ui.background?.margins, ui.background?.stretch], [[85, 85, 85, 85], [2, 2]])
+  assertEquals([ui.background?.margins, ui.background?.stretch], [[85, 85, 85, 85], [0, 0]])
 })
 
 test('ui-background: nine-slices with custom slices', async function (context) {
   const { ui } = await texture(context, 'NineSlices with right values')
-  assertEquals([ui.background?.margins, ui.background?.stretch], [[115, 115, 115, 115], [2, 2]])
+  assertEquals([ui.background?.margins, ui.background?.stretch], [[115, 115, 115, 115], [0, 0]])
+})
+
+// #2060: as in Unity (DCLImage.AdjustSlices), when opposite slices add up to more than the
+// texture, the first keeps its value and the second gets the rest: left 0.7 + right 0.6 becomes
+// 0.7 + 0.3, top 0.2 + bottom 0.9 becomes 0.2 + 0.8, of a 256 px texture.
+test('ui-background: nine-slices that overflow the texture are clamped', async function (context) {
+  const { ui } = await texture(context, 'NineSlices with overflowing slices')
+  assertEquals(ui.background?.margins, [179, 51, 76, 204], 'margins [left, top, right, bottom]')
 })
 
 test('ui-background: smaller nine-slices keep their margins', async function (context) {
