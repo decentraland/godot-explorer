@@ -803,3 +803,42 @@ mod tests {
         );
     }
 }
+
+mod slot_tests {
+    use super::*;
+    use crate::framework::TestContext;
+
+    fn playing(clip: &str) -> PbAnimationState {
+        PbAnimationState {
+            clip: clip.to_string(),
+            playing: Some(true),
+            ..Default::default()
+        }
+    }
+
+    fn animator(clips: &[&str]) -> PbAnimator {
+        PbAnimator {
+            states: clips.iter().map(|clip| playing(clip)).collect(),
+        }
+    }
+
+    #[godot::test::itest]
+    fn clips_dropped_from_states_free_their_slots(_ctx: &TestContext) {
+        let durations = ["a", "b", "c", "d"]
+            .iter()
+            .map(|clip| (clip.to_string(), 1.0))
+            .collect();
+        let mut controller = MultipleAnimationController::new(durations);
+
+        controller.bind_mut().apply_anims(&animator(&["a", "b"]));
+        // The scene replaces its states: a and b vanish without being listed as stopped.
+        controller.bind_mut().apply_anims(&animator(&["c", "d"]));
+
+        let bound = controller.bind();
+        let mut clips: Vec<_> = bound.playing_anims.keys().cloned().collect();
+        clips.sort();
+        assert_eq!(clips, ["c", "d"]);
+        drop(bound);
+        controller.free();
+    }
+}
