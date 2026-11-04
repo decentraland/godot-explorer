@@ -1,4 +1,5 @@
-import { CameraMode, CameraType, Transform, engine } from '@dcl/sdk/ecs'
+import { CameraMode, CameraType, Entity, MainCamera, Transform, VirtualCamera, engine } from '@dcl/sdk/ecs'
+import { movePlayerTo } from '~system/RestrictedActions'
 import { Vector3 } from '@dcl/sdk/math'
 import { skipTest, test } from 'testing-library/src/testing'
 import { assert } from 'testing-library/src/testing/assert'
@@ -51,4 +52,54 @@ skipTest('touch controls: spreading two fingers goes first person, pinching goes
   assert(cameraMode() === CameraType.CT_FIRST_PERSON, `after spreading the camera is ${cameraMode()}, expected first person`)
   await pinch(context, -200, 20)
   assert(cameraMode() === CameraType.CT_THIRD_PERSON, `after pinching the camera is ${cameraMode()}, expected third person`)
+})
+
+// #2885: a scene that switches to a VirtualCamera and back (as cs-1.6 does for its zoom and death
+// cam) must leave touch look working. Set up like cs-1.6's ensureCamera: one camera at eye height,
+// instant transition; released by deleting MainCamera.
+function sceneCamera(): Entity {
+  const camera = engine.addEntity()
+  const eye = Transform.get(engine.CameraEntity).position
+  Transform.create(camera, { position: { ...eye } })
+  VirtualCamera.create(camera, { defaultTransition: { transitionMode: VirtualCamera.Transition.Time(0) } })
+  return camera
+}
+
+async function expectLookTurns(context: TestFunctionContext, what: string): Promise<void> {
+  const before = cameraHeading()
+  await look(context, { x: 300, y: 0 }, 20)
+  const turned = cameraHeading() - before
+  assert(turned > 10, `${what}: the camera turned ${turned} degrees, expected more than 10 to the right`)
+}
+
+test('touch controls: dragging turns the camera after a scene camera is released', async function (context) {
+  await restart(context)
+  const camera = sceneCamera()
+  MainCamera.createOrReplace(engine.CameraEntity, { virtualCameraEntity: camera })
+  await context.helpers.waitNTicks(30)
+  // While the scene camera is on, the scene points the view: a drag must not turn it.
+  const held = cameraHeading()
+  await look(context, { x: 300, y: 0 }, 20)
+  assert(Math.abs(cameraHeading() - held) < 2, `the scene camera turned ${cameraHeading() - held} degrees with a drag`)
+  MainCamera.deleteFrom(engine.CameraEntity)
+  await context.helpers.waitNTicks(30)
+  await expectLookTurns(context, 'after the release')
+  engine.removeEntity(camera)
+})
+
+test('touch controls: dragging turns the camera after a release during a teleport', async function (context) {
+  await restart(context)
+  const camera = sceneCamera()
+  MainCamera.createOrReplace(engine.CameraEntity, { virtualCameraEntity: camera })
+  await context.helpers.waitNTicks(30)
+  // The #2885 race: released in the frame of a teleport, set again the next frame, released again.
+  void movePlayerTo({ newRelativePosition: START, cameraTarget: FACING })
+  MainCamera.deleteFrom(engine.CameraEntity)
+  await context.helpers.waitNTicks(1)
+  MainCamera.createOrReplace(engine.CameraEntity, { virtualCameraEntity: camera })
+  await context.helpers.waitNTicks(1)
+  MainCamera.deleteFrom(engine.CameraEntity)
+  await context.helpers.waitNTicks(30)
+  await expectLookTurns(context, 'after the teleport race')
+  engine.removeEntity(camera)
 })
