@@ -6,14 +6,17 @@
 #   scripts/serve-scene-tests.sh              build if the sources changed, then serve
 #   scripts/serve-scene-tests.sh --build-only build if the sources changed, then exit
 #   scripts/serve-scene-tests.sh --port 8000
+#   scripts/serve-scene-tests.sh --production production builds, as the QA World gets them (QA mode)
 set -euo pipefail
 
 PORT=7666
 SERVE=1
+MODE=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --port) PORT="$2"; shift 2 ;;
     --build-only) SERVE=0; shift ;;
+    --production) MODE="-production"; shift ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -35,8 +38,10 @@ hash_of() {
 # Each scene is built and exported on its own, and only when its folder changed; a change to what
 # they all share (or to the port, which the export embeds) redoes every one. The realm in static/
 # is then assembled from the per-scene exports. The hashes and exports live outside static/.
-HASHES=.build-hashes
-EXPORTS=.exports
+# Production builds keep their own, so switching modes rebuilds nothing.
+HASHES=".build-hashes$MODE"
+EXPORTS=".exports$MODE"
+STATIC="static$MODE"
 mkdir -p "$HASHES" "$EXPORTS"
 SHARED="$(hash_of testing-library package.json package-lock.json)-port-$PORT"
 if [ "$(cat "$HASHES/shared" 2>/dev/null)" != "$SHARED" ]; then
@@ -49,7 +54,7 @@ fi
 
 build_scene() {
   local scene="$1" hash="$2"
-  (cd "$scene" && npx sdk-commands build --skip-install >/dev/null) || { echo "Building $scene failed" >&2; return 1; }
+  (cd "$scene" && npx sdk-commands build --skip-install ${MODE:+--production} >/dev/null) || { echo "Building $scene failed" >&2; return 1; }
   rm -rf "${EXPORTS:?}/$scene"
   npx sdk-commands export-static --dir "$scene" --destination "$EXPORTS/$scene" \
     --realmName scene-explorer-tests --baseUrl "http://localhost:$PORT/" >/dev/null || return 1
@@ -94,8 +99,8 @@ for exported in "$EXPORTS"/*/; do
   fi
 done
 
-if [ "$CHANGED" = 1 ] || [ ! -f static/scene-explorer-tests/about ]; then
-  python3 -I - "$EXPORTS" static <<'EOF'
+if [ "$CHANGED" = 1 ] || [ ! -f "$STATIC/scene-explorer-tests/about" ]; then
+  python3 -I - "$EXPORTS" "$STATIC" <<'EOF'
 import json, os, shutil, sys
 exports, static = sys.argv[1], sys.argv[2]
 shutil.rmtree(static, ignore_errors=True)
@@ -122,14 +127,14 @@ json.dump(about, open(os.path.join(static, "scene-explorer-tests", "about"), "w"
 print(f"Assembled the realm in {static}/ ({len(urns)} scenes)")
 EOF
 else
-  echo "Scene tests unchanged, reusing static/"
+  echo "Scene tests unchanged, reusing $STATIC/"
 fi
 
 if [ "$SERVE" = 1 ]; then
   echo "Serving the realm http://localhost:$PORT/scene-explorer-tests"
   # The client asks for every scene at once; `python3 -m http.server` keeps a backlog of 5 and
   # resets the rest, and a scene whose entity request fails never loads.
-  exec python3 -I - "$PORT" static <<'EOF'
+  exec python3 -I - "$PORT" "$STATIC" <<'EOF'
 import functools, http.server, sys
 port, root = int(sys.argv[1]), sys.argv[2]
 class Server(http.server.ThreadingHTTPServer):

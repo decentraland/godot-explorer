@@ -20,11 +20,12 @@ const SUITE = path.join(ROOT, 'tests/scene-tests')
 const SDK_COMMANDS = path.join(SUITE, 'node_modules/.bin/sdk-commands')
 const WORLDS = (process.env.WORLDS_SERVER || 'https://worlds-content-server.decentraland.org').replace(/\/+$/, '')
 
-// A PR's zone: 20x20 parcels on the World's west half (x -150..-31), away from the merged scenes'
-// own parcels. Two PRs share a zone only when their numbers are 90 apart.
-const ZONE_SIZE = 20
-const ZONE_COLUMNS = 6
-const ZONE_ROWS = 15
+// A PR's zone: 30x30 parcels on the World's west half (x -150..-31), away from the merged scenes'
+// own parcels; a change to what all scenes share deploys all of them, which span 3x23. Two PRs
+// share a zone only when their numbers are 40 apart.
+const ZONE_SIZE = 30
+const ZONE_COLUMNS = 4
+const ZONE_ROWS = 10
 
 const require = createRequire(path.join(SUITE, 'package.json'))
 const { Authenticator } = require('@dcl/crypto')
@@ -99,6 +100,9 @@ function deployScene(world, key, { folder, parcels, base }) {
   const sceneJson = JSON.parse(original)
   sceneJson.worldConfiguration = { name: world }
   sceneJson.scene = { ...sceneJson.scene, parcels, base }
+  // Worlds rejects a thumbnail the deployment does not include.
+  const thumbnail = sceneJson.display?.navmapThumbnail
+  if (thumbnail && !fs.existsSync(path.join(SUITE, folder, thumbnail))) delete sceneJson.display.navmapThumbnail
   fs.writeFileSync(sceneJsonPath, JSON.stringify(sceneJson, null, 2))
   const cwd = path.join(SUITE, folder)
   try {
@@ -162,13 +166,20 @@ function report(world, deployed, zone) {
     '| Scene | Position | Open |',
     '|---|---|---|'
   ]
+  const query = (base) => `realm=${encodeURIComponent(world)}&position=${base}`
   for (const { folder, base } of deployed) {
-    const query = `realm=${encodeURIComponent(world)}&position=${base}`
-    lines.push(`| ${folder} | ${base} | [mobile](https://mobile.dclexplorer.com/open?${query}) · [desktop](https://decentraland.org/play/?${query}) |`)
+    lines.push(`| ${folder} | ${base} | [mobile](https://mobile.dclexplorer.com/open?${query(base)}) · [desktop](https://decentraland.org/play/?${query(base)}) |`)
   }
   const text = lines.join('\n')
   console.log(text)
-  if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${text}\n`)
+  const { GITHUB_STEP_SUMMARY, GITHUB_OUTPUT, GITHUB_SERVER_URL, GITHUB_REPOSITORY, GITHUB_RUN_ID } = process.env
+  if (GITHUB_STEP_SUMMARY) fs.appendFileSync(GITHUB_STEP_SUMMARY, `${text}\n`)
+  // The PR's "View deployment": the scene itself when there is one, else this run's table.
+  const url =
+    deployed.length === 1
+      ? `https://mobile.dclexplorer.com/open?${query(deployed[0].base)}`
+      : `${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}`
+  if (GITHUB_OUTPUT && GITHUB_RUN_ID) fs.appendFileSync(GITHUB_OUTPUT, `url=${url}\n`)
 }
 
 const options = parseArgs(process.argv.slice(2))

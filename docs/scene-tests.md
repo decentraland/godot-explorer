@@ -176,21 +176,27 @@ The steps come from `showQaSteps(title, steps)` (`testing-library/src/qa/panel.t
 scene's UI renderer; a repro the steps refer to (buttons, the component under test) goes in its
 third argument, drawn under the steps.
 
+To see a scene as QA does, run `scripts/qa-scene.sh <name>`: it serves production builds
+(`serve-scene-tests.sh --production`, port 7667) and opens the client on the scene; Ctrl-C closes
+both. `--screenshot <file.png>` saves a screenshot once the scene loaded and closes them, through
+the debug hub (started when none runs); it fails within a minute if the scene does not load.
+
 ## QA World
 
 `.github/workflows/scene_tests_world.yml` deploys the scenes with `scripts/ci/deploy-scene-tests.mjs`:
 
 - **Push to `main`** (scene tests changed) or manual run: every scene, at its own parcels.
 - **PR with the `qa-scene` label**: only the scenes the PR changed (all of them when it changed
-  `testing-library`), moved together into the PR's 20x20 zone on the World's west half, redeployed
-  on every push. The run summary lists each scene's mobile and desktop links.
-- **PR closed**: the zone is undeployed.
+  `testing-library`), moved together into the PR's 30x30 zone on the World's west half, redeployed
+  on every push. The run summary lists each scene's mobile and desktop links, and the PR gets a
+  "View deployment" button (`qa-world`): the scene when the PR deployed one, else the run summary.
+- **PR closed**: the zone is undeployed and the PR's deployment marked inactive.
 
 The World is set by the repository variable `SCENE_TESTS_WORLD` (`mobile1.dcl.eth`: its own scene
 stands on 0,0, which neither the test parcels nor the zones touch). Deploys sign with the secret
 `SCENE_TESTS_DEPLOYER_KEY`, the key of a wallet on the World's deployment list (not the owner's).
 The key lives only in that secret: deploys run in CI, never from a shell. Without the variable or
-the secret the jobs only leave a notice; fork PRs never deploy.
+the secret the jobs fail; fork PRs never deploy.
 
 To see which scenes a deploy would put where, with their links (no key needed):
 
