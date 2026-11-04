@@ -203,7 +203,7 @@ pub fn archipelago_stats() -> String {
 
 // Web3 (ungrouped — uses default)
 pub fn ethereum_rpc() -> String {
-    format!("wss://rpc.decentraland.{}/mainnet", default_suffix())
+    format!("https://rpc.decentraland.{}/mainnet", default_suffix())
 }
 pub fn ethereum_rpc_with_project(project: &str) -> String {
     format!("{}?project={}", ethereum_rpc(), project)
