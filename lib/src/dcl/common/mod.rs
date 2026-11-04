@@ -15,6 +15,9 @@ pub struct SceneStartTime(pub std::time::SystemTime);
 pub struct SceneLogs(pub Vec<SceneLogMessage>);
 pub struct SceneMainCrdt(pub Option<Vec<u8>>);
 pub struct SceneDying(pub bool);
+/// Why the scene loop is winding down on its own, reported as the crash reason
+/// when the scene never logged anything that would say so.
+pub struct SceneExitReason(pub String);
 
 pub struct CommunicatedWithRenderer;
 
