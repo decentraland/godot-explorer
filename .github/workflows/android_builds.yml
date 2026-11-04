@@ -34,6 +34,13 @@ on:
         required: false
         type: boolean
         default: false
+      build_android:
+        description: >
+          Build the Android library and the APK. runner.yml turns it off on PRs, which then run only
+          the Linux library and the scene tests (Android builds through the `build` label).
+        required: false
+        type: boolean
+        default: true
     secrets:
       ANDROID_KEYSTORE_BASE64:
         required: true
@@ -64,10 +71,6 @@ on:
       BUILD_NUMBER_SECRET:
         required: false
 
-permissions:
-  pull-requests: write
-  contents: read
-
 concurrency:
   # `inputs.concurrency_key` (set by mobile_distribute's on-demand rebuild) isolates that run from
   # the push-triggered build so the two don't cancel each other; falls back to the original key.
@@ -75,6 +78,59 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The builder image is tagged by a hash of docker/android-builder: a change to the Dockerfile
+  # builds and pushes a new tag once, every other run only checks that the tag exists.
+  builder-image:
+    name: Android builder image
+    if: inputs.build_android
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    timeout-minutes: 45
+    outputs:
+      image: ${{ steps.tag.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}
+          sparse-checkout: docker/android-builder
+
+      - name: Compute image tag
+        id: tag
+        run: |
+          HASH=$(find docker/android-builder -type f | sort | xargs sha256sum | sha256sum | cut -c1-16)
+          echo "image=ghcr.io/decentraland/godot-explorer/android-builder:${HASH}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check whether the image exists
+        id: exists
+        run: |
+          if docker manifest inspect "${{ steps.tag.outputs.image }}" >/dev/null 2>&1; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: docker/setup-buildx-action@v3
+        if: steps.exists.outputs.found != 'true'
+
+      - name: Build and push the image
+        if: steps.exists.outputs.found != 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: docker/android-builder
+          push: true
+          provenance: false
+          tags: ${{ steps.tag.outputs.image }}
+          cache-from: type=registry,ref=ghcr.io/decentraland/godot-explorer/android-builder:buildcache
+          cache-to: type=registry,ref=ghcr.io/decentraland/godot-explorer/android-builder:buildcache,mode=max
+
   # The Linux library is the Godot editor's GDExtension for the import and export below, and the
   # client the scene tests run. Built once, on the free runner: same Ubuntu 24.04 as the builder
   # image, so the .so loads in its container too.
@@ -111,19 +167,20 @@ jobs:
 
   android-lib:
     name: Android library
-    runs-on: warp-ubuntu-latest-x64-4x
-    timeout-minutes: 35
+    needs: builder-image
+    if: inputs.build_android
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    timeout-minutes: 40
     container:
-      # image generated at: https://github.com/decentraland/godot-docker-builder
-      image: quay.io/decentraland/dcl-godot-android-builder:394c180223d3e2ad410d191147e9e2ad39884c0b
+      image: ${{ needs.builder-image.outputs.image }}
+      credentials:
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
       volumes:
         - /home/user/.cache/devgodot:/github/home/.cache/devgodot
-      # WarpBuild's cache action authenticates via this token, which exists on the runner
-      # host but is NOT propagated into the container unless forwarded explicitly. Without
-      # it the cache step is a silent no-op ("Authentication token is invalid"). See:
-      # https://github.com/WarpBuilds/cache#running-inside-a-container
-      env:
-        WARPBUILD_RUNNER_VERIFICATION_TOKEN: ${{ env.WARPBUILD_RUNNER_VERIFICATION_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -137,21 +194,23 @@ jobs:
           toolchain: "1.94"
           components: clippy, rustfmt
 
-      # Cache the Rust build so the dep tree isn't recompiled from scratch every push. Use the
-      # WarpBuild-native cache (raw target/, NO cleaning): the v8 crate's prebuilt static lib
-      # (librusty_v8.a) lives under target/.../build/v8-*/out, and rust-cache's cleanup strips it
-      # while keeping v8's fingerprint → warm builds then fail to link. set-up-warp-cache keeps the
-      # full target/, so the lib survives (matches the iOS leg). Restore runs on every branch; the
-      # save (below) only writes on main, so PRs restore from main's cache without paying the
-      # multi-minute save on each push.
-      # WarpBuild's cache action shells out to wget; the builder image may not ship it.
-      - name: Ensure wget (WarpCache dependency)
-        run: command -v wget >/dev/null 2>&1 || (apt-get update && apt-get install -y wget)
-      - name: Set up build cache
+      # Raw target/ (NO cleaning, unlike rust-cache): the v8 crate's prebuilt static lib lives under
+      # target/.../build/v8-*/out, and cleaning it strips the lib while keeping v8's fingerprint, so
+      # warm builds then fail to link. Restore runs on every branch; the save only on main, so PRs
+      # restore main's cache without paying the multi-minute save on each push.
+      - name: Restore build cache
         id: cache
-        uses: ./.github/actions/set-up-warp-cache
+        uses: actions/cache/restore@v4
         with:
-          cache-name: android-build
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+            lib/target/
+          key: android-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: android-build-
 
       - name: Install Android targets
         run: |
@@ -169,24 +228,32 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.head_ref }}
 
-      # Allocate the store build number (Cloudflare Worker, idempotent per commit SHA). MUST run
+      # Allocate the store build number (Cloudflare Worker, idempotent per commit SHA + flavor). MUST run
       # BEFORE the lib build so build.rs bakes it into the version string (GODOT_EXPLORER_VERSION).
       - name: Compute build number
         uses: ./.github/actions/compute-build-number
         with:
           sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}
+          flavor: ${{ env.BUILD_FLAVOR }}
           secret: ${{ secrets.BUILD_NUMBER_SECRET }}
           allocated-by: android
 
       - name: Build Rust library
         run: cargo run -- build --release --target android ${{ env.PROD_FLAG }}
 
-      # Persist the freshly built target/ — no-op off main (see save-warp-cache).
+      # Placed right after the build so a later failure can't lose a valid cache.
       - name: Save build cache (main only)
-        uses: ./.github/actions/save-warp-cache
+        if: github.ref == 'refs/heads/main' && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
         with:
-          cargo-key: ${{ steps.cache.outputs.cargo-key }}
-          rust-key: ${{ steps.cache.outputs.rust-key }}
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+            lib/target/
+          key: ${{ steps.cache.outputs.cache-primary-key }}
 
       # Unstripped: the AAB embeds its symbols and the Sentry step uploads it with sources. The
       # checkpoints are the version strings build.rs wrote, which the export job's Sentry step reads.
@@ -212,20 +279,20 @@ jobs:
 
   build:
     name: Build Android
-    needs: [linux-lib, android-lib]
-    runs-on: warp-ubuntu-latest-x64-4x
-    timeout-minutes: 35
+    needs: [builder-image, linux-lib, android-lib]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      packages: read
+    timeout-minutes: 50
     container:
-      # image generated at: https://github.com/decentraland/godot-docker-builder
-      image: quay.io/decentraland/dcl-godot-android-builder:394c180223d3e2ad410d191147e9e2ad39884c0b
+      image: ${{ needs.builder-image.outputs.image }}
+      credentials:
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
       volumes:
         - /home/user/.cache/devgodot:/github/home/.cache/devgodot
-      # WarpBuild's cache action authenticates via this token, which exists on the runner
-      # host but is NOT propagated into the container unless forwarded explicitly. Without
-      # it the cache step is a silent no-op ("Authentication token is invalid"). See:
-      # https://github.com/WarpBuilds/cache#running-inside-a-container
-      env:
-        WARPBUILD_RUNNER_VERIFICATION_TOKEN: ${{ env.WARPBUILD_RUNNER_VERIFICATION_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -241,21 +308,17 @@ jobs:
 
       # Both libraries come from the jobs above; this job only compiles the xtask, whose
       # target/ and cargo registry are cached on their own (a few hundred MB, not the 2.8 GB build).
-      # WarpBuild's cache action shells out to wget; the builder image may not ship it.
-      - name: Ensure wget (WarpCache dependency)
-        run: command -v wget >/dev/null 2>&1 || (apt-get update && apt-get install -y wget)
       - name: Restore xtask cache
         id: xtask-cache
-        uses: WarpBuilds/cache/restore@v1.4.6
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-xtask-${{ hashFiles('Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-xtask-
+          key: xtask-${{ hashFiles('Cargo.lock') }}
+          restore-keys: xtask-
 
       - name: Cargo install
         run: cargo run -- install --targets android linux
@@ -269,12 +332,13 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.head_ref }}
 
-      # The same number android-lib baked into the library (idempotent per commit SHA), so the
-      # APK + AAB exports below stamp the same versionCode for this commit.
+      # The same number android-lib baked into the library (idempotent per commit SHA + flavor), so
+      # the APK + AAB exports below stamp the same versionCode for this commit.
       - name: Compute build number
         uses: ./.github/actions/compute-build-number
         with:
           sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}
+          flavor: ${{ env.BUILD_FLAVOR }}
           secret: ${{ secrets.BUILD_NUMBER_SECRET }}
           allocated-by: android
 
@@ -294,7 +358,7 @@ jobs:
 
       - name: Save xtask cache (main only)
         if: github.ref == 'refs/heads/main' && steps.xtask-cache.outputs.cache-hit != 'true'
-        uses: WarpBuilds/cache/save@v1.4.6
+        uses: actions/cache/save@v4
         with:
           path: |
             ~/.cargo/registry/index/

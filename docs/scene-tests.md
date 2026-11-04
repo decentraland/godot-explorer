@@ -143,10 +143,14 @@ per-scene summary on the run page and the Godot log as the `scene-tests-log` art
 
 | Job | Runner | Does |
 |---|---|---|
+| `builder-image` | `ubuntu-latest` | pushes the ghcr builder image (`docker/android-builder`) when its Dockerfile changed |
 | `linux-lib` | `ubuntu-latest` | builds the Linux `libdclgodot.so`, uploads `libdclgodot-linux-release` |
-| `android-lib` | WarpBuild, builder image | builds the Android `libdclgodot.so` (unstripped), uploads `libdclgodot-android-release` |
+| `android-lib` | `ubuntu-latest`, builder image | builds the Android `libdclgodot.so` (unstripped), uploads `libdclgodot-android-release` |
 | `scene-tests` | `ubuntu-latest` | needs `linux-lib`; runs `scripts/ci/scene-tests.sh`, headless (`scene_tests.yml`) |
-| `build` (Build Android) | WarpBuild, builder image | needs both libraries; imports, exports, signs and uploads the APK/AAB |
+| `build` (Build Android) | `ubuntu-latest`, builder image | needs both libraries; imports, exports, signs and uploads the APK/AAB |
+
+On PRs `runner.yml` passes `build_android: false`, so only `linux-lib` and `scene-tests` run; a PR
+builds Android through the `build` label (`mobile_distribute.yml`).
 
 The Linux library is the Godot editor's GDExtension for the import and export as well as the client
 the scene tests run. The builder image and `ubuntu-latest` are both Ubuntu 24.04, so it loads in

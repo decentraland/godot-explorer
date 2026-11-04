@@ -26,11 +26,18 @@ jobs:
   #   needs: static-checks
   #   uses: ./.github/workflows/coverage.yml
 
+  # PRs build Android only through the `build` label (mobile_distribute.yml); here they run the
+  # Linux library and the scene tests.
   android-build:
     name: 🤖 Android
+    permissions:
+      contents: read
+      pull-requests: write
+      packages: write
     uses: ./.github/workflows/android_builds.yml
     with:
       run_scene_tests: true
+      build_android: ${{ github.event_name != 'pull_request' }}
     secrets:
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
