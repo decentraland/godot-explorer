@@ -27,6 +27,8 @@ pub struct Landing {
     /// Only a join asks for the spawn point: a named parcel lands there, and a reload leaves
     /// the player standing where they are.
     pub wants_spawn: bool,
+    /// The navigation names a parcel: a world's spawn point must not move the player off it.
+    pub has_parcel: bool,
 }
 
 fn to_variant(value: &Value) -> Variant {
@@ -59,6 +61,7 @@ async fn commit(mut realm_node: Gd<DclRealm>, landing: Landing) -> bool {
         mut about,
         listing,
         wants_spawn,
+        has_parcel,
         ..
     } = landing;
 
@@ -98,7 +101,7 @@ async fn commit(mut realm_node: Gd<DclRealm>, landing: Landing) -> bool {
         .set_local_scene_development(commit.serves_local_scenes);
 
     let last_urn = commit.scene_urns.last().cloned();
-    let resolve_position = wants_spawn || realm::is_dcl_ens(&realm_name);
+    let resolve_position = wants_spawn || (realm::is_dcl_ens(&realm_name) && !has_parcel);
     realm_node.bind_mut().commit(RealmData {
         realm_string,
         realm_url: realm_url.clone(),
@@ -114,8 +117,8 @@ async fn commit(mut realm_node: Gd<DclRealm>, landing: Landing) -> bool {
         content_base_url: commit.content_base_url,
     });
 
-    // Worlds always resolve the spawn from scene metadata (the caller may not know the parcel);
-    // other realms only when asked.
+    // Worlds resolve the spawn from scene metadata unless the caller named a parcel; other
+    // realms only when asked.
     if let (Some(urn), true) = (last_urn, resolve_position) {
         request_set_position(&urn).await;
     }
@@ -240,6 +243,7 @@ pub async fn set_realm(realm_node: Gd<DclRealm>, realm_string: &str) -> bool {
         listing: None,
         credential: String::new(),
         wants_spawn: false,
+        has_parcel: false,
     };
     commit(realm_node, landing).await
 }

@@ -160,13 +160,13 @@ jobs:
           fi
 
   # The Linux library is the Godot editor's GDExtension for the import and export below, and the
-  # client the scene tests run. Built once, on the free runner: same Ubuntu 24.04 as the builder
-  # image, so the .so loads in its container too.
+  # client the scene tests run. Pinned to the builder image's Ubuntu 24.04: built on a newer glibc
+  # (ubuntu-latest is 26.04), the .so does not load in that container.
   linux-lib:
     name: Linux library
     needs: changes
     if: inputs.build_android || needs.changes.outputs.godot == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
