@@ -220,15 +220,16 @@ impl DclRoot {
     }
 
     /// `--preview <url>` names the realm when `--realm` is not given, and a fresh guest starts at
-    /// 0,0 unless `--location` says otherwise (otherwise it would stand where the last session
-    /// ended, possibly parcels away from a preview scene).
+    /// 0,0 unless `--location` or the startup deeplink's `position` says otherwise (otherwise it
+    /// would stand where the last session ended, possibly parcels away from a preview scene).
     fn complete_emulator_arguments(global: &Gd<DclGlobal>) {
         let mut cli = global.bind().get_cli();
         let url = cli.bind().get_arg("--preview".into());
         if cli.bind().realm.is_empty() && !url.is_empty() {
             cli.bind_mut().realm = url;
         }
-        if cli.bind().location.is_empty() {
+        let link_has_location = global.bind().deep_link_obj.bind().is_location_defined();
+        if cli.bind().location.is_empty() && !link_has_location {
             cli.bind_mut().location = "0,0".into();
         }
     }
