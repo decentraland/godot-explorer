@@ -166,13 +166,20 @@ function report(world, deployed, zone) {
     '| Scene | Position | Open |',
     '|---|---|---|'
   ]
+  const query = (base) => `realm=${encodeURIComponent(world)}&position=${base}`
   for (const { folder, base } of deployed) {
-    const query = `realm=${encodeURIComponent(world)}&position=${base}`
-    lines.push(`| ${folder} | ${base} | [mobile](https://mobile.dclexplorer.com/open?${query}) · [desktop](https://decentraland.org/play/?${query}) |`)
+    lines.push(`| ${folder} | ${base} | [mobile](https://mobile.dclexplorer.com/open?${query(base)}) · [desktop](https://decentraland.org/play/?${query(base)}) |`)
   }
   const text = lines.join('\n')
   console.log(text)
-  if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${text}\n`)
+  const { GITHUB_STEP_SUMMARY, GITHUB_OUTPUT, GITHUB_SERVER_URL, GITHUB_REPOSITORY, GITHUB_RUN_ID } = process.env
+  if (GITHUB_STEP_SUMMARY) fs.appendFileSync(GITHUB_STEP_SUMMARY, `${text}\n`)
+  // The PR's "View deployment": the scene itself when there is one, else this run's table.
+  const url =
+    deployed.length === 1
+      ? `https://mobile.dclexplorer.com/open?${query(deployed[0].base)}`
+      : `${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}`
+  if (GITHUB_OUTPUT && GITHUB_RUN_ID) fs.appendFileSync(GITHUB_OUTPUT, `url=${url}\n`)
 }
 
 const options = parseArgs(process.argv.slice(2))

@@ -33,6 +33,9 @@ jobs:
           && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      deployments: write
     steps:
       - name: Check the World and deployer key
         env:
@@ -56,6 +59,7 @@ jobs:
         working-directory: tests/scene-tests
         run: npm ci --no-audit --no-fund
       - name: Deploy
+        id: deploy
         env:
           DCL_PRIVATE_KEY: ${{ secrets.SCENE_TESTS_DEPLOYER_KEY }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -67,6 +71,27 @@ jobs:
             node scripts/ci/deploy-scene-tests.mjs deploy
           fi
 
+      # The PR's "View deployment". Not a job `environment`: every PR shares qa-world, and a
+      # job environment marks the other PRs' deployments inactive.
+      - name: Record the deployment
+        if: steps.deploy.outputs.url != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.head_ref || github.ref_name }}
+          URL: ${{ steps.deploy.outputs.url }}
+          LOG_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          for old in $(gh api "repos/$REPO/deployments?environment=qa-world&ref=$REF" --jq '.[].id'); do
+            gh api -X POST "repos/$REPO/deployments/$old/statuses" -f state=inactive >/dev/null
+          done
+          id=$(jq -n --arg ref "$REF" '{ref: $ref, environment: "qa-world", auto_merge: false,
+                required_contexts: [], transient_environment: true, production_environment: false}' \
+            | gh api -X POST "repos/$REPO/deployments" --input - --jq .id)
+          jq -n --arg url "$URL" --arg log "$LOG_URL" \
+            '{state: "success", environment_url: $url, log_url: $log, auto_inactive: false}' \
+            | gh api -X POST "repos/$REPO/deployments/$id/statuses" --input - >/dev/null
+
   undeploy:
     name: Clear the PR's QA zone
     if: >-
@@ -76,6 +101,9 @@ jobs:
       && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      deployments: write
     steps:
       - name: Check the World and deployer key
         env:
@@ -99,3 +127,12 @@ jobs:
           DCL_PRIVATE_KEY: ${{ secrets.SCENE_TESTS_DEPLOYER_KEY }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: node scripts/ci/deploy-scene-tests.mjs undeploy --zone "$PR_NUMBER"
+      - name: Mark the PR's deployments inactive
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.head_ref }}
+        run: |
+          for old in $(gh api "repos/$REPO/deployments?environment=qa-world&ref=$REF" --jq '.[].id'); do
+            gh api -X POST "repos/$REPO/deployments/$old/statuses" -f state=inactive >/dev/null
+          done
