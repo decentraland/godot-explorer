@@ -148,7 +148,7 @@ they use) skips both the tests and the Linux library.
 |---|---|---|
 | `changes` | `ubuntu-latest` | on PRs, whether any changed file is on the Godot side |
 | `builder-image` | `ubuntu-latest` | pushes the ghcr builder image (`docker/android-builder`) when its Dockerfile changed |
-| `linux-lib` | `ubuntu-latest` | needs `changes`; builds the Linux `libdclgodot.so`, uploads `libdclgodot-linux-release` |
+| `linux-lib` | `ubuntu-24.04` | needs `changes`; builds the Linux `libdclgodot.so`, uploads `libdclgodot-linux-release` |
 | `android-lib` | `ubuntu-latest`, builder image | builds the Android `libdclgodot.so` (unstripped), uploads `libdclgodot-android-release` |
 | `scene-tests` | `ubuntu-latest` | needs `linux-lib`; runs `scripts/ci/scene-tests.sh`, headless (`scene_tests.yml`) |
 | `build` (Build Android) | `ubuntu-latest`, builder image | needs both libraries; imports, exports, signs and uploads the APK/AAB |
@@ -157,8 +157,9 @@ On PRs `runner.yml` passes `build_android: false`, so only `linux-lib` and `scen
 builds Android through the `build` label (`mobile_distribute.yml`).
 
 The Linux library is the Godot editor's GDExtension for the import and export as well as the client
-the scene tests run. The builder image and `ubuntu-latest` are both Ubuntu 24.04, so it loads in
-either. `mobile_distribute.yml` calls `android_builds.yml` without `run_scene_tests`, so its
+the scene tests run. It is built on Ubuntu 24.04, the builder image's: it then loads in that
+container and on newer runners (`ubuntu-latest` is 26.04), while a library built on 26.04's glibc
+does not load in the container. `mobile_distribute.yml` calls `android_builds.yml` without `run_scene_tests`, so its
 on-demand rebuilds skip the tests.
 
 ## Two modes: automated tests and QA
