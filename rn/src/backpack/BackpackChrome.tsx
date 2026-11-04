@@ -16,6 +16,8 @@ export type LayoutProps = {
   /** Portrait only: the app's bottom navigation, or the entry flow's Continue button. */
   footer?: ReactNode;
   onBack?: () => void;
+  /** The Wearables / Emotes switch and the filter; off while the entry flow edits a look. */
+  tools?: boolean;
 };
 
 export function BackButton({

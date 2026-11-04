@@ -1,4 +1,6 @@
 import { registerPreview } from '../gallery/registry';
+import { createMockApi } from '../backpack/mockApi';
+import { CustomizeStep } from './CustomizeStep';
 import { StageImage } from './previewScreens';
 import {
   AccountScreen,
@@ -32,6 +34,42 @@ registerPreview('extra/flow-naming', {
     />
   ),
 });
+
+const customizeApi = createMockApi();
+(
+  [
+    [
+      'extra/flow-customize',
+      null,
+      'Figma AVATAR_CUSTOMIZE 1574:10070, opened on Face',
+    ],
+    [
+      'extra/flow-customize-finish',
+      'finish',
+      'Figma 2669:31655: DONE asks to finish the look',
+    ],
+    [
+      'extra/flow-customize-discard',
+      'discard',
+      'Figma 1835:9418: back asks to discard',
+    ],
+  ] as const
+).forEach(([id, prompt, notes]) =>
+  registerPreview(id, {
+    title: `Flow: customize${prompt ? ` (${prompt})` : ''}`,
+    orientation: 'portrait',
+    notes,
+    render: () => (
+      <CustomizeStep
+        key={id}
+        api={customizeApi}
+        initialPrompt={prompt}
+        onDone={noop}
+        onDiscard={noop}
+      />
+    ),
+  }),
+);
 
 registerPreview('extra/flow-guest-create', {
   title: 'Flow: guest create',

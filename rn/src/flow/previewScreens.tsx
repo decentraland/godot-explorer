@@ -119,16 +119,20 @@ function PresetCard({
 
 export function AvatarCreateScreen({
   onCustomize,
+  selected,
+  onSelect,
   onContinue,
   onBack,
 }: {
   onCustomize: () => void;
+  /** Lives in the flow, so coming back from EDIT or the name returns to the same preset. */
+  selected: number;
+  onSelect: (index: number) => void;
   onContinue: () => void;
   onBack: () => void;
 }) {
   const avatar = useAvatar();
   const [presets, setPresets] = useState<PresetAvatar[]>([]);
-  const [selected, setSelected] = useState(0);
   useEffect(() => {
     let cancelled = false;
     fetchPresetAvatars().then(found => {
@@ -187,7 +191,7 @@ export function AvatarCreateScreen({
                   key={preset?.id ?? i}
                   preset={preset}
                   selected={i === selected}
-                  onPress={() => setSelected(i)}
+                  onPress={() => onSelect(i)}
                 />
               ),
             )}

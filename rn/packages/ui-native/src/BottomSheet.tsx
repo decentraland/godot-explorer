@@ -7,7 +7,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { colors, radii } from './tokens';
+import { colors, elevation, radii } from './tokens';
 import {
   DEFAULT_SNAP_CONFIG,
   nearestSnap,
@@ -151,6 +151,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radii.sheet,
     backgroundColor: colors.purple500,
     overflow: 'hidden',
+    ...elevation.up,
   },
   handleArea: { alignItems: 'center', paddingVertical: u(10) },
   handle: {

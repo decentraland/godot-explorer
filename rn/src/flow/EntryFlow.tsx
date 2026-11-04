@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useReducer, useState } from 'react';
-import { BackHandler, StyleSheet, View } from 'react-native';
-import { BackpackScreen } from '../backpack/BackpackScreen';
-import { Button, u } from '@dcl/ui-native';
+import { BackHandler } from 'react-native';
 import type { Place } from '../discover/api';
 import { useApi } from '../discover/ApiContext';
 import { ftuePlaces } from '../discover/ftue';
@@ -20,6 +18,7 @@ import {
   whenSignedIn,
 } from './auth';
 import { core } from '../core';
+import { CustomizeStep } from './CustomizeStep';
 import { takePreviewLaunch, whenInitialLinkRouted } from './launchLink';
 import { initialFlow, reduceFlow } from './flowMachine';
 import { FtueStep } from './FtueStep';
@@ -66,6 +65,10 @@ export function EntryFlow({
         if (step === 'splash' || step === 'account') {
           return false;
         }
+        // The customize step asks before discarding; its own listener runs next.
+        if (step === 'avatar_customize') {
+          return false;
+        }
         dispatch({ type: 'back' });
         return true;
       },
@@ -91,6 +94,7 @@ export function EntryFlow({
   }, [step]);
 
   const [busy, setBusy] = useState(false);
+  const [preset, setPreset] = useState(0);
   const [emailError, setEmailError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -173,10 +177,13 @@ export function EntryFlow({
   );
 
   const back = useCallback(() => {
-    cancelSignIn();
+    // These return to the avatar, where the session must stay; the others leave a sign-in.
+    if (step !== 'avatar_customize' && step !== 'avatar_naming') {
+      cancelSignIn();
+    }
     setEmailError(null);
     dispatch({ type: 'back' });
-  }, []);
+  }, [step]);
 
   const booted = useCallback(async () => {
     await whenInitialLinkRouted();
@@ -263,22 +270,15 @@ export function EntryFlow({
     case 'avatar_create':
       return (
         <AvatarCreateScreen
+          selected={preset}
+          onSelect={setPreset}
           onCustomize={() => dispatch({ type: 'customizeAvatar' })}
           onContinue={confirmAvatar}
           onBack={back}
         />
       );
     case 'avatar_customize':
-      return (
-        <BackpackScreen
-          onBack={back}
-          footer={
-            <View style={styles.footer}>
-              <Button label={t('FLOW_CONTINUE')} onPress={confirmAvatar} />
-            </View>
-          }
-        />
-      );
+      return <CustomizeStep onDone={confirmAvatar} onDiscard={back} />;
     case 'avatar_naming':
       return (
         <NamingScreen
@@ -303,7 +303,3 @@ export function EntryFlow({
       return null;
   }
 }
-
-const styles = StyleSheet.create({
-  footer: { padding: u(24), paddingBottom: u(32), backgroundColor: '#161518' },
-});

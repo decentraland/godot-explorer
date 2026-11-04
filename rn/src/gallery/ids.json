@@ -885,6 +885,21 @@
     "orientation": "portrait"
   },
   {
+    "id": "extra/flow-customize",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-customize-finish",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-customize-discard",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
     "id": "extra/flow-guest-create",
     "source": "extra",
     "orientation": "portrait"
