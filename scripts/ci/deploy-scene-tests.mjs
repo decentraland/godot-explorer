@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 //
 // Deploys the scene tests to the QA World as production builds, where each scene shows its manual
-// QA steps (docs/scene-tests.md); or a PR's changed scenes into that PR's zone; or removes a zone.
+// QA steps (docs/scene-tests.md): at their own parcels, or all of them into a PR's zone, pointing QA
+// at the ones the PR changed; or removes a zone.
 // CI runs it (scene_tests_world.yml): the World comes from SCENE_TESTS_WORLD and the deployer's key
 // only from the DCL_PRIVATE_KEY environment variable, which that workflow fills from a secret.
 //
@@ -21,8 +22,8 @@ const SDK_COMMANDS = path.join(SUITE, 'node_modules/.bin/sdk-commands')
 const WORLDS = (process.env.WORLDS_SERVER || 'https://worlds-content-server.decentraland.org').replace(/\/+$/, '')
 
 // A PR's zone: 30x30 parcels on the World's west half (x -150..-31), away from the merged scenes'
-// own parcels; a change to what all scenes share deploys all of them, which span 3x23. Two PRs
-// share a zone only when their numbers are 40 apart.
+// own parcels. Every scene goes in, at the same place in every zone (they span 3x23). Two PRs share
+// a zone only when their numbers are 40 apart.
 const ZONE_SIZE = 30
 const ZONE_COLUMNS = 4
 const ZONE_ROWS = 10
@@ -66,17 +67,14 @@ function sceneFolders() {
     .map((folder) => ({ folder, scene: JSON.parse(fs.readFileSync(path.join(SUITE, folder, 'scene.json'), 'utf8')).scene }))
 }
 
-/** The scene folders a PR changed; every scene when it changed what they all share. */
-function changedFolders(base, all) {
-  const changed = execFileSync('git', ['diff', '--name-only', `${base}...HEAD`, '--', 'tests/scene-tests'], {
-    cwd: ROOT,
-    encoding: 'utf8'
-  })
-    .split('\n')
-    .filter(Boolean)
-    .map((file) => file.split('/')[2])
-  if (changed.some((top) => top === 'testing-library' || top === 'package-lock.json' || top === 'package.json')) return all
-  return all.filter(({ folder }) => changed.includes(folder))
+/** The scene folders a PR changed: what QA is pointed at. */
+function changedFolders(base) {
+  return new Set(
+    execFileSync('git', ['diff', '--name-only', `${base}...HEAD`, '--', 'tests/scene-tests'], { cwd: ROOT, encoding: 'utf8' })
+      .split('\n')
+      .filter(Boolean)
+      .map((file) => file.split('/')[2])
+  )
 }
 
 /** Moves the scenes, keeping their layout, so their lowest corner lands on the zone's. */
@@ -86,7 +84,7 @@ function placeInZone(scenes, zone) {
   const minY = Math.min(...parcels.map(([, y]) => y))
   const maxX = Math.max(...parcels.map(([x]) => x))
   const maxY = Math.max(...parcels.map(([, y]) => y))
-  if (maxX - minX >= ZONE_SIZE || maxY - minY >= ZONE_SIZE) fail(`the changed scenes span more than ${ZONE_SIZE}x${ZONE_SIZE} parcels`)
+  if (maxX - minX >= ZONE_SIZE || maxY - minY >= ZONE_SIZE) fail(`the scenes span more than ${ZONE_SIZE}x${ZONE_SIZE} parcels`)
   const move = (parcel) => {
     const [x, y] = parse(parcel)
     return `${x - minX + zone.x},${y - minY + zone.y}`
@@ -159,26 +157,22 @@ async function undeployZone(world, key, zone) {
   }
 }
 
-function report(world, deployed, zone) {
-  const lines = [
-    zone === null ? `### QA World: ${world}` : `### QA zone ${zone.x},${zone.y} in ${world}`,
-    '',
-    '| Scene | Position | Open |',
-    '|---|---|---|'
-  ]
+/** `changed`: the scenes to point QA at, listed first; none outside a PR or when it changed no scene. */
+function report(world, deployed, zone, changed) {
   const query = (base) => `realm=${encodeURIComponent(world)}&position=${base}`
-  for (const { folder, base } of deployed) {
-    lines.push(`| ${folder} | ${base} | [mobile](https://mobile.dclexplorer.com/open?${query(base)}) · [desktop](https://decentraland.org/play/?${query(base)}) |`)
-  }
+  const mobile = (base) => `https://mobile.dclexplorer.com/open?${query(base)}`
+  const row = ({ folder, base }) => `| ${folder} | ${base} | [mobile](${mobile(base)}) · [desktop](https://decentraland.org/play/?${query(base)}) |`
+  const table = (scenes) => ['| Scene | Position | Open |', '|---|---|---|', ...scenes.map(row)]
+  const pointed = deployed.filter(({ folder }) => changed.has(folder))
+  const lines = [zone === null ? `### QA World: ${world}` : `### QA zone ${zone.x},${zone.y} in ${world}`, '']
+  if (pointed.length > 0 && pointed.length < deployed.length) lines.push('**Changed in this PR**', '', ...table(pointed), '', '**Every scene**', '')
+  lines.push(...table(deployed))
   const text = lines.join('\n')
   console.log(text)
   const { GITHUB_STEP_SUMMARY, GITHUB_OUTPUT, GITHUB_SERVER_URL, GITHUB_REPOSITORY, GITHUB_RUN_ID } = process.env
   if (GITHUB_STEP_SUMMARY) fs.appendFileSync(GITHUB_STEP_SUMMARY, `${text}\n`)
-  // The PR's "View deployment": the scene itself when there is one, else this run's table.
-  const url =
-    deployed.length === 1
-      ? `https://mobile.dclexplorer.com/open?${query(deployed[0].base)}`
-      : `${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}`
+  // The PR's "View deployment": its scene when it changed one, else this run's table.
+  const url = pointed.length === 1 ? mobile(pointed[0].base) : `${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}`
   if (GITHUB_OUTPUT && GITHUB_RUN_ID) fs.appendFileSync(GITHUB_OUTPUT, `url=${url}\n`)
 }
 
@@ -193,13 +187,8 @@ if (options.command === 'undeploy') {
   await undeployZone(world, key, zone)
 } else {
   const all = sceneFolders()
-  const picked = zone === null ? all : changedFolders(options.base, all)
-  if (picked.length === 0) {
-    console.log('No scene test changed: nothing to deploy.')
-    process.exit(0)
-  }
-  const targets = zone === null ? picked.map(({ folder, scene }) => ({ folder, parcels: scene.parcels, base: scene.base })) : placeInZone(picked, zone)
+  const targets = zone === null ? all.map(({ folder, scene }) => ({ folder, parcels: scene.parcels, base: scene.base })) : placeInZone(all, zone)
   // One at a time: Worlds holds at most 10 pending deployments per deployer.
   if (!options.dryRun) for (const target of targets) deployScene(world, key, target)
-  report(world, targets, zone)
+  report(world, targets, zone, zone === null ? new Set() : changedFolders(options.base))
 }

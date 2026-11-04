@@ -187,10 +187,11 @@ the debug hub (started when none runs); it fails within a minute if the scene do
 `.github/workflows/scene_tests_world.yml` deploys the scenes with `scripts/ci/deploy-scene-tests.mjs`:
 
 - **Push to `main`** (scene tests changed) or manual run: every scene, at its own parcels.
-- **PR with the `qa-scene` label**: only the scenes the PR changed (all of them when it changed
-  `testing-library`), moved together into the PR's 30x30 zone on the World's west half, redeployed
-  on every push. The run summary lists each scene's mobile and desktop links, and the PR gets a
-  "View deployment" button (`qa-world`): the scene when the PR deployed one, else the run summary.
+- **PR with the `qa-scene` label**: every scene, moved together into the PR's 30x30 zone on the
+  World's west half (each scene at the same place in every zone), redeployed on every push. The run
+  summary lists the scenes the PR changed first, then all of them, with mobile and desktop links;
+  the PR gets a "View deployment" button (`qa-world`): its scene when it changed one, else the run
+  summary.
 - **PR closed**: the zone is undeployed and the PR's deployment marked inactive.
 
 The World is set by the repository variable `SCENE_TESTS_WORLD` (`mobile1.dcl.eth`: its own scene
