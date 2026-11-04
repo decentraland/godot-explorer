@@ -1,7 +1,7 @@
 class_name Player
 extends CharacterBody3D
 
-const _EquippedVisibility := preload(
+const EquippedVisibility := preload(
 	"res://src/decentraland_components/avatar/player_equipped_visibility.gd"
 )
 const DEFAULT_CAMERA_FOV = 60.0
@@ -375,7 +375,7 @@ func _ready():
 		add_child(PlayerDesktopInput.new(self))
 
 	Global.camera_mode_set.connect(_on_global_camera_mode_set)
-	avatar.avatar_loaded.connect(_EquippedVisibility.report.bind(avatar))
+	avatar.avatar_loaded.connect(EquippedVisibility.report.bind(avatar))
 
 	# Setup the outline system with the main camera
 	if outline_system:
