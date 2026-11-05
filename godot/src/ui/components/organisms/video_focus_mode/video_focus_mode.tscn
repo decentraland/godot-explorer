@@ -304,6 +304,17 @@ layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 
+[node name="Control_ChatShield" type="Control" parent="SafeMarginContainer_Root/VBoxContainer_Root/BoxContainer_Layout/PanelContainer_Chat/SafeMarginContainer_ChatBottom/VBoxContainer/Control_ChatSlot"]
+unique_name_in_owner = true
+editor_description = "Takes the taps meant for the docked chat while it is drawn transparent (the settle window after a relayout); kept as the slot's last child so it is on top."
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
 [node name="Control_KeyboardMargin" type="Control" parent="SafeMarginContainer_Root/VBoxContainer_Root"]
 unique_name_in_owner = true
 layout_mode = 2

@@ -57,6 +57,7 @@ var _autocomplete_queued: bool = false
 @onready var column_go_to_last: Control = $VBoxContainer/HBoxContainer/VSeparator
 
 @onready var _line_edit_safe_area: MarginContainer = %MarginContainer_LineEditSafeArea
+@onready var _panel_chat: PanelContainer = %PanelContainer_Chat
 @onready var _header: PanelContainer = %PanelContainer_Header
 @onready var _header_hbox: HBoxContainer = %PanelContainer_Header/HBoxContainer
 @onready var _header_icon: TextureRect = %PanelContainer_Header/HBoxContainer/TextureRect
@@ -314,6 +315,16 @@ func close_write_mode_if_active() -> void:
 func reset_safe_area_insets() -> void:
 	_line_edit_safe_area.add_theme_constant_override("margin_right", 0)
 	_line_edit_safe_area.add_theme_constant_override("margin_left", 0)
+
+
+## For a host that paints the chat's background itself (the focus mode column).
+func set_panel_transparent() -> void:
+	_panel_chat.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+
+
+## Moves the input left of its column by px; reset_safe_area_insets puts it back.
+func set_input_margin_left(px: int) -> void:
+	_line_edit_safe_area.add_theme_constant_override("margin_left", px)
 
 
 func async_apply_system_bar_insets() -> void:

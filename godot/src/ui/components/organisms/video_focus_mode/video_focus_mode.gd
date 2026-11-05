@@ -73,6 +73,7 @@ var _inset_left: int = 0
 @onready var _chat_header: PanelContainer = %PanelContainer_Header
 @onready var _collapse_slot: Control = %Control_CollapseSlot
 @onready var _chat_slot: Control = %Control_ChatSlot
+@onready var _chat_shield: Control = %Control_ChatShield
 @onready var _label_nearby: Label = %Label_Nearby
 @onready var _members_icon: TextureRect = %TextureRect_Members
 @onready var _label_members: Label = %Label_Members
@@ -190,17 +191,21 @@ func _spawn_chat() -> void:
 	_chat.on_exit_write_mode.connect(_on_chat_exit_write_mode)
 	_chat.submit_message.connect(_on_chat_submit_message)
 	_chat_slot.add_child(_chat)
+	# The shield stays the slot's last child, drawn over the chat, to take its taps.
+	_chat_slot.move_child(_chat, 0)
 	# The column paints the chat's background down to the screen edge, so the chat's own
 	# translucent panel would leave the safe-area band under the input a different shade.
-	_chat.get_node("%PanelContainer_Chat").add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	_chat.set_panel_transparent()
 	# Messages grow up from the input, as in the design, instead of hanging from the header.
 	# EXPAND keeps the ScrollContainer sizing the list to its own height; SHRINK_END then
 	# places a shorter list at the bottom of that height.
 	_chat.v_box_container_chat.size_flags_vertical = (Control.SIZE_EXPAND | Control.SIZE_SHRINK_END)
 	# Invisible until the first layout settles: chat.gd hides itself one deferred call after
 	# _ready, then re-shows, and the replayed messages re-measure over a few frames. Drawn
-	# meanwhile, that reads as the text flickering. _scroll_chat_to_bottom reveals it.
+	# meanwhile, that reads as the text flickering. _scroll_chat_to_bottom reveals it. The
+	# modulate hides the pixels but not the hit boxes, so the shield takes taps meanwhile.
 	_chat.modulate = Color.TRANSPARENT
+	_chat_shield.visible = true
 	var explorer = Global.get_explorer()
 	if explorer != null:
 		_chat.copy_messages_from(explorer.chat_panel.chat)
@@ -307,6 +312,7 @@ func _scroll_chat_to_bottom(epoch: int) -> void:
 		return
 	_chat.scroll_to_bottom_deferred()
 	_chat.modulate = Color.WHITE
+	_chat_shield.visible = false
 
 
 ## Keeps the buttons, the chat header and the chat clear of the device's side insets (camera
@@ -324,6 +330,10 @@ func _apply_side_insets() -> void:
 		var x_factor := get_viewport().get_visible_rect().size.x / window_width
 		left = maxi(roundi(safe_area.position.x * x_factor), 0)
 		right = maxi(roundi((window_width - safe_area.end.x) * x_factor), 0)
+	_layout_side_insets(left, right)
+
+
+func _layout_side_insets(left: int, right: int) -> void:
 	_inset_left = left
 	var is_portrait := _layout.vertical
 	var controls_side: int = (
@@ -434,9 +444,7 @@ func _on_chat_enter_write_mode() -> void:
 	if _layout.vertical:
 		return
 	var column_left: float = _chat.global_position.x - global_position.x
-	_chat.get_node("%MarginContainer_LineEditSafeArea").add_theme_constant_override(
-		"margin_left", -roundi(column_left - _inset_left)
-	)
+	_chat.set_input_margin_left(-roundi(column_left - _inset_left))
 
 
 func _on_chat_exit_write_mode() -> void:

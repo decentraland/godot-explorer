@@ -12,7 +12,7 @@ const OVERLAY_SCENE := preload(
 )
 
 ## Assertions that actually evaluated; guards against a suite that never ran.
-const EXPECTED_CHECKS := 16
+const EXPECTED_CHECKS := 24
 
 var _failures: Array[String] = []
 var _checks: int = 0
@@ -46,13 +46,20 @@ func _test_lifecycle() -> void:
 	overlay.enter(player)
 	_expect(overlay.visible, "enter shows the overlay")
 	var chat_slot: Control = overlay.get_node("%Control_ChatSlot")
-	_expect(chat_slot.get_child_count() == 1, "enter docks one chat")
+	_expect(chat_slot.get_child_count() == 2, "enter docks one chat under the tap shield")
 	# The settle timer carries the layout epoch it was armed for: a stale one must not reveal.
 	var chat: Control = chat_slot.get_child(0)
+	var shield: Control = overlay.get_node("%Control_ChatShield")
 	overlay._scroll_chat_to_bottom(overlay._chat_reveal_epoch - 1)
-	_expect(chat.modulate == Color.TRANSPARENT, "a stale settle timer leaves the chat hidden")
+	_expect(
+		chat.modulate == Color.TRANSPARENT and shield.visible,
+		"a stale settle timer leaves the chat hidden, its taps shielded"
+	)
 	overlay._scroll_chat_to_bottom(overlay._chat_reveal_epoch)
-	_expect(chat.modulate == Color.WHITE, "the current settle timer reveals the chat")
+	_expect(
+		chat.modulate == Color.WHITE and not shield.visible,
+		"the current settle timer reveals the chat and drops the shield"
+	)
 
 	overlay._process(0.0)
 	var texture_rect: TextureRect = overlay.get_node("%TextureRect_Video")
@@ -95,6 +102,68 @@ func _test_lifecycle() -> void:
 	)
 	expand.pressed.emit()
 	_expect(chat_column.visible and not expand.visible, "the edge tab brings the chat back")
+
+	# Typing in landscape: the input stretches over the video and the header steps aside.
+	var header: PanelContainer = overlay.get_node("%PanelContainer_Header")
+	var line_edit_area: MarginContainer = chat._line_edit_safe_area
+	chat.on_enter_write_mode.emit()
+	var column_left := chat.global_position.x - overlay.global_position.x
+	_expect(
+		(
+			line_edit_area.get_theme_constant("margin_left")
+			== -roundi(column_left - overlay._inset_left)
+		),
+		"landscape write mode moves the input left to the screen edge"
+	)
+	Global.change_virtual_keyboard.emit(400)
+	_expect(not header.visible, "landscape hides the NEARBY header while the keyboard is up")
+	Global.change_virtual_keyboard.emit(0)
+	_expect(header.visible, "the header is back once the keyboard goes")
+	chat.on_exit_write_mode.emit()
+	_expect(
+		line_edit_area.get_theme_constant("margin_left") == 0,
+		"leaving write mode returns the input to its column"
+	)
+
+	# Side insets are arithmetic over the device insets, so they are driven here without one.
+	var controls: MarginContainer = overlay.get_node("%MarginContainer_Controls")
+	var header_box := header.get_theme_stylebox("panel") as StyleBoxFlat
+	overlay._layout_side_insets(44, 30)
+	_expect(
+		(
+			controls.get_theme_constant("margin_left") == 48 + 44
+			and controls.get_theme_constant("margin_right") == 48
+			and header_box.content_margin_left == 16
+			and header_box.content_margin_right == 16 + 30
+			and chat.offset_left == 0
+			and chat.offset_right == -30
+			and expand.offset_right == -(24 + 30)
+		),
+		"landscape: the left inset on the controls, the right one on the chat side only"
+	)
+	collapse.pressed.emit()
+	overlay._layout_side_insets(44, 30)
+	_expect(
+		controls.get_theme_constant("margin_right") == 48 + 30,
+		"landscape collapsed: the video reaches the right edge, so the controls take that inset"
+	)
+	expand.pressed.emit()
+	Global.orientation_changed.emit(true)
+	overlay._layout_side_insets(44, 30)
+	_expect(
+		(
+			controls.get_theme_constant("margin_left") == 40 + 44
+			and controls.get_theme_constant("margin_right") == 40 + 30
+			and header_box.content_margin_left == 32 + 44
+			and header_box.content_margin_right == 32 + 30
+			and chat.offset_left == 44
+			and chat.offset_right == -30
+		),
+		"portrait: both insets on the controls, the header and the chat"
+	)
+	Global.change_virtual_keyboard.emit(400)
+	_expect(header.visible, "portrait keeps the NEARBY header while typing")
+	Global.change_virtual_keyboard.emit(0)
 
 	overlay.get_node("%Button_Exit").pressed.emit()
 	_expect(not overlay.visible, "the exit button hides the overlay")
