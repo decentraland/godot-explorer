@@ -34,12 +34,14 @@ async function waitAndAssertTransformPosition(
     collisionMask: 0xffffffff
   })
 
-  await context.helpers.waitNTicks(2)
-
-  assert(
-    RaycastResult.getOrNull(entity) !== null,
-    `${assertPrefix}raycast should have arrived`
+  // The SDK does not say on which tick the result arrives, only that it
+  // carries the query's timestamp.
+  const timestamp = customWaitAndAssertTransformPositionTimestamp
+  const arrived = await context.helpers.waitTicksUntil(
+    () => RaycastResult.getOrNull(entity)?.timestamp === timestamp,
+    1000
   )
+  assert(arrived, `${assertPrefix}raycast should have arrived`)
 
   const globalPosition = getGlobalTransform(entity).position
   const calculatedPosition = RaycastResult.get(entity).globalOrigin
