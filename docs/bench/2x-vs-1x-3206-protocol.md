@@ -193,6 +193,8 @@ done
 ```
 
 Report: PSS after cycle 1 vs cycle 20 (MB), fps in cycle 1 vs cycle 20, and the slope of the fit.
+Measured on 2026-11-03 with this exact command on both builds (20 cycles each); the numbers and the
+per-cycle CSV live in `data/2x-vs-1x-3206/android-a54/enter-exit/<build>/`.
 
 ### 9.2 Soak (60–90 min) on Android
 
@@ -203,8 +205,10 @@ python3 scripts/bench/2x-vs-1x/bench_android.py --serial $SERIAL window \
   --out docs/bench/data/2x-vs-1x-3206/android-a54/soak/2x-soak-90m
 ```
 
-The trace buffer is a ring (128 MB), so a 90-min trace keeps the whole run at the observed frame
-count; if it does not, chunk it into 10-min windows (`--seconds 600`) and concatenate the CSVs.
+The trace buffer is a ring (128 MB). A 71-min run measured on 2026-11-03 kept only the last ~6
+min of frame timeline **and dropped the process table**, so the fps query joined against nothing and
+returned zero rows while the mem/thermal/CPU samplers covered the whole run. Chunk the soak into
+10-min windows (`--seconds 600`) and concatenate the CSVs; do not run it as one trace.
 
 ### 9.3 Avatar push until fps drops under budget
 
