@@ -17,6 +17,11 @@ de invalidación). Datos crudos en [`data/2x-vs-1x-3206/`](./data/2x-vs-1x-3206/
   (−4.6 %). CPU media 132.7 % → 119.0 % (−10.3 %), temperatura de funda 43.6 → 42.6 °C.
 - **Carga**: 2.x entra al mundo antes. `[RenderReady]` t100 (todo lo que está en vista con pipeline
   compilado) **7.7 s → 1.4 s**; arranque en frío hasta `[RenderReady]` **27.8 s → 19.4 s** (mediana).
+- **Entrar y salir 20 veces**: 2.x entra **13.2 % antes** (8.5 s vs 9.8 s) y con **237 MB menos**
+  (−12.4 %). Ninguno de los dos fuga: el PSS del ciclo 20 está dentro de la dispersión del ciclo 1.
+- **Soak de 71 min (2.x)**: sin throttling térmico (piel 38–40 °C), memoria con deriva suave de
+  ~+100 MB en la mediana, sin escalones. El fps de ese run no se pudo leer (buffer de Perfetto
+  pequeño), ver §7.
 - **Presupuesto** del issue: fps ≥ 1.x → **PASS**; RSS ≤ 1.x + 100 MB → **PASS** (2.x usa menos).
 
 ## Qué se comparó
@@ -33,7 +38,7 @@ de invalidación). Datos crudos en [`data/2x-vs-1x-3206/`](./data/2x-vs-1x-3206/
 Los dos APKs son `export --release` de CI; no participó ningún build debug ni con profiler.
 
 **Contenido pinneado (idéntico en ambos):** `[RenderReady]` reporta
-`scene_id=bafkreig5z6onywvk4hrklg7einxgspq3nqr54a5zpbnfp53vpkigyatu2a`, `position="0,-2"`,
+`scene_id=bafkreig5z6onyvwk4hrklg7einxgspq3nqr54a5zpbnfp53vpkigyatu2a`, `position="0,-2"`,
 `profile=0`, `anti_aliasing=0`, `shadow_quality=0`, `bloom_quality=0`, `async_shaders=true`. Es la
 misma Genesis Plaza, mismo perfil gráfico y mismo spawn en las dos ramas, que es la condición para
 que un Δ% signifique algo.
