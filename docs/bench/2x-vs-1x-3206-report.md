@@ -135,7 +135,7 @@ y en 1.x Atrás no abandona el mundo (abre el overlay del tutorial; ver `state-3
 miden las filas 3–5 es "mundo con overlay encima", no la vuelta a menús: el PSS no baja de 2 GB por
 que el mundo sigue cargado detrás. Se publican como evidencia de que el mundo no se descarga, no como
 un estado de memoria de menús. En 2.x el control de salida está dentro del shell React Native y no se
-encontró de forma scriptable en esta pasada — ver §9.
+encontró de forma scriptable en esta pasada — ver §10.
 
 ## 4. Stress: entrar y salir 20 veces
 
@@ -224,7 +224,7 @@ como para seguirle el rastro en un soak más largo.
 **fps del soak: no disponible.** Con el buffer de Perfetto de 128 MB, 71 min de traza conservan sólo
 los últimos ~6 min de frame timeline y pierden la tabla de procesos, así que la consulta de frames no
 tiene a qué unirse (0 filas). El sampler sí cubrió los 71 min completos. La config ya quedó anotada
-con la razón y el protocolo pide trocear el soak en ventanas de 10 min (§9.2) en vez de una sola
+con la razón y el protocolo pide trocear el soak en ventanas de 10 min (protocolo §9.2) en vez de una sola
 traza larga — eso es lo que hay que hacer la próxima vez; no se reintentó en esta pasada.
 
 **UI por pantalla y red degradada**: sin ejecutar (§10).
@@ -281,22 +281,22 @@ traza larga — eso es lo que hay que hacer la próxima vez; no se reintentó en
   el árbol de accesibilidad, así que ese bloque sólo puede hacerse con diff de capturas.
 - **Soak con fps**: el soak de 71 min ya cubre memoria/térmica/CPU; falta trocearlo en ventanas de
   10 min para conservar la frame timeline (o subir el buffer de Perfetto).
-- **UI por pantalla, tap spam, red degradada**: comandos listos (§9.2–9.5 del protocolo), sin
-  ejecutar.
+- **Tap spam y red degradada**: comandos listos (protocolo §9.4–9.5), sin ejecutar en esta pasada.
 
 ## 11. Datos crudos
 
 ```
 docs/bench/data/2x-vs-1x-3206/
   android-a54/
-    gp/                10 corridas (5 por build): meta.json, frames.csv, mem.csv,
-                       thermal.csv, cpu.csv, screen.png, launch-*.log
-    gp/summary.md      tabla agregada que genera summarize.py
-    gp-empty/          2x3 corridas → INVALID.md (modal "Connection lost")
-    rss-states/1x/     meminfo + [MemMonitor] por estado, más capturas
-      enter-exit/1x|2x/  cycles.csv (20 ciclos por build) + capturas del ciclo 1 y 20
-    soak/2x-soak-60m/  mem.csv / thermal.csv / cpu.csv de 71 min + screen.png
-  iphone16e/launch/    1x-mode/ y 2x/: console-*.log + launch-*.json
+    summary.md|json      tabla agregada que genera summarize.py (la del §1)
+    gp/                  10 corridas (5 por build): meta.json, frames.csv, mem.csv,
+                         thermal.csv, cpu.csv, screen.png, launch-*.log
+    gp-empty/            6 corridas + INVALID.md (modal "Connection lost", fuera del reporte)
+    rss-states/1x/       states.csv (40 muestras de meminfo), states-median.csv, capturas
+    enter-exit/1x|2x/    cycles.csv (20 ciclos por build) + captura del ciclo 1 y del 20
+    soak/2x-soak-60m/    mem.csv / thermal.csv / cpu.csv de 71 min + meta.json + screen.png
+    ui-2x/               shell React Native: qué se pudo y qué no medir, con capturas
+  iphone16e/launch/      1x-mode/ y 2x/: console-*.log + launch-*.json
 ```
 
 ## 12. Reproducir
