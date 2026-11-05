@@ -6,6 +6,10 @@ de invalidación). Datos crudos en [`data/2x-vs-1x-3206/`](./data/2x-vs-1x-3206/
 
 ## TL;DR
 
+Versión navegable de todos estos datos, con las tablas generadas desde los CSV y los archivos crudos
+descargables: <https://artifacts.dclregenesislabs.xyz/af8787b0-ec0c-49c0-bc58-3e7728a3b180>
+(pide login con email de trabajo la primera vez).
+
 - **fps**: empatados por diseño. Ambos builds corren con dynamic graphics ON y quedan clavados en
   ~18 fps (objetivo 55.6 ms/frame) en Genesis Plaza. 1.x **17.9**, 2.x **18.1** (mediana de 5
   corridas de 60 s cada una, alternadas). El cap esconde la diferencia: el número no distingue los
