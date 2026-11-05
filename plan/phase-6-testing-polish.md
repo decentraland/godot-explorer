@@ -61,7 +61,10 @@ engine-facing fix.
 - [ ] **6.9 Friends in RN/TypeScript**. The core's friends API and the Rust RPC client are gone since
   phase 3 (D-43). Reimplement friends, requests, blocked users, nearby, mutual friends and online status
   in RN with TypeScript (a social service client in `rn/`), behind the existing `menu/` and `discover/`
-  screens, which run on mock data until then.
+  screens, which run on mock data until then. The service contract to write it against is 1.x's
+  client (#3131, `lib/src/social/` on the `1.x` branch): signed HTTP (`/v2` address-only reads,
+  `/v1` writes), a `/v1/stream` WebSocket for requests, online status and blocks, and profiles
+  resolved by the client through the asset-bundle-registry.
 - [ ] **6.6 Localization pass**. es and pt_BR strings reviewed in place on every screen.
 ## Verification
 
