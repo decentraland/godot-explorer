@@ -240,6 +240,21 @@ done
 adb -s $SERIAL logcat -d | grep -E "FATAL|ANR|ReactNativeJS.*Error"
 ```
 
+Measured on 2026-11-05 on the 2.x build only (in 1.x these screens are drawn by the engine and have
+no accessibility tree). Two corrections to the commands above, both needed to run it at all:
+
+- `ui.sh tap "Discover"` does not work from inside the world: the HUD's buttons are engine-drawn and
+  absent from the tree. The scriptable way back to the shell is `KEYCODE_BACK` (opens the RN dialog
+  `Leave this world?`, whose `LEAVE` node is tappable) or a tap at `2283 240` in landscape 2340x1080
+  (HUD chevron), which lands on Backpack in portrait; from there the tabs are at `y=2065` and
+  `x` = Discover 228, Backpack 427, Settings 638, Profile 851.
+- Time-to-content cannot be polled with `uiautomator dump` (one dump costs 0.9–3.4 s and it is
+  OOM-killed on Discover): use `screencap` in a loop (~0.5 s per capture) and stop when the area
+  above the tab bar matches a settled reference of the target screen. Resolution is one capture, so
+  a screen that paints faster than that (Settings) can only be reported as an upper bound.
+
+Results, CSVs and screenshots: `data/2x-vs-1x-3206/android-a54/ui-2x/`.
+
 ### 9.5 Degraded network
 
 ```bash

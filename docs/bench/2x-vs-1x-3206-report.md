@@ -21,7 +21,11 @@ de invalidación). Datos crudos en [`data/2x-vs-1x-3206/`](./data/2x-vs-1x-3206/
   (−12.4 %). Ninguno de los dos fuga: el PSS del ciclo 20 está dentro de la dispersión del ciclo 1.
 - **Soak de 71 min (2.x)**: sin throttling térmico (piel 38–40 °C), memoria con deriva suave de
   ~+100 MB en la mediana, sin escalones. El fps de ese run no se pudo leer (buffer de Perfetto
-  pequeño), ver §7.
+  pequeño), ver §8.
+- **UI del shell React Native (sólo tiene lado 2.x)**: tiempo a contenido 0.5–2.3 s por pantalla
+  (Discover 2.27 s, Backpack 1.85 s, Profile 1.16 s, Settings ≤ 0.5 s), sin fuga en 20 navegaciones
+  (−56 MB) y sin crash con 20 taps en ráfaga. Y volver al shell desde el mundo **sí** es scriptable:
+  `BACK` → `LEAVE`, o el chevron del HUD (§6).
 - **Presupuesto** del issue: fps ≥ 1.x → **PASS**; RSS ≤ 1.x + 100 MB → **PASS** (2.x usa menos).
 
 ## Qué se comparó
@@ -88,7 +92,7 @@ Dispersión por corrida (para que se vea que no es un promedio tapando dos pobla
 
 **Avatares presentes.** Genesis Plaza estaba poblada en todas las corridas (jugadores reales, no
 bots): 5–10 avatares visibles por captura, contados a mano en `screen.png` de cada corrida. No hubo
-forma de fijar N (§9 de limitaciones), así que este bloque es "plaza poblada tal cual", no un test de
+forma de fijar N (§10 de limitaciones), así que este bloque es "plaza poblada tal cual", no un test de
 N avatares.
 
 **Diferencia de overlay a declarar.** En las corridas de 1.x quedó arriba el cartel de primer uso
@@ -134,8 +138,8 @@ entrar).
 y en 1.x Atrás no abandona el mundo (abre el overlay del tutorial; ver `state-3-after-exit.png`). Lo que
 miden las filas 3–5 es "mundo con overlay encima", no la vuelta a menús: el PSS no baja de 2 GB por
 que el mundo sigue cargado detrás. Se publican como evidencia de que el mundo no se descarga, no como
-un estado de memoria de menús. En 2.x el control de salida está dentro del shell React Native y no se
-encontró de forma scriptable en esta pasada — ver §10.
+un estado de memoria de menús. En 2.x el shell queda detrás del mundo y salir sí es scriptable (§6),
+pero este bloque no se repitió para 2.x: la muestra por estado es de 1.x.
 
 ## 4. Stress: entrar y salir 20 veces
 
@@ -177,7 +181,47 @@ captura de pantalla disponible tampoco se puede afirmar qué pantalla mostraba c
 dos columnas de footprint **no son comparables entre sí** (una app puede estar en su pantalla de
 bienvenida y la otra ya en el mundo): se dejan como referencia de arranque, no como resultado.
 
-## 6. Hallazgos
+## 6. UI del shell React Native (2.x, Android A54)
+
+Este bloque sólo tiene lado 2.x: en 1.x las pantallas las dibuja el motor y no existen en el árbol de
+accesibilidad, así que no hay nada equivalente que medir. Lo que sigue es cuánto cuesta cada pantalla
+del shell RN con el build 2.0.0. Comandos, capturas y método completo en
+`data/…/android-a54/ui-2x/README.md`.
+
+**Volver al shell sí es scriptable** — esto corrige una suposición de una versión anterior de este
+reporte. Desde el mundo: `KEYCODE_BACK` abre el diálogo React Native `Leave this world?` con
+`CANCEL`/`LEAVE` (sus nodos son de RN, `ui.sh tap "LEAVE"` funciona), y el chevron del borde derecho
+del HUD (`tap 2283 240` en landscape 2340x1080) entra directo al shell en Backpack. `KEYCODE_ESCAPE`
+no hace nada. Las cuatro pantallas del tab bar son las únicas alcanzables.
+
+Tiempo a contenido por pantalla, 5 repeticiones cada una, alternando la pantalla de origen:
+
+| pantalla | n | mediana | rango | resolución del método |
+|---|---:|---:|---|---|
+| Discover | 5 | 2268 ms | 1930–2430 ms | 2–4 capturas |
+| Backpack | 5 | 1851 ms | 1220–1955 ms | 2–4 capturas |
+| Profile | 5 | 1160 ms | 1101–1182 ms | 2 capturas |
+| Settings | 5 | 514 ms | 499–525 ms | **≤ 500 ms, no resoluble** |
+
+Método: tap en el tab y `screencap` en bucle (~0.5 s por captura en este teléfono) hasta que el área
+de la pantalla —todo menos la barra de tabs, que cambia en el propio tap— deja de diferir de una
+referencia ya asentada de esa pantalla. El piso de resolución es una captura: Settings pinta antes de
+la primera, así que se publica como cota superior, no como valor.
+
+**Sin fuga de navegación**: 20 ciclos Discover↔Profile llevan el PSS de 2075 a 2021 MB (−55.9 MB,
+monótono a la baja, `navleak.csv`). El piso de ruido es alto porque el mundo Godot sigue residente
+detrás del shell (~2 GB): este test sólo vería una fuga grande, y el heap de JS no es legible en un
+build release.
+
+**Tap spam**: 20 taps al centro de la pantalla a 150 ms, mismo pid (21219), PSS +1 MB, ninguna línea
+`FATAL`/`ANR`/error de RN en logcat, y las capturas de antes y después son indistinguibles.
+
+Lo que no se pudo medir, con evidencia en el README del bloque: `uiautomator dump` muere por OOM en
+Discover (9 intentos, 0 bytes; la misma orden en Settings devuelve 37 KB), así que esa pantalla va
+sólo por píxeles; en 1.x no hay árbol de accesibilidad que consultar; y no se abrieron las subpantallas
+de Settings.
+
+## 7. Hallazgos
 
 1. **La cola es lo único que separa a los dos builds, y 2.x la tiene peor.** Misma mediana y mismo
    p95, pero el 1 % más lento de 2.x es 10.6 % peor y su p99 es 11.9 % más alto, con la CPU 10.3 %
@@ -199,10 +243,14 @@ bienvenida y la otra ya en el mundo): se dejan como referencia de arranque, no c
    invitado de 2.x se pueden disparar sin taps, y en iOS no hay inyección de input disponible en
    esta máquina: para medir iOS (y para CI) hace falta un arranque de benchmark por deeplink que
    entre al mundo con pose fija y sin flujo de login.
-6. **Cortar la red no da una plaza vacía**: los dos builds levantan un modal bloqueante de
-   "Connection lost" (ver §8). Una medición con y sin avatares necesita el flag de comms, no red off.
+6. **El shell React Native no es donde se pierde el tiempo, y su salida se puede automatizar.**
+   Cuatro pantallas, 0.5–2.3 s a contenido, sin fuga en 20 navegaciones y sin inestabilidad en 20
+   taps en ráfaga. Para comparar contra 1.x habría que medir lo mismo por diff de capturas, porque
+   en 1.x esas pantallas son del motor y no están en el árbol de accesibilidad.
+7. **Cortar la red no da una plaza vacía**: los dos builds levantan un modal bloqueante de
+   "Connection lost" (ver §9). Una medición con y sin avatares necesita el flag de comms, no red off.
 
-## 7. Stress: soak de 71 minutos (2.x)
+## 8. Stress: soak de 71 minutos (2.x)
 
 Una corrida continua de 71 min en Genesis Plaza, quieto, con el sampler tomando memoria, CPU y
 temperatura cada ~3 s (1464 muestras). Datos en `data/…/android-a54/soak/2x-soak-60m/`.
@@ -227,9 +275,10 @@ tiene a qué unirse (0 filas). El sampler sí cubrió los 71 min completos. La c
 con la razón y el protocolo pide trocear el soak en ventanas de 10 min (protocolo §9.2) en vez de una sola
 traza larga — eso es lo que hay que hacer la próxima vez; no se reintentó en esta pasada.
 
-**UI por pantalla y red degradada**: sin ejecutar (§10).
+**UI por pantalla**: medida en §6 (sólo lado 2.x, porque en 1.x las pantallas las dibuja el motor
+y no están en el árbol de accesibilidad). **Red degradada**: sin ejecutar (protocolo §9.5).
 
-## 8. Intentos que no sirvieron (documentados para no repetirlos)
+## 9. Intentos que no sirvieron (documentados para no repetirlos)
 
 - **Plaza vacía cortando la red.** `NET_OFF_AFTER_READY=1` apaga Wi-Fi tras cargar el mundo para
   sacar los avatares remotos. Resultado: **los dos builds responden con el modal bloqueante
@@ -243,7 +292,7 @@ traza larga — eso es lo que hay que hacer la próxima vez; no se reintentó en
   en este teléfono (`[DynamicGraphics] FPS limit changed, target=55.6ms`). Comparar fps medios es
   comparar el cap; por eso el resultado se apoya en p99/p1 y en la cola.
 
-## 9. Limitaciones declaradas
+## 10. Limitaciones declaradas
 
 1. **Dynamic graphics ON** en ambos (comportamiento de fábrica). No se forzó OFF desde Settings en
    ninguna de las dos apps: sin un flag de CLI equivalente (`graphic_profile`,
@@ -266,8 +315,11 @@ traza larga — eso es lo que hay que hacer la próxima vez; no se reintentó en
    corregido.
 8. **Overlay de primer uso en 1.x**: ver §1. Las corridas de 1.x muestran el cartel de tutorial y
    los globos de movimiento/emotes; las de 2.x no. Es UI extra a favor de 2.x en la comparación.
+9. **UI sólo con lado 2.x y con piso de 0.5 s**: ver §6. En 1.x esas pantallas se dibujan en el motor
+   y no hay árbol de accesibilidad, así que no se midieron; y el probe por capturas no distingue nada
+   por debajo de una captura (~0.5 s), que es el caso de Settings.
 
-## 10. Qué haría falta para cerrar lo que falta
+## 11. Qué haría falta para cerrar lo que falta
 
 - **Plaza vacía**: un flag de arranque en 2.x que llegue al motor (hoy el shell RN ignora los
   parámetros de engine), o el runner `gp_benchmark` invocable también en 2.x. Con eso, el mismo
@@ -275,15 +327,15 @@ traza larga — eso es lo que hay que hacer la próxima vez; no se reintentó en
   dos ramas.
 - **N avatares**: bot farm (un cliente de escritorio por bot con perfil propio, todos a `0,0`), o
   un lugar poblado con contador de avatares por captura.
-- **UI por pantalla**: mapear las pantallas del shell RN 2.x (hoy se llega al mundo y no se vuelve
-  al shell de forma scriptable) y medir tiempo a interactiva por pantalla con `ui.sh` (polling de
-  `uiautomator`), que es lo que sí expone 2.x; en 1.x la UI es dibujada por el motor y no aparece en
-  el árbol de accesibilidad, así que ese bloque sólo puede hacerse con diff de capturas.
+- **UI por pantalla, con lado 1.x**: la mitad 2.x ya está medida (§6). Falta medir las mismas
+  pantallas en 1.x, que se dibujan en el motor y no están en el árbol de accesibilidad: hace falta el
+  mismo probe por diff de capturas que se usó del lado 2.x. Y del lado 2.x falta bajar el piso de
+  resolución de 0.5 s (`screenrecord` con timestamps de frame en vez de `screencap`).
 - **Soak con fps**: el soak de 71 min ya cubre memoria/térmica/CPU; falta trocearlo en ventanas de
   10 min para conservar la frame timeline (o subir el buffer de Perfetto).
-- **Tap spam y red degradada**: comandos listos (protocolo §9.4–9.5), sin ejecutar en esta pasada.
+- **Red degradada**: comandos listos (protocolo §9.5), sin ejecutar en esta pasada.
 
-## 11. Datos crudos
+## 12. Datos crudos
 
 ```
 docs/bench/data/2x-vs-1x-3206/
@@ -295,11 +347,12 @@ docs/bench/data/2x-vs-1x-3206/
     rss-states/1x/       states.csv (40 muestras de meminfo), states-median.csv, capturas
     enter-exit/1x|2x/    cycles.csv (20 ciclos por build) + captura del ciclo 1 y del 20
     soak/2x-soak-60m/    mem.csv / thermal.csv / cpu.csv de 71 min + meta.json + screen.png
-    ui-2x/               shell React Native: qué se pudo y qué no medir, con capturas
+    ui-2x/               shell React Native: README con el método, ttc-pixel.csv / ttc-a11y.csv
+                         (tiempo a contenido), navleak.csv, tapspam.csv, explore/ con capturas
   iphone16e/launch/      1x-mode/ y 2x/: console-*.log + launch-*.json
 ```
 
-## 12. Reproducir
+## 13. Reproducir
 
 ```bash
 # 1) builds pinneados
