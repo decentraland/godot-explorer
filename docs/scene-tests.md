@@ -229,3 +229,29 @@ SCENE_TESTS_WORLD=mobile1.dcl.eth node scripts/ci/deploy-scene-tests.mjs deploy 
 4. Add the scene to `scenes.json` (`{ "parcel": [x, y], "name": "<name>" }`).
 5. Run it with `scripts/ci/scene-tests.sh --scene <name>`, and `--windowed` for its render tests. For a new screenshot, copy the
    capture from `tests/snapshots/scenes/comparison/` into `tests/snapshots/scenes/` after checking it.
+
+## Change a reference image
+
+A failing screenshot comparison means the picture changed. Treat it as a possible regression, not
+as a stale reference: replacing the reference is the quickest way to make the test pass, and also
+how a bug becomes the expected result.
+
+Before replacing a reference:
+
+1. Look at the three images: the reference (`tests/snapshots/scenes/<name>.png`), the capture
+   (`comparison/<name>.png`) and the diff (`comparison/<name>.diff.png`).
+2. Name the change that explains the difference: the PR's own rendering change, or a fix that makes
+   the old picture wrong. If nothing in the PR explains it, it is a regression: find it, or file
+   it and keep the reference.
+3. Check the new picture against what the test says it checks (its name and the scene code), not
+   against the old picture. A known bug keeps its correct reference, and the test becomes a
+   `skipTest` naming the issue.
+
+Then:
+
+- Replace only the images the change explains, one by one. Never copy the whole `comparison/`
+  folder.
+- List each replaced image in the PR description, under Details, with one line on why it changed
+  and the old and new pictures.
+- Regenerating many references at once (a new runner, a capture change) is a PR of its own, with
+  no fix in it, so it can be reviewed picture by picture.
