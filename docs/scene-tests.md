@@ -137,9 +137,15 @@ given after `--`. The scene build is reused while nothing under `tests/scene-tes
 
 ## In CI
 
-Every push and PR runs the scene tests headless as the "🛠️ Build & scene tests / 🧪 Scene tests /
-Headless" check, with the per-scene summary on the run page and the Godot log as the
-`scene-tests-log` artifact. A PR that changes nothing on the Godot side (the `changes` job matches
+Every push and PR runs the scene tests twice, and both must pass:
+
+- "🛠️ Build & scene tests / 🧪 Scene tests / Headless": no renderer, so the render tests are skipped.
+- "… / Render (lavapipe)": with `--render`, drawn by Mesa's software Vulkan under Xvfb, so the
+  render tests run and compare their screenshots. Its captures are the `scene-tests-screenshots`
+  artifact.
+
+Each shows the per-scene summary on the run page and uploads the Godot log as
+`scene-tests-log-<headless|render>`. A PR that changes nothing on the Godot side (the `changes` job matches
 its files against `lib/`, `godot/`, `src/`, the suite, its scripts and the workflows and actions
 they use) skips both the tests and the Linux library.
 
@@ -151,7 +157,7 @@ they use) skips both the tests and the Linux library.
 | `builder-image` | `ubuntu-latest` | pushes the ghcr builder image (`docker/android-builder`) when its Dockerfile changed |
 | `linux-lib` | `ubuntu-24.04` | needs `changes`; builds the Linux `libdclgodot.so`, uploads `libdclgodot-linux-release` |
 | `android-lib` | `ubuntu-latest`, builder image | builds the Android `libdclgodot.so` (unstripped), uploads `libdclgodot-android-release` |
-| `scene-tests` | `ubuntu-latest` | needs `linux-lib`; runs `scripts/ci/scene-tests.sh`, headless (`scene_tests.yml`) |
+| `scene-tests` | `ubuntu-latest` | needs `linux-lib`; runs `scripts/ci/scene-tests.sh` headless and with `--render` (`scene_tests.yml`) |
 | `build` (Build Android) | `ubuntu-latest`, builder image | needs both libraries; imports, exports, signs and uploads the APK/AAB |
 
 On PRs `runner.yml` passes `build_android: false`, so only `linux-lib` and `scene-tests` run; a PR

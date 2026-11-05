@@ -12,9 +12,6 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # The render leg draws with software Vulkan (Mesa lavapipe). Informational until its
-    # screenshot references are regenerated on it: it reports, it does not fail the PR.
-    continue-on-error: ${{ matrix.render }}
     strategy:
       fail-fast: false
       matrix:
