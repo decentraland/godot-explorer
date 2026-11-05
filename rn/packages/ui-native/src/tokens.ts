@@ -19,6 +19,8 @@ export const colors = {
   purple450: '#460F6F',
   purple500: '#350854',
   purple550: '#24033B',
+  /** `background/brand`, the plain `Background` of the entry flow frames. */
+  brand: '#470071',
   cardLight: '#B48CD7',
   glass: 'rgba(105,31,169,0.4)',
   glassPressed: 'rgba(105,31,169,0.6)',

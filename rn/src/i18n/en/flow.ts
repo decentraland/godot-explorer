@@ -38,7 +38,6 @@ export const flow = {
   FLOW_NAME_INVALID: 'Letters, numbers and spaces only',
   FLOW_NAME_RANDOMIZE: 'Random name',
   FLOW_LETS_GO: "Let's go",
-  FLOW_GUEST_NAME: 'Guest',
   FLOW_AVATAR_LOADING: 'Getting your avatar ready…',
   FLOW_AVATAR_CHOOSE_LOOK: 'Choose your look',
   FLOW_AVATAR_EDIT: 'EDIT',

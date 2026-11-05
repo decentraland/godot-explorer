@@ -1,8 +1,5 @@
 import { useCallback, useEffect, useReducer, useState } from 'react';
 import { BackHandler } from 'react-native';
-import type { Place } from '../discover/api';
-import { useApi } from '../discover/ApiContext';
-import { ftuePlaces } from '../discover/ftue';
 import {
   acceptTerms,
   alreadySignedIn,
@@ -22,7 +19,6 @@ import { CustomizeStep } from './CustomizeStep';
 import { takePreviewLaunch, whenInitialLinkRouted } from './launchLink';
 import { askNotificationPermission } from '../notifications/push';
 import { initialFlow, reduceFlow } from './flowMachine';
-import { FtueStep } from './FtueStep';
 import {
   AvatarCreateScreen,
   PreviewArea,
@@ -40,24 +36,10 @@ import {
 } from './screens';
 import { t } from '../i18n';
 
-/** Portrait-only entry flow: splash → terms → account → (auth) → avatar → name → welcome → app. */
-export function EntryFlow({
-  onDone,
-  onJumpIn,
-}: {
-  onDone: () => void;
-  onJumpIn?: (place: Place) => Promise<boolean>;
-}) {
+/** Portrait-only entry flow: splash → account → (auth) → avatar → name → app. */
+export function EntryFlow({ onDone }: { onDone: () => void }) {
   const [flow, dispatch] = useReducer(reduceFlow, initialFlow);
   const { step, provider } = flow;
-  const api = useApi();
-
-  // Ahead of the FTUE gate, so deciding the single-place bypass never waits on the network.
-  useEffect(() => {
-    if (step === 'avatar_create') {
-      ftuePlaces(api);
-    }
-  }, [step, api]);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener(
@@ -82,17 +64,6 @@ export function EntryFlow({
       onDone();
     }
   }, [step, onDone]);
-
-  // Only an account without a profile reaches the welcome after its avatar: it was made here.
-  useEffect(() => {
-    if (step === 'ftue') {
-      try {
-        core().ftueMarkNewPlayer();
-      } catch {
-        // Signed out meanwhile: there is no account to remember.
-      }
-    }
-  }, [step]);
 
   const [busy, setBusy] = useState(false);
   const [preset, setPreset] = useState(0);
@@ -297,16 +268,14 @@ export function EntryFlow({
           onBack={back}
           onSubmit={name => {
             setAvatarName(name);
+            // Only an account without a profile names an avatar here: it is a new player.
+            try {
+              core().ftueMarkNewPlayer();
+            } catch {
+              // Signed out meanwhile: there is no account to remember.
+            }
             dispatch({ type: 'named', name });
           }}
-        />
-      );
-    case 'ftue':
-      return (
-        <FtueStep
-          username={flow.name || t('FLOW_GUEST_NAME')}
-          onJumpIn={onJumpIn}
-          onFinish={() => dispatch({ type: 'finish' })}
         />
       );
     default:

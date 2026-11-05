@@ -30,7 +30,7 @@ describe('entry flow', () => {
     ).toBe('account');
   });
 
-  it('guest path names the avatar and ends in the ftue', () => {
+  it('guest path names the avatar and ends in the app', () => {
     const state = run([
       { type: 'booted' },
       { type: 'playAsGuest' },
@@ -41,8 +41,7 @@ describe('entry flow', () => {
     expect(state.step).toBe('avatar_naming');
     expect(state.guest).toBe(true);
     const named = run([{ type: 'named', name: 'Zara Skyforge' }], state);
-    expect(named.step).toBe('ftue');
-    expect(run([{ type: 'finish' }], named).step).toBe('done');
+    expect(named.step).toBe('done');
   });
 
   it('new account goes through avatar and naming', () => {
@@ -57,7 +56,7 @@ describe('entry flow', () => {
       [{ type: 'avatarConfirmed' }, { type: 'named', name: 'Mateo' }],
       state,
     );
-    expect(named.step).toBe('ftue');
+    expect(named.step).toBe('done');
     expect(named.name).toBe('Mateo');
   });
 

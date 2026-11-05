@@ -1,4 +1,4 @@
-/** Entry flow mirroring the Godot lobby (godot/src/ui/pages/auth/lobby.gd), portrait only. */
+/** Entry flow mirroring the 1.x lobby, portrait only; naming ends it, the FTUE screen stays out. */
 export type Step =
   | 'splash'
   | 'account'
@@ -11,7 +11,6 @@ export type Step =
   | 'avatar_create'
   | 'avatar_customize'
   | 'avatar_naming'
-  | 'ftue'
   | 'done';
 
 export type Provider = 'google' | 'apple' | 'email' | 'wallet';
@@ -118,7 +117,7 @@ export function reduceFlow(state: FlowState, action: FlowAction): FlowState {
     case 'avatarConfirmed':
       return go(state, 'avatar_naming');
     case 'named':
-      return go(state, 'ftue', { name: action.name });
+      return go(state, 'done', { name: action.name });
     case 'finish':
       return go(state, 'done');
     case 'back':

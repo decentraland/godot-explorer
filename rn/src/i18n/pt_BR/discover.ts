@@ -33,6 +33,10 @@ export const discover: Partial<Record<keyof typeof en, string>> = {
   COMMON_SHARE: 'Compartilhar',
   COMMON_DESCRIPTION: 'DESCRIÇÃO',
   COMMON_BY: 'por',
+  FTUE_WELCOME_TITLE: 'Bem-vindo',
+  FTUE_GET_STARTED: 'Vamos começar',
+  FTUE_RECOMMENDED_PLACES: 'Lugares recomendados',
+  FTUE_EXPLORE_MORE: 'Explorar mais',
   PLACE_DOWNLOAD_WARNING: 'Pode baixar até {megabytes} MB de dados.',
   CALENDAR_EVENT_LOCATION: 'Decentraland em {x},{y}',
   SHARE_EVENT_MESSAGE:
