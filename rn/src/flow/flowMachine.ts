@@ -1,7 +1,6 @@
-/** Entry flow mirroring the Godot lobby (godot/src/ui/pages/auth/lobby.gd), portrait only. */
+/** Entry flow mirroring the 1.x lobby, portrait only; naming ends it, the FTUE screen stays out. */
 export type Step =
   | 'splash'
-  | 'terms'
   | 'account'
   | 'sign_in'
   | 'auth_wait'
@@ -12,7 +11,6 @@ export type Step =
   | 'avatar_create'
   | 'avatar_customize'
   | 'avatar_naming'
-  | 'ftue'
   | 'done';
 
 export type Provider = 'google' | 'apple' | 'email' | 'wallet';
@@ -29,9 +27,8 @@ export type FlowState = {
 };
 
 export type FlowAction =
-  | { type: 'booted'; next?: 'terms' | 'account' }
+  | { type: 'booted' }
   | { type: 'recovered'; hasProfile: boolean; name: string }
-  | { type: 'acceptTerms' }
   | { type: 'playAsGuest' }
   | { type: 'previewGuest' }
   | { type: 'guestReady' }
@@ -70,9 +67,7 @@ const go = (
 export function reduceFlow(state: FlowState, action: FlowAction): FlowState {
   switch (action.type) {
     case 'booted':
-      return state.step === 'splash'
-        ? go(state, action.next ?? 'terms')
-        : state;
+      return state.step === 'splash' ? go(state, 'account') : state;
     case 'recovered':
       // A restored account that already has a name goes straight into the app, as the lobby did.
       if (state.step !== 'splash') {
@@ -81,8 +76,6 @@ export function reduceFlow(state: FlowState, action: FlowAction): FlowState {
       return action.hasProfile
         ? go(state, 'done', { name: action.name })
         : go(state, 'avatar_create');
-    case 'acceptTerms':
-      return go(state, 'account');
     case 'playAsGuest':
       return go(state, 'guest_wait', { guest: true, provider: null });
     case 'previewGuest':
@@ -122,10 +115,9 @@ export function reduceFlow(state: FlowState, action: FlowAction): FlowState {
     case 'customizeAvatar':
       return go(state, 'avatar_customize');
     case 'avatarConfirmed':
-      // Guests never pick a name (as in the lobby); accounts do.
-      return go(state, state.guest ? 'ftue' : 'avatar_naming');
+      return go(state, 'avatar_naming');
     case 'named':
-      return go(state, 'ftue', { name: action.name });
+      return go(state, 'done', { name: action.name });
     case 'finish':
       return go(state, 'done');
     case 'back':
@@ -135,8 +127,6 @@ export function reduceFlow(state: FlowState, action: FlowAction): FlowState {
 
 function back(state: FlowState): FlowState {
   switch (state.step) {
-    case 'account':
-      return go(state, 'terms');
     case 'sign_in':
       return go(state, 'account');
     case 'auth_wait':
@@ -165,7 +155,9 @@ export const PREVIEW_STEPS: readonly Step[] = [
   'welcome_back',
 ];
 
-/** Name rule from the lobby naming screen: 3–15 letters or digits. */
-export const NAME_PATTERN = /^[A-Za-z0-9]{3,15}$/;
+/** Name rule from the lobby's field: letters, digits and inner spaces, 15 characters at most. */
+export const NAME_MAX = 15;
+export const NAME_PATTERN = /^[A-Za-z0-9]+( +[A-Za-z0-9]+)*$/;
 
-export const isValidName = (name: string) => NAME_PATTERN.test(name.trim());
+export const isValidName = (name: string) =>
+  name.length <= NAME_MAX && NAME_PATTERN.test(name);

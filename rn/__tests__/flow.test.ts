@@ -10,15 +10,8 @@ const run = (actions: FlowAction[], from: FlowState = initialFlow) =>
   actions.reduce(reduceFlow, from);
 
 describe('entry flow', () => {
-  it('goes splash → terms → account', () => {
-    expect(run([{ type: 'booted' }]).step).toBe('terms');
-    expect(run([{ type: 'booted' }, { type: 'acceptTerms' }]).step).toBe(
-      'account',
-    );
-  });
-
-  it('skips the terms the player already accepted', () => {
-    expect(run([{ type: 'booted', next: 'account' }]).step).toBe('account');
+  it('goes splash → account', () => {
+    expect(run([{ type: 'booted' }]).step).toBe('account');
   });
 
   it('a restored account with a name goes straight in, one without builds an avatar', () => {
@@ -34,27 +27,26 @@ describe('entry flow', () => {
         hasProfile: true,
         name: 'x',
       }).step,
-    ).toBe('terms');
+    ).toBe('account');
   });
 
-  it('guest path skips naming and ends in the ftue', () => {
+  it('guest path names the avatar and ends in the app', () => {
     const state = run([
       { type: 'booted' },
-      { type: 'acceptTerms' },
       { type: 'playAsGuest' },
       { type: 'guestReady' },
       { type: 'customizeAvatar' },
       { type: 'avatarConfirmed' },
     ]);
-    expect(state.step).toBe('ftue');
+    expect(state.step).toBe('avatar_naming');
     expect(state.guest).toBe(true);
-    expect(run([{ type: 'finish' }], state).step).toBe('done');
+    const named = run([{ type: 'named', name: 'Zara Skyforge' }], state);
+    expect(named.step).toBe('done');
   });
 
   it('new account goes through avatar and naming', () => {
     const state = run([
       { type: 'booted' },
-      { type: 'acceptTerms' },
       { type: 'chooseSignIn' },
       { type: 'chooseProvider', provider: 'google' },
       { type: 'authSucceeded', hasProfile: false, name: '' },
@@ -64,7 +56,7 @@ describe('entry flow', () => {
       [{ type: 'avatarConfirmed' }, { type: 'named', name: 'Mateo' }],
       state,
     );
-    expect(named.step).toBe('ftue');
+    expect(named.step).toBe('done');
     expect(named.name).toBe('Mateo');
   });
 
@@ -92,7 +84,7 @@ describe('entry flow', () => {
   });
 
   it('previewGuest only applies from the splash', () => {
-    const state = run([{ type: 'booted', next: 'account' }]);
+    const state = run([{ type: 'booted' }]);
     expect(reduceFlow(state, { type: 'previewGuest' })).toBe(state);
   });
 
@@ -169,11 +161,13 @@ describe('entry flow', () => {
 });
 
 describe('isValidName', () => {
-  it('accepts 3–15 alphanumerics only', () => {
+  it('accepts up to 15 letters, digits and inner spaces', () => {
     expect(isValidName('Mateo')).toBe(true);
-    expect(isValidName('  Ana3 ')).toBe(true);
-    expect(isValidName('ab')).toBe(false);
-    expect(isValidName('has space')).toBe(false);
+    expect(isValidName('Zara Skyforge')).toBe(true);
+    expect(isValidName('a')).toBe(true);
+    expect(isValidName('')).toBe(false);
+    expect(isValidName('  Ana3 ')).toBe(false);
+    expect(isValidName('Ana!')).toBe(false);
     expect(isValidName('a'.repeat(16))).toBe(false);
   });
 });

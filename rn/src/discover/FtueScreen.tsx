@@ -1,72 +1,72 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppText, colors, SnapCarousel, u } from '@dcl/ui-native';
+import {
+  AppText,
+  Button,
+  colors,
+  fonts,
+  Icon,
+  LinearFill,
+  PageDots,
+  SnapCarousel,
+  u,
+} from '@dcl/ui-native';
 import { t } from '../i18n';
 import { Place } from './api';
 import { useApi } from './ApiContext';
-import { DiscoverBackground } from './DiscoverBackground';
 import { ftuePlaces } from './ftue';
-import { JumpGlyph } from './JumpGlyph';
 import { Thumb } from './Thumb';
 
-const CARD_W = 300;
-const CARD_H = 240;
-const STATIC_W = 275;
+const CARD_W = 312;
+const CARD_H = 175;
+/** The cards beside the settled one are 530 wide in the frame, against its 624. */
+const SIDE_SCALE = 530 / 624;
 
-function Headline({ name }: { name: string }) {
-  return (
-    <View style={styles.headline}>
-      <AppText variant="heading" style={styles.welcome}>
-        {t('FTUE_WELCOME_TITLE')}
-      </AppText>
-      <AppText variant="heading" style={[styles.welcome, styles.name]}>
-        @{name}
-      </AppText>
-      <AppText variant="heading" style={styles.welcome}>
-        {t('FTUE_START_HERE')}
-      </AppText>
-    </View>
-  );
-}
+const SHADE = [
+  { offset: 0, color: colors.shadow, opacity: 0 },
+  { offset: 1, color: colors.shadow, opacity: 0.9 },
+];
 
-function Caption({ place }: { place: Place }) {
+function Card({ place }: { place: Place }) {
   return (
-    <View style={styles.caption}>
-      <AppText variant="title" numberOfLines={1} style={styles.placeTitle}>
-        {place.title}
-      </AppText>
-      <AppText variant="body" style={styles.by}>
-        {t('COMMON_BY')}{' '}
-        <AppText variant="body" style={styles.creator}>
-          {place.creator}
+    <View style={styles.card}>
+      <Thumb
+        uri={place.image}
+        width="100%"
+        height="100%"
+        radius={0}
+        bordered={false}
+      />
+      <View style={styles.cardShade}>
+        <LinearFill stops={SHADE} />
+      </View>
+      <View style={styles.cardName}>
+        <AppText numberOfLines={2} style={styles.cardNameText}>
+          {place.title}
         </AppText>
-      </AppText>
+      </View>
     </View>
   );
 }
 
 /**
- * First-run welcome: the `ftue` places as a snap carousel (a single place is a static card), JUMP IN
- * for the centred one and a Skip link to Discover. Without `places` it fills when the list lands.
+ * Figma `DISCOVER_FTUE`: the `ftue` places as a snap carousel with the name over each card, JUMP IN
+ * for the settled one and Explore more to Discover. Without `places` it fills when the list lands.
  */
 export function FtueScreen({
   username,
   places,
   initialIndex = 0,
-  skipLabel = 'FTUE_SKIP',
   onJump,
   onSkip,
 }: {
   username: string;
   places?: Place[];
   initialIndex?: number;
-  skipLabel?: 'FTUE_SKIP' | 'FTUE_SKIP_AND_EXPLORE';
   onJump: (place: Place) => void;
   onSkip: () => void;
 }) {
   const api = useApi();
-  const insets = useSafeAreaInsets();
   const [loaded, setLoaded] = useState<Place[]>([]);
   const [index, setIndex] = useState(initialIndex);
   useEffect(() => {
@@ -77,71 +77,62 @@ export function FtueScreen({
 
   const list = places ?? loaded;
   const current = list[Math.min(index, list.length - 1)];
-  const single = list.length === 1;
 
   return (
-    <View
-      style={[
-        styles.root,
-        { paddingTop: insets.top, paddingBottom: insets.bottom },
-      ]}
-    >
-      <DiscoverBackground seasonal={false} />
-      <Headline name={username} />
-      {current ? (
-        <>
-          {single ? (
-            <View style={styles.staticCard}>
-              <Thumb
-                uri={current.image}
-                width={u(STATIC_W)}
-                height={u(220)}
-                radius={6}
+    <View style={styles.root}>
+      <View style={styles.headline}>
+        <AppText style={styles.welcome}>
+          {t('FTUE_WELCOME_TITLE')}{' '}
+          <AppText style={[styles.welcome, styles.name]}>@{username}</AppText>
+        </AppText>
+        <AppText style={styles.welcome}>{t('FTUE_GET_STARTED')}</AppText>
+      </View>
+      <View style={styles.recommended}>
+        <AppText style={styles.label}>{t('FTUE_RECOMMENDED_PLACES')}</AppText>
+        {current ? (
+          <>
+            {list.length === 1 ? (
+              <View style={styles.single}>
+                <Card place={current} />
+              </View>
+            ) : (
+              <View style={styles.carousel}>
+                <SnapCarousel
+                  data={list}
+                  itemWidth={CARD_W}
+                  gap={8}
+                  inset={24}
+                  initialIndex={initialIndex}
+                  sideScale={SIDE_SCALE}
+                  keyOf={place => place.id}
+                  onIndexChange={setIndex}
+                  renderItem={place => <Card place={place} />}
+                />
+              </View>
+            )}
+            <View style={styles.dots}>
+              <PageDots count={list.length} index={index} round dark />
+            </View>
+            <View style={styles.jump}>
+              <Button
+                big
+                fullWidth
+                label={t('COMMON_JUMP_IN')}
+                trailingIcon="jump"
+                onPress={() => onJump(current)}
               />
             </View>
-          ) : (
-            <View style={styles.carousel}>
-              <SnapCarousel
-                data={list}
-                itemWidth={CARD_W}
-                gap={15}
-                inset={30}
-                keyOf={place => place.id}
-                onIndexChange={setIndex}
-                renderItem={place => (
-                  <Thumb
-                    uri={place.image}
-                    width={u(CARD_W)}
-                    height={u(CARD_H)}
-                    radius={6}
-                  />
-                )}
-              />
-            </View>
-          )}
-          <Caption place={current} />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('COMMON_JUMP_IN')}
-            onPress={() => onJump(current)}
-            style={({ pressed }) => [styles.jump, pressed && styles.pressed]}
-          >
-            <AppText variant="button" style={styles.jumpText}>
-              {t('COMMON_JUMP_IN')}
-            </AppText>
-            <JumpGlyph />
-          </Pressable>
-        </>
-      ) : null}
+          </>
+        ) : null}
+      </View>
       <Pressable
         accessibilityRole="button"
         hitSlop={12}
         onPress={onSkip}
-        style={styles.skip}
+        style={styles.explore}
       >
-        <AppText variant="body" style={styles.skipText}>
-          {t(skipLabel)}
-        </AppText>
+        <Icon name="compass" size={28} color={colors.white70} />
+        <AppText style={styles.exploreText}>{t('FTUE_EXPLORE_MORE')}</AppText>
       </Pressable>
     </View>
   );
@@ -150,41 +141,74 @@ export function FtueScreen({
 const styles = StyleSheet.create({
   root: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: colors.purple500,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
+    backgroundColor: colors.brand,
+    paddingTop: u(99),
+    paddingBottom: u(36),
+    gap: u(100),
   },
-  headline: { alignItems: 'center', marginTop: u(60), marginBottom: u(38) },
-  welcome: { fontSize: u(24), lineHeight: u(29), textAlign: 'center' },
+  headline: { alignItems: 'center' },
+  welcome: {
+    fontFamily: fonts.bold,
+    fontSize: u(24),
+    lineHeight: u(29),
+    color: colors.snow,
+    textAlign: 'center',
+  },
   name: { color: colors.lavender },
-  carousel: { alignSelf: 'stretch' },
-  staticCard: { borderRadius: u(6) },
-  caption: { alignItems: 'center', marginTop: u(11) },
-  placeTitle: { fontSize: u(22) },
-  by: { marginTop: u(4), fontSize: u(13), color: colors.white70 },
-  creator: {
+  recommended: { alignSelf: 'stretch' },
+  label: {
+    marginLeft: u(24),
+    fontFamily: fonts.bold,
+    fontSize: u(12),
+    lineHeight: u(14.5),
+    color: colors.white70,
+    textTransform: 'uppercase',
+  },
+  carousel: { marginTop: u(12.5) },
+  single: { marginTop: u(12.5), alignItems: 'center' },
+  dots: { marginTop: u(8) },
+  jump: { marginTop: u(48), paddingHorizontal: u(24) },
+  card: {
+    width: u(CARD_W),
+    height: u(CARD_H),
+    borderRadius: u(4),
+    borderWidth: 1,
+    borderColor: colors.lavender,
+    overflow: 'hidden',
+    backgroundColor: colors.purple450,
+  },
+  cardShade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: u(84.5),
+  },
+  cardName: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: u(16),
+    paddingVertical: u(15),
+  },
+  cardNameText: {
+    fontFamily: fonts.semibold,
     fontSize: u(13),
-    fontFamily: 'Inter-SemiBold',
+    lineHeight: u(15.5),
     color: colors.snow,
   },
-  jump: {
-    marginTop: u(42),
-    width: u(275),
-    height: u(47),
-    borderRadius: u(6),
+  explore: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: u(8),
-    backgroundColor: colors.ruby,
+    gap: u(4),
   },
-  jumpText: { fontFamily: 'Inter-Bold', fontSize: u(15) },
-  skip: { marginTop: u(21) },
-  skipText: {
+  exploreText: {
+    fontFamily: fonts.bold,
     fontSize: u(15),
-    fontFamily: 'Inter-SemiBold',
-    color: colors.lavender,
-    textDecorationLine: 'underline',
+    lineHeight: u(18),
+    color: colors.white70,
   },
-  pressed: { opacity: 0.85 },
 });

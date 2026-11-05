@@ -210,6 +210,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: fonts.bold,
     fontSize: u(19),
+    lineHeight: u(19),
     color: colors.snow,
     textAlign: 'center',
   },

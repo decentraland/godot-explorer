@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
 import { LinearFill } from './Gradient';
 import { Icon } from './Icon';
-import { colors, fonts } from './tokens';
+import { colors, fonts, lightRainbow } from './tokens';
 import { u } from './scale';
 
 export type EventTimeKind =
@@ -58,11 +58,6 @@ const TRENDING = [
   { offset: 0.019, color: '#22C1C1' },
   { offset: 1, color: '#34C070' },
 ];
-const FEATURED = [
-  { offset: 0, color: '#FFBC5B' },
-  { offset: 0.505, color: '#FF2D55' },
-  { offset: 1, color: '#C640CD' },
-];
 
 /** Figma `Tag/Event`: a gradient highlight tag, Trending (teal) or Featured (light rainbow). */
 export function EventBadge({
@@ -76,7 +71,7 @@ export function EventBadge({
     <View style={[styles.tag, styles.badge]}>
       {/* Figma CSS angles −73.2° / 147.6°; `LinearFill` is 0 = top→bottom, so angle = 180 − θ. */}
       <LinearFill
-        stops={type === 'trending' ? TRENDING : FEATURED}
+        stops={type === 'trending' ? TRENDING : lightRainbow}
         angle={type === 'trending' ? 253 : 32}
       />
       <AppText style={[styles.badgeLabel, styles.textSnow]}>{label}</AppText>

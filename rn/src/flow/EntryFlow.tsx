@@ -1,28 +1,24 @@
 import { useCallback, useEffect, useReducer, useState } from 'react';
-import { BackHandler, StyleSheet, View } from 'react-native';
-import { BackpackScreen } from '../backpack/BackpackScreen';
-import { Button, u } from '@dcl/ui-native';
-import type { Place } from '../discover/api';
-import { useApi } from '../discover/ApiContext';
-import { ftuePlaces } from '../discover/ftue';
+import { BackHandler } from 'react-native';
 import {
   acceptTerms,
   alreadySignedIn,
   authCode,
   cancelSignIn,
+  nameTag,
   sendEmailCode,
   setAvatarName,
   startBrowserSignIn,
   startGuest,
-  termsAccepted,
   verifyEmailCode,
   welcome,
   whenSignedIn,
 } from './auth';
 import { core } from '../core';
+import { CustomizeStep } from './CustomizeStep';
 import { takePreviewLaunch, whenInitialLinkRouted } from './launchLink';
+import { askNotificationPermission } from '../notifications/push';
 import { initialFlow, reduceFlow } from './flowMachine';
-import { FtueStep } from './FtueStep';
 import {
   AvatarCreateScreen,
   PreviewArea,
@@ -32,38 +28,28 @@ import {
   AccountScreen,
   CodeScreen,
   EmailScreen,
+  GuestCreateScreen,
   NamingScreen,
   SignInScreen,
   SplashScreen,
-  TermsScreen,
   WaitScreen,
 } from './screens';
 import { t } from '../i18n';
 
-/** Portrait-only entry flow: splash → terms → account → (auth) → avatar → name → welcome → app. */
-export function EntryFlow({
-  onDone,
-  onJumpIn,
-}: {
-  onDone: () => void;
-  onJumpIn?: (place: Place) => Promise<boolean>;
-}) {
+/** Portrait-only entry flow: splash → account → (auth) → avatar → name → app. */
+export function EntryFlow({ onDone }: { onDone: () => void }) {
   const [flow, dispatch] = useReducer(reduceFlow, initialFlow);
   const { step, provider } = flow;
-  const api = useApi();
-
-  // Ahead of the FTUE gate, so deciding the single-place bypass never waits on the network.
-  useEffect(() => {
-    if (step === 'avatar_create') {
-      ftuePlaces(api);
-    }
-  }, [step, api]);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener(
       'hardwareBackPress',
       () => {
-        if (step === 'splash' || step === 'terms') {
+        if (step === 'splash' || step === 'account') {
+          return false;
+        }
+        // The customize step asks before discarding; its own listener runs next.
+        if (step === 'avatar_customize') {
           return false;
         }
         dispatch({ type: 'back' });
@@ -79,24 +65,18 @@ export function EntryFlow({
     }
   }, [step, onDone]);
 
-  // Only an account without a profile reaches the welcome after its avatar: it was made here.
-  useEffect(() => {
-    if (step === 'ftue') {
-      try {
-        core().ftueMarkNewPlayer();
-      } catch {
-        // Signed out meanwhile: there is no account to remember.
-      }
-    }
-  }, [step]);
-
   const [busy, setBusy] = useState(false);
+  const [preset, setPreset] = useState(0);
   const [emailError, setEmailError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    const succeeded = async () =>
-      !cancelled && dispatch({ type: 'authSucceeded', ...(await welcome()) });
+    const succeeded = async () => {
+      acceptTerms().catch(() => {});
+      if (!cancelled) {
+        dispatch({ type: 'authSucceeded', ...(await welcome()) });
+      }
+    };
     const failed = (error?: unknown) =>
       !cancelled &&
       dispatch({
@@ -153,6 +133,7 @@ export function EntryFlow({
       setEmailError(null);
       try {
         await verifyEmailCode(flow.email, code);
+        acceptTerms().catch(() => {});
         dispatch({ type: 'authSucceeded', ...(await welcome()) });
       } catch (e) {
         setEmailError(
@@ -168,10 +149,13 @@ export function EntryFlow({
   );
 
   const back = useCallback(() => {
-    cancelSignIn();
+    // These return to the avatar, where the session must stay; the others leave a sign-in.
+    if (step !== 'avatar_customize' && step !== 'avatar_naming') {
+      cancelSignIn();
+    }
     setEmailError(null);
     dispatch({ type: 'back' });
-  }, []);
+  }, [step]);
 
   const booted = useCallback(async () => {
     await whenInitialLinkRouted();
@@ -188,31 +172,33 @@ export function EntryFlow({
       dispatch({ type: 'previewGuest' });
       return;
     }
-    dispatch({ type: 'booted', next: termsAccepted() ? 'account' : 'terms' });
+    dispatch({ type: 'booted' });
   }, []);
   const confirmAvatar = useCallback(
     () => dispatch({ type: 'avatarConfirmed' }),
     [],
   );
+  // The Account Home taps are the commit point: the terms are accepted and the OS asks for
+  // notifications over the next screen, as the 1.x lobby did (Figma NOTIF_PROMPT).
+  const commit = useCallback(() => {
+    acceptTerms().catch(() => {});
+    askNotificationPermission().catch(() => {});
+  }, []);
 
   switch (step) {
     case 'splash':
       return <SplashScreen onDone={booted} />;
-    case 'terms':
-      return (
-        <TermsScreen
-          onAccept={() => {
-            acceptTerms().catch(() => {});
-            dispatch({ type: 'acceptTerms' });
-          }}
-        />
-      );
     case 'account':
       return (
         <AccountScreen
-          onGuest={() => dispatch({ type: 'playAsGuest' })}
-          onSignIn={() => dispatch({ type: 'chooseSignIn' })}
-          onBack={back}
+          onGuest={() => {
+            commit();
+            dispatch({ type: 'playAsGuest' });
+          }}
+          onSignIn={() => {
+            commit();
+            dispatch({ type: 'chooseSignIn' });
+          }}
         />
       );
     case 'sign_in':
@@ -254,13 +240,7 @@ export function EntryFlow({
         />
       );
     case 'guest_wait':
-      return (
-        <WaitScreen
-          title={t('FLOW_GUEST_WAIT_TITLE')}
-          body={t('FLOW_GUEST_WAIT_BODY')}
-          onCancel={back}
-        />
-      );
+      return <GuestCreateScreen />;
     case 'welcome_back':
       return (
         <WelcomeBackScreen
@@ -271,59 +251,34 @@ export function EntryFlow({
     case 'avatar_create':
       return (
         <AvatarCreateScreen
+          selected={preset}
+          onSelect={setPreset}
           onCustomize={() => dispatch({ type: 'customizeAvatar' })}
           onContinue={confirmAvatar}
           onBack={back}
         />
       );
     case 'avatar_customize':
-      return (
-        <BackpackScreen
-          onBack={back}
-          footer={
-            <View style={styles.footer}>
-              <Button
-                label={t('FLOW_CONTINUE')}
-                onPress={confirmAvatar}
-              />
-            </View>
-          }
-        />
-      );
+      return <CustomizeStep onDone={confirmAvatar} onDiscard={back} />;
     case 'avatar_naming':
       return (
         <NamingScreen
-          initial={flow.name}
-          preview={<PreviewFill />}
+          tag={nameTag()}
+          preview={<PreviewArea inset={false} />}
           onBack={back}
           onSubmit={name => {
             setAvatarName(name);
+            // Only an account without a profile names an avatar here: it is a new player.
+            try {
+              core().ftueMarkNewPlayer();
+            } catch {
+              // Signed out meanwhile: there is no account to remember.
+            }
             dispatch({ type: 'named', name });
           }}
-        />
-      );
-    case 'ftue':
-      return (
-        <FtueStep
-          username={flow.name || t('FLOW_GUEST_NAME')}
-          onJumpIn={onJumpIn}
-          onFinish={() => dispatch({ type: 'finish' })}
         />
       );
     default:
       return null;
   }
 }
-
-function PreviewFill() {
-  return (
-    <View style={styles.previewFill}>
-      <PreviewArea inset={false} />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  footer: { padding: u(24), paddingBottom: u(32), backgroundColor: '#161518' },
-  previewFill: { flex: 1, marginVertical: u(8) },
-});

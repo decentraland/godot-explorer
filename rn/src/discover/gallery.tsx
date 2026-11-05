@@ -112,7 +112,6 @@ reg([13], 'FTUE static', () => (
     <FtueScreen
       username="UserName"
       places={[place('genesis')]}
-      skipLabel="FTUE_SKIP_AND_EXPLORE"
       onJump={noop}
       onSkip={noop}
     />

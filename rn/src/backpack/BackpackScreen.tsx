@@ -18,6 +18,7 @@ export type BackpackScreenProps = {
   emptyCopy?: EmptyCopy;
   /** Sub-category row: thumbnail tiles (default) or the older text pills. */
   subRow?: SubRow;
+  tools?: boolean;
 };
 
 export function BackpackScreen({
@@ -27,6 +28,7 @@ export function BackpackScreen({
   initial,
   emptyCopy,
   subRow,
+  tools,
 }: BackpackScreenProps) {
   const controller = useBackpack({ api, initial });
   return (
@@ -36,6 +38,7 @@ export function BackpackScreen({
       subRow={subRow}
       footer={footer}
       onBack={onBack}
+      tools={tools}
     />
   );
 }

@@ -19,6 +19,8 @@ export const colors = {
   purple450: '#460F6F',
   purple500: '#350854',
   purple550: '#24033B',
+  /** `background/brand`, the plain `Background` of the entry flow frames. */
+  brand: '#470071',
   cardLight: '#B48CD7',
   glass: 'rgba(105,31,169,0.4)',
   glassPressed: 'rgba(105,31,169,0.6)',
@@ -61,6 +63,13 @@ export const colors = {
   /** `Modal/Dialog` `Link=True` text. */
   sky: '#32CEFF',
 } as const;
+
+/** Figma `DCL/Gradients/Light Rainbow` stops, for `LinearFill`. */
+export const lightRainbow = [
+  { offset: 0, color: '#FFBC5B' },
+  { offset: 0.505, color: '#FF2D55' },
+  { offset: 1, color: '#C640CD' },
+];
 
 /** Figma `Elevation/Down|Up`: one shadow, 0/±4 offset, blur 4, Shadow at 50% — values ÷ 2 for
  * dp. `boxShadow` draws the same on both platforms (Android `elevation` ignores the colour). */

@@ -32,6 +32,7 @@ export function PortraitLayout({
   subRow,
   footer,
   onBack,
+  tools = true,
 }: LayoutProps) {
   const insets = useSafeAreaInsets();
   const [area, setArea] = useState(0);
@@ -53,7 +54,7 @@ export function PortraitLayout({
           {onBack ? (
             <BackButton onPress={onBack} style={{ left: u(18), top }} />
           ) : null}
-          <HeaderRow controller={controller} />
+          {tools ? <HeaderRow controller={controller} /> : null}
         </View>
         {covered ? (
           <View style={styles.hole} />
@@ -108,10 +109,12 @@ export function PortraitLayout({
             bottomInset={heights.full - heights[state.sheet]}
           />
         </BottomSheet>
-        <FilterOverlay
-          controller={controller}
-          position={{ top: top + u(36), right: u(24) }}
-        />
+        {tools ? (
+          <FilterOverlay
+            controller={controller}
+            position={{ top: top + u(36), right: u(24) }}
+          />
+        ) : null}
       </View>
       {footer}
     </View>
