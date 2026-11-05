@@ -118,19 +118,24 @@ entrar).
 
 ## 3. Memoria por estado (Android A54)
 
-1.x, 8 muestras de `dumpsys meminfo` cada 2 s por estado:
+1.x, 8 muestras de `dumpsys meminfo` cada 2 s por estado (`states.csv` con los 40 valores crudos,
+`states-median.csv` con el resumen):
 
-| estado | PSS mediana | footprint del motor (`[MemMonitor]`) |
+| estado | PSS mediana | rango |
 |---|---:|---:|
-| menús (sin entrar al mundo) | 1531 MB | 1631 MB |
-| en mundo (GP) | 2023 MB | 2146 MB |
-| tras volver a menús | **no medido** | — |
-| segundo ciclo | **no medido** | — |
+| menús (sin entrar al mundo) | 1532 MB | 1532–1533 |
+| en mundo (GP) | 2024 MB | 1991–2071 |
+| "tras volver a menús" | 2065 MB | 2010–2114 |
+| segundo ciclo en mundo | 2065 MB | 2012–2118 |
+| "tras la segunda salida" | 2048 MB | 2010–2118 |
 
-`PSS` de mundo coincide con el del bloque de fps (2023 MB vs 2031 MB), lo que valida la muestra.
-El estado "después de salir del mundo" no se pudo medir con script: en 1.x el botón Atrás de Android
-no abandona el mundo (abre el overlay de menú), y en 2.x el control de salida está dentro del shell
-React Native, que se descubre a mano — ver §9 y el comando en el protocolo §9.4.
+`PSS` de mundo coincide con el del bloque de fps (2024 MB vs 2031 MB), lo que valida la muestra.
+**Los estados 3 y 5 no son lo que dicen ser**: la secuencia se guionizó con el botón Atrás de Android,
+y en 1.x Atrás no abandona el mundo (abre el overlay del tutorial; ver `state-3-after-exit.png`). Lo que
+miden las filas 3–5 es "mundo con overlay encima", no la vuelta a menús: el PSS no baja de 2 GB por
+que el mundo sigue cargado detrás. Se publican como evidencia de que el mundo no se descarga, no como
+un estado de memoria de menús. En 2.x el control de salida está dentro del shell React Native y no se
+encontró de forma scriptable en esta pasada — ver §9.
 
 ## 4. Stress: entrar y salir 20 veces
 
