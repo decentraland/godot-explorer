@@ -423,8 +423,8 @@ test('ui-background: flexbox rows, percentages, justify and align', async functi
   }
 })
 
-// Skipped until the engine treats a NaN flexGrow as 0: the SDK sends `flexGrow: undefined` as NaN,
-// and one NaN sibling leaves the growing box 0 px wide. Issue to be filed.
+// Skipped until #3249 is fixed: the SDK sends `flexGrow: undefined` as NaN, and one NaN sibling
+// leaves the growing box 0 px wide.
 skipTest('ui-background: flexbox boxes grow next to their siblings', async function (context) {
   const { box, rows } = await flexbox(context)
   const expected = [
