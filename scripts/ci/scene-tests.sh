@@ -144,7 +144,7 @@ SUMMARY="$SUMMARY
 Skipped: $UNRENDERED render tests (no renderer), $SKIPPED switched off (skipTest)"
 if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
   {
-    echo "### Scene tests${SCENES:+ ($SCENES)}"
+    echo "### Scene tests$([ "$REQUIRE_RENDER" = 1 ] && echo ', rendered')${SCENES:+ ($SCENES)}"
     echo '```'
     echo "$SUMMARY"
     echo '```'

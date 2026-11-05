@@ -9,9 +9,22 @@ on:
 
 jobs:
   scenes:
-    name: Headless
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # The render leg draws with software Vulkan (Mesa lavapipe). Informational until its
+    # screenshot references are regenerated on it: it reports, it does not fail the PR.
+    continue-on-error: ${{ matrix.render }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Headless
+            key: headless
+            render: false
+          - name: Render (lavapipe)
+            key: render
+            render: true
     steps:
       - uses: actions/checkout@v4
         with:
@@ -46,14 +59,38 @@ jobs:
           cache: npm
           cache-dependency-path: tests/scene-tests/package-lock.json
 
+      - name: Install software Vulkan
+        if: matrix.render
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mesa-vulkan-drivers vulkan-tools xvfb
+          icd="$(find /usr/share/vulkan/icd.d -name 'lvp_icd.*.json' | head -1)"
+          echo "VK_ICD_FILENAMES=$icd" >> "$GITHUB_ENV"
+          VK_ICD_FILENAMES="$icd" vulkaninfo --summary
+
       - name: Run the scene tests
+        if: ${{ !matrix.render }}
         run: scripts/ci/scene-tests.sh
+
+      - name: Run the scene tests with rendering
+        if: matrix.render
+        run: xvfb-run -a -s "-screen 0 1280x1024x24" scripts/ci/scene-tests.sh --render
 
       - name: Upload the Godot log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: scene-tests-log
+          name: scene-tests-log-${{ matrix.key }}
           path: tests/scene-tests/scene-tests.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+      # What lavapipe drew, next to the references, to check by eye.
+      - name: Upload the screenshots
+        if: always() && matrix.render
+        uses: actions/upload-artifact@v4
+        with:
+          name: scene-tests-screenshots
+          path: tests/snapshots/scenes/comparison
           retention-days: 7
           if-no-files-found: ignore
