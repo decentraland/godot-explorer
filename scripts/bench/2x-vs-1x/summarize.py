@@ -99,10 +99,18 @@ def main() -> None:
     sections = []
     summary = {}
     for scenario_dir in sorted(p for p in root.iterdir() if p.is_dir()):
+        # A scenario whose runs broke the protocol carries an INVALID.md next to them; its numbers are
+        # not results and must not reach the table.
+        if (scenario_dir / "INVALID.md").exists():
+            continue
         runs = [read_run(d) for d in sorted(scenario_dir.iterdir()) if (d / "meta.json").exists()]
         if not runs:
             continue
         a, b = medians(runs, "1x"), medians(runs, "2x")
+        # A comparison needs both sides; a scenario measured on one build only (a soak, say) is not
+        # one, and half a table reads as if the other build had been measured.
+        if not (a["runs"] and b["runs"]):
+            continue
         summary[scenario_dir.name] = {"1x": a, "2x": b, "runs": [r["label"] for r in runs]}
         verdict_fps = "PASS" if (b["fps_avg"] or 0) >= (a["fps_avg"] or 0) else "FAIL"
         rss_budget = (a["rss_steady_mb"] or 0) + 100
