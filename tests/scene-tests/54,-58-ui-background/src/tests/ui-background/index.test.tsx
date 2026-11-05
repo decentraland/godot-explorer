@@ -1,6 +1,5 @@
 import { renderTest, skipTest, test } from 'testing-library/src/testing'
 import { assertSnapshot } from 'testing-library/src/utils/snapshot-test'
-import { getScreenCanvasInfo } from 'testing-library/src/utils/ui/ui-utils'
 import { assert, assertEquals } from 'testing-library/src/testing/assert'
 import { TestFunctionContext } from 'testing-library/src/testing/types'
 import { CustomReactEcsRenderer } from 'testing-library/src/utils/ui'
@@ -515,8 +514,7 @@ async function picture(name: string): Promise<void> {
   await assertSnapshot(
     `screenshot/$explorer_snapshot_ui_background_${name}.png`,
     Vector3.create(8, 1, 10),
-    Vector3.create(8, 1, 8),
-    getScreenCanvasInfo()
+    Vector3.create(8, 1, 8)
   )
 }
 

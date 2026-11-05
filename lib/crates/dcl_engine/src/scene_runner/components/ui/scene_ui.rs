@@ -163,6 +163,25 @@ fn build_rich_text_paragraph(
     paragraph
 }
 
+/// Lays the scene's UI out for `canvas` right away, without waiting for the scene's next update
+/// (a snapshot blocks the scene thread), and asks the next update to lay it out again for the
+/// real canvas.
+pub fn relayout_for_capture(scene: &mut Scene, canvas: &PbUiCanvasInformation) {
+    if !scene.godot_dcl_scene.root_node_ui.is_instance_valid() {
+        return;
+    }
+    let crdt = scene.dcl_scene.scene_crdt.clone();
+    let Ok(crdt_state) = crdt.try_lock() else {
+        return;
+    };
+    update_layout(scene, &crdt_state, canvas);
+    scene
+        .godot_dcl_scene
+        .ui_results
+        .borrow_mut()
+        .relayout_requested = true;
+}
+
 fn update_layout(
     scene: &mut Scene,
     crdt_state: &SceneCrdtState,
