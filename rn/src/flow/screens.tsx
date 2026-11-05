@@ -37,7 +37,7 @@ export function SplashScreen({ onDone }: { onDone: () => void }) {
     return () => clearTimeout(timer);
   }, [onDone]);
   return (
-    <FlowFrame flat>
+    <FlowFrame flat edgeToEdge>
       <View style={styles.center}>
         <Image source={logo} style={styles.logo} resizeMode="contain" />
       </View>
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: u(18),
   },
-  logo: { width: u(160), height: u(160) },
+  logo: { width: u(72.5), height: u(72.5) },
   guestCreate: {
     flex: 1,
     alignItems: 'center',

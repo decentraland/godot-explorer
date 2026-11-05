@@ -7,7 +7,7 @@ import { t } from '../i18n';
 const photoBackground = require('../assets/photo-background.png');
 const gradientBackground = require('../assets/flow-gradient-background.png');
 
-/** Magenta-to-purple full-screen backdrop (flat purple when `flat`, the lobby's photo background
+/** Magenta-to-purple full-screen backdrop (the plain brand `Background` when `flat`, the lobby's photo background
  * when `photo`) with safe-area padding and an optional back button. `edgeToEdge` skips the
  * safe-area padding: the Figma margin is already generous enough to clear the notch/status bar
  * on its own, so adding insets on top double-pads — for screens with their own exact Figma
@@ -34,7 +34,9 @@ export function FlowFrame({
           style={StyleSheet.absoluteFill}
           resizeMode="cover"
         />
-      ) : flat ? null : (
+      ) : flat ? (
+        <View style={styles.flat} />
+      ) : (
         <ImageBackground
           source={gradientBackground}
           style={StyleSheet.absoluteFill}
@@ -68,6 +70,7 @@ export function FlowFrame({
 
 const styles = StyleSheet.create({
   root: { ...StyleSheet.absoluteFill, backgroundColor: colors.purple350 },
+  flat: { ...StyleSheet.absoluteFill, backgroundColor: colors.brand },
   content: { flex: 1, paddingHorizontal: u(32) },
   back: {
     position: 'absolute',
