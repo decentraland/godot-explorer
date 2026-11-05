@@ -172,6 +172,9 @@ pub fn relayout_for_capture(scene: &mut Scene, canvas: &PbUiCanvasInformation) {
     }
     let crdt = scene.dcl_scene.scene_crdt.clone();
     let Ok(crdt_state) = crdt.try_lock() else {
+        godot::global::godot_warn!(
+            "snapshot: the scene's CRDT state was busy, so its UI keeps the previous layout"
+        );
         return;
     };
     update_layout(scene, &crdt_state, canvas);
