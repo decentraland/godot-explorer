@@ -81,14 +81,23 @@ how the report's screen table was navigated.
 
 - **Pose:** `decentraland://open?position=0,0`. The client spawns at `position "0,-2"` (both builds
   log the same value) and nothing moves the camera: no touch input during the window.
-- **Graphics profile:** whatever the app auto-detects, *but verified equal* through the
-  `[RenderReady]` line, which carries `profile` (and `anti_aliasing`, `shadow_quality`,
-  `bloom_quality`, `resolution_3d_scale`). The report records the value both builds reported. A run
-  where the two differ is void.
-- **Dynamic graphics is left ON**, i.e. the shipped behaviour: both builds run
-  `[DynamicGraphics] set_enabled(true)` and hold a target frame time (~55.6 ms ≈ 18 fps on this
-  phone). This is stated in the report as a limitation of the fps comparison, because the cap
-  flattens the difference between the builds.
+- **Graphics profile: `HIGH`, pinned in both builds, with dynamic graphics OFF.** Not the shipped
+  default — an A54 ships at `Low` with dynamic graphics ON, which caps the client at ~18 fps
+  (`[DynamicGraphics] FPS limit changed, target=55.6ms`) and hides any difference between the builds
+  behind that cap. With dynamic graphics off the loop still reads 16.6 ms but the real limiter
+  becomes the render cost, so the number belongs to the build.
+
+  Settings are not scriptable: they live in the app's internal storage (not reachable without root)
+  and no launch flag overrides them, so each build is set once by hand after installing, and the
+  install wipes it. The path, both of them taps:
+
+  | build | path | evidence |
+  |---|---|---|
+  | 2.x | Settings tab `645 2094` → Graphics `400 292` → Dynamic Graphics `901 465` → profiles `538 860` → High `260 1193` | logcat `[DynamicGraphics] initialized: enabled=false, profile=3` |
+  | 1.x | in world: avatar `224 105` (twice, the first tap also dismisses the tutorial) → gear `226 723` → Dynamic Graphics `2075 328` → profiles `1568 645` → scroll → High `1035 511` | screenshot of the panel (1.x logs no profile) |
+
+  A run where the two builds report a different `profile`, or where 2.x does not log
+  `enabled=false`, is void.
 
 ## 5. What is measured, and how
 
@@ -126,15 +135,31 @@ python3 scripts/bench/2x-vs-1x/bench_android.py --serial $SERIAL window \
 
 ## 6. Run order, count and settle
 
-- **Count:** 5 runs per build per scenario (the issue asks for ≥ 5).
-- **Order:** strictly alternating `2x 1x 2x 1x …` (block pair), so a thermal or network drift hits
-  both builds equally. Implemented by `ORDER="2x 1x 2x 1x …"`.
-- **Settle:** 25 s standing still after `[RenderReady]`, then a 60 s window.
-- **Window length:** 60 s ≈ 12 000 frames at the observed rate; the perfetto ring buffer holds it.
+- **Count:** 5 runs per build per scenario (the issue asks for ≥ 5). With `HIGH` + dynamic OFF the
+  phone heats enough to throttle mid-block (16.9 → 13.6 fps inside one build), so the thermal-matched
+  design below is used instead, with 3 runs per build.
+- **Order:** strictly alternating `2x 1x 2x 1x …` so a thermal or network drift hits both builds
+  equally. `run_scenario.sh` implements it; `run_paired.sh` alternates one run at a time because it
+  has to re-apply the graphics settings on every install.
+- **Thermal matching:** each run starts from the same die temperature. The app is force-stopped and
+  the AP sensor (`dumpsys thermalservice`, `mName=AP`) polled until it is ≤ 34 °C; launch + settle
+  then lands the window at the same temperature in both builds, and `thermal.csv` row `t=0` records
+  the value actually measured (a run outside the band is re-run). Without this, block order decides
+  the result.
+- **Settle:** 25 s standing still after `[RenderReady]`, then the window.
+- **Window length:** 30 s in the thermal-matched design (the perfetto ring buffer holds a 60 s window
+  too, but 60 s of `HIGH` heats the phone by ~7 °C inside a single run). The 60 s default stays for
+  scenarios measured at the shipped profile.
 
 ```bash
+# shipped profile, 5 runs per build, alternating
 ORDER="2x 1x 2x 1x 2x 1x 2x 1x 2x 1x" SETTLE=25 \
   scripts/bench/2x-vs-1x/run_scenario.sh gp "" 5 60
+
+# HIGH + dynamic OFF, thermal-matched: one run at a time, in this order
+for pair in 2x 1x 2x 1x 2x 1x; do
+  WINDOW=30 SETTLE=25 TARGET_TEMP=34 scripts/bench/2x-vs-1x/run_paired.sh "$pair" "${pair}-hi-p$n"
+done
 ```
 
 Aggregation (median of the per-run medians, plus Δ % and the budget verdict):
@@ -151,7 +176,9 @@ python3 scripts/bench/2x-vs-1x/summarize.py \
 
 | scenario | how it is put on screen |
 |---|---|
-| `gp` | `decentraland://open?position=0,0`, nothing else; other players present as found (count them in `screen.png`) |
+| `gp` | `decentraland://open?position=0,0`, nothing else; other players present as found (count them in `screen.png`); measured at the shipped default (dynamic ON, profile as detected) |
+| `gp-hi` | `gp` at `HIGH` + dynamic graphics OFF, 60 s windows, no thermal matching: kept as the run that shows why the cooldown is needed, not as a result |
+| `gp-hi-pair` | `gp-hi` with thermal matching per run (§6): 30 s windows, 3 runs per build, alternating. This is the build-vs-build comparison |
 | `gp-empty` | same, then cut the network once the world is up so no remote avatar is in view: `adb shell cmd wifi set-wifi-enabled disabled` (see §8) |
 | `gp-avatars` | the worst case available without a bot farm: `gp` while the plaza is populated; report the avatar count |
 
