@@ -64,7 +64,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y mesa-vulkan-drivers vulkan-tools xvfb
-          icd="$(find /usr/share/vulkan/icd.d -name 'lvp_icd.*.json' | head -1)"
+          # Where the package puts lavapipe's driver file changes between Ubuntu releases.
+          dpkg -L mesa-vulkan-drivers | grep '\.json$'
+          icd="$(dpkg -L mesa-vulkan-drivers | grep -E 'lvp[^/]*\.json$' | head -1)"
+          [ -n "$icd" ] || { echo "::error::no lavapipe driver file in mesa-vulkan-drivers"; exit 1; }
           echo "VK_ICD_FILENAMES=$icd" >> "$GITHUB_ENV"
           VK_ICD_FILENAMES="$icd" vulkaninfo --summary
 
