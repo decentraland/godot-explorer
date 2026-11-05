@@ -29,6 +29,7 @@ use dcl_core::Core;
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
+    time::Duration,
 };
 
 use godot::prelude::*;
@@ -46,6 +47,34 @@ use super::{
     parcel::*,
     scene_definition::{EntityBase, SceneEntityDefinition},
 };
+
+/// A failed pointer or entity request is never made again, so its scenes would never load: a
+/// dropped connection or a 5xx gets two more tries.
+const REQUEST_ATTEMPTS: u32 = 3;
+
+async fn request_with_retries(
+    http_requester: &HttpQueueRequester,
+    request_option: RequestOption,
+) -> Result<HttpResponse, HttpError> {
+    let mut attempt = 1;
+    loop {
+        let result = http_requester.request(request_option.clone(), 0).await;
+        let retryable = match &result {
+            Err(_) => true,
+            Ok(response) => response.status_code.is_server_error(),
+        };
+        if !retryable || attempt >= REQUEST_ATTEMPTS {
+            return result;
+        }
+        tracing::warn!(
+            "Retrying {} (attempt {} of {REQUEST_ATTEMPTS})",
+            request_option.url,
+            attempt + 1
+        );
+        tokio::time::sleep(Duration::from_millis(500 * u64::from(attempt))).await;
+        attempt += 1;
+    }
+}
 
 #[derive(Debug, GodotClass)]
 #[class(base=Node)]
@@ -182,7 +211,7 @@ impl SceneEntityCoordinator {
 
         if let Some(rt) = self.runtime.as_ref() {
             rt.spawn(async move {
-                let result = http_requester.request(request_option, 0).await;
+                let result = request_with_retries(&http_requester, request_option).await;
                 if let Err(error) = sender.send(result).await {
                     tracing::error!("Error sending the result: {:?}", error);
                 }
@@ -196,7 +225,7 @@ impl SceneEntityCoordinator {
                 let runtime = runtime.unwrap();
 
                 runtime.block_on(async move {
-                    let result = http_requester.request(request_option, 0).await;
+                    let result = request_with_retries(&http_requester, request_option).await;
                     let _ = sender.try_send(result);
                 });
             });

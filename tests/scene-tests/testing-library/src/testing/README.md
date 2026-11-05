@@ -1,0 +1,1 @@
+# This folder has the testing framework based on the one exposed in `@dcl/sdk/testing`, this is for faster iteration

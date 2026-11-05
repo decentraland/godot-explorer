@@ -1,7 +1,7 @@
 use std::fmt;
 
 /// A scene parcel on the world grid.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Deserialize)]
 #[cfg_attr(feature = "ffi", derive(uniffi::Record))]
 pub struct Parcel {
     pub x: i32,

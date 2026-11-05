@@ -20,7 +20,7 @@ pub enum ResponseType {
 static REQUEST_ID_COUNTER: once_cell::sync::Lazy<std::sync::atomic::AtomicU32> =
     once_cell::sync::Lazy::new(Default::default);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RequestOption {
     pub id: u32,
     pub reference_id: u32,

@@ -9584,7 +9584,8 @@ export enum Control_Tags {
 }
 /**
  * What the shell asks of the engine once a world or the avatar preview is up. All of them are
- * ignored by an engine that has nothing to apply them to (no world, no preview).
+ * ignored by an engine that has nothing to apply them to (no world, no preview). Deserializable as
+ * `{"type": "set_color", ...}` so scene tests can send the same commands.
  */
 export const Control = (() => {
   type Teleport__interface = {
@@ -10168,7 +10169,8 @@ export const Control = (() => {
 })();
 /**
  * What the shell asks of the engine once a world or the avatar preview is up. All of them are
- * ignored by an engine that has nothing to apply them to (no world, no preview).
+ * ignored by an engine that has nothing to apply them to (no world, no preview). Deserializable as
+ * `{"type": "set_color", ...}` so scene tests can send the same commands.
  */
 export type Control = InstanceType<
   (typeof Control)[
