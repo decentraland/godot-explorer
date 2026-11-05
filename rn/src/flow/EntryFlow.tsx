@@ -20,6 +20,7 @@ import {
 import { core } from '../core';
 import { CustomizeStep } from './CustomizeStep';
 import { takePreviewLaunch, whenInitialLinkRouted } from './launchLink';
+import { askNotificationPermission } from '../notifications/push';
 import { initialFlow, reduceFlow } from './flowMachine';
 import { FtueStep } from './FtueStep';
 import {
@@ -206,6 +207,12 @@ export function EntryFlow({
     () => dispatch({ type: 'avatarConfirmed' }),
     [],
   );
+  // The Account Home taps are the commit point: the terms are accepted and the OS asks for
+  // notifications over the next screen, as the 1.x lobby did (Figma NOTIF_PROMPT).
+  const commit = useCallback(() => {
+    acceptTerms().catch(() => {});
+    askNotificationPermission().catch(() => {});
+  }, []);
 
   switch (step) {
     case 'splash':
@@ -214,10 +221,13 @@ export function EntryFlow({
       return (
         <AccountScreen
           onGuest={() => {
-            acceptTerms().catch(() => {});
+            commit();
             dispatch({ type: 'playAsGuest' });
           }}
-          onSignIn={() => dispatch({ type: 'chooseSignIn' })}
+          onSignIn={() => {
+            commit();
+            dispatch({ type: 'chooseSignIn' });
+          }}
         />
       );
     case 'sign_in':

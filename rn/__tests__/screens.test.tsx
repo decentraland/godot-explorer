@@ -1,4 +1,5 @@
 import { ReactElement } from 'react';
+import { NativeModules, Platform } from 'react-native';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { HomeTabs } from '../src/app/HomeTabs';
@@ -45,5 +46,33 @@ describe('screens render', () => {
   it('starts the entry flow on the splash screen', () => {
     const tree = mount(<EntryFlow onDone={() => {}} />);
     expect(tree.toJSON()).not.toBeNull();
+  });
+
+  it('asks for the notification permission at the Play as Guest tap', async () => {
+    const os = Platform.OS;
+    Platform.OS = 'android';
+    const push = {
+      hasPermission: jest.fn().mockResolvedValue(false),
+      requestPermission: jest.fn().mockResolvedValue(true),
+    };
+    NativeModules.DclPush = push;
+    jest.useFakeTimers();
+    try {
+      const tree = mount(<EntryFlow onDone={() => {}} />);
+      await act(async () => {
+        jest.advanceTimersByTime(1500);
+      });
+      await act(async () => {});
+      await act(async () =>
+        tree.root
+          .findByProps({ accessibilityLabel: 'PLAY AS GUEST' })
+          .props.onPress(),
+      );
+      expect(push.requestPermission).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+      Platform.OS = os;
+      delete NativeModules.DclPush;
+    }
   });
 });
