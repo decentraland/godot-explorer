@@ -192,10 +192,32 @@ bienvenida y la otra ya en el mundo): se dejan como referencia de arranque, no c
 6. **Cortar la red no da una plaza vacía**: los dos builds levantan un modal bloqueante de
    "Connection lost" (ver §8). Una medición con y sin avatares necesita el flag de comms, no red off.
 
-## 7. Stress: soak, UI por pantalla, red degradada
+## 7. Stress: soak de 71 minutos (2.x)
 
-Pendiente en esta pasada; comandos listos en `2x-vs-1x-3206-protocol.md` §9.2–§9.5. El bloque de UI
-por pantalla necesita además el mapeo de pantallas del shell RN (ver §9).
+Una corrida continua de 71 min en Genesis Plaza, quieto, con el sampler tomando memoria, CPU y
+temperatura cada ~3 s (1464 muestras). Datos en `data/…/android-a54/soak/2x-soak-60m/`.
+
+| métrica | inicio | mediana | fin | pico |
+|---|---:|---:|---:|---:|
+| PSS | 2056 MB | 2049 MB | 2098 MB | 2206 MB |
+| temperatura (máx / piel) | 48.9 / 38.0 °C | — | 47.5 / 40.0 °C | 48.9 / 40.2 °C |
+| CPU | 139 % | 150 % | 160 % | — |
+
+**Sin throttling térmico**: la temperatura no sube después del arranque (la piel queda en 38–40 °C
+todo el run) y el CPU se mantiene plano.
+
+**Memoria**: +42 MB entre la primera y la última muestra, con una deriva suave de ~+100 MB en la
+mediana por tramos de 10 min (1996 → 2095 MB). No es un leak con escalón ni crece sin techo (el pico
+de 2206 MB vuelve solo), pero tampoco es plano: en 71 min en la plaza el consumo sube lo suficiente
+como para seguirle el rastro en un soak más largo.
+
+**fps del soak: no disponible.** Con el buffer de Perfetto de 128 MB, 71 min de traza conservan sólo
+los últimos ~6 min de frame timeline y pierden la tabla de procesos, así que la consulta de frames no
+tiene a qué unirse (0 filas). El sampler sí cubrió los 71 min completos. La config ya quedó anotada
+con la razón y el protocolo pide trocear el soak en ventanas de 10 min (§9.2) en vez de una sola
+traza larga — eso es lo que hay que hacer la próxima vez; no se reintentó en esta pasada.
+
+**UI por pantalla y red degradada**: sin ejecutar (§10).
 
 ## 8. Intentos que no sirvieron (documentados para no repetirlos)
 
@@ -247,7 +269,9 @@ por pantalla necesita además el mapeo de pantallas del shell RN (ver §9).
   al shell de forma scriptable) y medir tiempo a interactiva por pantalla con `ui.sh` (polling de
   `uiautomator`), que es lo que sí expone 2.x; en 1.x la UI es dibujada por el motor y no aparece en
   el árbol de accesibilidad, así que ese bloque sólo puede hacerse con diff de capturas.
-- **Soak 60–90 min, tap spam, red degradada**: comandos listos (§9.2–9.5 del protocolo), sin
+- **Soak con fps**: el soak de 71 min ya cubre memoria/térmica/CPU; falta trocearlo en ventanas de
+  10 min para conservar la frame timeline (o subir el buffer de Perfetto).
+- **UI por pantalla, tap spam, red degradada**: comandos listos (§9.2–9.5 del protocolo), sin
   ejecutar.
 
 ## 11. Datos crudos
@@ -260,7 +284,8 @@ docs/bench/data/2x-vs-1x-3206/
     gp/summary.md      tabla agregada que genera summarize.py
     gp-empty/          2x3 corridas → INVALID.md (modal "Connection lost")
     rss-states/1x/     meminfo + [MemMonitor] por estado, más capturas
-    enter-exit/2x/     cycles.csv (20 ciclos) + captura por ciclo
+      enter-exit/1x|2x/  cycles.csv (20 ciclos por build) + capturas del ciclo 1 y 20
+    soak/2x-soak-60m/  mem.csv / thermal.csv / cpu.csv de 71 min + screen.png
   iphone16e/launch/    1x-mode/ y 2x/: console-*.log + launch-*.json
 ```
 
