@@ -1,0 +1,7 @@
+{
+  "build": "2x",
+  "label": "2x-gp-r1",
+  "am_total_time_ms": 315,
+  "cold_launch_to_render_ready_ms": 16104,
+  "settle_seconds": 25
+}

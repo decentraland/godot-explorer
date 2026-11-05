@@ -1,0 +1,7 @@
+{
+  "build": "1x",
+  "label": "1x-gp-empty-r6",
+  "am_total_time_ms": 340,
+  "cold_launch_to_render_ready_ms": 27546,
+  "settle_seconds": 20
+}

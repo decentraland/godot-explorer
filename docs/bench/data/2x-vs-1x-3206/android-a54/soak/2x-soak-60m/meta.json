@@ -1,0 +1,32 @@
+{
+  "label": "2x-soak-60m",
+  "build": "2x",
+  "scenario": "soak",
+  "device": "SM-A546E",
+  "device_serial": "R5CW60624NE",
+  "pkg": "org.decentraland.godotexplorer",
+  "version_name": "2.0.0(2723)",
+  "pid_before": 21219,
+  "trace_wall_seconds": 4289.07,
+  "started_at": "2026-11-03T14:40:52-0300",
+  "frames": {
+    "frames": "0",
+    "fps_avg": "0.000000",
+    "span_s": "[NULL]",
+    "interval_p50_ms": "[NULL]",
+    "interval_p95_ms": "[NULL]",
+    "interval_p99_ms": "[NULL]",
+    "interval_max_ms": "[NULL]",
+    "fps_p1_low": "[NULL]",
+    "fps_p5_low": "[NULL]",
+    "fps_median": "[NULL]",
+    "pct_missed_deadline": "[NULL]",
+    "jank_any": "[NULL]"
+  },
+  "rss_peak_kb": 2259255,
+  "rss_steady_kb": 2097995,
+  "mem_samples": 1464,
+  "notes": "",
+  "thermal_end_c": 47.5,
+  "cpu_mean_pct": 155.5
+}
