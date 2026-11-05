@@ -145,7 +145,9 @@ Every push and PR runs the scene tests twice, and both must pass:
   artifact.
 
 Each shows the per-scene summary on the run page and uploads the Godot log as
-`scene-tests-log-<headless|render>`. A PR that changes nothing on the Godot side (the `changes` job matches
+`scene-tests-log-<headless|render>`. Branch protection requires "🛠️ Build & scene tests / Scene
+tests result", which reports on every PR: it fails when the tests or the Linux library failed, and
+passes when they passed or were skipped. A PR that changes nothing on the Godot side (the `changes` job matches
 its files against `lib/`, `godot/`, `src/`, the suite, its scripts and the workflows and actions
 they use) skips both the tests and the Linux library.
 
