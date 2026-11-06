@@ -2,6 +2,8 @@ use ethers_core::types::H160;
 use ethers_signers::LocalWallet;
 use godot::prelude::*;
 use rand::thread_rng;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::{Instant, UNIX_EPOCH};
 use tokio::task::JoinHandle;
 
@@ -70,6 +72,9 @@ pub struct DclPlayerIdentity {
     /// verifier.
     mobile_auth_request_id: Option<String>,
 
+    /// Set while a scene's `sendAsync` consent webview is open, so scenes cannot stack prompts.
+    signing_request_in_flight: Arc<AtomicBool>,
+
     #[var]
     is_guest: bool,
 
@@ -111,6 +116,7 @@ impl INode for DclPlayerIdentity {
             mobile_auth_started: false,
             mobile_auth_attempt: 0,
             mobile_auth_request_id: None,
+            signing_request_in_flight: Arc::new(AtomicBool::new(false)),
         }
     }
 }
@@ -882,7 +888,7 @@ impl DclPlayerIdentity {
         // is fetched without the header and the server decides.
         let pending = match signin_verifier::select_pending(&auth_request_id.to_string()) {
             signin_verifier::Selection::Use(pending) => Some(pending),
-            signin_verifier::Selection::NoVerifier | signin_verifier::Selection::Foreign => None,
+            signin_verifier::Selection::Foreign => None,
         };
         let used_auth_request_id = pending
             .as_ref()
@@ -989,7 +995,8 @@ impl DclPlayerIdentity {
     }
 
     /// True when a `signin` deep link names an `authRequestId` this install never started (or
-    /// already settled), so the router can drop it without a server round trip.
+    /// already settled), or carries none while no sign-in is pending here, so the router can
+    /// drop it without a server round trip.
     #[func]
     fn is_foreign_mobile_signin(&self, auth_request_id: GString) -> bool {
         signin_verifier::select_pending(&auth_request_id.to_string())
@@ -1486,15 +1493,28 @@ impl DclPlayerIdentity {
             .bind()
             .get_sender();
         let Some(auth_chain) = self.ephemeral_auth_chain.clone() else {
+            response.send(Err("no identity".to_string()));
             return;
         };
         body.auth_chain = Some(auth_chain.auth_chain().clone());
 
+        if self
+            .signing_request_in_flight
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_err()
+        {
+            response.send(Err("another signing request is pending".to_string()));
+            return;
+        }
+        let in_flight = self.signing_request_in_flight.clone();
         if let Some(handle) = TokioRuntime::static_clone_handle() {
             handle.spawn(async move {
                 let result = do_request(body, url_sender).await.map(|(_, result)| result);
+                in_flight.store(false, Ordering::Release);
                 response.send(result.map_err(|err| err.to_string()));
             });
+        } else {
+            in_flight.store(false, Ordering::Release);
         }
     }
 }
