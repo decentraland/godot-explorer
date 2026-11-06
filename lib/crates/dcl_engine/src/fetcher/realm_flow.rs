@@ -135,8 +135,11 @@ async fn commit(mut realm_node: Gd<DclRealm>, landing: Landing) -> bool {
 }
 
 async fn fetch_world_scenes(world_name: &str, content_url: &str) -> Vec<EntityUrn> {
-    let url = format!("{}/scenes", realm::dcl_world_url(world_name));
-    let Some(listing) = http::get_json(&url).await else {
+    let listing = dcl_core::world_scenes::world_scene_listing(world_name, |url| async move {
+        http::get_json(&url).await
+    })
+    .await;
+    let Some(listing) = listing else {
         tracing::error!("[REALM] Failed to fetch world scenes");
         return Vec::new();
     };
