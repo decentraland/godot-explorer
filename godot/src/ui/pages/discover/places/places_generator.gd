@@ -135,11 +135,18 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 	_loading = false
 
 
-## No `order_by` value exists server-side for "new or recently updated" (only most_active /
-## like_score), so this fetches one large most_active page and filters/sorts client-side on
-## `deployed_at` / `user_count` / `like_score`, fields the API already returns but no other
-## carousel reads. A scene that's brand-new but not yet in the most_active page won't surface —
-## acceptable for v1, see issue #2981.
+## `order_by=created_at` exists server-side but today it's buried under `highlighted`/`ranking`
+## (places#896 fixes that, pending review/merge — see
+## https://github.com/decentraland/places/pull/896), so this fetches one large most_active page
+## and filters/sorts client-side on `deployed_at` / `user_count` / `like_score` instead. A scene
+## that's brand-new but not yet in the most_active page won't surface — acceptable for v1, see
+## issue #2981.
+##
+## TODO(places#896): once that merges and deploys, switch the query to
+## `order_by=created_at&order=desc` — it'll return genuinely-newest destinations first instead of
+## hoping they also rank in the most_active page, so the client-side `deployed_at` filter below can
+## likely shrink or go away (the `user_count`/`like_score` sort still has to stay client-side,
+## since the API only sorts by one column).
 func async_request_new_in_decentraland(_offset: int, _limit: int) -> void:
 	_no_more_elements = true
 	if _loading:
