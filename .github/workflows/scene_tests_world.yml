@@ -1,8 +1,9 @@
 name: 🧪 Scene tests QA World
 # Deploys the scene tests to the QA World (repository variable SCENE_TESTS_WORLD): every scene on
 # pushes to main, and a PR's changed scenes into its own zone while it carries the qa-scene label;
-# the zone is cleared when the PR closes. Signs with the SCENE_TESTS_DEPLOYER_KEY secret (a wallet
-# on the World's deployment list). Without the variable or the secret the jobs fail.
+# the zone is cleared when the PR closes or the label comes off. Signs with the
+# SCENE_TESTS_DEPLOYER_KEY secret (a wallet on the World's deployment list). Without the variable or
+# the secret the jobs fail.
 on:
   push:
     branches: [main]
@@ -10,7 +11,7 @@ on:
       - 'tests/scene-tests/**'
       - 'scripts/ci/deploy-scene-tests.mjs'
   pull_request:
-    types: [labeled, synchronize, closed]
+    types: [labeled, unlabeled, synchronize, closed]
   workflow_dispatch:
 
 concurrency:
@@ -29,6 +30,7 @@ jobs:
     if: >-
       github.event_name != 'pull_request'
       || (github.event.action != 'closed'
+          && github.event.action != 'unlabeled'
           && contains(github.event.pull_request.labels.*.name, 'qa-scene')
           && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
@@ -96,8 +98,9 @@ jobs:
     name: Clear the PR's QA zone
     if: >-
       github.event_name == 'pull_request'
-      && github.event.action == 'closed'
-      && contains(github.event.pull_request.labels.*.name, 'qa-scene')
+      && ((github.event.action == 'closed'
+           && contains(github.event.pull_request.labels.*.name, 'qa-scene'))
+          || (github.event.action == 'unlabeled' && github.event.label.name == 'qa-scene'))
       && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 10

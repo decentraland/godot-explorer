@@ -307,6 +307,26 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}
 
+  # The check to require in branch protection: it reports on every PR, while skipped scene tests
+  # report under another name. Fails when any job it needs failed or was cancelled.
+  scene-tests-result:
+    name: Scene tests result
+    needs: [changes, linux-lib, scene-tests]
+    if: always() && inputs.run_scene_tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the scene tests and what they need
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "changes, Linux library, scene tests: $RESULTS"
+          for result in $RESULTS; do
+            case "$result" in
+              success|skipped) ;;
+              *) echo "::error::a scene-test job ended with '$result'"; exit 1 ;;
+            esac
+          done
+
   build:
     name: Build Android
     needs: [builder-image, linux-lib, android-lib]

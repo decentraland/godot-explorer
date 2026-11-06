@@ -2,14 +2,14 @@ import {
   Material,
   MaterialTransparencyMode,
   MeshRenderer,
-  Transform,
-  executeTask
+  Transform
 } from '@dcl/sdk/ecs'
 import { Color4, Vector3 } from '@dcl/sdk/math'
 import { customAddEntity } from 'testing-library/src/utils/entity'
 import { assertSnapshot } from 'testing-library/src/utils/snapshot-test'
 import { renderTest } from 'testing-library/src/testing'
-import { getUserData } from '~system/UserIdentity'
+import { assert } from 'testing-library/src/testing/assert'
+import { renderedMaterialTexture, settled } from 'testing-library/src/utils/engine'
 
 renderTest('material: blue emissiveIntensity:100: if exist a reference snapshot should match with it', async function (context) {
   customAddEntity.clean()
@@ -451,36 +451,30 @@ renderTest('material: rock wall texture with bump texture: if exist a reference 
 
 renderTest('material: avatar portrait', async function (context) {
   customAddEntity.clean()
-
-  executeTask(async () => {
-    const userData = await getUserData({})
-    const plane = customAddEntity.addEntity()
-    Transform.create(plane, {
-      position: Vector3.create(8, 2, 8),
-      scale: Vector3.create(2, 2, 2)
-    })
-    MeshRenderer.create(plane, {
-      mesh: {
-        $case: 'plane',
-        plane: { uvs: [] }
-      }
-    })
-
-    if (userData.data !== null) {
-      Material.setPbrMaterial(plane, {
-        texture: Material.Texture.Avatar({
-          userId: '0xc09cc22c8f5cf3fb1edbf0b42da2cff70990908b'
-        })
-      })
+  const plane = customAddEntity.addEntity()
+  Transform.create(plane, {
+    position: Vector3.create(8, 2, 8),
+    scale: Vector3.create(2, 2, 2)
+  })
+  MeshRenderer.create(plane, {
+    mesh: {
+      $case: 'plane',
+      plane: { uvs: [] }
     }
   })
+  Material.setPbrMaterial(plane, {
+    texture: Material.Texture.Avatar({
+      userId: '0x83f9192d59b393c8789b55d446e5d4a77075c820'
+    })
+  })
 
-  // TODO: should be able to know when the texture is loaded
-  await context.helpers.waitNTicks(100)
+  // The face comes from the network.
+  const texture = await settled(context, () => renderedMaterialTexture(plane), (kind) => kind === 'ImageTexture', 900)
+  assert(texture === 'ImageTexture', `the avatar texture did not load: ${texture}`)
 
   await assertSnapshot(
     'screenshot/$explorer_snapshot_material_14.png',
-    Vector3.create(6, 4, 6),
-    Vector3.create(8, 1, 8)
+    Vector3.create(8, 2, 5),
+    Vector3.create(8, 2, 8)
   )
 })
