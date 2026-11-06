@@ -287,6 +287,13 @@ The habits AI-assisted changes most often get wrong in this repo. Reviewers hold
   non-abstracted (`REVIEW.md` §9).
 - English only in comments and identifiers; no `print(` left behind (`REVIEW.md` §7).
 
+### Scene-test screenshot references
+
+- A failing screenshot comparison is a possible regression. Never replace a reference in
+  `tests/snapshots/scenes/` just to make a test pass, and never copy the whole `comparison/` folder.
+- Before replacing one, follow `docs/scene-tests.md` → "Change a reference image": show the user the
+  reference, the capture and the diff, say which change explains the difference, and ask.
+
 ## Important Notes
 
 - The project uses a forked Godot 4.6.2 - don't update the engine version

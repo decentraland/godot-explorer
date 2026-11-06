@@ -137,9 +137,17 @@ given after `--`. The scene build is reused while nothing under `tests/scene-tes
 
 ## In CI
 
-Every push and PR runs the scene tests headless as the "🛠️ Build & scene tests / 🧪 Scene tests /
-Headless" check, with the per-scene summary on the run page and the Godot log as the
-`scene-tests-log` artifact. A PR that changes nothing on the Godot side (the `changes` job matches
+Every push and PR runs the scene tests twice, and both must pass:
+
+- "🛠️ Build & scene tests / 🧪 Scene tests / Headless": no renderer, so the render tests are skipped.
+- "… / Render (lavapipe)": with `--render`, drawn by Mesa's software Vulkan under Xvfb, so the
+  render tests run and compare their screenshots. Its captures are the `scene-tests-screenshots`
+  artifact.
+
+Each shows the per-scene summary on the run page and uploads the Godot log as
+`scene-tests-log-<headless|render>`. Branch protection requires "🛠️ Build & scene tests / Scene
+tests result", which reports on every PR: it fails when the tests or the Linux library failed, and
+passes when they passed or were skipped. A PR that changes nothing on the Godot side (the `changes` job matches
 its files against `lib/`, `godot/`, `src/`, the suite, its scripts and the workflows and actions
 they use) skips both the tests and the Linux library.
 
@@ -151,7 +159,7 @@ they use) skips both the tests and the Linux library.
 | `builder-image` | `ubuntu-latest` | pushes the ghcr builder image (`docker/android-builder`) when its Dockerfile changed |
 | `linux-lib` | `ubuntu-24.04` | needs `changes`; builds the Linux `libdclgodot.so`, uploads `libdclgodot-linux-release` |
 | `android-lib` | `ubuntu-latest`, builder image | builds the Android `libdclgodot.so` (unstripped), uploads `libdclgodot-android-release` |
-| `scene-tests` | `ubuntu-latest` | needs `linux-lib`; runs `scripts/ci/scene-tests.sh`, headless (`scene_tests.yml`) |
+| `scene-tests` | `ubuntu-latest` | needs `linux-lib`; runs `scripts/ci/scene-tests.sh` headless and with `--render` (`scene_tests.yml`) |
 | `build` (Build Android) | `ubuntu-latest`, builder image | needs both libraries; imports, exports, signs and uploads the APK/AAB |
 
 On PRs `runner.yml` passes `build_android: false`, so only `linux-lib` and `scene-tests` run; a PR
@@ -229,3 +237,29 @@ SCENE_TESTS_WORLD=mobile1.dcl.eth node scripts/ci/deploy-scene-tests.mjs deploy 
 4. Add the scene to `scenes.json` (`{ "parcel": [x, y], "name": "<name>" }`).
 5. Run it with `scripts/ci/scene-tests.sh --scene <name>`, and `--windowed` for its render tests. For a new screenshot, copy the
    capture from `tests/snapshots/scenes/comparison/` into `tests/snapshots/scenes/` after checking it.
+
+## Change a reference image
+
+A failing screenshot comparison means the picture changed. Treat it as a possible regression, not
+as a stale reference: replacing the reference is the quickest way to make the test pass, and also
+how a bug becomes the expected result.
+
+Before replacing a reference:
+
+1. Look at the three images: the reference (`tests/snapshots/scenes/<name>.png`), the capture
+   (`comparison/<name>.png`) and the diff (`comparison/<name>.diff.png`).
+2. Name the change that explains the difference: the PR's own rendering change, or a fix that makes
+   the old picture wrong. If nothing in the PR explains it, it is a regression: find it, or file
+   it and keep the reference.
+3. Check the new picture against what the test says it checks (its name and the scene code), not
+   against the old picture. A known bug keeps its correct reference, and the test becomes a
+   `skipTest` naming the issue.
+
+Then:
+
+- Replace only the images the change explains, one by one. Never copy the whole `comparison/`
+  folder.
+- List each replaced image in the PR description, under Details, with one line on why it changed
+  and the old and new pictures.
+- Regenerating many references at once (a new runner, a capture change) is a PR of its own, with
+  no fix in it, so it can be reviewed picture by picture.

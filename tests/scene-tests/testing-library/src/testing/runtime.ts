@@ -56,6 +56,8 @@ export function createTestRuntime(
   const waitingFn = withInterval(1, () => {
     console.log('Waiting for the player to be inside the scene...')
   })
+  // Once the player arrived the tests run on wherever it goes: a test may walk it out of the scene.
+  let playerArrived = false
 
   // add a system to the engine that resolves all promises in the `nextTickFuture` array
   engine.addSystem(function TestingFrameworkCoroutineRunner(dt) {
@@ -64,10 +66,11 @@ export function createTestRuntime(
 
     if (nextTickFuture.length) {
       // Avoids the test to begin without the player in the scene
-      if (!playerIsInside.get()) {
+      if (!playerArrived && !playerIsInside.get()) {
         waitingFn(dt)
         return
       }
+      playerArrived = true
 
       // resolve all nextTick futures.
       nextTickFuture.splice(0, nextTickFuture.length).forEach((_) => _(dt))

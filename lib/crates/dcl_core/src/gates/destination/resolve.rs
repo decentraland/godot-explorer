@@ -15,7 +15,7 @@ use crate::{
     app::{Destination, Parcel},
     destination::{self as rules, SceneInfo},
     gates::fetch::{Fetch, SignedFetchError},
-    realm, urls,
+    realm, urls, world_scenes,
 };
 
 /// The whole resolve, not per request: three sequential calls each under their own timeout is
@@ -402,11 +402,12 @@ impl Resolver<'_> {
             AccessVerdict::Allowed => {}
         }
 
-        let listing = self
-            .fetch
-            .get_json(&format!("{base}/scenes"))
-            .await
-            .unwrap_or_else(|_| json!({}));
+        let fetch = self.fetch;
+        let listing = world_scenes::world_scene_listing(name, |url| async move {
+            fetch.get_json(&url).await.ok()
+        })
+        .await
+        .unwrap_or_else(|| json!({}));
         // /about points content at the Genesis peer, not where a world's files live.
         let worlds_base = urls::worlds_content_server().replace("/world/", "/");
         let mut entity = last_entity(&listing);

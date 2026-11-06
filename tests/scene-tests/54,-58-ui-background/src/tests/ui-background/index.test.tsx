@@ -1,6 +1,5 @@
 import { renderTest, skipTest, test } from 'testing-library/src/testing'
 import { assertSnapshot } from 'testing-library/src/utils/snapshot-test'
-import { getScreenCanvasInfo } from 'testing-library/src/utils/ui/ui-utils'
 import { assert, assertEquals } from 'testing-library/src/testing/assert'
 import { TestFunctionContext } from 'testing-library/src/testing/types'
 import { CustomReactEcsRenderer } from 'testing-library/src/utils/ui'
@@ -424,8 +423,8 @@ test('ui-background: flexbox rows, percentages, justify and align', async functi
   }
 })
 
-// Skipped until the engine treats a NaN flexGrow as 0: the SDK sends `flexGrow: undefined` as NaN,
-// and one NaN sibling leaves the growing box 0 px wide. Issue to be filed.
+// Skipped until #3249 is fixed: the SDK sends `flexGrow: undefined` as NaN, and one NaN sibling
+// leaves the growing box 0 px wide.
 skipTest('ui-background: flexbox boxes grow next to their siblings', async function (context) {
   const { box, rows } = await flexbox(context)
   const expected = [
@@ -515,8 +514,7 @@ async function picture(name: string): Promise<void> {
   await assertSnapshot(
     `screenshot/$explorer_snapshot_ui_background_${name}.png`,
     Vector3.create(8, 1, 10),
-    Vector3.create(8, 1, 8),
-    getScreenCanvasInfo()
+    Vector3.create(8, 1, 8)
   )
 }
 
