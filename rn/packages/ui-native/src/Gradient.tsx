@@ -78,12 +78,18 @@ export function RadialFill({
   cy = 0.5,
   rx = 0.5,
   ry = 0.5,
+  rxDp,
+  ryDp,
 }: {
   stops: GradientStop[];
+  /** Centre and radii as fractions of the box. */
   cx?: number;
   cy?: number;
   rx?: number;
   ry?: number;
+  /** Radii in dp instead of fractions, for a glow that keeps its size whatever the box is. */
+  rxDp?: number;
+  ryDp?: number;
 }) {
   const id = useId();
   return (
@@ -95,8 +101,8 @@ export function RadialFill({
               id={id}
               cx={cx}
               cy={cy}
-              rx={rx}
-              ry={ry}
+              rx={rxDp !== undefined && width ? rxDp / width : rx}
+              ry={ryDp !== undefined && height ? ryDp / height : ry}
               fx={cx}
               fy={cy}
             >

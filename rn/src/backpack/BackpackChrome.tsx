@@ -49,7 +49,6 @@ export function HeaderRow({
   return (
     <BackpackHeader
       mode={state.mode}
-      filterActive={state.filter !== 'all'}
       menuOpen={state.filterMenuOpen}
       filterGap={filterGap}
       onMode={mode => dispatch({ type: 'mode', mode })}

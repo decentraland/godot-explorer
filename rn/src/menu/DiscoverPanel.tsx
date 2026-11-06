@@ -162,12 +162,7 @@ export function DiscoverPanel({
             onPress={() => setKebabOpen(open => !open)}
             style={styles.kebab}
           >
-            <Icon
-              name="kebab"
-              size={24}
-              color={colors.lavender}
-              strokeWidth={4}
-            />
+            <Icon name="kebab" size={24} color={colors.lavender} />
           </Pressable>
         </View>
         {body()}

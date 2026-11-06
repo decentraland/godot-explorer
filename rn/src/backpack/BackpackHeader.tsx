@@ -6,15 +6,12 @@ import { Mode } from './backpackState';
 /** Wearables / Emotes switch and the filter button; the filter menu is rendered by the screen. */
 export function BackpackHeader({
   mode,
-  filterActive,
   menuOpen,
   onMode,
   onFilter,
   filterGap = 22,
 }: {
   mode: Mode;
-  /** A non-default filter is applied: the button gets the red dot. */
-  filterActive: boolean;
   menuOpen: boolean;
   onMode: (mode: Mode) => void;
   onFilter: () => void;
@@ -42,7 +39,6 @@ export function BackpackHeader({
           icon="filter"
           accessibilityLabel={t('BACKPACK_FILTER')}
           selected={menuOpen}
-          badge={filterActive}
           onPress={onFilter}
         />
       </View>

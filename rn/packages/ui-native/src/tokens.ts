@@ -58,20 +58,20 @@ export const colors = {
   menu: '#1B002D',
   navbar: 'rgba(26,9,37,0.9)',
   black25: 'rgba(0,0,0,0.25)',
-  /** `Modal/Dialog` `Link=True` text. */
-  sky: '#32CEFF',
 } as const;
 
 /** Figma `Elevation/Down|Up`: one shadow, 0/±4 offset, blur 4, Shadow at 50% — values ÷ 2 for
  * dp. `boxShadow` draws the same on both platforms (Android `elevation` ignores the colour). */
-const shadow = (offsetY: number) => ({
+const shadow = (offsetY: number, blurRadius = u(2), alpha = '80') => ({
   boxShadow: [
-    { offsetX: 0, offsetY, blurRadius: u(2), color: `${colors.shadow}80` },
+    { offsetX: 0, offsetY, blurRadius, color: `${colors.shadow}${alpha}` },
   ],
 });
 export const elevation = {
   down: shadow(u(2)),
   up: shadow(-u(2)),
+  /** `Elevation/Menu` (the floating `Menu`): 0/8, blur 12, Shadow at 40%. */
+  menu: shadow(u(4), u(6), '66'),
 };
 
 /** Notification card title colours by category. */

@@ -27,6 +27,8 @@ export { ItemCard, SkeletonCard } from './ItemCard';
 export { LinkButton } from './LinkButton';
 export { LinkRow } from './LinkRow';
 export { LoginButton } from './LoginButton';
+export { Menu } from './Menu';
+export type { MenuItem } from './Menu';
 export type { LoginProvider } from './LoginButton';
 export { NotificationBadge } from './NotificationBadge';
 export { PillButton } from './PillButton';

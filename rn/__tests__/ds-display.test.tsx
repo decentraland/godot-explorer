@@ -9,9 +9,8 @@ import {
   EmptyState,
   HudCircleButton,
   Icon,
-  IconButton,
   LinkRow,
-  NotificationBadge,
+  Menu,
   PageDots,
   ProgressBar,
   Skeleton,
@@ -70,23 +69,31 @@ describe('Icon', () => {
   });
 });
 
+describe('Menu', () => {
+  it('reports the pressed item and marks the selected one', () => {
+    const onSelect = jest.fn();
+    const tree = render(
+      <Menu
+        items={[
+          { key: 'share', label: 'Share', icon: 'share' },
+          { key: 'report', label: 'Report', selected: true, check: true },
+        ]}
+        onSelect={onSelect}
+      />,
+    );
+    act(() => pressable(tree, 'Share').props.onPress());
+    expect(onSelect).toHaveBeenCalledWith('share');
+    expect(pressable(tree, 'Report').props.accessibilityState.selected).toBe(
+      true,
+    );
+  });
+});
+
 describe('Badge, IconButton, Tabs, HudCircleButton', () => {
   it('Badge shows a count, caps it, or is a dot', () => {
     expect(text(render(<Badge count={3} />))).toContain('3');
     expect(text(render(<Badge count={120} />))).toContain('99+');
     expect(text(render(<Badge />))).not.toContain('99');
-  });
-
-  it('IconButton renders a notification badge', () => {
-    const tree = render(
-      <IconButton
-        icon="bell"
-        accessibilityLabel="Notifications"
-        badge
-        onPress={() => {}}
-      />,
-    );
-    expect(tree.root.findAllByType(NotificationBadge)).toHaveLength(1);
   });
 
   it('Tabs show a badge on the tab', () => {

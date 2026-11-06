@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
   },
   fieldOpen: { borderColor: colors.lavender },
   fieldError: { borderColor: colors.danger },
-  fieldDisabled: { backgroundColor: colors.black20 },
+  fieldDisabled: { backgroundColor: colors.black30 },
   text: {
     fontFamily: fonts.medium,
     fontSize: u(15),
