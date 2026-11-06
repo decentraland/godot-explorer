@@ -33,13 +33,62 @@ fn add_px(lp: taffy::style::LengthPercentage, extra: f32) -> taffy::style::Lengt
     }
 }
 
-// v1 only resolves YGU_POINT to pixels. YGU_PERCENT and YGU_AUTO are not yet
-// supported for borders (would need post-layout resolution against parent size).
+// Border widths resolve to pixels here; YGU_PERCENT and YGU_AUTO widths are not supported.
 fn border_px(unit: YgUnit, value: Option<f32>) -> f32 {
     match unit {
         YgUnit::YguPoint => value.unwrap_or(0.0).max(0.0),
         _ => 0.0,
     }
+}
+
+/// A corner radius as the scene sent it. A percentage needs the box's size, so it resolves
+/// after layout (`resolve_corner_radii`).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct CornerRadius {
+    pub value: f32,
+    pub percent: bool,
+}
+
+fn corner_radius(unit: YgUnit, value: Option<f32>) -> CornerRadius {
+    let value = value.unwrap_or(0.0).max(0.0);
+    match unit {
+        YgUnit::YguPoint => CornerRadius {
+            value,
+            percent: false,
+        },
+        YgUnit::YguPercent => CornerRadius {
+            value,
+            percent: true,
+        },
+        _ => CornerRadius::default(),
+    }
+}
+
+/// The radii in pixels for a `width` x `height` box, as CSS does it: a percentage is a share of
+/// the shorter side (a circle on a square), and when two corners on a side add up to more than
+/// the side, every radius shrinks by the same factor, so none exceeds half the box.
+pub fn resolve_corner_radii(radii: [CornerRadius; 4], width: f32, height: f32) -> [f32; 4] {
+    let shorter = width.min(height).max(0.0);
+    let px = radii.map(|r| {
+        if r.percent {
+            r.value / 100.0 * shorter
+        } else {
+            r.value
+        }
+    });
+    let [tl, tr, br, bl] = px;
+    let fit = |side: f32, a: f32, b: f32| {
+        if a + b > side {
+            side.max(0.0) / (a + b)
+        } else {
+            1.0
+        }
+    };
+    let scale = fit(width, tl, tr)
+        .min(fit(width, bl, br))
+        .min(fit(height, tl, bl))
+        .min(fit(height, tr, br));
+    px.map(|r| r * scale)
 }
 
 // macro helpers to convert proto format to bevy format for val, size, rect
@@ -102,10 +151,11 @@ pub struct UiTransform {
     pub z_index: i32,
     pub taffy_style: taffy::style::Style,
     // Border, in pixels. Widths order: [left, right, top, bottom].
-    // Radii order: [top_left, top_right, bottom_right, bottom_left] (Godot StyleBoxFlat order).
+    // Radii order: [top_left, top_right, bottom_right, bottom_left] (Godot StyleBoxFlat order),
+    // as sent: resolved against the box's size where it is drawn.
     // Colors order: [top, right, bottom, left] (CSS order).
     pub border_widths: [f32; 4],
-    pub border_radii: [f32; 4],
+    pub border_radii: [CornerRadius; 4],
     pub border_colors: [Color; 4],
     pub has_border: bool,
 }
@@ -117,19 +167,19 @@ impl From<&PbUiTransform> for UiTransform {
         let bw_t = border_px(value.border_top_width_unit(), value.border_top_width);
         let bw_b = border_px(value.border_bottom_width_unit(), value.border_bottom_width);
 
-        let br_tl = border_px(
+        let br_tl = corner_radius(
             value.border_top_left_radius_unit(),
             value.border_top_left_radius,
         );
-        let br_tr = border_px(
+        let br_tr = corner_radius(
             value.border_top_right_radius_unit(),
             value.border_top_right_radius,
         );
-        let br_br = border_px(
+        let br_br = corner_radius(
             value.border_bottom_right_radius_unit(),
             value.border_bottom_right_radius,
         );
-        let br_bl = border_px(
+        let br_bl = corner_radius(
             value.border_bottom_left_radius_unit(),
             value.border_bottom_left_radius,
         );
@@ -326,5 +376,68 @@ impl From<&PbUiTransform> for UiTransform {
                 ..Default::default()
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const fn px(value: f32) -> CornerRadius {
+        CornerRadius {
+            value,
+            percent: false,
+        }
+    }
+
+    const fn pct(value: f32) -> CornerRadius {
+        CornerRadius {
+            value,
+            percent: true,
+        }
+    }
+
+    fn assert_near(actual: [f32; 4], expected: [f32; 4]) {
+        let near = actual
+            .iter()
+            .zip(expected)
+            .all(|(a, e)| (a - e).abs() < 0.001);
+        assert!(near, "{actual:?} != {expected:?}");
+    }
+
+    #[test]
+    fn radii_that_fit_are_kept() {
+        assert_near(resolve_corner_radii([px(20.0); 4], 100.0, 100.0), [20.0; 4]);
+    }
+
+    #[test]
+    fn a_radius_over_half_the_box_is_clamped_to_half() {
+        assert_near(resolve_corner_radii([px(80.0); 4], 100.0, 100.0), [50.0; 4]);
+        assert_near(resolve_corner_radii([px(50.0); 4], 60.0, 60.0), [30.0; 4]);
+    }
+
+    #[test]
+    fn radii_that_overflow_a_side_shrink_together() {
+        assert_near(
+            resolve_corner_radii([px(80.0), px(40.0), px(0.0), px(0.0)], 100.0, 100.0),
+            [80.0 / 1.2, 40.0 / 1.2, 0.0, 0.0],
+        );
+    }
+
+    #[test]
+    fn a_percentage_is_a_share_of_the_shorter_side() {
+        assert_eq!(
+            resolve_corner_radii([pct(50.0); 4], 100.0, 100.0),
+            [50.0; 4]
+        );
+        assert_eq!(
+            resolve_corner_radii([pct(25.0); 4], 200.0, 100.0),
+            [25.0; 4]
+        );
+    }
+
+    #[test]
+    fn an_empty_box_has_no_radius() {
+        assert_near(resolve_corner_radii([px(10.0); 4], 0.0, 0.0), [0.0; 4]);
     }
 }
