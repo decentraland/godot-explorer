@@ -112,6 +112,12 @@ export async function renderedNode(
   }
 }
 
+/** The Godot class of the texture the entity's `Material` draws with (`ImageTexture` once it loaded), or null. */
+export async function renderedMaterialTexture(entity: Entity): Promise<string | null> {
+  const mesh = (await entityNode(entity, { MeshRenderer: ['surface_material_override/0:albedo_texture'] }))?.MeshRenderer
+  return resourceClass(mesh?.['surface_material_override/0:albedo_texture'])
+}
+
 /** The `MeshRenderer` mesh: its Godot class (`SphereMesh`, or `ArrayMesh` for a box, cylinder or plane) and visibility. */
 export async function renderedMesh(entity: Entity): Promise<{ kind: string; visible: boolean } | null> {
   const mesh = (await entityNode(entity, { MeshRenderer: ['mesh', 'visible'] }))?.MeshRenderer
