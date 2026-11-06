@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: u(24),
   },
   portraitBack: { paddingBottom: u(15) },
-  searchOpen: { gap: u(12), paddingBottom: u(10), alignItems: 'center' },
+  searchOpen: { gap: u(12), paddingBottom: u(10) },
   grow: { flex: 1 },
   titleGroup: {
     flexDirection: 'row',

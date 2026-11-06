@@ -339,23 +339,30 @@ function DsButtons() {
         />
         <Block
           label="Menu"
-          spec="60x60 px · Corner 10px · Icon 40x40 · variant=filled"
-          columns={[
-            'Default / Pressed',
-            'Selected',
-            'Notifications',
-            'Disabled',
-          ]}
+          spec="54x54 px · Corner 8px · Icon 40x40 · variant=filled"
+          columns={['Default / Pressed', 'Selected', 'Disabled']}
           rows={[
             {
-              label: '',
+              label: 'Background=On',
               render: s => (
                 <IconButton
-                  icon="filter"
+                  icon="menuDot"
                   selected={on(s)}
-                  badge={s === 'Notifications'}
                   disabled={off(s)}
-                  accessibilityLabel="Filter"
+                  accessibilityLabel="Menu"
+                  onPress={noop}
+                />
+              ),
+            },
+            {
+              label: 'Background=Off',
+              render: s => (
+                <IconButton
+                  icon="menuDot"
+                  background={false}
+                  selected={on(s)}
+                  disabled={off(s)}
+                  accessibilityLabel="Menu"
                   onPress={noop}
                 />
               ),

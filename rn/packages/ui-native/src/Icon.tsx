@@ -136,6 +136,7 @@ const aliases = {
   heart: 'fav',
   info: 'menuInfo',
   jump: 'jumpIn',
+  kebab: 'menuDot',
   link: 'menuLink',
   logout: 'leave',
   mail: 'email',

@@ -10,7 +10,7 @@ import '../menu/gallery';
 import '../profile/gallery';
 import '../settings/gallery';
 import { StyleSheet, View } from 'react-native';
-import { BottomNav, colors } from '@dcl/ui-native';
+import { BottomNav, colors, Menu } from '@dcl/ui-native';
 import './dsButtons';
 import { registerPreview } from './registry';
 
@@ -42,6 +42,22 @@ registerPreview('extra/nav-bar', {
     </View>
   ),
 });
+registerPreview('extra/menu', {
+  title: 'Menu: floating context menu',
+  orientation: 'portrait',
+  render: () => (
+    <View style={styles.menu}>
+      <Menu
+        items={[
+          { key: 'a', label: 'Text', icon: 'menuLocation' },
+          { key: 'b', label: 'Text', icon: 'menuLocation', selected: true },
+          { key: 'c', label: 'Text', icon: 'menuLocation', check: true },
+        ]}
+        onSelect={noop}
+      />
+    </View>
+  ),
+});
 registerPreview('extra/nav-rail', {
   title: 'NavBar: landscape rail',
   orientation: 'landscape',
@@ -64,4 +80,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.modal,
   },
   navRail: { flex: 1, flexDirection: 'row', backgroundColor: colors.modal },
+  menu: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.modal,
+  },
 });

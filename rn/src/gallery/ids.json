@@ -1640,6 +1640,11 @@
     "orientation": "portrait"
   },
   {
+    "id": "extra/menu",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
     "id": "extra/nav-rail",
     "source": "extra",
     "orientation": "landscape"

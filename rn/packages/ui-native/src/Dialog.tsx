@@ -44,15 +44,18 @@ const MODAL_ICON = {
   success: 'modalSuccess',
 } as const;
 
-/** `surface/modal-glow`: two blurred Mythic blobs, the top one opaque and the bottom one at 50%. */
-const GLOW_TOP = [
-  { offset: 0, color: colors.mythic, opacity: 0.85 },
-  { offset: 1, color: colors.mythic, opacity: 0 },
-];
-const GLOW_BOTTOM = [
-  { offset: 0, color: colors.mythic, opacity: 0.5 },
-  { offset: 1, color: colors.mythic, opacity: 0 },
-];
+/** `surface/modal-glow`: two Mythic radial gradients in the card fill, one on the top-right
+ * corner (210×190) and one under the bottom edge (343×140 portrait, 475×140 landscape), with
+ * Figma's eased six-stop falloff. */
+const FALLOFF = [1, 0.669, 0.399, 0.192, 0.055, 0];
+const glow = (peak: number) =>
+  FALLOFF.map((factor, i) => ({
+    offset: i / (FALLOFF.length - 1),
+    color: colors.mythic,
+    opacity: peak * factor,
+  }));
+const GLOW_TOP = glow(0.6);
+const GLOW_BOTTOM = glow(0.62);
 
 /** Height of the on-screen keyboard while `active`, so the card can stay above it. */
 function useKeyboardLift(active: boolean): number {
@@ -122,13 +125,19 @@ export function Dialog({
           accessibilityViewIsModal
         >
           <View style={styles.clip}>
-            <RadialFill stops={GLOW_TOP} cx={1} cy={0} rx={0.7} ry={0.35} />
+            <RadialFill
+              stops={GLOW_TOP}
+              cx={1}
+              cy={0}
+              rxDp={u(105)}
+              ryDp={u(95)}
+            />
             <RadialFill
               stops={GLOW_BOTTOM}
               cx={0.5}
-              cy={1.05}
-              rx={0.6}
-              ry={0.22}
+              cy={1.04}
+              rxDp={u(landscape ? 237.5 : 171.5)}
+              ryDp={u(70)}
             />
           </View>
           <View style={[styles.content, landscape && styles.contentLandscape]}>
@@ -223,7 +232,7 @@ const styles = StyleSheet.create({
   link: {
     marginTop: u(5),
     fontSize: u(10),
-    color: colors.sky,
+    color: colors.link,
     textAlign: 'center',
     textDecorationLine: 'underline',
   },

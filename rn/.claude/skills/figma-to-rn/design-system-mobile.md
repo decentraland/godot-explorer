@@ -1,12 +1,15 @@
 # Design System Mobile (Figma reference)
 
 File: `Jis8xv58qaDNy53OCGLeoh` ("Design System Mobile"). Pages: Colors, Buttons, Icons, Fonts, Tags,
-Names, Inputs, Dropdowns, Modals, Tabs, Loader, Controls, Headers, Menu, Backgrounds, Spacing & Sizes,
-Elevation, Motion, States, Safe areas. This is the source every screen's components (buttons, colors,
+Names, Inputs, Dropdowns, Modals, Tabs, Loader, Controls, Headers, NavBar, Menu, Backgrounds, Spacing &
+Sizes, Elevation, Motion, States, Safe areas. This is the source every screen's components (buttons, colors,
 text fields) ultimately trace back to — check here **before** re-deriving a spec from a specific
 screen's node, and before assuming a value is screen-specific when it might be a shared token.
 Last full pass (every component set read through `get_design_context` metadata, no screenshots):
-**2026-11-03**. **Conflict rule (decided 2026-11-03): the drawn component wins.** When a node's
+**2026-11-06** (the 11-03 pass plus the designer's changes since: Menu page, `Button/Filter`,
+Dialog glows/link, Dropdown Disabled, two glyphs). New nodes show up as ids above the previous pass's
+highest (`get_metadata` per page, grep the ids); value edits inside old nodes only show by re-reading
+the set. **Conflict rule (decided 2026-11-03): the drawn component wins.** When a node's
 values contradict its usage description or a spec string, implement the node — the design gets
 its approval visually, a description is text the designer can forget to update. Descriptions are
 still the source for the intended RN API and for behaviour the nodes cannot show. Re-run it page by page when the designer announces changes; the node ids below are
@@ -117,7 +120,7 @@ older than the nodes: where they disagree the nodes win (Entry says "Icon 32x32"
 | Reminder 594:589 | control/lg 96, px 24, py 16, gap 8, radius 12; Default purple 40% + **1px Snow border**; Pressed purple 60% (same border, Snow text); Selected Black 20% + 2px Ruby border + Ruby text/check | `tone="reminder"` (`selected` swaps border and colours) |
 | Entry 244:492 | 96 tall, radius 16, px 24; Google/Apple/Wallet Snow bg + Shadow text, logo 36 (gap 4, Wallet 10), Pressed White 70%, Disabled White 10% + content at 60%; Mail = Secondary with `Icon/Base` 38 + gap 8 | `LoginButton` |
 | Discover 4:1222 | 94×96 radius 16, `Icon/Base` 52; purple 40% / Pressed **60%** / Selected 70% + Lavender Light icon / Disabled 20% + Snow 30% icon | `IconButton variant="filled" big` |
-| Filter 4:1554 | 60×60 radius 10, `Icon/Base` 40; Black 40% / Pressed 60% / **Selected Lavender Light + Shadow icon** / Disabled Black 30% + Silver 50% icon; Active = badge at top −4 / right −4 | `IconButton variant="filled"` |
+| Filter 4:1554 | Rebuilt 2026-11-06 (781:\*): **54×54 radius 8**, `Icon/Base` 40 (the new `Menu-Dot`); `State` Default / **Tap-Selected** (one state for press and selection: Black 60% + Lavender Light icon) / Disable (Black 30% + Silver 50% icon) × `Background` On/Off (Off = the glyph alone, same colours); no badge state any more | `IconButton variant="filled"` (`selected`, `background={false}`); the `badge` prop is gone |
 | Social 300:383 | 54×54 radius 8, 2px border, `Icon/Base` 40; Black 40% / Pressed 60% with the border **and icon** in Ruby (Cancel) or Rare Light (Accept) / Disabled Black 30% + Silver 50% | `IconButton variant="outline" accentColor` |
 | Pill 10:293 | Large 60 / Medium 56, pl 14 pr 16 py 8 gap 4, icon 32; Large Default Black 40% + Pearl B2 26/34; Medium Default White 20% + White 70% B4 24/30; **Selected = Lavender Light + Shadow in every size** (States page); badge 22 at −4/−4 | `PillButton` |
 | Link 706:4763 | 54 tall, hug, no padding; `Link` Inter Medium 24 underline, `text/link` `#A0ABFF`; Pressed label at 70%; Disabled Silver 50% | `LinkButton` |
@@ -129,7 +132,9 @@ Secondary alike — both resolved. Still open: `Button/Pill` Large `Icon=False` 
 while the `Icon=True` nodes say 26/34 — node vs node, code keeps 26/34 until the designer settles it;
 `Button/Entry`'s spec string says "Icon 32x32" but the logos are 36 and the Mail icon 38 (code: 36/38).
 Code-only: `tone="ghost"` (no Figma source, generic 50% dim), `loading` (renders `Spinner`),
-`LoginButton fullWidth`. The reference page `extra/ds-buttons` (`rn/src/gallery/dsButtons.tsx`) draws
+`LoginButton fullWidth`. `Button/Filter`'s description still says "60×60, State=Active shows the
+notification dot" — the rebuilt set has neither, the nodes win. `Button/Social` Disabled keeps a Snow
+glyph (same asset as Default); only the border goes Silver 50%. The reference page `extra/ds-buttons` (`rn/src/gallery/dsButtons.tsx`) draws
 this page with the real components; Pressed is seen by pressing (no `pressed` prop, by decision).
 
 ## Inputs page — `TextField`, `SearchField`, `CodeSlots` (`rn/packages/ui-native/src/`)
@@ -147,7 +152,7 @@ Audited 2026-11-03 against `Input/Field` 562:4820, `Input/Labeled` 562:4890, `In
 | Disabled | Black 30% bg (`surface/overlayDisabled`), text and placeholder White 20%, label White 30% — a palette state, not a dim | `boxDisabled`, `textDisabled`, `labelDisabled` |
 | Multiline | fixed 216 tall, `items-start`, p 16; counter `B3` Regular 20 Pearl 8 below ("0/300"), `#FB3B3B` at the limit in the Error node | `inputMultiline minHeight u(108)`, `counter` (Regular `u(10)` Pearl, `marginTop u(4)`), `counterMax` = `Input/Counter`'s `ruby[200]` `#FF5F77` |
 | Name | 68 box + a Regular 20 Pearl row 8 below: helper left, "0/15" right; suffix `#1234` `Input/Suffix` Light 24 in the text colour | `UsernameField` keeps the suffix Regular (no Inter Light face) and the helper above — screen-level follow-up |
-| Labeled | `Input` Medium 30 **Snow** label, gap 20 to the field; Disabled label White 30%; `Button=True` adds a `Button/Secondary` Outline Medium (radius 10) after the field, gap 16 | `label` Medium Snow, `marginBottom u(10)`; no `button` prop yet |
+| Labeled | `Input` Medium 30 **Snow** label, gap 20 to the field; Disabled label White 30%; `Button=True` adds a `Button/Secondary` Outline Medium (radius 12) after the field, gap 16 | `label` Medium Snow, `marginBottom u(10)`; no `button` prop yet |
 | Label/Description | label + `Caption2` Regular 22 Pearl, gap 10, pb 8 | `helperAbove` `u(11)` Pearl, `marginBottom u(5)`, `paddingBottom u(4)` |
 | Search 562:5083 | 540×68, **px 10**, radius 12, Black 40%; `Icon/Base` search **56** Snow, gap 8; text Medium 30 Snow, placeholder Snow 50%; Typing/Focus = 1px Lavender Light border + `Icon/Base` close 40 Snow | `SearchField`: one look for every call site (the old `glass` pill and the always-bordered `framed` box are gone; `framed` only widens the gap after the back chevron) |
 | CodeSlots 562:5058 | 84×130 per digit, radius 16, Black 40%, 1px Shadow border; Typing = Lavender Light border + Black 70% + a 1px White caret 50 tall; Filled = Pearl border + `Input/Code` Semi Bold 48 Snow; Error = `#FB3B3B` border and digit | `CodeSlots` (hidden `TextInput`, `oneTimeCode`); the gap between slots is not specified in Figma — `u(8)` |
@@ -161,20 +166,24 @@ Black 30% like `Input/Field`; `Input/Search` Focus holds a value ("Search" in Sn
 button only ever appears with text (what code does). Still open: Error/SingleLine 562:4837 has no
 message row although the description promises one (code shows it); `Input/Dropdown` Disabled stays
 Black 20% while `Input/Field` is Black 30% (code follows each node); `Input/Labeled Button=True`
-keeps the nested field at a fixed 624 instead of fill.
+keeps the nested field at a fixed 624 instead of fill. Re-read 2026-11-06: the `Name` helper row was
+rebuilt (703:\*) as **one** Regular 20 line — helper/message left, counter right (Error: "15/15" left
+in `#FB3B3B`, message right) — code still stacks hint then counter (`UsernameField` follow-up).
 The entry flow's own inputs (`rn/src/flow/screens.tsx` `TextStep`, pill / White 10%) predate this
 component and are the entry-flow branch's job.
 
 ## Icons page — every family is imported (`iconSvgs.ts`)
 
-Audited 2026-11-03: `Icon/Base` 48:3563 (54, Filled=False/True, 40 glyphs → `basePaths`),
-`Icon/Menu` 42:3274 (22, 46 glyphs → `menuPaths` + 8 multi-path SVG strings), `Icon/NavBar` 17:228
+Audited 2026-11-06: `Icon/Base` 48:3563 (54, Filled=False/True, 41 glyphs → `basePaths`; `Menu-Dot`
+778:179 added on 11-06 = three 7px dots, code `menuDot`, the old hand-drawn `kebab` is now its alias),
+`Icon/Menu` 42:3274 (22, 47 glyphs → `menuPaths` + 8 multi-path SVG strings; `Location` 732:4783 added
+on 11-06 = `Icon/Base` Location at 25px centred in the 22 box, code `menuLocation` via a `viewBox`), `Icon/NavBar` 17:228
 (82, 7 types × Active → `navBarPaths` + the profile SVGs), `Icon/Settings` 606:112 (32, 6 →
 `settingsPaths`; Gameplay is hidden in Figma), `Icon/Modal` 562:7607 (90×68, 8 → `modal*Svg`),
 `Logo/Connect` 17:386 (64, 5 → `logoPaths` + SVG strings), `Badge/Notification` 501:24 (22),
 `Icon/Credits` 681:67 (40, multicolour → `creditsSvg`). Nothing on the page is missing from code;
-13 hand-drawn strokes (`plus`, `arrowRight`, `minus`, `bulb`, `hand`, `externalLink`, `kebab`,
-`eye`, `eyeOff`, `lock`, `star`, `flame`, `upArrow`), `chevronRight` and `profileRing` are code-only.
+12 hand-drawn strokes (`plus`, `arrowRight`, `minus`, `bulb`, `hand`, `externalLink`, `eye`,
+`eyeOff`, `lock`, `star`, `flame`, `upArrow`), `chevronRight` and `profileRing` are code-only.
 Sizes per family are the base sizes; the consuming component sets the drawn size (`Button` 32/28/24,
 `IconButton` 52/40, `Header` 60, `Search` 56, `Dropdown` 40, `Tabs` 32, `NavBar` 82/64).
 
@@ -205,11 +214,11 @@ Audited 2026-11-02 against `Control/Switch` 562:9023, `Control/Slider` 562:9048,
 | Part | Figma | Code |
 |---|---|---|
 | Field | 624×68, `rounded-[12px]`, px 16, gap 10, Black 40%, text Input (Medium 30) Snow, chevron `Icon/Base` 40 | h `u(34)`, radius `u(6)`, px `u(8)`, text `u(15)` medium, chevron `size={20}` |
-| States | Focus/Open: 1px Lavender Light border · Disabled: Black 20% bg, White 20% text, label White 30% · ReadOnly: no chevron, Gray text · Error: 1px `status/danger` #FB3B3B + message | `fieldOpen` / `fieldDisabled` + `textDisabled` + `labelDisabled` / `readOnly` prop / `error` prop (`colors.danger`) |
+| States | Focus/Open: 1px Lavender Light border · Disabled: **Black 30%** bg (`surface/overlayDisabled`, the `DropdownLabeled` Disabled instance since 11-06; the standalone `Input/Dropdown` node still says 20%), White 20% text, label White 30% · ReadOnly: no chevron, Gray text · Error: 1px `status/danger` #FB3B3B (the node has no message row; code draws one, States rule) | `fieldOpen` / `fieldDisabled` (`black30`) + `textDisabled` + `labelDisabled` / `readOnly` prop / `error` prop (`colors.danger`) |
 | Label | `Input/Label`: Medium 30 Snow, gap 20 to the field | `u(15)` medium, `marginBottom: u(10)` |
 | Options list | `surface/menu` #1B002D, 1px border (Down node says `alpha.violet70`, Up node says `border/menu` = Lavender Light 70% — the theme token wins), radius 12, padding 8, gap 8, `Elevation/Down` or `/Up` | `colors.menu`, `colors.lavender70`, `u(6)`/`u(4)`/`u(4)`, `elevation.down|up` |
 | Scroll height | 388 = p 8×2 + 5 rows × 68 + 4 gaps × 8 | `listHeight` counts the gaps (5 rows + 4 × `u(4)`) |
-| Action=Button / Action=Copy | a `Button/Secondary` Outline Medium or an `Icon/Menu` copy after the field, gap 16 | not built (no consumer) |
+| Action=Button / Action=Copy | a `Button/Primary` Medium ("CONNECT", since 11-06; was Secondary Outline) or an `Icon/Menu` copy stretched to the field height after the field, gap 16 | not built (no consumer) |
 | Option | 68 tall, px 16, radius 12; Selected = Black 40% bg + Lavender Light text + `Icon/Base` Check 40 | `row`/`rowSelected`/`textSelected`, check `size={20}` |
 
 The old `variant="settings"` (tighter paddings) is gone: the Figma field already is the tight one.
@@ -219,25 +228,30 @@ The old `variant="settings"` (tighter paddings) is gone: the Figma field already
 
 `Modal/Dialog` 562:7666 + `Modal/Scrim` 591:118. Portrait card 520 wide (pt 64, pb 60, px 56, content
 gap 54), Landscape 720 (pt 54, pb 48, px 54, gap 48); `surface/modal` #4C147C (`colors.modal`) with
-the two glow blobs (`surface/modal-glow`, approximated with `RadialFill`); radius 16 → `u(8)`; title
+the two glows (`surface/modal-glow`, `RadialFill` with dp radii); radius 16 → `u(8)`; title
 `Modal/Title` Bold 38 → `u(19)` Snow centred; body `Modal/Body` Regular 26 / lh 36 → `u(13)`/`u(18)`
 Snow; text gap 16; CTAs gap 32 (40 landscape) = `Button/Secondary` hugging + `Button/Primary` filling
 (the last button gets `flex: 1` + `fullWidth`). `Icon/Modal` (90×68) sits centred over the top edge
-at `top: -34px`. Scrim: Black 40% + blur 6 in Figma; RN has no blur so it is the documented fallback
-Black 60% (`colors.black60`), which is also what `Modal/Scrim`'s description calls `surface/scrim`.
+at `top: -34px`. Scrim: `surface/scrim` = Black 40% + a 12px background blur (`Scrim/Blur`); the description no
+longer mentions a no-blur value (it used to say 60%). RN has no blur library, so code keeps the
+Black 60% (`colors.black60`) fallback — a code-only decision to re-check with the designer.
 Orientation comes from `useWindowDimensions`; the old `rounded`/`width` props are gone.
-Re-read 2026-11-03: the glow blobs are **Mythic `#FF4BED`** (top opaque, bottom at 50%, blur σ
-66.7/33.3 in the export; `GLOW_TOP`/`GLOW_BOTTOM` in `Dialog.tsx`), the top ellipse centred 33px
-outside the right edge / 9px below the top, the bottom frame 520×79 sitting 13px above the bottom
-edge. `Link=True` = `B3` Regular 20 underline **`#32CEFF`** (`colors.sky`), two lines max, gap 10
-under the body → `Dialog link={{ label, onPress }}`. Checkbox and Input blocks stay the caller's
+Re-read 2026-11-06: the glows are no longer blurred ellipses but **two radial gradients in the card
+fill**, Mythic `#FF4BED`: top-right centred on the corner, rx 210 / ry 190, 60% → 0; bottom centred
+20px below the bottom edge, rx 343 (Portrait) / 475 (Landscape) / ry 140, 62% → 0; both with the same
+six-stop falloff (×1, .669, .399, .192, .055, 0) — `glow()`/`FALLOFF` in `Dialog.tsx`, radii passed as
+`rxDp`/`ryDp`. `Link=True` = `B3` Regular 20 underline **`text/link` `#A0ABFF`** (`colors.link`; was
+`#32CEFF`, the `sky` token is gone), two lines max, gap 10 under the body →
+`Dialog link={{ label, onPress }}`. Node quirks: 562:7744 (Portrait, no icon) is 514 wide inside its
+520 frame (keep 520); the Landscape Input variant 562:7727 (720×514, content gap 36) is not modelled
+either, the field is `children`. Checkbox and Input blocks stay the caller's
 `children` (`Checkbox size="sm"` 30×30 radius 2; `TextField`). The Input variants (562:7756 with
 label 520×458, 562:7771 with icon 520×414; frames fixed by the designer on 2026-11-03) tighten the
 content gap to 38 and the text gap to 24 (with label) / 32 — not modelled, the caller passes the
 field as `children`. "Cancel" there is a standard `Button/Secondary` Black 40% and the confirm
 `Button/Primary` starts Disabled.
 `Modal-Background` 671:4363 (Portrait 520×466 with the 458 card inset / Landscape 720×404) is the
-same card with the same blobs and no content — not built.
+same card with the same glows and no content — not built.
 
 ## Tabs page — `Tabs`
 
@@ -253,7 +267,8 @@ count pill (no Figma source — a code-only extension).
 Back = `Icon/Base` 60 → `size={30}` + gap 8; Actions gap 32 → `u(16)`: Search 60, `Badge/Credits`
 (h 60, px 18, gap 10, Black 40% pill, `Icon/Credits` 40 + Medium 32 amount), Ticket 54 (Back only).
 SearchOpen: Back + `Input/Search` filling (gap 24, pb 20, **bottom-aligned**: the 60 icon against
-the 68 field) — rendered with the DS `SearchField`, now the `Input/Search` look (see Inputs).
+the 68 field; code centred it until 11-06) — rendered with the DS `SearchField`, now the
+`Input/Search` look (see Inputs).
 Landscape 528×74: title Bold 44 → `u(22)`; TitleButton = `Button/Secondary` Outline → `tone="outline"`
 (border `border/thin` 2px = 1dp). Orientation from `useWindowDimensions`. The description lists a
 Portrait "Title" type the set does not have (code renders it anyway). `Badge/Credits` 681:148
@@ -261,8 +276,9 @@ confirmed: 107×60, px 18, gap 10, `surface/overlay` pill, `Icon/Credits` 40 ("d
 `Header/Credits` Medium 32 Snow; the Ticket (54) only appears with Credits in Figma, code shows it
 whenever `onBack && onTicket`.
 
-## Menu page — `BottomNav`
+## NavBar page — `BottomNav`
 
+The page was called "Menu" until 2026-11-06; "Menu" is now the floating context menu (next section).
 `NavBar` 635:211 Portrait 720×180: pt 32, pb 40 (+ safe-area), px 64, gap 56, items `NavBar/Item`
 82 (`u(41)`), background `surface/navbar` rgba(26,9,37,0.9) (`colors.navbar`) with `NavBar/Portrait`
 (blur 16 + shadow 0/-4/4 **Black 25%** = `colors.black25`; since the designer's 2026-11-03 pass the
@@ -277,6 +293,19 @@ left rail, py 40, gap 37, 64px items, blur 16. Items in Figma: Explore/Backpack/
 649px of content in a 640 rail, so it clips). The app has four destinations; `NavKey` stays four
 until Social/Alerts exist as screens.
 
+## Menu page — `Menu` (`Menu.tsx`), added 2026-11-06
+
+`Menu` 736:32 + `Menu/Item` 736:31. Container 319 wide (`u(159.5)`), px 24, py 16, gap 26, radius 12,
+`surface/menu` #1B002D (`colors.menu`), 1px `border/menu` (`colors.lavender70`), **`Elevation/Menu`** =
+0/8, blur 12, Shadow 40% (`elevation.menu`, only defined on this page — the Elevation page still lists
+Down/Up). Row 64 tall filling the width, px 16, gap 10, radius 12; optional leading icon in a 32 slot
+(the node draws `Icon/Base` Location, the description says `Icon/Menu`; code takes any `IconName` at
+`size={16}`), label Inter Medium 28 Snow, optional trailing `Icon/Base` Check 40; Selected = Black 40%
+bg + Lavender Light text/icons (code also uses it while pressed — there is no Pressed node). API:
+`<Menu items={[{ key, label, icon?, selected?, check? }]} onSelect />`; the caller positions and
+dismisses it. Consumer: `rn/src/menu/KebabMenu.tsx` (Discover's three-dots popover, now `menuDot`);
+preview `extra/menu`.
+
 ## Spacing & Sizes page — `space`, `radius`, `controlHeight`, `iconSize`, `border`, `minTouchTarget`
 
 Page header: "Values in Figma units (2x). In React Native they are divided by 2: always use the
@@ -289,11 +318,13 @@ lg/md/sm/pillLg/pillMd/tag/badge = 96/74/54/60/56/42/32; `iconSize` buttonLg/Md/
 smaller controls with `hitSlop`). `Button` and `IconButton` consume them; the rest of the package
 still carries the same numbers inline and can migrate file by file.
 
-## Elevation page — `elevation.down` / `elevation.up` in `tokens.ts`
+## Elevation page — `elevation.down` / `elevation.up` / `elevation.menu` in `tokens.ts`
 
 One shadow, Shadow #161518 at 50%, blur 4, offset 0/±4: Down for things below their trigger
 (dropdown list, menu), Up for things above it or at the bottom of the screen (dropdown opening up,
-bars, sheets). RN: `boxShadow` (new architecture, both platforms) with the values ÷ 2 — offset
+bars, sheets). The Menu page adds a third effect style, `Elevation/Menu` (0/8, blur 12, 40%), not
+listed on this page; its "In React Native" paragraph still describes the old iOS `shadow*` / Android
+`elevation` split, code uses `boxShadow`. RN: `boxShadow` (new architecture, both platforms) with the values ÷ 2 — offset
 0/±`u(2)`, blur `u(2)`, `#16151880`; the old `shadow*` props are iOS-only and Android `elevation`
 drew nothing visible on the slider thumb. Shadows only draw on a solid background. `Blur/Background` (blur 4 on
 Black 40%) needs a blur library; without one the surface is Black 60% with no blur.
