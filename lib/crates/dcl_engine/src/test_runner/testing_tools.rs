@@ -3,9 +3,10 @@
 //! `--scene-test`.
 
 use godot::classes::node::ProcessMode;
+use godot::classes::sub_viewport::UpdateMode;
 use godot::classes::{
-    Camera3D, CanvasItem, Control, DirAccess, FileAccess, Image, Input, InputEventScreenDrag,
-    InputEventScreenTouch, Node, Node3D, RenderingServer,
+    Camera3D, Control, DirAccess, FileAccess, Image, Input, InputEventScreenDrag,
+    InputEventScreenTouch, Node, Node3D, RenderingServer, SubViewport,
 };
 use godot::prelude::*;
 
@@ -14,11 +15,14 @@ use super::scene_plan::{
     parse_parcels, summarize, SceneReport, SceneTest, SCENE_TESTS_TIMEOUT, SCENE_TIMEOUT,
 };
 use super::snapshot_files::{snapshot_file_name, SnapshotFolders};
+use crate::dcl::components::proto_components::sdk::components::PbUiCanvasInformation;
+use crate::dcl::SceneId;
 use crate::engine::local_task::{await_all, defer, next_frame, sleep, spawn_local};
 use crate::fetcher::globals;
 use crate::godot_classes::dcl_avatar::DclAvatar;
 use crate::godot_classes::dcl_global::DclGlobal;
 use crate::godot_classes::rpc_sender::take_and_compare_snapshot_response::DclRpcSenderTakeAndCompareSnapshotResponse;
+use crate::scene_runner::components::ui::scene_ui::relayout_for_capture;
 
 /// The camera layers that show the world without the outline layer (20).
 const CAMERA_CULL_MASK: u32 = 524287;
@@ -442,19 +446,25 @@ fn send(request: SnapshotRequest, result: VarDictionary) {
     sender.bind_mut().send(result.to_variant());
 }
 
-/// Waits until the content queue has been empty for a few checks in a row.
+/// Waits until no content promise is pending and no load has started or finished for a few
+/// checks in a row. The load counters are running totals, and a failed load never counts as
+/// finished, so "nothing in flight" is a counter that stopped moving, not one at zero.
 async fn wait_for_content() {
     let mut stable = 0;
+    let mut last = None;
     for _ in 0..LOAD_CHECKS {
-        let (pending, loading) = {
+        let (pending, counters) = {
             let provider = globals::content_provider();
             let provider = provider.bind();
             (
                 provider.get_pending_promises(),
-                provider.count_loading_resources(),
+                (
+                    provider.count_loading_resources(),
+                    provider.count_loaded_resources(),
+                ),
             )
         };
-        if pending.is_empty() && loading == 0 {
+        if pending.is_empty() && last == Some(counters) {
             stable += 1;
             if stable >= STABLE_CHECKS {
                 return;
@@ -465,63 +475,83 @@ async fn wait_for_content() {
                 await_all(pending.iter_shared().collect()).await;
             }
         }
+        last = Some(counters);
         sleep(LOAD_CHECK_INTERVAL).await;
     }
+    godot_warn!(
+        "snapshot: content still loading after {:.0} s; capturing anyway",
+        LOAD_CHECKS as f64 * LOAD_CHECK_INTERVAL
+    );
 }
 
-/// The scene from the requested camera, alone: the world UI and the avatars hidden.
+/// The scene from the requested camera at exactly the requested size, drawn off-screen: the
+/// window's own size (a phone shape, or what the display allows) never changes the picture. The
+/// scene's UI is lent to the capture; the explorer's HUD and the avatars stay out of it.
 async fn capture(tools: &Gd<DclTestingTools>, request: &SnapshotRequest) -> Option<Gd<Image>> {
     RenderingServer::singleton().set_default_clear_color(Color::from_rgba(0.0, 0.0, 0.0, 0.0));
-    let mut window = tools.get_window()?;
-    let previous_camera = window.get_camera_3d();
-    let previous_size = window.get_size();
+    let window = tools.get_window()?;
+    let mut viewport = SubViewport::new_alloc();
+    viewport.set_size(Vector2i::new(request.size.x as i32, request.size.y as i32));
+    viewport.set_world_3d(&window.find_world_3d()?);
+    viewport.set_msaa_3d(window.get_msaa_3d());
+    viewport.set_screen_space_aa(window.get_screen_space_aa());
+    viewport.set_update_mode(UpdateMode::ALWAYS);
+    tools.clone().add_child(&viewport);
 
     let mut camera = Camera3D::new_alloc();
     camera.set_cull_mask(CAMERA_CULL_MASK);
-    tools.clone().add_child(&camera);
+    viewport.add_child(&camera);
     camera.make_current();
-    window.set_size(Vector2i::new(request.size.x as i32, request.size.y as i32));
     camera.set_global_position(request.camera_position);
     camera.look_at(request.camera_target);
 
-    let hud = hide_hud();
+    let lent_ui = lend_scene_ui(&viewport);
+    if lent_ui.is_some() {
+        relayout_scene_ui(request.scene_id, request.size);
+    }
     freeze_avatars();
     for _ in 0..SETTLE_FRAMES {
         next_frame().await;
     }
     sleep(SETTLE_SECONDS).await;
-    let image = window.get_texture().and_then(|texture| texture.get_image());
+    let image = viewport
+        .get_texture()
+        .and_then(|texture| texture.get_image());
 
-    for mut item in hud {
-        item.set_visible(true);
+    if let Some((mut ui, mut parent, index)) = lent_ui {
+        ui.reparent(&parent);
+        // Input picks scene UI by its place among its siblings.
+        parent.move_child(&ui, index);
     }
-    window.set_size(previous_size);
-    if let Some(mut previous) = previous_camera {
-        previous.make_current();
-    }
-    tools.clone().remove_child(&camera);
-    camera.queue_free();
+    tools.clone().remove_child(&viewport);
+    viewport.queue_free();
     image
 }
 
-/// Hides the explorer's own HUD for a capture and returns what it hid. The scene's UI stays: it is
-/// what a UI test checks.
-fn hide_hud() -> Vec<Gd<CanvasItem>> {
-    let mut hidden = Vec::new();
-    crate::world::state::current().inspect(|world| {
-        for child in world.ui_root.get_children().iter_shared() {
-            if child.get_name() == "SceneUIContainer" {
-                continue;
-            }
-            if let Ok(mut item) = child.try_cast::<CanvasItem>() {
-                if item.is_visible() {
-                    item.set_visible(false);
-                    hidden.push(item);
-                }
-            }
-        }
-    });
-    hidden
+/// Moves the scene's UI container into the capture viewport, where it fills the capture's size,
+/// and returns where it came from.
+fn lend_scene_ui(viewport: &Gd<SubViewport>) -> Option<(Gd<Control>, Gd<Node>, i32)> {
+    let world = crate::world::state::current()?;
+    let mut ui = world.scene_ui.clone();
+    let parent = ui.get_parent()?;
+    let index = ui.get_index();
+    ui.reparent(viewport);
+    Some((ui, parent, index))
+}
+
+/// The scene's UI laid out for the capture's size: percentages and centering follow it.
+fn relayout_scene_ui(scene_id: i32, size: Vector2) {
+    let canvas = PbUiCanvasInformation {
+        width: size.x as i32,
+        height: size.y as i32,
+        device_pixel_ratio: 1.0,
+        ..Default::default()
+    };
+    let mut runner = globals::scene_runner();
+    let mut runner = runner.bind_mut();
+    if let Some(scene) = runner.get_scene_mut(&SceneId(scene_id)) {
+        relayout_for_capture(scene, &canvas);
+    }
 }
 
 /// Still and hidden: the remote avatars and the player's.
