@@ -203,6 +203,7 @@ pub enum SegmentEvent {
     Loading(Box<SegmentEventLoading>),
     GuestWalletCreation(SegmentEventGuestWalletCreation),
     ReviewPrompted(SegmentEventReviewPrompted),
+    MemorySessionReport(SegmentEventMemorySessionReport),
     LoginStreakDayCounted(SegmentEventLoginStreakDayCounted),
     LoginStreakClaim(SegmentEventLoginStreakClaim),
     RequestResult(SegmentEventRequestResult),
@@ -624,6 +625,34 @@ pub struct SegmentEventReviewPrompted {
     pub trigger_id: String,
 }
 
+/// MEMORY_SESSION_REPORT (#3150): the memory footprint of the PREVIOUS session, sent at the
+/// next launch from the record the memory monitor kept on disk, whether that session ended
+/// cleanly or was killed. The healthy baseline the per-RAM-tier budgets are tuned against.
+/// Unknowns are `null`.
+#[derive(Serialize, Clone)]
+pub struct SegmentEventMemorySessionReport {
+    // `session_id` of the session the record belongs to.
+    pub previous_session_id: Option<String>,
+    // Total device RAM.
+    pub total_ram_mb: Option<i32>,
+    // Highest own footprint seen in that session: RssAnon + VmSwap on Android,
+    // phys_footprint on iOS.
+    pub peak_footprint_mb: Option<i32>,
+    // Own footprint at the last write (the closest value to the end of the session).
+    pub footprint_mb: Option<i32>,
+    pub rss_anon_mb: Option<i32>,
+    pub swap_mb: Option<i32>,
+    // GPU memory (Android `summary.graphics`), sampled every ~30 s.
+    pub graphics_mb: Option<i32>,
+    // Own-footprint budget of the device tier; null where the headroom bands decide.
+    pub budget_mb: Option<i32>,
+    // Pressure level at the last write: 0 ok, 1 warning, 2 critical.
+    pub level: Option<i32>,
+    // ApplicationExitInfo reason of that session ("low_memory", "anr", ...); null when the
+    // session ended normally or the platform does not report exits (iOS).
+    pub exit_reason: Option<String>,
+}
+
 /// LOGIN_STREAK_DAY_COUNTED (issue #3018): a day was credited to the 7-day login streak.
 #[derive(Serialize, Clone)]
 pub struct SegmentEventLoginStreakDayCounted {
@@ -1005,6 +1034,11 @@ pub fn build_segment_event_batch_item(
         ),
         SegmentEvent::ReviewPrompted(event) => (
             "review_prompted".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::MemorySessionReport(event) => (
+            "MEMORY_SESSION_REPORT".to_string(),
             serde_json::to_value(event).unwrap(),
             None,
         ),

@@ -60,6 +60,8 @@ var _last_rss_mb := -1
 var _last_pressure := -1
 var _total_ram_mb := -1
 var _low_memory_warning_shown := false
+var _memory_report: MemorySessionReport
+var _android_plugin: Object = null
 
 
 ## Called by Global from _ready() after realm / scene_fetcher /
@@ -93,8 +95,11 @@ func setup() -> void:
 	Global.config.param_changed.connect(_on_config_param_changed)
 	_refresh_profile_tags()
 
+	Global.scene_runner.set_memory_report_session(Global.session_id)
+	_memory_report = MemorySessionReport.consume()
 	_setup_memory_polling()
 	_setup_android_exit_diagnostics()
+	_memory_report.send()
 
 
 func _on_realm_changed() -> void:
@@ -308,6 +313,8 @@ func _setup_memory_polling() -> void:
 # Contexts are not synced to the native (NDK) scope, only tags are - so the
 # pressure level is mirrored as a tag for the crashes that matter most.
 func _on_memory_poll() -> void:
+	if _android_plugin != null:
+		Global.scene_runner.set_graphics_memory_mb(int(_android_plugin.getGraphicsMemoryMb()))
 	var rss_mb: int = Global.scene_runner.get_process_memory_mb()
 	var available_mb: int = Global.scene_runner.get_available_memory_mb()
 	var level: int = clampi(Global.scene_runner.get_memory_pressure_level(), 0, 2)
@@ -397,6 +404,7 @@ func _setup_android_exit_diagnostics() -> void:
 	if not plugin.has_signal("memory_trim"):
 		return
 	plugin.connect("memory_trim", _on_memory_trim)
+	_android_plugin = plugin
 	var exit_infos: Array = plugin.getPreviousExitReasons()
 	var newest_timestamp := 0
 	for exit_info in exit_infos:
@@ -406,6 +414,11 @@ func _setup_android_exit_diagnostics() -> void:
 	var warned_ms := _consume_low_memory_marker()
 	for exit_info in exit_infos:
 		var is_newest := int(exit_info.get("timestamp", 0)) == newest_timestamp
+		if is_newest:
+			var footprint := _memory_report.footprint_for_exit(exit_info)
+			if not footprint.is_empty():
+				exit_info["last_footprint"] = footprint
+				_memory_report.exit_reason = str(exit_info.get("reason", "other"))
 		_report_exit_reason(exit_info, warned_ms if is_newest else 0)
 	# Acked only after capture, so an exit is never lost; if the process dies
 	# before the envelope leaves the outbox it is reported again next launch.
