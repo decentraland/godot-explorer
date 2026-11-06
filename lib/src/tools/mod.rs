@@ -1,4 +1,5 @@
 pub mod godot_logger;
+pub mod last_panic;
 pub mod log_stream;
 pub mod memory_monitor;
 pub mod network_inspector;

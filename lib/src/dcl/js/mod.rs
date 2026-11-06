@@ -17,7 +17,7 @@ mod websocket;
 
 use crate::comms::truncate_utf8_safe;
 use crate::dcl::common::{
-    is_scene_log_enabled, CommunicatedWithRenderer, SceneDying, SceneElapsedTime,
+    is_scene_log_enabled, CommunicatedWithRenderer, SceneDying, SceneElapsedTime, SceneExitReason,
     SceneLastJsTickUs, SceneLogLevel, SceneLogMessage, SceneLogs, SceneMainCrdtFileContent,
     SceneRendererDelta, SceneStartTime,
 };
@@ -545,6 +545,7 @@ pub(crate) fn scene_thread(
     let mut last_memory_stats_update = std::time::Instant::now();
 
     let mut tick_counter: u32 = 0;
+    let mut last_update_error = String::new();
 
     loop {
         // Scene time advances with rendered frames: every reply carries the
@@ -596,6 +597,7 @@ pub(crate) fn scene_thread(
             reported_error_filter += 1;
             if reported_error_filter <= 10 {
                 let err_str = format!("{:?}", e);
+                last_update_error = err_str.clone();
 
                 if should_debug {
                     crate::tools::scene_inspector::log_lifecycle_event(
@@ -636,6 +638,10 @@ pub(crate) fn scene_thread(
                     "{} too many errors without renderer interaction: shutting down",
                     log_info.prefix()
                 );
+                state.borrow_mut().put(SceneExitReason(format!(
+                    "too many onUpdate errors without renderer interaction: {}",
+                    last_update_error
+                )));
                 break;
             }
         } else if should_debug {
@@ -688,7 +694,11 @@ pub(crate) fn scene_thread(
         );
     }
 
-    send_remove_godot_scene(&state, scene_id, None);
+    let exit_reason = state
+        .borrow_mut()
+        .try_take::<SceneExitReason>()
+        .map(|r| r.0);
+    send_remove_godot_scene(&state, scene_id, exit_reason);
     runtime.v8_isolate().terminate_execution();
 
     tracing::debug!("{} thread exited", log_info.prefix());
