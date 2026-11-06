@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer, useState } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
 import { BackpackScreen } from '../backpack/BackpackScreen';
-import { PrimaryButton, u } from '@dcl/ui-native';
+import { Button, u } from '@dcl/ui-native';
 import type { Place } from '../discover/api';
 import { useApi } from '../discover/ApiContext';
 import { ftuePlaces } from '../discover/ftue';
@@ -282,7 +282,7 @@ export function EntryFlow({
           onBack={back}
           footer={
             <View style={styles.footer}>
-              <PrimaryButton
+              <Button
                 label={t('FLOW_CONTINUE')}
                 onPress={confirmAvatar}
               />

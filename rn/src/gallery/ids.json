@@ -1595,6 +1595,11 @@
     "orientation": "landscape"
   },
   {
+    "id": "extra/ds-buttons",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
     "id": "extra/flow-terms",
     "source": "extra",
     "orientation": "portrait"
@@ -1608,5 +1613,20 @@
     "id": "extra/flow-wait",
     "source": "extra",
     "orientation": "portrait"
+  },
+  {
+    "id": "extra/nav-bar",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/menu",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/nav-rail",
+    "source": "extra",
+    "orientation": "landscape"
   }
 ]

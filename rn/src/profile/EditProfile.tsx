@@ -310,9 +310,7 @@ export function EditProfile({
       )}
       <Dialog
         visible={dialog === 'leave'}
-        icon="warning"
-        rounded
-        width={260}
+        icon="alert"
         title={t('PROFILE_LEAVE_TITLE')}
         body={t('PROFILE_LEAVE_BODY')}
         onRequestClose={() => setDialog(undefined)}

@@ -38,7 +38,7 @@ describe('Dialog', () => {
     const tree = render(
       <Dialog
         visible
-        icon="warning"
+        icon="alert"
         title="Leave without saving?"
         body="You will lose changes."
         buttons={[

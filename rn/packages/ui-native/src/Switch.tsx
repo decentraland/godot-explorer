@@ -1,41 +1,48 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { colors } from './tokens';
+import { colors, radii } from './tokens';
 import { u } from './scale';
 
-const DISABLED_TRACK = '#39005A';
-const DISABLED_THUMB = '#402D4F';
+const SIZES = {
+  lg: { width: 70, height: 32, pad: 2, knobW: 35 },
+  sm: { width: 55, height: 28, pad: 1.75, knobW: 30 },
+} as const;
 
-/** Settings toggle: 70x32dp track, ruby when on. */
+/** Figma `Control/Switch`: Ruby track when on, Black 40% when off; `lg` 140×64, `sm` 110×56. */
 export function Switch({
   value,
   onChange,
   label,
   disabled = false,
+  size = 'lg',
 }: {
   value: boolean;
   onChange: (value: boolean) => void;
   label: string;
   disabled?: boolean;
+  size?: 'lg' | 'sm';
 }) {
+  const s = SIZES[size];
   return (
     <Pressable
       accessibilityRole="switch"
       accessibilityLabel={label}
       accessibilityState={{ checked: value, disabled }}
       disabled={disabled}
-      hitSlop={8}
+      hitSlop={u(8)}
       onPress={() => onChange(!value)}
       style={[
         styles.track,
+        { width: u(s.width), height: u(s.height), padding: u(s.pad) },
+        value ? styles.knobEnd : styles.knobStart,
         value ? styles.on : styles.off,
-        disabled && (value ? styles.disabled : styles.offDisabled),
+        disabled && (value ? styles.onDisabled : styles.offDisabled),
       ]}
     >
       <View
         style={[
-          styles.thumb,
-          value && styles.thumbOn,
-          disabled && !value && styles.thumbDisabled,
+          styles.knob,
+          { width: u(s.knobW) },
+          disabled && (value ? styles.knobOnDisabled : styles.knobOffDisabled),
         ]}
       />
     </Pressable>
@@ -43,23 +50,19 @@ export function Switch({
 }
 
 const styles = StyleSheet.create({
-  track: {
-    width: u(70),
-    height: u(32),
-    borderRadius: u(16),
-    padding: u(3),
-    justifyContent: 'center',
-  },
+  track: { borderRadius: radii.pill, justifyContent: 'center' },
+  knobStart: { alignItems: 'flex-start' },
+  knobEnd: { alignItems: 'flex-end' },
   on: { backgroundColor: colors.ruby },
-  off: { backgroundColor: colors.fieldDark },
-  disabled: { opacity: 0.35 },
-  offDisabled: { backgroundColor: DISABLED_TRACK },
-  thumbDisabled: { backgroundColor: DISABLED_THUMB },
-  thumb: {
-    width: u(26),
-    height: u(26),
-    borderRadius: u(13),
+  off: { backgroundColor: colors.black40 },
+  onDisabled: { opacity: 0.5 },
+  offDisabled: { backgroundColor: colors.black20 },
+  knob: {
+    alignSelf: 'auto',
+    height: '100%',
+    borderRadius: radii.pill,
     backgroundColor: colors.snow,
   },
-  thumbOn: { alignSelf: 'flex-end' },
+  knobOnDisabled: { backgroundColor: colors.gray, opacity: 0.9 },
+  knobOffDisabled: { backgroundColor: colors.paleBlack },
 });

@@ -9,13 +9,14 @@ import {
   EmptyState,
   HudCircleButton,
   Icon,
-  IconButton,
   LinkRow,
+  Menu,
   PageDots,
   ProgressBar,
   Skeleton,
   SnapCarousel,
-  StatusPill,
+  EventBadge,
+  EventTimeTag,
   Tabs,
   WarningBanner,
   colors,
@@ -49,8 +50,10 @@ describe('tokens', () => {
   it('has the new Figma colours', () => {
     expect(colors.mythic).toBe('#FF4BED');
     expect(colors.iconHud).toBe('#DFD0FF');
-    expect(colors.teal).toBe('#2FCF9A');
-    expect(colors.periwinkle).toBe('#9D8CFF');
+    expect(colors.teal).toBe('#22C1C1');
+    expect(colors.periwinkle).toBe('#A0ABFF');
+    expect(colors.link).toBe('#A0ABFF');
+    expect(colors.rubyDisabled).toBe('rgba(255,45,85,0.5)');
     expect(colors.fieldDark).toBe('#2B0847');
   });
 });
@@ -66,23 +69,31 @@ describe('Icon', () => {
   });
 });
 
+describe('Menu', () => {
+  it('reports the pressed item and marks the selected one', () => {
+    const onSelect = jest.fn();
+    const tree = render(
+      <Menu
+        items={[
+          { key: 'share', label: 'Share', icon: 'share' },
+          { key: 'report', label: 'Report', selected: true, check: true },
+        ]}
+        onSelect={onSelect}
+      />,
+    );
+    act(() => pressable(tree, 'Share').props.onPress());
+    expect(onSelect).toHaveBeenCalledWith('share');
+    expect(pressable(tree, 'Report').props.accessibilityState.selected).toBe(
+      true,
+    );
+  });
+});
+
 describe('Badge, IconButton, Tabs, HudCircleButton', () => {
   it('Badge shows a count, caps it, or is a dot', () => {
     expect(text(render(<Badge count={3} />))).toContain('3');
     expect(text(render(<Badge count={120} />))).toContain('99+');
     expect(text(render(<Badge />))).not.toContain('99');
-  });
-
-  it('IconButton renders a badge and extends the label', () => {
-    const tree = render(
-      <IconButton
-        icon="bell"
-        label="Notifications"
-        badge={2}
-        onPress={() => {}}
-      />,
-    );
-    expect(text(tree)).toContain('2');
   });
 
   it('Tabs show a badge on the tab', () => {
@@ -121,17 +132,22 @@ describe('ActionSquareButton', () => {
   });
 });
 
-describe('StatusPill and Chip', () => {
-  it('renders each kind', () => {
-    expect(text(render(<StatusPill kind="live" label="LIVE" />))).toContain(
-      'LIVE',
+describe('Tags and Chip', () => {
+  it('renders each event time kind and the live player count', () => {
+    const live = text(
+      render(<EventTimeTag kind="live" label="Live" players={12} />),
+    );
+    expect(live).toContain('Live');
+    expect(live).toContain('12');
+    expect(
+      text(render(<EventTimeTag kind="startingSoon" label="In 5 mins" />)),
+    ).toContain('In 5 mins');
+    expect(text(render(<EventTimeTag kind="date" label="Nov 12" />))).toContain(
+      'Nov 12',
     );
     expect(
-      text(render(<StatusPill kind="trending" label="Trending" />)),
-    ).toContain('Trending');
-    expect(text(render(<StatusPill kind="count" label="12" />))).toContain(
-      '12',
-    );
+      text(render(<EventBadge type="featured" label="Featured" />)),
+    ).toContain('Featured');
   });
 
   it('Chip presses and removes', () => {
@@ -298,10 +314,12 @@ describe('demo props', () => {
       'BottomSheet',
       'Skeleton',
       'EmptyState',
-      'StatusPill',
+      'EventTimeTag',
+      'EventBadge',
+      'Checkbox',
+      'Header',
       'Chip',
       'ProgressBar',
-      'OutlinedButton',
       'CollapsibleSection',
       'LinkRow',
       'WarningBanner',

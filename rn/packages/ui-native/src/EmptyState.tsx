@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
 import { Icon, IconName } from './Icon';
-import { PrimaryButton } from './PrimaryButton';
+import { Button } from './Button';
 import { colors } from './tokens';
 import { u } from './scale';
 
@@ -32,7 +32,7 @@ export function EmptyState({
       )}
       {actionLabel && onAction && (
         <View style={styles.action}>
-          <PrimaryButton label={actionLabel} onPress={onAction} />
+          <Button label={actionLabel} onPress={onAction} />
         </View>
       )}
     </View>

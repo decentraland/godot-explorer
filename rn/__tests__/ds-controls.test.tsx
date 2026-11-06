@@ -1,8 +1,10 @@
 import { ReactElement } from 'react';
 import { act, create, ReactTestInstance } from 'react-test-renderer';
 import {
+  Button,
+  Checkbox,
   Dropdown,
-  OutlinedButton,
+  Header,
   ReadOnlyField,
   SearchField,
   Slider,
@@ -51,6 +53,63 @@ describe('Switch', () => {
     const node = pressable(tree, 'A');
     expect(node.props.accessibilityState).toMatchObject({ disabled: true });
     expect(node.props.disabled).toBe(true);
+  });
+});
+
+describe('Checkbox', () => {
+  it('toggles from the whole row and reports its state', () => {
+    const onChange = jest.fn();
+    const tree = render(
+      <Checkbox checked={false} label="Accept" onChange={onChange} />,
+    );
+    const node = pressable(tree, 'Accept');
+    expect(node.props.accessibilityRole).toBe('checkbox');
+    expect(node.props.accessibilityState).toMatchObject({ checked: false });
+    act(() => node.props.onPress());
+    expect(onChange).toHaveBeenCalledWith(true);
+    expect(text(tree)).toContain('Accept');
+  });
+
+  it('is inert when disabled', () => {
+    const tree = render(
+      <Checkbox checked disabled label="Locked" onChange={() => {}} />,
+    );
+    expect(pressable(tree, 'Locked').props.disabled).toBe(true);
+  });
+});
+
+describe('Header', () => {
+  it('shows title, back, search and credits', () => {
+    const onBack = jest.fn();
+    const onSearch = jest.fn();
+    const tree = render(
+      <Header
+        title="Backpack"
+        onBack={onBack}
+        onSearch={onSearch}
+        credits={{ amount: 42 }}
+      />,
+    );
+    const out = text(tree);
+    expect(out).toContain('Backpack');
+    expect(out).toContain('42');
+    act(() => pressable(tree, 'Back').props.onPress());
+    act(() => pressable(tree, 'Search').props.onPress());
+    expect(onBack).toHaveBeenCalled();
+    expect(onSearch).toHaveBeenCalled();
+  });
+
+  it('replaces the title with the search field when open', () => {
+    const onClose = jest.fn();
+    const tree = render(
+      <Header
+        title="Backpack"
+        search={{ value: 'hat', onChangeText: () => {}, onClose }}
+      />,
+    );
+    expect(tree.root.findAllByProps({ value: 'hat' }).length).toBeGreaterThan(0);
+    act(() => pressable(tree, 'Back').props.onPress());
+    expect(onClose).toHaveBeenCalled();
   });
 });
 
@@ -153,6 +212,22 @@ describe('Dropdown', () => {
     );
     act(() => pressable(tree, 'Lang').props.onPress());
     expect(text(tree)).not.toContain('Espanol');
+  });
+
+  it('cannot open when read-only and shows an error message', () => {
+    const tree = render(
+      <Dropdown
+        label="Lang"
+        value="en"
+        readOnly
+        error="Required"
+        options={options}
+        onChange={() => {}}
+      />,
+    );
+    act(() => pressable(tree, 'Lang').props.onPress());
+    expect(text(tree)).not.toContain('Espanol');
+    expect(text(tree)).toContain('Required');
   });
 
   it('can open upwards', () => {
@@ -284,15 +359,39 @@ describe('ReadOnlyField', () => {
   });
 });
 
-describe('OutlinedButton', () => {
+describe('Button', () => {
   it('presses and respects disabled', () => {
     const onPress = jest.fn();
-    const tree = render(<OutlinedButton label="SIGN OUT" onPress={onPress} />);
+    const tree = render(
+      <Button tone="secondary" label="SIGN OUT" onPress={onPress} />,
+    );
     act(() => pressable(tree, 'SIGN OUT').props.onPress());
     expect(onPress).toHaveBeenCalledTimes(1);
     const off = render(
-      <OutlinedButton label="CLEAN" disabled onPress={onPress} />,
+      <Button tone="secondary" label="CLEAN" disabled onPress={onPress} />,
     );
     expect(pressable(off, 'CLEAN').props.disabled).toBe(true);
+  });
+
+  it('exposes the reminder toggle state', () => {
+    const set = render(
+      <Button
+        tone="reminder"
+        selected
+        icon="check"
+        label="REMIND ME"
+        onPress={() => {}}
+      />,
+    );
+    expect(pressable(set, 'REMIND ME').props.accessibilityState).toEqual({
+      disabled: false,
+      selected: true,
+    });
+    const plain = render(
+      <Button tone="secondary" label="PLAIN" onPress={() => {}} />,
+    );
+    expect(pressable(plain, 'PLAIN').props.accessibilityState).toEqual({
+      disabled: false,
+    });
   });
 });
