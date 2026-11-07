@@ -4,7 +4,10 @@ use std::collections::HashSet;
 use crate::{
     dcl::components::proto_components::{
         common::Color3,
-        sdk::components::{PbAvatarBase, PbAvatarEquippedData, PbPlayerIdentityData},
+        sdk::components::{
+            pb_avatar_equipped_data::EquippedWearable, PbAvatarBase, PbAvatarEquippedData,
+            PbPlayerIdentityData,
+        },
     },
     http_request::request_response::{RequestResponse, ResponseEnum},
 };
@@ -238,6 +241,15 @@ impl SerializedProfile {
     }
     pub fn to_pb_avatar_equipped_data(&self) -> PbAvatarEquippedData {
         PbAvatarEquippedData {
+            wearables: self
+                .avatar
+                .wearables
+                .iter()
+                .map(|urn| EquippedWearable {
+                    urn: urn.clone(),
+                    visible: None,
+                })
+                .collect(),
             wearable_urns: self.avatar.wearables.to_vec(),
             emote_urns: self
                 .avatar

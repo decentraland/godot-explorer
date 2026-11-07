@@ -7,7 +7,7 @@ use crate::{
                 common::Color3,
                 sdk::components::{EmoteState, PbAvatarEmoteCommand},
             },
-            SceneComponentId,
+            SceneComponentId, SceneEntityId,
         },
         crdt::{
             grow_only_set::GenericGrowOnlySetComponentOperation,
@@ -94,6 +94,13 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             }
 
             let new_value = new_value.unwrap();
+            if *entity == SceneEntityId::PLAYER {
+                let mut avatars = DclGlobal::singleton().bind().avatars.clone();
+                avatars
+                    .bind_mut()
+                    .set_player_avatar_override(new_value.value.as_ref());
+                continue;
+            }
             let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
