@@ -31,7 +31,6 @@ config/features=PackedStringArray("4.6")
 boot_splash/bg_color=Color(0.411765, 0.121569, 0.662745, 1)
 boot_splash/stretch_mode=0
 boot_splash/image="res://assets/ui/splash-isotype.png"
-boot_splash/show_image=true
 config/icon="res://decentraland_logo_squared.png"
 boot_splash/minimum_display_time=300
 
@@ -84,7 +83,7 @@ import/use_multiple_threads=false
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/dcl-godot-android/plugin.cfg", "res://addons/dcl-ios-devtools/plugin.cfg", "res://addons/dcl_build_plugin/plugin.cfg", "res://addons/dcl_dev_tools/plugin.cfg", "res://addons/dcl_mobile_preview/plugin.cfg", "res://addons/emote_converter/plugin.cfg", "res://addons/resource_tracker/plugin.cfg")
+enabled=PackedStringArray("res://addons/dcl-godot-android/plugin.cfg", "res://addons/dcl-godot-ios/plugin.cfg", "res://addons/dcl-ios-devtools/plugin.cfg", "res://addons/dcl_build_plugin/plugin.cfg", "res://addons/dcl_dev_tools/plugin.cfg", "res://addons/dcl_mobile_preview/plugin.cfg", "res://addons/emote_converter/plugin.cfg", "res://addons/resource_tracker/plugin.cfg")
 
 [filesystem]
 
@@ -244,14 +243,13 @@ pseudolocalization/suffix="»"
 3d_physics/layer_31="CL_AVATAR_MODIFIER_AREA"
 3d_physics/layer_32="CL_CAMERA_MODE_AREA"
 
-[physics]
-
-; #2844: Jolt replaces Godot Physics as the 3D server on all targets.
-3d/physics_engine="Jolt Physics"
-
 [network]
 
 limits/debugger/max_chars_per_second=3276800
+
+[physics]
+
+3d/physics_engine="Jolt Physics"
 
 [rendering]
 
@@ -276,9 +274,9 @@ environment/screen_space_reflection/roughness_quality=0
 
 options/auto_init=false
 options/dsn="https://03559fa545b3fa2bc9e876a41d6aab2f@o4510187684298752.ingest.us.sentry.io/4510187688361984"
+schema_version=4
 options/debug_printing=0
 options/diagnostic_level=4
-schema_version=4
 
 [shader_globals]
 

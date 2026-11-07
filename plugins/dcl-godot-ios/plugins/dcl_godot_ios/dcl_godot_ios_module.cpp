@@ -6,6 +6,7 @@
 #include "deeplink_service.h"
 #include "notification_service.h"
 #include "push_service.h"
+#include "firebase_service.h"
 
 DclGodotiOS *dcl_godot_ios;
 
@@ -18,6 +19,9 @@ void register_dcl_godot_ios_types() {
 
 	// Inject the APNs delegate callbacks and request this launch's device token
 	force_push_service_initialization();
+
+	// Configure Firebase here so its auto-collected events (first_open, session_start) start with the app
+	force_firebase_service_initialization();
 
 	dcl_godot_ios = memnew(DclGodotiOS);
 	Engine::get_singleton()->add_singleton(Engine::Singleton("DclGodotiOS", dcl_godot_ios));
