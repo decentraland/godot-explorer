@@ -25,7 +25,7 @@ const RESOLVE_MAX_WAIT_SECONDS := TIMEOUT_SECONDS + 1.0
 ## so without one a reinstall months later would replay a long-dead campaign.
 const TOKEN_MAX_AGE_SECONDS := 7 * 86400
 
-## Bounded wait for install attribution to settle (Android). The Rust resolver bounds itself
+## Bounded wait for install attribution to settle (mobile). The Rust resolver bounds itself
 ## (10s for GA4F, 25s overall), so this only has to outlast that.
 const ATTRIBUTION_MAX_WAIT_SECONDS := 30.0
 const ATTRIBUTION_POLL_SECONDS := 0.5
@@ -120,7 +120,7 @@ func _fallback(token: String, reason: String) -> Dictionary:
 ## attribution starts once per install, so a process killed before the FTUE is reached would
 ## lose it for good. Residual gap: a kill before attribution settles still loses it.
 func _async_watch_attribution() -> void:
-	if OS.get_name() != "Android" or Global.metrics == null:
+	if not OS.get_name() in ["Android", "iOS"] or Global.metrics == null:
 		_attribution_settled = true
 		return
 

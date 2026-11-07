@@ -192,6 +192,7 @@ bypasses that check for local debugging only. The baked files live in
    - Use `--strip-ios` to strip debug symbols and save disk space (~2.1GB -> ~234MB)
    - Use `--cache` to reuse previously downloaded files instead of re-downloading
    - The strip command auto-detects already-stripped templates (< 1GB) and skips
+   - `install --targets ios` also downloads the pinned Tenjin xcframework into `godot/ios/plugins/dcl_godot_ios/tenjin/` (git-ignored); `export --target ios` fails when it is missing
 
 5. **Android APK hosting & mobile distribution**:
    Every Android CI build (`android_builds.yml`, on every push/PR) uploads the signed

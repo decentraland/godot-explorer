@@ -194,6 +194,7 @@ pub enum SegmentEvent {
     Unfriend(SegmentEventUnfriend),
     InstallAttribution(SegmentEventInstallAttribution),
     FirebaseInit(SegmentEventFirebaseInit),
+    AttributionInit(SegmentEventAttributionInit),
     AttestationAttempt(SegmentEventAttestationAttempt),
     AttestationSessionCacheLoaded(SegmentEventAttestationSessionCacheLoaded),
     IosStoreKitEnvironment(SegmentEventIosStoreKitEnvironment),
@@ -231,6 +232,29 @@ pub struct SegmentEventSceneLocaleRequested {
 pub struct SegmentEventFirebaseInit {
     // Firebase Analytics app instance id (ga_pseudo_user_id). Guaranteed non-empty at queue time.
     pub firebase_user_id: String,
+}
+
+/// Tenjin's view of the install, queued once when its attribution info settles. `userId` on
+/// the envelope is the Tenjin customer user id, so Snowflake joins it to the rest of the
+/// session without a separate id.
+#[derive(Serialize, Clone)]
+pub struct SegmentEventAttributionInit {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ad_network: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub campaign_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub campaign_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub click_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub creative_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deferred_deeplink_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub analytics_installation_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub campaign_token: Option<String>,
 }
 
 #[derive(Serialize, Clone)]
@@ -1045,6 +1069,11 @@ pub fn build_segment_event_batch_item(
         ),
         SegmentEvent::FirebaseInit(event) => (
             "Firebase Init".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::AttributionInit(event) => (
+            "Attribution Init".to_string(),
             serde_json::to_value(event).unwrap(),
             None,
         ),

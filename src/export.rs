@@ -21,6 +21,7 @@ use crate::{
     helpers::get_exe_extension,
     install_dependency::{
         download_and_extract_zip, godot_export_templates_path, set_executable_permission,
+        tenjin_ios_installed,
     },
     path::{adjust_canonicalization, get_godot_path},
     platform::validate_platform_for_target,
@@ -497,6 +498,14 @@ pub fn export(
         }
         _ => return Err(anyhow::anyhow!("Unexpected final target: {}", target)),
     };
+
+    // The plugin's .gdip embeds the Tenjin xcframework; without it the generated Xcode project
+    // references files that are not there and fails much later, inside xcodebuild.
+    if target == "ios" && !tenjin_ios_installed() {
+        return Err(anyhow::anyhow!(
+            "Tenjin iOS SDK is not installed (run: cargo run -- install --targets ios)"
+        ));
+    }
 
     let output_rel_path = format!("{EXPORTS_FOLDER}{output_file_name}");
     if std::path::Path::new(output_rel_path.as_str()).exists() {

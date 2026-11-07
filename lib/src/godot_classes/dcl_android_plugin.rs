@@ -352,6 +352,7 @@ impl DclAndroidPlugin {
 
     /// Set the canonical Firebase Analytics user id. Auto-attached to every Firebase event.
     /// Pass an empty string to clear it.
+    /// Deprecated: superseded by Tenjin (`attribution.rs`); removed once Tenjin is validated.
     #[func]
     pub fn set_firebase_user_id(user_id: GString) -> bool {
         let Some(mut singleton) = Self::try_get_singleton() else {
@@ -363,6 +364,7 @@ impl DclAndroidPlugin {
 
     /// Set a Firebase Analytics user property. Auto-attached to every event fired afterward.
     /// Pass an empty string as the value to clear the property.
+    /// Deprecated: superseded by Tenjin (`attribution.rs`); removed once Tenjin is validated.
     #[func]
     pub fn set_firebase_user_property(name: GString, value: GString) -> bool {
         let Some(mut singleton) = Self::try_get_singleton() else {
@@ -378,6 +380,7 @@ impl DclAndroidPlugin {
 
     /// Log a custom Firebase Analytics event. `params_json` should be a JSON object string with
     /// primitive values (string/number/boolean); pass "" for no parameters.
+    /// Deprecated: superseded by Tenjin (`attribution.rs`); removed once Tenjin is validated.
     #[func]
     pub fn log_firebase_event(event_name: GString, params_json: GString) -> bool {
         let Some(mut singleton) = Self::try_get_singleton() else {
@@ -391,6 +394,42 @@ impl DclAndroidPlugin {
         // The Kotlin `Boolean` arrives as an INT Variant (see has_notification_permission);
         // `try_to::<bool>()` always failed, so one-shot events never saved their flag.
         result.booleanize()
+    }
+
+    /// Starts the Tenjin SDK (idempotent) and sets the customer user id.
+    #[func]
+    pub fn tenjin_start(sdk_key: GString, user_id: GString) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        let result = Self::timed_jni_call(
+            &mut singleton,
+            "tenjinStart",
+            &[sdk_key.to_variant(), user_id.to_variant()],
+        );
+        result.booleanize()
+    }
+
+    /// Sends a Tenjin custom event. `value` 0 sends the event without a value.
+    #[func]
+    pub fn tenjin_event(name: GString, value: i32) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        let result = Self::timed_jni_call(
+            &mut singleton,
+            "tenjinEvent",
+            &[name.to_variant(), value.to_variant()],
+        );
+        result.booleanize()
+    }
+
+    /// Tenjin attribution info. The first call starts the fetch and returns
+    /// `{status: "pending"}`; later calls return the cached `ok` / `error` result.
+    pub(crate) fn tenjin_get_attribution_internal() -> Option<VarDictionary> {
+        let mut singleton = Self::try_get_singleton()?;
+        let result = Self::timed_jni_call(&mut singleton, "tenjinGetAttribution", &[]);
+        result.try_to::<VarDictionary>().ok()
     }
 
     /// Fetch install referrer data from Google Play.
