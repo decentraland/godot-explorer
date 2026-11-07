@@ -121,6 +121,7 @@ pub enum SceneUpdateState {
     Animator,
     AvatarShape,
     AvatarShapeEmoteCommand,
+    AvatarNametag,
     Raycasts,
     AvatarAttach,
     SceneUi,
@@ -168,7 +169,8 @@ impl SceneUpdateState {
             Self::NftShape => Self::Animator,
             Self::Animator => Self::AvatarShape,
             Self::AvatarShape => Self::AvatarShapeEmoteCommand,
-            Self::AvatarShapeEmoteCommand => Self::Raycasts,
+            Self::AvatarShapeEmoteCommand => Self::AvatarNametag,
+            Self::AvatarNametag => Self::Raycasts,
             Self::Raycasts => Self::VideoPlayer,
             Self::VideoPlayer => Self::AudioStream,
             Self::AudioStream => Self::AvatarModifierArea,
@@ -271,6 +273,14 @@ pub struct Scene {
     pub livekit_video_player_entities: HashSet<SceneEntityId>,
 
     pub avatar_scene_updates: SceneAvatarUpdates,
+    // Entities whose `AvatarNametag` plate this scene currently draws. Plates live on
+    // avatars shared with other scenes, so they have to be cleared explicitly.
+    pub avatar_nametags: HashSet<SceneEntityId>,
+    // Writes that landed before the target avatar existed, with their retry deadline.
+    pub pending_avatar_nametags: HashMap<SceneEntityId, Instant>,
+    // Whether this scene's plates are drawn; false while the player is elsewhere, which
+    // forces a rescan of the component map on re-entry.
+    pub avatar_nametags_synced: bool,
     pub scene_tests: HashMap<String, Option<SceneTestResult>>,
     pub scene_test_plan_received: bool,
 
@@ -428,6 +438,9 @@ impl Scene {
             livekit_video_player_entities: HashSet::new(),
             scene_type,
             avatar_scene_updates: Default::default(),
+            avatar_nametags: HashSet::new(),
+            pending_avatar_nametags: HashMap::new(),
+            avatar_nametags_synced: false,
             scene_tests: HashMap::new(),
             scene_test_plan_received: false,
             tweens: HashMap::new(),
@@ -537,6 +550,9 @@ impl Scene {
             video_players: HashMap::new(),
             livekit_video_player_entities: HashSet::new(),
             avatar_scene_updates: Default::default(),
+            avatar_nametags: HashSet::new(),
+            pending_avatar_nametags: HashMap::new(),
+            avatar_nametags_synced: false,
             scene_tests: HashMap::new(),
             scene_test_plan_received: false,
             tweens: HashMap::new(),
