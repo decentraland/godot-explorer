@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: u(18),
   },
-  logo: { width: u(72.5), height: u(72.5) },
+  logo: { width: u(71), height: u(71) },
   guestCreate: {
     flex: 1,
     alignItems: 'center',
