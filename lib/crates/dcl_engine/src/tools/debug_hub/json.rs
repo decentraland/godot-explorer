@@ -85,7 +85,13 @@ pub fn variant_to_json(value: &Variant) -> Value {
     }
 }
 
-/// `object.get(name)` as JSON.
+/// `object.get_indexed(name)` as JSON: a plain property, or a path into a sub-resource such as
+/// `material:shader_parameter/uvs_0`.
 pub fn property(object: &Gd<impl Inherits<Object>>, name: &str) -> Value {
-    variant_to_json(&object.clone().upcast::<Object>().get(name))
+    variant_to_json(
+        &object
+            .clone()
+            .upcast::<Object>()
+            .get_indexed(&godot::builtin::NodePath::from(name)),
+    )
 }
