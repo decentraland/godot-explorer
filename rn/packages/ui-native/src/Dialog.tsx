@@ -78,8 +78,8 @@ function useKeyboardLift(active: boolean): number {
 }
 
 /** Figma `Modal/Dialog` over `Modal/Scrim`: Portrait card 520 wide, Landscape 720, `surface/modal`
- * with the glow, an optional `Icon/Modal` overlapping the top edge, and a Secondary (hug) +
- * Primary (fill) CTA row. The scrim is Black 60% (the no-blur fallback); tapping it closes. */
+ * with the glow, an optional `Icon/Modal` overlapping the top edge, and a CTA row whose buttons
+ * share the width in equal parts (the designer's call, 2026-11-09). The scrim is Black 60% (the no-blur fallback); tapping it closes. */
 export function Dialog({
   visible,
   title,
@@ -157,16 +157,13 @@ export function Dialog({
               <View
                 style={[styles.buttons, landscape && styles.buttonsLandscape]}
               >
-                {buttons.map((button, i) => (
-                  <View
-                    key={button.label}
-                    style={i === buttons.length - 1 && styles.grow}
-                  >
+                {buttons.map(button => (
+                  <View key={button.label} style={styles.grow}>
                     <Button
                       label={button.label}
                       tone={button.tone}
                       disabled={button.disabled}
-                      fullWidth={i === buttons.length - 1}
+                      fullWidth
                       onPress={button.onPress}
                     />
                   </View>
@@ -238,6 +235,7 @@ const styles = StyleSheet.create({
   },
   buttons: { flexDirection: 'row', alignItems: 'center', gap: u(16) },
   buttonsLandscape: { gap: u(20) },
+  /** The buttons share the row in equal parts. */
   grow: { flex: 1 },
   icon: {
     position: 'absolute',

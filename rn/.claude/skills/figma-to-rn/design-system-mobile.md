@@ -230,8 +230,9 @@ The old `variant="settings"` (tighter paddings) is gone: the Figma field already
 gap 54), Landscape 720 (pt 54, pb 48, px 54, gap 48); `surface/modal` #4C147C (`colors.modal`) with
 the two glows (`surface/modal-glow`, `RadialFill` with dp radii); radius 16 → `u(8)`; title
 `Modal/Title` Bold 38 → `u(19)` Snow centred; body `Modal/Body` Regular 26 / lh 36 → `u(13)`/`u(18)`
-Snow; text gap 16; CTAs gap 32 (40 landscape) = `Button/Secondary` hugging + `Button/Primary` filling
-(the last button gets `flex: 1` + `fullWidth`). `Icon/Modal` (90×68) sits centred over the top edge
+Snow; text gap 16; CTAs gap 32 (40 landscape). The node 562:7666 still draws `Button/Secondary` hugging +
+`Button/Primary` filling, but the designer asked on 2026-11-09 for the buttons to share the row in equal
+parts, so every button gets `flex: 1` + `fullWidth` (the node is to be updated). `Icon/Modal` (90×68) sits centred over the top edge
 at `top: -34px`. Scrim: `surface/scrim` = Black 40% + a 12px background blur (`Scrim/Blur`); the description no
 longer mentions a no-blur value (it used to say 60%). RN has no blur library, so code keeps the
 Black 60% (`colors.black60`) fallback — a code-only decision to re-check with the designer.
