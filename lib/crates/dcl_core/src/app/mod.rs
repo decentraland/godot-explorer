@@ -119,6 +119,7 @@ impl App {
             Control::Equip { .. }
                 | Control::Unequip { .. }
                 | Control::SetBodyShape { .. }
+                | Control::SetLook { .. }
                 | Control::SetColor { .. }
                 | Control::SetEmoteSlot { .. }
                 | Control::RandomizeAvatar
@@ -133,6 +134,21 @@ impl App {
             Control::Equip { urn } => avatar::equip(&current, &self.catalog, urn),
             Control::Unequip { urn } => Ok(avatar::unequip(&current, &self.catalog, urn)),
             Control::SetBodyShape { urn } => avatar::set_body_shape(&current, &self.catalog, urn),
+            Control::SetLook {
+                body_shape,
+                wearables,
+                skin,
+                hair,
+                eyes,
+            } => avatar::set_look(
+                &current,
+                &self.catalog,
+                body_shape,
+                wearables,
+                skin,
+                hair,
+                eyes,
+            ),
             Control::SetColor { target, color } => avatar::set_color(&current, *target, color),
             Control::SetEmoteSlot { slot, urn } => avatar::set_emote_slot(&current, *slot, urn),
             _ => avatar::randomize(&current, &self.catalog, &mut self.rng),

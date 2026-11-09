@@ -11,7 +11,7 @@ mod tests;
 
 pub use catalog::{parse_wearables, Catalog, CatalogItem};
 pub use rules::{
-    equip, randomize, set_body_shape, set_color, set_emote_slot, unequip, AvatarError,
+    equip, randomize, set_body_shape, set_color, set_emote_slot, set_look, unequip, AvatarError,
 };
 pub use service::{base_catalog, CatalogError};
 pub use taxonomy::{

@@ -9572,6 +9572,7 @@ export enum Control_Tags {
   Equip = 'Equip',
   Unequip = 'Unequip',
   SetBodyShape = 'SetBodyShape',
+  SetLook = 'SetLook',
   SetColor = 'SetColor',
   PlayPreviewEmote = 'PlayPreviewEmote',
   SetEmoteSlot = 'SetEmoteSlot',
@@ -9879,6 +9880,59 @@ export const Control = (() => {
     }
   }
 
+  type SetLook__interface = {
+    tag: Control_Tags.SetLook;
+    inner: Readonly<{
+      bodyShape: string;
+      wearables: Array<string>;
+      skin: string;
+      hair: string;
+      eyes: string;
+    }>;
+  };
+  /**
+   * The whole look in one edit, so a preset lands without the avatars in between.
+   */
+  class SetLook_ extends UniffiEnum implements SetLook__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.SetLook;
+    readonly inner: Readonly<{
+      bodyShape: string;
+      wearables: Array<string>;
+      skin: string;
+      hair: string;
+      eyes: string;
+    }>;
+    constructor(inner: {
+      bodyShape: string;
+      wearables: Array<string>;
+      skin: string;
+      hair: string;
+      eyes: string;
+    }) {
+      super('Control', 'SetLook');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: {
+      bodyShape: string;
+      wearables: Array<string>;
+      skin: string;
+      hair: string;
+      eyes: string;
+    }): SetLook_ {
+      return new SetLook_(inner);
+    }
+
+    static instanceOf(obj: any): obj is SetLook_ {
+      return obj.tag === Control_Tags.SetLook;
+    }
+  }
+
   type SetColor__interface = {
     tag: Control_Tags.SetColor;
     inner: Readonly<{ target: ColorTarget; color: string }>;
@@ -10155,6 +10209,7 @@ export const Control = (() => {
     Equip: Equip_,
     Unequip: Unequip_,
     SetBodyShape: SetBodyShape_,
+    SetLook: SetLook_,
     SetColor: SetColor_,
     PlayPreviewEmote: PlayPreviewEmote_,
     SetEmoteSlot: SetEmoteSlot_,
@@ -10183,6 +10238,7 @@ export type Control = InstanceType<
     | 'Equip'
     | 'Unequip'
     | 'SetBodyShape'
+    | 'SetLook'
     | 'SetColor'
     | 'PlayPreviewEmote'
     | 'SetEmoteSlot'
@@ -10245,37 +10301,45 @@ const FfiConverterTypeControl = (() => {
             urn: FfiConverterString.readFromCursor(c),
           });
         case 12:
+          return new Control.SetLook({
+            bodyShape: FfiConverterString.readFromCursor(c),
+            wearables: FfiConverterSequenceString.readFromCursor(c),
+            skin: FfiConverterString.readFromCursor(c),
+            hair: FfiConverterString.readFromCursor(c),
+            eyes: FfiConverterString.readFromCursor(c),
+          });
+        case 13:
           return new Control.SetColor({
             target: FfiConverterTypeColorTarget.readFromCursor(c),
             color: FfiConverterString.readFromCursor(c),
           });
-        case 13:
+        case 14:
           return new Control.PlayPreviewEmote({
             urn: FfiConverterString.readFromCursor(c),
           });
-        case 14:
+        case 15:
           return new Control.SetEmoteSlot({
             slot: FfiConverterUInt32.readFromCursor(c),
             urn: FfiConverterString.readFromCursor(c),
           });
-        case 15:
-          return new Control.RandomizeAvatar();
         case 16:
+          return new Control.RandomizeAvatar();
+        case 17:
           return new Control.SetPreviewUrl({
             url: FfiConverterString.readFromCursor(c),
           });
-        case 17:
+        case 18:
           return new Control.SetName({
             name: FfiConverterString.readFromCursor(c),
           });
-        case 18:
-          return new Control.Reconnect();
         case 19:
+          return new Control.Reconnect();
+        case 20:
           return new Control.SetWorldSecret({
             realm: FfiConverterString.readFromCursor(c),
             secret: FfiConverterString.readFromCursor(c),
           });
-        case 20:
+        case 21:
           return new Control.AnswerSceneRequest({
             id: FfiConverterUInt32.readFromCursor(c),
             accepted: FfiConverterBool.readFromCursor(c),
@@ -10352,55 +10416,65 @@ const FfiConverterTypeControl = (() => {
           FfiConverterString.writeIntoCursor(inner.urn, c);
           return;
         }
-        case Control_Tags.SetColor: {
+        case Control_Tags.SetLook: {
           c.writeI32(12);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.bodyShape, c);
+          FfiConverterSequenceString.writeIntoCursor(inner.wearables, c);
+          FfiConverterString.writeIntoCursor(inner.skin, c);
+          FfiConverterString.writeIntoCursor(inner.hair, c);
+          FfiConverterString.writeIntoCursor(inner.eyes, c);
+          return;
+        }
+        case Control_Tags.SetColor: {
+          c.writeI32(13);
           const inner = value.inner;
           FfiConverterTypeColorTarget.writeIntoCursor(inner.target, c);
           FfiConverterString.writeIntoCursor(inner.color, c);
           return;
         }
         case Control_Tags.PlayPreviewEmote: {
-          c.writeI32(13);
+          c.writeI32(14);
           const inner = value.inner;
           FfiConverterString.writeIntoCursor(inner.urn, c);
           return;
         }
         case Control_Tags.SetEmoteSlot: {
-          c.writeI32(14);
+          c.writeI32(15);
           const inner = value.inner;
           FfiConverterUInt32.writeIntoCursor(inner.slot, c);
           FfiConverterString.writeIntoCursor(inner.urn, c);
           return;
         }
         case Control_Tags.RandomizeAvatar: {
-          c.writeI32(15);
+          c.writeI32(16);
           return;
         }
         case Control_Tags.SetPreviewUrl: {
-          c.writeI32(16);
+          c.writeI32(17);
           const inner = value.inner;
           FfiConverterString.writeIntoCursor(inner.url, c);
           return;
         }
         case Control_Tags.SetName: {
-          c.writeI32(17);
+          c.writeI32(18);
           const inner = value.inner;
           FfiConverterString.writeIntoCursor(inner.name, c);
           return;
         }
         case Control_Tags.Reconnect: {
-          c.writeI32(18);
+          c.writeI32(19);
           return;
         }
         case Control_Tags.SetWorldSecret: {
-          c.writeI32(19);
+          c.writeI32(20);
           const inner = value.inner;
           FfiConverterString.writeIntoCursor(inner.realm, c);
           FfiConverterString.writeIntoCursor(inner.secret, c);
           return;
         }
         case Control_Tags.AnswerSceneRequest: {
-          c.writeI32(20);
+          c.writeI32(21);
           const inner = value.inner;
           FfiConverterUInt32.writeIntoCursor(inner.id, c);
           FfiConverterBool.writeIntoCursor(inner.accepted, c);
@@ -10477,6 +10551,16 @@ const FfiConverterTypeControl = (() => {
           const inner = value.inner;
           let size = 4;
           size += FfiConverterString.allocationSize(inner.urn);
+          return size;
+        }
+        case Control_Tags.SetLook: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.bodyShape);
+          size += FfiConverterSequenceString.allocationSize(inner.wearables);
+          size += FfiConverterString.allocationSize(inner.skin);
+          size += FfiConverterString.allocationSize(inner.hair);
+          size += FfiConverterString.allocationSize(inner.eyes);
           return size;
         }
         case Control_Tags.SetColor: {

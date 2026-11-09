@@ -110,6 +110,7 @@ pub(super) fn control_payload(control: &Control) -> Option<(&'static str, VarDic
         Control::Equip { .. }
         | Control::Unequip { .. }
         | Control::SetBodyShape { .. }
+        | Control::SetLook { .. }
         | Control::SetColor { .. }
         | Control::SetEmoteSlot { .. }
         | Control::RandomizeAvatar

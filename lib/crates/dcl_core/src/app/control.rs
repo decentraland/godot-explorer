@@ -71,6 +71,14 @@ pub enum Control {
     SetBodyShape {
         urn: String,
     },
+    /// The whole look in one edit, so a preset lands without the avatars in between.
+    SetLook {
+        body_shape: String,
+        wearables: Vec<String>,
+        skin: String,
+        hair: String,
+        eyes: String,
+    },
     /// `color` is `#rrggbb`.
     SetColor {
         target: ColorTarget,

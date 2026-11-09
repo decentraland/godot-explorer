@@ -1,6 +1,5 @@
 import { core } from '../core';
-import { Control, ColorTarget } from '../core/native';
-import type { AvatarState } from '../core/native';
+import { Control } from '../core/native';
 
 const PRESET_COUNT = 12;
 
@@ -74,25 +73,15 @@ export async function fetchPresetAvatars(): Promise<PresetAvatar[]> {
   return results.filter((p): p is PresetAvatar => p !== null);
 }
 
-/** Unequips the current wearables, then applies the preset's body shape, wearables and colors. */
-export function applyPresetAvatar(
-  preset: PresetAvatar,
-  current: AvatarState | null,
-): void {
-  current?.wearables.forEach(urn => {
-    core().control(new Control.Unequip({ urn }));
-  });
-  core().control(new Control.SetBodyShape({ urn: preset.bodyShape }));
-  preset.wearables.forEach(urn => {
-    core().control(new Control.Equip({ urn }));
-  });
+/** The preset's body shape, wearables and colors, as one edit: the engine draws the result only. */
+export function applyPresetAvatar(preset: PresetAvatar): void {
   core().control(
-    new Control.SetColor({ target: ColorTarget.Skin, color: preset.skin }),
-  );
-  core().control(
-    new Control.SetColor({ target: ColorTarget.Hair, color: preset.hair }),
-  );
-  core().control(
-    new Control.SetColor({ target: ColorTarget.Eyes, color: preset.eyes }),
+    new Control.SetLook({
+      bodyShape: preset.bodyShape,
+      wearables: preset.wearables,
+      skin: preset.skin,
+      hair: preset.hair,
+      eyes: preset.eyes,
+    }),
   );
 }
