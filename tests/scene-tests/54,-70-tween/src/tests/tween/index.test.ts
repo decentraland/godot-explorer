@@ -2,7 +2,7 @@ import { MeshRenderer, Transform, engine } from '@dcl/sdk/ecs'
 import { Quaternion, Vector3 } from '@dcl/sdk/math'
 import { test } from 'testing-library/src/testing'
 import { assert } from 'testing-library/src/testing/assert'
-import { spin, tilt } from '../../spin'
+import { SEGMENT_MS, spin, tilt } from '../../spin'
 
 /** The coin's spin about its local Z, in degrees 0..360, from the rotation the engine reports. */
 function spinAngle(rotation: Quaternion): number {
@@ -19,20 +19,24 @@ test('tween: a TL_RESTART sequence of 90° rotations always turns forward', asyn
   Transform.create(coin, { position: Vector3.create(8, 1.5, 8), rotation: tilt })
   MeshRenderer.setCylinder(coin)
   spin(coin)
-
-  // Tweens run on the wall clock, which the fixed-step test run outpaces: sample every tick until
-  // the coin has turned a turn and a quarter (every seam, including 270° -> 360° -> 0°).
-  let previous = spinAngle(Transform.get(coin).rotation)
-  let turned = 0
-  for (let tick = 0; tick < 20000 && turned < 450; tick++) {
-    await context.helpers.waitNTicks(1)
-    const angle = spinAngle(Transform.get(coin).rotation)
-    // Forward is +; crossing 360° -> 0° is forward too.
-    const delta = ((angle - previous + 540) % 360) - 180
-    assert(delta > -2, `the coin turned back ${(-delta).toFixed(1)}° at ${previous.toFixed(1)}° (tick ${tick})`)
-    turned += delta
-    previous = angle
+  try {
+    // Tweens run on the wall clock, which the fixed-step test run outpaces: sample every tick until
+    // the coin has turned a turn and a quarter (every seam, including 270° -> 360° -> 0°), five
+    // segments, allowing three times that.
+    const deadline = Date.now() + 3 * 5 * SEGMENT_MS
+    let previous = spinAngle(Transform.get(coin).rotation)
+    let turned = 0
+    for (let tick = 0; Date.now() < deadline && turned < 450; tick++) {
+      await context.helpers.waitNTicks(1)
+      const angle = spinAngle(Transform.get(coin).rotation)
+      // Forward is +; crossing 360° -> 0° is forward too.
+      const delta = ((angle - previous + 540) % 360) - 180
+      assert(delta >= 0, `the coin turned back ${(-delta).toFixed(1)}° at ${previous.toFixed(1)}° (tick ${tick})`)
+      turned += delta
+      previous = angle
+    }
+    assert(turned >= 450, `the coin turned ${turned.toFixed(0)}°, expected a turn and a quarter (450°)`)
+  } finally {
+    engine.removeEntity(coin)
   }
-  assert(turned >= 450, `the coin turned ${turned.toFixed(0)}°, expected a turn and a quarter (450°)`)
-  engine.removeEntity(coin)
 })

@@ -47,16 +47,19 @@ async function walkThrough(context: TestFunctionContext, center: Vector3, mask: 
   await assertMovePlayerTo(context, OUTSIDE, LOOK)
   await context.helpers.waitNTicks(10)
   const { entity, seen } = area(center, mask)
-  await context.helpers.waitNTicks(10)
-  await assertMovePlayerTo(context, Vector3.create(center.x, 0, center.z), LOOK)
-  await context.helpers.waitNTicks(30)
-  await assertMovePlayerTo(context, OUTSIDE, LOOK)
-  await context.helpers.waitNTicks(30)
-  triggerAreaEventsSystem.removeOnTriggerEnter(entity)
-  triggerAreaEventsSystem.removeOnTriggerStay(entity)
-  triggerAreaEventsSystem.removeOnTriggerExit(entity)
-  engine.removeEntity(entity)
-  return seen
+  try {
+    await context.helpers.waitNTicks(10)
+    await assertMovePlayerTo(context, Vector3.create(center.x, 0, center.z), LOOK)
+    await context.helpers.waitNTicks(30)
+    await assertMovePlayerTo(context, OUTSIDE, LOOK)
+    await context.helpers.waitNTicks(30)
+    return seen
+  } finally {
+    triggerAreaEventsSystem.removeOnTriggerEnter(entity)
+    triggerAreaEventsSystem.removeOnTriggerStay(entity)
+    triggerAreaEventsSystem.removeOnTriggerExit(entity)
+    engine.removeEntity(entity)
+  }
 }
 
 const phases = (seen: Seen[]) => new Set(seen.map((s) => s.phase))
@@ -105,8 +108,13 @@ test('trigger area: an area subscribed to the main player fires for the local pl
 // joined this scene once (and the tests above teleported it around inside): one enter, with a
 // position.
 test('trigger area: the local player entered the scene once, with a position', async function (context) {
-  await context.helpers.waitNTicks(10)
-  const me = getPlayer()?.userId
+  // getPlayer() can briefly find none of the local player's components.
+  let me: string | undefined
+  const deadline = Date.now() + 5000
+  while (me === undefined && Date.now() < deadline) {
+    await context.helpers.waitNTicks(1)
+    me = getPlayer()?.userId
+  }
   assert(me !== undefined, 'no local player')
   const mine = enters.filter((enter) => enter.userId === me)
   assert(mine.length === 1, `onEnterScene fired ${mine.length} times for the local player`)

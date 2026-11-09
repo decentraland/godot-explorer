@@ -1,4 +1,4 @@
-import { AvatarEmoteCommand, engine } from '@dcl/sdk/ecs'
+import { AvatarEmoteCommand, AvatarMask, engine } from '@dcl/sdk/ecs'
 import { Vector3 } from '@dcl/sdk/math'
 import { triggerEmote } from '~system/RestrictedActions'
 import { skipTest, test } from 'testing-library/src/testing'
@@ -11,8 +11,6 @@ import { hold } from 'testing-library/src/utils/input'
 // AvatarEmoteCommand.state, as the explorer writes it (avatar_emote_command.proto).
 const STARTED = 0
 const INTERRUPTED = 2
-// AvatarMask.AM_UPPER_BODY; the toolchain's TriggerEmoteRequest typings predate `mask`.
-const AM_UPPER_BODY = 0
 
 const states: number[] = []
 AvatarEmoteCommand.onChange(engine.PlayerEntity, (value) => {
@@ -34,10 +32,11 @@ async function emoteAndWalk(context: TestFunctionContext, emote: string, masked:
   await assertMovePlayerTo(context, Vector3.create(8, 0, 2), Vector3.create(8, 1, 16))
   await avatarReady(context)
   states.length = 0
-  const request = masked ? { predefinedEmote: emote, mask: AM_UPPER_BODY } : { predefinedEmote: emote }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await triggerEmote(request as any)
-  for (let tick = 0; tick < 60 && !states.includes(STARTED); tick++) await context.helpers.waitNTicks(1)
+  await triggerEmote(masked ? { predefinedEmote: emote, mask: AvatarMask.AM_UPPER_BODY } : { predefinedEmote: emote })
+  // Wall clock, not ticks: the emote is downloaded on first use, and a headless run spends
+  // ticks far faster than that.
+  const deadline = Date.now() + 15000
+  while (!states.includes(STARTED) && Date.now() < deadline) await context.helpers.waitNTicks(1)
   await hold(context, 'ia_forward', 60)
   await context.helpers.waitNTicks(10)
   return [...states]
