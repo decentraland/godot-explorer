@@ -74,6 +74,8 @@ impl Backpack {
         let address = Self::address();
         if self.refresh_avatar().await {
             *self.preloaded_for.borrow_mut() = address;
+            // The shell can dress the first look before it opens the preview.
+            self.emit_avatar();
         }
         self.preload_pending.set(false);
     }

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Image,
   ImageBackground,
   Pressable,
@@ -17,6 +16,7 @@ import {
   lightRainbow,
   LinearFill,
   Button,
+  Spinner,
   u,
 } from '@dcl/ui-native';
 import { core } from '../core';
@@ -75,10 +75,7 @@ export function PreviewArea({
       <StageImage variant={stage === 'create' ? 'create' : 'full'} />
       {!avatar && (
         <View style={styles.loading}>
-          <ActivityIndicator color="#FCFCFC" />
-          <AppText variant="caption" style={styles.loadingText}>
-            {t('FLOW_AVATAR_LOADING')}
-          </AppText>
+          <Spinner />
         </View>
       )}
       {!hold && (
@@ -122,7 +119,7 @@ function PresetCard({
           resizeMode="cover"
         />
       ) : (
-        <ActivityIndicator color={colors.snow} />
+        <Spinner size={30} />
       )}
       {selected && (
         <LinearFill
@@ -154,9 +151,9 @@ export function AvatarCreateScreen({
   const insets = useSafeAreaInsets();
   const avatar = useAvatar();
   const [presets, setPresets] = useState<PresetAvatar[]>([]);
-  // The core still holds the last session's avatar: the window stays closed until the preset is
-  // applied, so that one is never drawn. With none held, the engine reports it once the window opens.
-  const [released, setReleased] = useState(() => avatar === null);
+  // The window stays closed until the preset is applied, so the avatar the profile holds is never
+  // drawn. The engine reports its avatar after preloading it: the preset needs that to apply.
+  const [released, setReleased] = useState(false);
   useEffect(() => {
     let cancelled = false;
     // The edits resolve against the core's catalog: it has to be in before a preset is applied.
@@ -312,7 +309,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  loadingText: { marginTop: u(8) },
   top: {
     position: 'absolute',
     top: 0,
