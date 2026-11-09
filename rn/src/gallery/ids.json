@@ -1625,6 +1625,21 @@
     "orientation": "portrait"
   },
   {
+    "id": "extra/ds-cards-backpack",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/ds-cards-discover",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/ds-skeleton",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
     "id": "extra/flow-account",
     "source": "extra",
     "orientation": "portrait"

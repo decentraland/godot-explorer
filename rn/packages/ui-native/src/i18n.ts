@@ -8,6 +8,7 @@ export type UiNativeKey =
   | 'APP_TICKET'
   | 'APP_CLEAR'
   | 'APP_CLEAR_SEARCH'
+  | 'APP_CLOSE'
   | 'APP_COLOR_BRIGHTNESS'
   | 'APP_COLOR_HUE'
   | 'APP_COLOR_SATURATION'

@@ -1,8 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { AppText, colors, Skeleton, u } from '@dcl/ui-native';
+import { AppText, colors, DiscoverCardSkeleton, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { Place } from './api';
-import { EVENT_W, PLACE_W } from './Cards';
 import { Thumb } from './Thumb';
 import type { Friend } from './types';
 
@@ -75,19 +74,7 @@ export function LoadMoreCard({ wide = false }: { wide?: boolean }) {
 }
 
 export function PlaceSkeleton({ wide = false }: { wide?: boolean }) {
-  const width = wide ? EVENT_W : PLACE_W;
-  return (
-    <View style={{ width: u(width) }}>
-      <Skeleton width={u(width)} height={wide ? 120 : 78} radius={4} />
-      <Skeleton
-        width={u(width)}
-        height={wide ? 17 : 14}
-        radius={3}
-        style={styles.bar}
-      />
-      <Skeleton width={u(width)} height={14} radius={3} style={styles.bar} />
-    </View>
-  );
+  return <DiscoverCardSkeleton type={wide ? 'event' : 'place'} />;
 }
 
 const styles = StyleSheet.create({
@@ -118,6 +105,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: colors.white70,
   },
-  bar: { marginTop: u(7) },
   pressed: { opacity: 0.85 },
 });

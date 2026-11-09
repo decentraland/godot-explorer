@@ -1,13 +1,10 @@
-import { Image, Pressable, StyleSheet, View } from 'react-native';
-import { AppText, colors, Icon, u } from '@dcl/ui-native';
+import { Image, StyleSheet, View } from 'react-native';
+import { colors, DiscoverCard, u } from '@dcl/ui-native';
 import type { DiscoverEvent, Place } from '../discover/api';
 import { formatRate, formatUsers, startsIn } from '../discover/format';
 import { t } from '../i18n';
 import { ArtFill } from './ArtFill';
 import { FeaturedTag, LiveTag, SoonTag, TrendingTag, UsersTag } from './Tags';
-
-export const PLACE_W = u(147);
-export const EVENT_W = u(203);
 
 export function Thumb({
   uri,
@@ -41,32 +38,15 @@ export function PlaceCard({
   onPress: () => void;
 }) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={place.title}
+    <DiscoverCard
+      type="place"
+      title={place.title}
+      image={place.image}
+      art={place.image ? undefined : <ArtFill seed={place.title} />}
+      users={formatUsers(place.users)}
+      likeRate={formatRate(place.likeRate)}
       onPress={onPress}
-      style={({ pressed }) => [{ width: PLACE_W }, pressed && styles.pressed]}
-    >
-      <Thumb
-        uri={place.image}
-        seed={place.title}
-        width={PLACE_W}
-        height={u(78)}
-      />
-      <AppText variant="button" numberOfLines={1} style={styles.placeTitle}>
-        {place.title}
-      </AppText>
-      <View style={styles.stats}>
-        <Icon name="user" size={13} color={colors.white70} strokeWidth={2} />
-        <AppText variant="body" style={styles.stat}>
-          {formatUsers(place.users)}
-        </AppText>
-        <Icon name="like" size={13} color={colors.white70} strokeWidth={2} />
-        <AppText variant="body" style={styles.stat}>
-          {formatRate(place.likeRate)}
-        </AppText>
-      </View>
-    </Pressable>
+    />
   );
 }
 
@@ -75,13 +55,16 @@ export function EventTags({
   event,
   featured,
   now,
+  inline = false,
 }: {
   event: DiscoverEvent;
   featured: boolean;
   now: number;
+  /** Laid out by the parent (the card's tag row) instead of pinned over the image. */
+  inline?: boolean;
 }) {
   return (
-    <View style={styles.tags} pointerEvents="none">
+    <View style={[styles.tagRow, !inline && styles.tags]} pointerEvents="none">
       <View style={styles.tagGroup}>
         {event.live ? (
           <>
@@ -113,28 +96,16 @@ export function EventCard({
   onPress: () => void;
 }) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={event.title}
+    <DiscoverCard
+      type="event"
+      title={event.title}
+      image={event.image}
+      art={event.image ? undefined : <ArtFill seed={event.title} />}
+      byLabel={t('COMMON_BY')}
+      creator={event.creator}
+      tags={<EventTags event={event} featured={featured} now={now} inline />}
       onPress={onPress}
-      style={({ pressed }) => [{ width: EVENT_W }, pressed && styles.pressed]}
-    >
-      <View>
-        <Thumb
-          uri={event.image}
-          seed={event.title}
-          width={EVENT_W}
-          height={u(120)}
-        />
-        <EventTags event={event} featured={featured} now={now} />
-      </View>
-      <AppText variant="button" numberOfLines={2} style={styles.eventTitle}>
-        {event.title}
-      </AppText>
-      <AppText variant="body" numberOfLines={1} style={styles.by}>
-        {t('MENU_BY_CREATOR', { creator: event.creator })}
-      </AppText>
-    </Pressable>
+    />
   );
 }
 
@@ -146,25 +117,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.purple450,
   },
   fill: { width: '100%', height: '100%' },
-  pressed: { opacity: 0.8 },
-  placeTitle: { marginTop: u(8), fontSize: u(13) },
-  stats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: u(4),
-    marginTop: u(6),
-  },
-  stat: { fontSize: u(12), color: colors.white70, marginRight: u(8) },
-  tags: {
-    position: 'absolute',
-    left: u(8),
-    right: u(8),
-    top: u(8),
+  tagRow: {
+    flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
+  tags: { position: 'absolute', left: u(8), right: u(8), top: u(8) },
   tagGroup: { flexDirection: 'row', gap: u(3) },
-  eventTitle: { marginTop: u(9), fontSize: u(14), lineHeight: u(18) },
-  by: { marginTop: u(4), fontSize: u(13), color: colors.white70 },
 });

@@ -4,6 +4,7 @@ export const common: Partial<Record<keyof typeof en, string>> = {
   BACKPACK_BACKPACK: 'Backpack',
   SETTINGS_SETTINGS: 'Ajustes',
   APP_SEARCH: 'Buscar',
+  APP_CLOSE: 'Cerrar',
   APP_TICKET: 'Entradas',
   APP_CREDITS: 'Créditos',
 };

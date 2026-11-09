@@ -1,13 +1,14 @@
 # Design System Mobile (Figma reference)
 
 File: `Jis8xv58qaDNy53OCGLeoh` ("Design System Mobile"). Pages: Colors, Buttons, Icons, Fonts, Tags,
-Names, Inputs, Dropdowns, Modals, Tabs, Loader, Controls, Headers, NavBar, Menu, Backgrounds, Spacing &
-Sizes, Elevation, Motion, States, Safe areas. This is the source every screen's components (buttons, colors,
+Names, Inputs, Dropdowns, Controls, Modals, Tabs, Headers, NavBar, Menu, Cards_Backpack, Cards_Discover,
+Loader, Skeleton, Backgrounds, Spacing & Sizes, Elevation, Motion, States, Safe areas. This is the source every screen's components (buttons, colors,
 text fields) ultimately trace back to — check here **before** re-deriving a spec from a specific
 screen's node, and before assuming a value is screen-specific when it might be a shared token.
 Last full pass (every component set read through `get_design_context` metadata, no screenshots):
-**2026-11-06** (the 11-03 pass plus the designer's changes since: Menu page, `Button/Filter`,
-Dialog glows/link, Dropdown Disabled, two glyphs). New nodes show up as ids above the previous pass's
+**2026-11-09** (the designer's changes since 11-06: Ruby Pressed and four rarity Light colours, the
+alpha tokens, the Cards_Backpack / Cards_Discover / Skeleton pages, `Header` Close, the `Background`
+component as gradients, the Shop and Chat icon families, `Menu/Item` text style). New nodes show up as ids above the previous pass's
 highest (`get_metadata` per page, grep the ids); value edits inside old nodes only show by re-reading
 the set. **Conflict rule (decided 2026-11-03): the drawn component wins.** When a node's
 values contradict its usage description or a spec string, implement the node — the design gets
@@ -16,8 +17,9 @@ still the source for the intended RN API and for behaviour the nodes cannot show
 the component *sets*, so one call per set returns every variant.
 
 `get_variable_defs` does not work headlessly for this file (requires an active desktop-app
-selection) — use `get_metadata` instead; color names/hex are readable directly from node *names*
-(e.g. `"Ruby #FF2D55"`), no need to call `get_design_context` on every swatch.
+selection). Read colours with `get_design_context` on the swatch group: its "styles contained in the
+design" list carries the variable values. **Do not trust the swatch label text or node names**: on
+2026-11-09 the variables changed while the labels on the Colors page still showed the old hex.
 
 ## Colors — cross-checked against `rn/packages/ui-native/src/tokens.ts`
 
@@ -39,6 +41,16 @@ Yellow `#FFC95B`, Melon `#FFA25A`, Violet `#A524B3`, Cloudy Sky `#716B7C`, Grass
 `#FFE5EA`, and the **System** scales (Success 100–500 `#C1EECF #65D890 #34CE77 #00B453 #00A146`,
 Error `#FFCDD4 #E97177 #FB3B3B #EC303A #CC1D2C` — 300 is `colors.danger`, Warning `#FFCD88 #FFB95B
 #FE9C2A #F38025 #EC7122`). The palette bar gradient starts at `#FFBC5B`, not Yellow.
+
+Changed by the designer on 2026-11-09 (aligned with the Desktop/Web libraries): `rubyPressed`
+(`action/primary-pressed`, every `Button/Primary` Pressed) `#E1002B` → **`#D80029`**; rarity Light
+`uncommon` `#FFD6B2` → `#FFE0B2`, `epic` `#81D1FF` → `#81E1FF`, `legendary` `#DF9CFF` → `#E8B9FF`,
+`exotic` `#E4FFB8` → `#DBF0AD`. `notificationTitle.event` keeps `#DF9CFF` (it comes from the
+notifications design, not the rarity token). New alpha tokens: `white8`/`white4`, `black8`/`black4`
+(Skeleton), `black50` (Avatar-Card pressed), `deepPurple40`/`deepPurple50` (Purple 500 `#350854`,
+Discover card without image), `lavender50`; also `shadow80` (Equipped bar), `brand` `#470071`
+(`background/brand`) and `lightRainbow` (`Gradients/Light Rainbow`, shared by `EventBadge` Featured
+and the selected `AvatarCard`). `space/26` exists only as a variable used by `Menu` (26 = `u(13)`).
 
 Full purple scale (50→550): `#F3ECF9 #DCCBEC #C5AADF #AE8AD2 #966AC5 #7F48B7 #691FA9 #57178B #460F6F
 #350854 #24033B`. Full vivid-pink scale (50→550): `#F8BDC8 #FDA0AF #FF8194 #FF5F77 #FF2D55 #DF2447
@@ -150,7 +162,7 @@ Audited 2026-11-03 against `Input/Field` 562:4820, `Input/Labeled` 562:4890, `In
 | Focus | 1px Lavender Light border; `Icon/Base` close 40 Snow at the right (Focus/SingleLine grows to 72 because the icon overflows the padding — Focus/Name pins 68; code keeps 68) | `focused`, clear `size={20}` |
 | Error | 1px `#FB3B3B`; message under the box Regular 20 `#FB3B3B` | `error`, `hint` + `errorText` |
 | Disabled | Black 30% bg (`surface/overlayDisabled`), text and placeholder White 20%, label White 30% — a palette state, not a dim | `boxDisabled`, `textDisabled`, `labelDisabled` |
-| Multiline | fixed 216 tall, `items-start`, p 16; counter `B3` Regular 20 Pearl 8 below ("0/300"), `#FB3B3B` at the limit in the Error node | `inputMultiline minHeight u(108)`, `counter` (Regular `u(10)` Pearl, `marginTop u(4)`), `counterMax` = `Input/Counter`'s `ruby[200]` `#FF5F77` |
+| Multiline | fixed 216 tall, `items-start`, p 16; counter `B3` Regular 20 Pearl 8 below ("0/300"), `#FB3B3B` at the limit in the Error node | the **box** is `minHeight u(108)` (216 includes p 16; until 11-09 the TextInput got the 108 and the box grew to 126), the input stretches, `counter` (Regular `u(10)` Pearl, `marginTop u(4)`), `counterMax` = `Input/Counter`'s `ruby[200]` `#FF5F77` |
 | Name | 68 box + a Regular 20 Pearl row 8 below: helper left, "0/15" right; suffix `#1234` `Input/Suffix` Light 24 in the text colour | `UsernameField` keeps the suffix Regular (no Inter Light face) and the helper above — screen-level follow-up |
 | Labeled | `Input` Medium 30 **Snow** label, gap 20 to the field; Disabled label White 30%; `Button=True` adds a `Button/Secondary` Outline Medium (radius 12) after the field, gap 16 | `label` Medium Snow, `marginBottom u(10)`; no `button` prop yet |
 | Label/Description | label + `Caption2` Regular 22 Pearl, gap 10, pb 8 | `helperAbove` `u(11)` Pearl, `marginBottom u(5)`, `paddingBottom u(4)` |
@@ -191,6 +203,13 @@ Re-export candidates (nodes edited after the export): `Icon/Base` Share/Like/Dis
 640:1659–1680), `Icon/NavBar` Social inactive mask 641:903 and the Profile ring 641:2726, `Icon/Modal`
 Block (641:830–833). The NavBar description says Active uses "the nav gradient"; the exported active
 glyphs are flat `#E8B9FF` and code paints them so.
+
+Not imported (added 2026-11-09, no screen uses them yet): the **Shop** frame 785:253 (`shop/cart`,
+`cart-filled`, `offer`, `offer-filled`, `delete`, `view` 40; `credits`, `credits-filled` 38×40;
+`sale`, `sale-filled` 40; `land`, `names` 24 — names is "temporary home"; `credits-coin` 24 full
+colour) and the **Chat** frame 785:348 (24: `emojis-off/on`, nine `emoji-category/*`,
+`microphone-off/on`; 23×24: `call`, `end-call`, `call-blocked`; several are composite groups with
+rotations, export each component as one SVG when a screen needs it).
 
 Don't bulk-import assets outside these families; when a screen needs one, it is the Figma asset
 itself, never a redrawn approximation (SKILL.md §2d).
@@ -242,7 +261,8 @@ fill**, Mythic `#FF4BED`: top-right centred on the corner, rx 210 / ry 190, 60% 
 20px below the bottom edge, rx 343 (Portrait) / 475 (Landscape) / ry 140, 62% → 0; both with the same
 six-stop falloff (×1, .669, .399, .192, .055, 0) — `glow()`/`FALLOFF` in `Dialog.tsx`, radii passed as
 `rxDp`/`ryDp`. `Link=True` = `B3` Regular 20 underline **`text/link` `#A0ABFF`** (`colors.link`; was
-`#32CEFF`, the `sky` token is gone), two lines max, gap 10 under the body →
+`#32CEFF`, the `sky` token is gone), two lines max, gap 10 under the body (the body and the link share a group: `bodyGroup` gap `u(5)`,
+fixed 11-09 — it was the text gap plus a margin, 13dp) →
 `Dialog link={{ label, onPress }}`. Node quirks: 562:7744 (Portrait, no icon) is 514 wide inside its
 520 frame (keep 520); the Landscape Input variant 562:7727 (720×514, content gap 36) is not modelled
 either, the field is `children`. Checkbox and Input blocks stay the caller's
@@ -270,6 +290,10 @@ Back = `Icon/Base` 60 → `size={30}` + gap 8; Actions gap 32 → `u(16)`: Searc
 SearchOpen: Back + `Input/Search` filling (gap 24, pb 20, **bottom-aligned**: the 60 icon against
 the 68 field; code centred it until 11-06) — rendered with the DS `SearchField`, now the
 `Input/Search` look (see Inputs).
+**`Type=Close`** 817:3410 (added 11-09): only an `Icon/Base` Close 60 at the left, pt 40, pb 20,
+px 48 → `Header onClose` (label `APP_CLOSE`). Every Portrait variant is a fixed 176 tall
+(`items-end`); code hugs its content (≈62dp) because the screens add the status-bar inset on top —
+left as is, re-check against a full screen frame before forcing `u(88)`.
 Landscape 528×74: title Bold 44 → `u(22)`; TitleButton = `Button/Secondary` Outline → `tone="outline"`
 (border `border/thin` 2px = 1dp). Orientation from `useWindowDimensions`. The description lists a
 Portrait "Title" type the set does not have (code renders it anyway). `Badge/Credits` 681:148
@@ -280,7 +304,8 @@ whenever `onBack && onTicket`.
 ## NavBar page — `BottomNav`
 
 The page was called "Menu" until 2026-11-06; "Menu" is now the floating context menu (next section).
-`NavBar` 635:211 Portrait 720×180: pt 32, pb 40 (+ safe-area), px 64, gap 56, items `NavBar/Item`
+`NavBar` 635:211 Portrait 720×180 (fixed; the padding sums to 154, the rest is the home-indicator
+area the code adds as `bottomInset`): pt 32, pb 40 (+ safe-area), px 64, gap 56, items `NavBar/Item`
 82 (`u(41)`), background `surface/navbar` rgba(26,9,37,0.9) (`colors.navbar`) with `NavBar/Portrait`
 (blur 16 + shadow 0/-4/4 **Black 25%** = `colors.black25`; since the designer's 2026-11-03 pass the
 Portrait fill is `surface/navbar` as well — `colors.navbar` in both orientations). Active = the gradient `Icon/NavBar` + the "Selected indicator"
@@ -296,16 +321,64 @@ until Social/Alerts exist as screens.
 
 ## Menu page — `Menu` (`Menu.tsx`), added 2026-11-06
 
-`Menu` 736:32 + `Menu/Item` 736:31. Container 319 wide (`u(159.5)`), px 24, py 16, gap 26, radius 12,
-`surface/menu` #1B002D (`colors.menu`), 1px `border/menu` (`colors.lavender70`), **`Elevation/Menu`** =
+`Menu` 736:32 + `Menu/Item` 736:31. Container 320 wide (`u(160)`, was 319 until 11-09), px 24, py 16, gap `space/26`, radius 12,
+`surface/menu` #1B002D (`colors.menu`), 1px `border/menu` (`colors.lavender70`, `u(0.5)`), **`Elevation/Menu`** =
 0/8, blur 12, Shadow 40% (`elevation.menu`, only defined on this page — the Elevation page still lists
 Down/Up). Row 64 tall filling the width, px 16, gap 10, radius 12; optional leading icon in a 32 slot
-(the node draws `Icon/Base` Location, the description says `Icon/Menu`; code takes any `IconName` at
-`size={16}`), label Inter Medium 28 Snow, optional trailing `Icon/Base` Check 40; Selected = Black 40%
+(the node draws `Icon/Base` Location at 36.4 px overflowing the slot, the description says
+`Icon/Menu`; code draws any `IconName` at 18.2 in a 16dp slot), label text style **`Menu/Item`**
+Inter Medium 28 Snow (`AppText variant="menuItem"`), optional trailing `Icon/Base` Check 40; Selected = Black 40%
 bg + Lavender Light text/icons (code also uses it while pressed — there is no Pressed node). API:
 `<Menu items={[{ key, label, icon?, selected?, check? }]} onSelect />`; the caller positions and
 dismisses it. Consumer: `rn/src/menu/KebabMenu.tsx` (Discover's three-dots popover, now `menuDot`);
 preview `extra/menu`.
+
+## Cards_Backpack page — `ItemCard`, `RarityBackground`, `AvatarCard`, added 2026-11-09
+
+`Rarity-Backgrounds` 785:970 (192, radius 12, 2px Snow border = 1dp): Purple 350 base + two radial
+glows, no blur — the rarity Light colour at (8%, 4%) r 78% and the base colour at (70%, 68%) r 100%
+(Exotic: Light twice). Default = Card Light `#B48CD7` + Snow / Gray glows at 90%; Disable = Silver +
+Gray / Silver, 80%; Empty = Black 40% with a black border and a Snow 30% plus (16×2dp). Code:
+`RarityBackground` in `ItemCard.tsx`.
+`Cards-Wearables` 785:1018 (192 → `ItemCard`, 96dp, `elevation.down`): image 176×177 from the top
+(inset 4dp, 7.5dp from the bottom, 80% when Disable). `state`: `default`; Pressed (only from
+default) = background inset 2.5dp + a 1.5dp Lavender Light ring radius 8; `equipped` = 1.5dp
+Lavender ring 2.5dp **outside** the card + a Shadow 80% bar with the 18dp check; `equip` /
+`unequip` / `detail` = 2dp Orange ring outside + the `_Backpack-ButtonCard` bar (20dp, inset 1dp,
+bottom radii 5, `Btn/Medium` Bold 12 uppercase; Equip Ruby, Unequip/Detail Shadow) when
+`actionLabel` is given; `selected` (emote wheel) = 5dp Orange ring, radius 9. `empty` slot with
+Default / Pressed / Selected (Black 60% + ring) / Disable (60%, plus 20%). `price` = Premium credits
+pill (Black 60%, h 18, px 6, gap 3, `Icon/Credits` 13 + Medium 12); `newLabel` = Ruby `New-Tag`
+(Bold 9 uppercase, radius 2) top-right. The old `equipped`/`caption`/`strip`/`outline` props are
+gone; the backpack grids map their strips onto `state`.
+`Avatar-Card` 790:2789 (160×360 → `AvatarCard`, radius 16, `elevation.down`): Default Black 40%,
+Pressed Black 50% + 1px Lavender Light, Selected Black 70% + 4px **Light Rainbow** ring (SVG stroke,
+CSS 147.6°); the avatar image `contain` with 10.14% top/bottom margins. Not used by a screen on this
+branch (the entry flow's avatar picker is on `feat/entry-flow-parity`).
+
+## Cards_Discover page — `DiscoverCard`, `DiscoverCardSkeleton`, `DetailRow`, added 2026-11-09
+
+`Cards-Discovery` 790:3141: Places 294 wide, image 156 (`DISCOVER_CARD.place` = 147 / 78dp);
+Event 406, image 240 (203 / 120dp); image radius 8, 0.6px Lavender Light border (`u(0.3)`). Places
+content pt 14 pb 18 gap 12: title `Pill/Large` SemiBold 26 one line, then Players / Like (`Icon/Base`
+28 + `Caption1` Regular 24 Snow, gap 4, groups 16 apart). Event: the image holds the tag row
+(pt 16 px 16 pb 12, `Tag/EventTime` left, `Tag/Event` right → `tags` slot), content pt 20 pb 24
+gap 12: title H4 SemiBold 28 one line, "by" Lavender Light + creator Snow (Regular 24, gap 4).
+`ImageNotFound` (image empty or failing): Places Deep Purple 50% + Lavender 50% border, Event Deep
+Purple 40% + Lavender border; `Icon/Base` imageOff 70 / 80 in Lavender Light 70%. Both app card sets
+(`src/discover/Cards.tsx`, `src/menu/Cards.tsx`) render it; their tag rows pass `inline`.
+`Card-Discover-Skeleton` 806:88: the card's size from `Skeleton` Dark Wave — image + two bars
+(Places 28/28 px gap 16, Event 34/29 gap 12) → `DiscoverCardSkeleton`, used by `LoadMoreCard` and
+the in-game Discover panel's loading rail.
+`Detail` 790:3188 → `DetailRow type value`: `Icon/Base` 32 + `Input/Value` Regular 30 Snow, gap 4,
+p 8; Players / Likes / Coords / World (truncates at 148) / Date / Duration. No screen uses it yet.
+
+## Skeleton page — `Skeleton`, added 2026-11-09
+
+`Skeleton` 790:1783 (200×40, radius 4 → default `radius` 2): Theme Dark = White 8%, Light = Black
+8%. Wave = a half-width band (transparent → 8% at 48.4% → transparent) sweeping from −50% to 100% in
+1 s ease-out; Pulse = 8% → 4% and back, 0.75 s each way. Code: `animation` / `theme` props
+(defaults wave / dark); it was a 7% block with a 12% sheen at 1.2 s linear.
 
 ## Spacing & Sizes page — `space`, `radius`, `controlHeight`, `iconSize`, `border`, `minTouchTarget`
 
@@ -329,6 +402,15 @@ listed on this page; its "In React Native" paragraph still describes the old iOS
 0/±`u(2)`, blur `u(2)`, `#16151880`; the old `shadow*` props are iOS-only and Android `elevation`
 drew nothing visible on the slider thumb. Shadows only draw on a solid background. `Blur/Background` (blur 4 on
 Black 40%) needs a blur library; without one the surface is Black 60% with no blur.
+
+## Motion page — `motion` in `tokens.ts`
+
+Durations `instant` 100 / `fast` 150 / `base` 200 / `slow` 300 ms; easings `standard`
+cubic-bezier(0.2, 0, 0, 1), `enter` (0, 0, 0, 1), `exit` (0.3, 0, 1, 1) → `motion.duration` /
+`motion.easing` (added 11-09, no consumer yet). Pattern table: Toast "dismisses after 3 s" →
+`Toast` default 3000 ms (was 2500). Not implemented, flagged: Modal "backdrop fade + scale 0.96 → 1"
+(`Dialog` only fades), Pressed "scale 0.97" (no pressable scales), "Reduce motion: everything becomes
+a fade at fast" (the `Loader` description asks the spinner to keep rotating slower, which code does).
 
 ## States page — the rule every component follows
 
@@ -363,14 +445,20 @@ Discover pass; `src/discover/CategoryChips.tsx` is the current stand-in.
 tables). Nametags are drawn over avatars in the world; survey the states and radii when that screen
 is ported.
 
-## Backgrounds page — screen assets, not components
+## Backgrounds page — `BrandBackground`
 
-`Background` 676:6 (Plain/Glow × Portrait/Landscape) and `Background/Avatar` 677:2 are baked images
-(blurred glows, §2c of the skill): each screen downloads the sub-node it uses as a PNG.
+`Background` 676:6 (Plain/Glow × Portrait/Landscape) is no longer a baked image (11-09):
+`background/brand` `#470071` (`colors.brand`) plus, for Glow, radial gradients with no blur —
+Legendary top-left (portrait stops .4985 → 0, landscape .4999 → 0) and, in portrait only, Mythic
+bottom-right (.2911 → 0). `BrandBackground glow` draws them with Figma's own `gradientTransform`
+scaled to the view (they are rotated ellipses). The description says Plain is for loading /
+Engine-Load. No screen uses it yet; Settings and Edit Profile now read `colors.brand` for their own
+gradients. `Background/Avatar` 677:2 is still a PNG export.
 
 ## Loader page — `Spinner`; `Loader/Logo` not built
 
-`Loader/Spinner` 562:8817: 150×150, a 16px Black 40% ring with a Ruby arc (≈135°) that rotates
+`Loader/Spinner` 562:8817: 150×150, a 16px Black 40% ring **centred at radius 53** (outer ≈123, not
+the full box) with a Ruby arc from 141° to 300° (**159°**; both fixed 11-09, code had 75 and 135°) that rotates
 360° every 1s, linear, infinite; slower under Reduce Motion; `ActivityIndicator` in `action/primary`
 is the documented fallback. Code: `Spinner` (`size` in dp, stroke keeps 16/150), used by
 `Button loading`. `Loader/Logo` 562:8818 is a 154×154 raster of the Decentraland logo with a pulse

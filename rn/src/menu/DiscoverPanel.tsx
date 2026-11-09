@@ -1,9 +1,16 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { AppText, colors, Icon, Skeleton, u } from '@dcl/ui-native';
+import {
+  AppText,
+  colors,
+  DiscoverCardSkeleton,
+  Icon,
+  Skeleton,
+  u,
+} from '@dcl/ui-native';
 import type { DiscoverEvent, Place } from '../discover/api';
 import { t } from '../i18n';
-import { EventCard, PLACE_W, PlaceCard } from './Cards';
+import { EventCard, PlaceCard } from './Cards';
 import { KebabAction, KebabMenu } from './KebabMenu';
 import type { Loaded } from './useLoad';
 import type { DiscoverFeed, SceneInfo } from './types';
@@ -46,8 +53,8 @@ function Loading() {
     <View style={styles.section}>
       <Skeleton width={u(90)} height={u(16)} radius={u(4)} />
       <View style={styles.rail}>
-        <Skeleton width={PLACE_W} height={u(78)} radius={u(4)} />
-        <Skeleton width={PLACE_W} height={u(78)} radius={u(4)} />
+        <DiscoverCardSkeleton type="place" />
+        <DiscoverCardSkeleton type="place" />
       </View>
     </View>
   );

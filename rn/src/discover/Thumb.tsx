@@ -28,6 +28,24 @@ const PALETTE = [
 
 type Size = number | `${number}%`;
 
+/** `mock:N` gradient art of the mock API, or undefined for a real URL (and for `mock:error`). */
+export function mockArt(uri: string) {
+  const mock = uri.startsWith('mock:') ? uri.slice(5) : null;
+  if (!mock || mock === 'error') {
+    return undefined;
+  }
+  const [from, to] = PALETTE[Number(mock) % PALETTE.length];
+  return (
+    <LinearFill
+      angle={135}
+      stops={[
+        { offset: 0, color: from },
+        { offset: 1, color: to },
+      ]}
+    />
+  );
+}
+
 /** Image with a frame; a failed or `mock:error` image becomes the dark tile with the crossed-image icon. */
 export function Thumb({
   uri,

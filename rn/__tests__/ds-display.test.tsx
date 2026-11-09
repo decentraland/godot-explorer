@@ -3,7 +3,12 @@ import { act, create, ReactTestInstance } from 'react-test-renderer';
 import { Text } from 'react-native';
 import {
   ActionSquareButton,
+  AvatarCard,
   Badge,
+  DetailRow,
+  DiscoverCard,
+  DiscoverCardSkeleton,
+  Header,
   Chip,
   CollapsibleSection,
   EmptyState,
@@ -86,6 +91,60 @@ describe('Menu', () => {
     expect(pressable(tree, 'Report').props.accessibilityState.selected).toBe(
       true,
     );
+  });
+});
+
+describe('Cards_Discover and Cards_Backpack', () => {
+  it('DiscoverCard shows ImageNotFound without an image and the event creator row', () => {
+    const place = render(
+      <DiscoverCard
+        type="place"
+        title="Genesis Plaza"
+        image=""
+        users="12"
+        likeRate="90%"
+      />,
+    );
+    expect(text(place)).toContain('Genesis Plaza');
+    expect(text(place)).toContain('90%');
+    expect(place.root.findAllByProps({ name: 'imageOff' }).length).toBe(1);
+    const event = render(
+      <DiscoverCard
+        type="event"
+        title="Party"
+        image="https://example.com/a.png"
+        byLabel="by"
+        creator="Ana"
+      />,
+    );
+    expect(text(event)).toContain('Ana');
+    expect(event.root.findAllByProps({ name: 'imageOff' }).length).toBe(0);
+  });
+
+  it('DetailRow, skeleton and AvatarCard render', () => {
+    expect(text(render(<DetailRow type="coords" value="-12,40" />))).toContain(
+      '-12,40',
+    );
+    expect(
+      render(<DiscoverCardSkeleton type="event" />).toJSON(),
+    ).not.toBeNull();
+    const onPress = jest.fn();
+    const avatar = render(
+      <AvatarCard selected label="Avatar 1" onPress={onPress} />,
+    );
+    act(() => pressable(avatar, 'Avatar 1').props.onPress());
+    expect(onPress).toHaveBeenCalled();
+    expect(
+      pressable(avatar, 'Avatar 1').props.accessibilityState.selected,
+    ).toBe(true);
+  });
+
+  it('Header Type=Close shows only the close action', () => {
+    const onClose = jest.fn();
+    const tree = render(<Header title="Hidden" onClose={onClose} />);
+    expect(text(tree)).not.toContain('Hidden');
+    act(() => pressable(tree, 'Close').props.onPress());
+    expect(onClose).toHaveBeenCalled();
   });
 });
 

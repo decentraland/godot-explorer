@@ -7,6 +7,7 @@ export const common = {
   APP_BACK: 'Back',
   APP_CLEAR: 'Clear',
   APP_CLEAR_SEARCH: 'Clear search',
+  APP_CLOSE: 'Close',
   APP_DISMISS_DIALOG: 'Dismiss dialog',
   APP_SEARCH: 'Search',
   APP_TICKET: 'Tickets',

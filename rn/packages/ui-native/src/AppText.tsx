@@ -10,7 +10,8 @@ export type TextVariant =
   | 'body'
   | 'label'
   | 'caption'
-  | 'button';
+  | 'button'
+  | 'menuItem';
 
 const variants: Record<TextVariant, TextStyle> = {
   title: { fontFamily: fonts.semibold, fontSize: u(21), color: colors.pearl },
@@ -30,6 +31,8 @@ const variants: Record<TextVariant, TextStyle> = {
   },
   caption: { fontFamily: fonts.medium, fontSize: u(12), color: colors.gray },
   button: { fontFamily: fonts.semibold, fontSize: u(15), color: colors.snow },
+  /** Figma `Menu/Item`: Medium 28. */
+  menuItem: { fontFamily: fonts.medium, fontSize: u(14), color: colors.snow },
 };
 
 export function AppText({
