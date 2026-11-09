@@ -28,6 +28,8 @@ pub struct Backpack {
     canvas_cull_mask: Cell<u32>,
     preload_pending: Cell<bool>,
     preloaded_for: RefCell<String>,
+    applying: Cell<bool>,
+    pending_apply: RefCell<Option<VarDictionary>>,
 }
 
 impl Backpack {
@@ -39,6 +41,8 @@ impl Backpack {
             canvas_cull_mask: Cell::new(0),
             preload_pending: Cell::new(false),
             preloaded_for: RefCell::new(String::new()),
+            applying: Cell::new(false),
+            pending_apply: RefCell::new(None),
         }
     }
 
@@ -96,6 +100,8 @@ impl Backpack {
         {
             let mut p = preview.bind_mut();
             p.set_fit_avatar(true);
+            // The shell draws the name itself: no plate over the avatar, not even for a frame.
+            p.hide_name = true;
         }
         preview.set_stretch(true);
         layer.add_child(&preview);
@@ -132,7 +138,22 @@ impl Backpack {
 
     /// Renders the avatar the core computed. The core already holds it, so the engine reports back
     /// only when it ended up with something else (it forces defaults for missing categories).
+    /// One edit at a time: builds overlapping on the same loader drop the wearables still
+    /// downloading, so a burst of edits waits for the one in flight and only the last one runs.
     pub async fn apply_avatar(&self, args: &VarDictionary) {
+        if self.applying.replace(true) {
+            *self.pending_apply.borrow_mut() = Some(args.clone());
+            return;
+        }
+        let mut next = Some(args.clone());
+        while let Some(args) = next {
+            self.apply_avatar_now(&args).await;
+            next = self.pending_apply.borrow_mut().take();
+        }
+        self.applying.set(false);
+    }
+
+    async fn apply_avatar_now(&self, args: &VarDictionary) {
         let identity = globals::player_identity();
         let mut avatar = identity.bind().get_mutable_avatar();
         let strings = |key: &str| {
