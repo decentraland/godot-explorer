@@ -35,13 +35,13 @@ impl IControl for PreviewSpinner {
             size * 53.0 / 150.0,
             size * 16.0 / 150.0,
         );
-        let start = 135.0_f32.to_radians() + self.turn;
+        let start = 141.0_f32.to_radians() + self.turn;
         let mut base = self.base_mut();
         base.draw_arc_ex(center, radius, 0.0, TAU, 96, TRACK)
             .width(width)
             .antialiased(true)
             .done();
-        base.draw_arc_ex(center, radius, start, start + TAU * 0.442, 48, RUBY)
+        base.draw_arc_ex(center, radius, start, start + TAU * 159.0 / 360.0, 48, RUBY)
             .width(width)
             .antialiased(true)
             .done();
