@@ -2,16 +2,17 @@
 
 use std::cell::{Cell, RefCell};
 
-use godot::classes::control::LayoutPreset;
+use godot::classes::control::{LayoutPreset, MouseFilter};
 use godot::classes::sub_viewport::UpdateMode;
-use godot::classes::{CanvasLayer, DisplayServer, Node, PackedScene};
+use godot::classes::texture_rect::{ExpandMode, StretchMode};
+use godot::classes::{CanvasLayer, DisplayServer, ImageTexture, Node, PackedScene, TextureRect};
 use godot::prelude::*;
 
 use super::state;
 use crate::avatars::avatar::build::update_from_profile;
 use crate::avatars::avatar::emote_load::async_play_emote_or_stash;
 use crate::avatars::emotes;
-use crate::avatars::preview::AvatarPreview;
+use crate::avatars::preview::{AvatarPreview, PreviewSpinner};
 use crate::engine::local_task::{await_all, next_frame};
 use crate::fetcher::globals;
 
@@ -30,6 +31,8 @@ pub struct Backpack {
     preloaded_for: RefCell<String>,
     applying: Cell<bool>,
     pending_apply: RefCell<Option<VarDictionary>>,
+    still: RefCell<Option<Gd<TextureRect>>>,
+    spinner: RefCell<Option<Gd<PreviewSpinner>>>,
 }
 
 impl Backpack {
@@ -43,6 +46,8 @@ impl Backpack {
             preloaded_for: RefCell::new(String::new()),
             applying: Cell::new(false),
             pending_apply: RefCell::new(None),
+            still: RefCell::new(None),
+            spinner: RefCell::new(None),
         }
     }
 
@@ -75,6 +80,10 @@ impl Backpack {
 
     pub async fn open(&self, rect: Rect2) {
         let preview = self.ensure_preview();
+        // A look being dressed is what the screen shows, not the one it replaces.
+        while self.applying.get() {
+            next_frame().await;
+        }
         self.show_preview(&preview, true);
         self.place(rect);
         while self.preload_pending.get() {
@@ -154,8 +163,6 @@ impl Backpack {
     }
 
     async fn apply_avatar_now(&self, args: &VarDictionary) {
-        let identity = globals::player_identity();
-        let mut avatar = identity.bind().get_mutable_avatar();
         let strings = |key: &str| {
             args.get(key)
                 .and_then(|v| v.try_to::<PackedStringArray>().ok())
@@ -164,6 +171,18 @@ impl Backpack {
         let text = |key: &str| args.get(key).map(|v| v.to_string()).unwrap_or_default();
         let color = |key: &str| Color::from_html(text(key).as_str()).unwrap_or(Color::WHITE);
         let wearables = strings("wearables");
+        self.show_spinner();
+        let fetches = {
+            let base_url = globals::realm().bind().get_profile_content_url();
+            globals::content_provider()
+                .bind_mut()
+                .fetch_wearables(wearables.to_var_array(), base_url)
+        };
+        await_all(fetches.iter_shared().collect()).await;
+        self.freeze();
+        // Written right before the build, with no wait in between: the saved profile replaces the
+        // identity's avatar when it arrives, and a look written earlier would be lost to it.
+        let mut avatar = globals::player_identity().bind().get_mutable_avatar();
         {
             let mut avatar = avatar.bind_mut();
             avatar.set_body_shape(text("body_shape").as_str().into());
@@ -173,15 +192,9 @@ impl Backpack {
             avatar.set_hair_color(color("hair"));
             avatar.set_eyes_color(color("eyes"));
         }
-        let fetches = {
-            let wearables = avatar.bind().get_wearables();
-            let base_url = globals::realm().bind().get_profile_content_url();
-            globals::content_provider()
-                .bind_mut()
-                .fetch_wearables(wearables.to_var_array(), base_url)
-        };
-        await_all(fetches.iter_shared().collect()).await;
         self.refresh_avatar().await;
+        next_frame().await;
+        self.thaw();
         if !same_wearables(
             &string_list(&avatar.bind().get_wearables()),
             &string_list(&wearables),
@@ -275,6 +288,64 @@ impl Backpack {
         profile.bind_mut().set_avatar(avatar);
         update_from_profile(preview_avatar, profile).await;
         true
+    }
+
+    /// The avatar is hidden while a new look assembles: a still of the old one stays up meanwhile.
+    fn freeze(&self) {
+        if let Some(mut old) = self.still.borrow_mut().take() {
+            old.queue_free();
+        }
+        if !self.is_shown() {
+            return;
+        }
+        let Some(preview) = self.preview() else {
+            return;
+        };
+        let Some(viewport) = preview.bind().subviewport.clone() else {
+            return;
+        };
+        let Some(image) = viewport.get_texture().and_then(|t| t.get_image()) else {
+            return;
+        };
+        let Some(texture) = ImageTexture::create_from_image(&image) else {
+            return;
+        };
+        let mut still = TextureRect::new_alloc();
+        still.set_texture(&texture);
+        still.set_expand_mode(ExpandMode::IGNORE_SIZE);
+        still.set_stretch_mode(StretchMode::SCALE);
+        still.set_anchors_preset(LayoutPreset::FULL_RECT);
+        still.set_mouse_filter(MouseFilter::IGNORE);
+        still.set_visibility_layer(OVERLAY_CANVAS_LAYER);
+        preview.clone().add_child(&still);
+        *self.still.borrow_mut() = Some(still);
+    }
+
+    /// A ring over the avatar from the edit until the new look is drawn.
+    fn show_spinner(&self) {
+        if !self.is_shown() || self.spinner.borrow().is_some() {
+            return;
+        }
+        let Some(mut preview) = self.preview() else {
+            return;
+        };
+        let mut spinner = PreviewSpinner::centred();
+        spinner.set_visibility_layer(OVERLAY_CANVAS_LAYER);
+        preview.add_child(&spinner);
+        *self.spinner.borrow_mut() = Some(spinner);
+    }
+
+    fn thaw(&self) {
+        if let Some(mut still) = self.still.borrow_mut().take() {
+            if still.is_instance_valid() {
+                still.queue_free();
+            }
+        }
+        if let Some(mut spinner) = self.spinner.borrow_mut().take() {
+            if spinner.is_instance_valid() {
+                spinner.queue_free();
+            }
+        }
     }
 
     fn emit_avatar(&self) {

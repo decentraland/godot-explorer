@@ -2,6 +2,9 @@
 //! an orthographic camera, rotated and zoomed by touch or mouse, and captured to images.
 
 pub mod fit;
+mod spinner;
+
+pub use spinner::PreviewSpinner;
 
 use std::collections::HashMap;
 
