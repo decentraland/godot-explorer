@@ -98,6 +98,18 @@ describe('entry flow', () => {
     expect(state.name).toBe('Ana');
   });
 
+  it('a guest tap on a session the core still holds goes on like a sign-in', () => {
+    const waiting = run([{ type: 'playAsGuest' }]);
+    expect(
+      reduceFlow(waiting, { type: 'authSucceeded', hasProfile: false, name: '' })
+        .step,
+    ).toBe('avatar_create');
+    expect(
+      reduceFlow(waiting, { type: 'authSucceeded', hasProfile: true, name: 'Ana' })
+        .step,
+    ).toBe('welcome_back');
+  });
+
   it('returns to Account Home when the guest sign-in fails', () => {
     const waiting = run([{ type: 'playAsGuest' }]);
     expect(waiting.step).toBe('guest_wait');

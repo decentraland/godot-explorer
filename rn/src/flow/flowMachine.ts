@@ -98,7 +98,12 @@ export function reduceFlow(state: FlowState, action: FlowAction): FlowState {
         ? go(state, 'email_code', { email: action.email })
         : state;
     case 'authSucceeded':
-      if (state.step !== 'auth_wait' && state.step !== 'email_code') {
+      // Also from the guest wait: a session the core still held makes the guest tap a sign-in.
+      if (
+        state.step !== 'auth_wait' &&
+        state.step !== 'email_code' &&
+        state.step !== 'guest_wait'
+      ) {
         return state;
       }
       return action.hasProfile

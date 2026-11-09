@@ -12,8 +12,14 @@ export function authCode(error: unknown): string | undefined {
   return undefined;
 }
 
-/** The core refuses to begin a sign-in once one is done; callers move on instead of failing. */
-export const alreadySignedIn = () => core().state().tag === 'SignedIn';
+/**
+ * The core refuses to begin a sign-in once one is done; callers move on instead of failing. Any
+ * state past signing in counts: the avatar screens hold the preview, not plain `SignedIn`.
+ */
+export const alreadySignedIn = () => {
+  const { tag } = core().state();
+  return tag !== 'Booting' && tag !== 'SignedOut' && tag !== 'SigningIn';
+};
 
 export const startGuest = () => core().signInGuest();
 

@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { HomeTabs } from '../src/app/HomeTabs';
 import { NavProvider } from '../src/app/NavProvider';
 import { EntryFlow } from '../src/flow/EntryFlow';
+import { core } from '../src/core';
 
 const metrics = {
   frame: { x: 0, y: 0, width: 400, height: 900 },
@@ -97,9 +98,13 @@ describe('screens render', () => {
       await act(async () => {});
       await playAsGuest();
       expect(JSON.stringify(tree.toJSON())).toContain('Choose your look');
+      // On a device the avatar hole has opened the preview by now: the state is not `SignedIn`.
+      act(() => core().showAvatarPreview({ x: 0, y: 0, width: 10, height: 10 }));
+      expect(core().state().tag).toBe('AvatarPreview');
       await act(async () =>
         tree.root.findByProps({ accessibilityLabel: 'Back' }).props.onPress(),
       );
+      expect(core().state().tag).toBe('SignedOut');
       expect(JSON.stringify(tree.toJSON())).toContain('PLAY AS GUEST');
       await playAsGuest();
       expect(JSON.stringify(tree.toJSON())).toContain('Choose your look');
