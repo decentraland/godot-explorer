@@ -1891,8 +1891,11 @@ impl SceneManager {
         if matches!(scene.scene_type, SceneType::Parcel) {
             self.crashed_scene_ids.push(*scene_id);
         }
-        self.abnormal_exits
-            .insert(*scene_id, CRDT_STATE_POISONED.to_string());
+        let reason = match crate::tools::last_panic::take() {
+            Some(panic) => crash_reason_summary(&format!("{CRDT_STATE_POISONED}: {panic}")),
+            None => CRDT_STATE_POISONED.to_string(),
+        };
+        self.abnormal_exits.insert(*scene_id, reason);
         scene.state = SceneState::ToKill(current_time_us);
         self.dying_scene_ids.push(*scene_id);
         true

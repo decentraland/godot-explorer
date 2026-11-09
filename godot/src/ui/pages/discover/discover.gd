@@ -93,6 +93,11 @@ func _ready():
 	places_favorites.generator.report_loading_status.connect(
 		_on_report_loading_status.bind(places_favorites)
 	)
+	# Not in _get_active_carousels(), so it doesn't change the messages; its report only re-sends
+	# the DISCOVER snapshot once My Places has loaded.
+	places_my_places.generator.report_loading_status.connect(
+		_on_report_loading_status.bind(places_my_places)
+	)
 
 
 ## Consumes StreakManager's queued modal (set in-world by credit_jump_in(), issue #3018) and
@@ -159,18 +164,59 @@ func _on_featured_card_tapped(index: int) -> void:
 		var tex = card.get_texture()
 		if tex:
 			data["_preloaded_texture"] = tex
+		data["_carousel"] = "featured"
+		data["_carousel_position"] = index
 		jump_in.set_data(data)
 		jump_in.open_panel.call_deferred()
 
 
-func on_item_pressed(data):
+func on_item_pressed(data, card: PlaceItem = null):
+	if card:
+		_set_card_origin(data, card)
 	jump_in.set_data(data)
 	jump_in.open_panel()
 
 
-func on_friend_pressed(data):
+func on_friend_pressed(data, card: PlaceItem = null):
+	if card:
+		_set_card_origin(data, card)
 	friend_jump_in.set_data(data)
 	friend_jump_in.open_panel()
+
+
+# Carousel node -> key, shared by the DISCOVER event's `carousels` and the `carousel` that
+# PLACE_DETAILS / PLACE_DETAIL_CLICK log, so the two always join. `featured` is a SnapCarousel
+# and is handled on its own.
+func _carousel_keys() -> Dictionary:
+	# search_param, not search_text: search_text follows keystrokes before a search is submitted.
+	var searching: bool = not places_most_active.generator.search_param.is_empty()
+	return {
+		friends_online: "friends",
+		last_visited: "last_visited",
+		places_most_active: "search" if searching else "most_active",
+		events: "events",
+		places_favorites: "favorites",
+		places_my_places: "my_places",
+	}
+
+
+# 0-based slots count PlaceItem siblings, the same way _collect_carousel_data() does.
+func _set_card_origin(data: Dictionary, card: PlaceItem) -> void:
+	var container := card.get_parent()
+	var carousel_keys := _carousel_keys()
+	# Both keys or neither: a slot without its carousel would read as a real position.
+	for carousel in carousel_keys:
+		if carousel.item_container == container:
+			data["_carousel"] = carousel_keys[carousel]
+			var slot := 0
+			for child in container.get_children():
+				if child == card:
+					break
+				if child is PlaceItem:
+					slot += 1
+			data["_carousel_position"] = slot
+			return
+	push_warning("[Discover] place card tapped from an untracked carousel")
 
 
 func _on_friend_jump_in(parcel_position: Vector2i, realm: String):
@@ -205,6 +251,7 @@ func async_open_place_by_id(place_id: String) -> void:
 	if place_data.is_empty():
 		printerr("[Discover] Empty place data for id: ", place_id)
 		return
+	place_data["_carousel"] = "deeplink"
 	on_item_pressed(place_data)
 
 
@@ -218,7 +265,8 @@ func _on_jump_in_world(realm: String):
 	Global.async_join_world(realm)
 
 
-func _get_ui_location() -> String:
+# Shared with menu.gd so every DISCOVER event carries the same `location`.
+static func get_ui_location() -> String:
 	return "in_game" if Global.get_explorer() else "pre_game"
 
 
@@ -240,7 +288,7 @@ func _on_visibility_changed():
 		_show_device_support_modal_if_needed()
 		Global.set_orientation_portrait()
 		Global.metrics.track_screen_viewed(
-			"DISCOVER", JSON.stringify({"location": _get_ui_location()})
+			"DISCOVER", JSON.stringify({"location": get_ui_location()})
 		)
 		_show_low_spec_warning_if_needed()
 		if Global.get_explorer():
@@ -627,7 +675,7 @@ func _update_global_messages() -> void:
 				. metrics
 				. track_screen_viewed(
 					"DISCOVER",
-					JSON.stringify({"location": _get_ui_location(), "carousels": carousels_data}),
+					JSON.stringify({"location": get_ui_location(), "carousels": carousels_data}),
 				)
 			)
 
@@ -639,13 +687,9 @@ func _update_global_messages() -> void:
 
 func _collect_carousel_data() -> Dictionary:
 	var result := {}
-	var carousel_map := {
-		"most_active": places_most_active,
-		"events": events,
-		"last_visited": last_visited,
-	}
-	for key in carousel_map:
-		var carousel = carousel_map[key]
+	var carousel_keys := _carousel_keys()
+	for carousel in carousel_keys:
+		var key: String = carousel_keys[carousel]
 		if not carousel.visible:
 			continue
 		var items := []

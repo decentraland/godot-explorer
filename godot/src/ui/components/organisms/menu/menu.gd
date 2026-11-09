@@ -75,7 +75,10 @@ func _ready():
 	self.modulate = Color(1, 1, 1, 1)
 	current_screen_name = ("DISCOVER" if Global.is_orientation_portrait() else "DISCOVER_IN_GAME")
 	if !is_in_game:
-		Global.metrics.track_screen_viewed(current_screen_name, '{"function": "ready"}')
+		Global.metrics.track_screen_viewed(
+			current_screen_name,
+			JSON.stringify({"function": "ready", "location": Discover.get_ui_location()})
+		)
 		Global.metrics.flush()
 
 	control_settings.placeholder.visible = false
@@ -274,7 +277,9 @@ func select_settings_screen(play_sfx: bool = true):
 
 func select_discover_screen(play_sfx: bool = true):
 	current_screen_name = ("DISCOVER" if Global.is_orientation_portrait() else "DISCOVER_IN_GAME")
-	Global.metrics.track_screen_viewed(current_screen_name, "")
+	Global.metrics.track_screen_viewed(
+		current_screen_name, JSON.stringify({"location": Discover.get_ui_location()})
+	)
 	async_select_node(control_discover, play_sfx)
 
 
