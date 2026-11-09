@@ -93,7 +93,7 @@ export function Dialog({
   visible: boolean;
   title: string;
   body?: string;
-  /** Figma `Link=True`: an underlined sky-blue line under the body (two lines at most). */
+  /** Figma `Link=True`: an underlined `text/link` line under the body (two lines at most). */
   link?: { label: string; onPress: () => void };
   icon?: DialogIcon;
   buttons: DialogButton[];
@@ -143,13 +143,17 @@ export function Dialog({
           <View style={[styles.content, landscape && styles.contentLandscape]}>
             <View style={styles.text}>
               <AppText style={styles.title}>{title}</AppText>
-              {body && <AppText style={styles.body}>{body}</AppText>}
-              {link && (
-                <Pressable accessibilityRole="link" onPress={link.onPress}>
-                  <AppText numberOfLines={2} style={styles.link}>
-                    {link.label}
-                  </AppText>
-                </Pressable>
+              {(body || link) && (
+                <View style={styles.bodyGroup}>
+                  {body && <AppText style={styles.body}>{body}</AppText>}
+                  {link && (
+                    <Pressable accessibilityRole="link" onPress={link.onPress}>
+                      <AppText numberOfLines={2} style={styles.link}>
+                        {link.label}
+                      </AppText>
+                    </Pressable>
+                  )}
+                </View>
               )}
             </View>
             {children}
@@ -228,8 +232,8 @@ const styles = StyleSheet.create({
     color: colors.snow,
     textAlign: 'center',
   },
+  bodyGroup: { gap: u(5) },
   link: {
-    marginTop: u(5),
     fontSize: u(10),
     color: colors.link,
     textAlign: 'center',

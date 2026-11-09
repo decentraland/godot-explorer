@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { AppText } from './AppText';
 import { Icon, IconName } from './Icon';
-import { colors, elevation, fonts } from './tokens';
+import { colors, elevation } from './tokens';
 import { u } from './scale';
 
 export type MenuItem<K extends string> = {
@@ -47,8 +47,16 @@ export function Menu<K extends string>({
               (item.selected || pressed) && styles.rowSelected,
             ]}
           >
-            {item.icon && <Icon name={item.icon} size={16} color={tint} />}
-            <AppText numberOfLines={1} style={[styles.label, { color: tint }]}>
+            {item.icon && (
+              <View style={styles.iconSlot}>
+                <Icon name={item.icon} size={18.2} color={tint} />
+              </View>
+            )}
+            <AppText
+              variant="menuItem"
+              numberOfLines={1}
+              style={[styles.label, { color: tint }]}
+            >
               {item.label}
             </AppText>
             {item.check && <Icon name="check" size={20} color={tint} />}
@@ -61,12 +69,12 @@ export function Menu<K extends string>({
 
 const styles = StyleSheet.create({
   menu: {
-    width: u(159.5),
+    width: u(160),
     paddingHorizontal: u(12),
     paddingVertical: u(8),
     gap: u(13),
     borderRadius: u(6),
-    borderWidth: 1,
+    borderWidth: u(0.5),
     borderColor: colors.lavender70,
     backgroundColor: colors.menu,
     ...elevation.menu,
@@ -80,5 +88,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rowSelected: { backgroundColor: colors.black40 },
-  label: { flex: 1, fontFamily: fonts.medium, fontSize: u(14) },
+  /** The node draws a 36.4 px `Icon/Base` overflowing its 32 px slot. */
+  iconSlot: {
+    width: u(16),
+    height: u(16),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  label: { flex: 1 },
 });

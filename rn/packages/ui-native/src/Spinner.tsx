@@ -39,7 +39,8 @@ export function Spinner({
   }, [turn]);
   const px = u(size);
   const stroke = (px * 16) / 150;
-  const r = px / 2 - stroke / 2;
+  // The track's centre line sits at radius 53 of 150; the arc spans 141°→300°.
+  const r = (px * 53) / 150;
   const circumference = 2 * Math.PI * r;
   const rotate = turn.interpolate({
     inputRange: [0, 1],
@@ -67,8 +68,8 @@ export function Spinner({
           stroke={colors.ruby}
           strokeWidth={stroke}
           fill="none"
-          strokeDasharray={`${circumference * 0.375} ${circumference}`}
-          rotation={135}
+          strokeDasharray={`${(circumference * 159) / 360} ${circumference}`}
+          rotation={141}
           origin={`${px / 2}, ${px / 2}`}
         />
       </Svg>

@@ -7,12 +7,13 @@ import { colors, fonts, radii } from './tokens';
 import { u } from './scale';
 import { t } from './i18n';
 
-/** Figma `Header`. Portrait: Title / TitleSearch / Back / BackSearch / SearchOpen, with the
+/** Figma `Header`. Portrait: Title / TitleSearch / Back / BackSearch / SearchOpen / Close, with the
  * optional `Badge/Credits` (and the Ticket action next to it on Back). Landscape: Title /
  * TitleButton, where `action` is a Secondary outline button. Orientation follows the window. */
 export function Header({
   title,
   onBack,
+  onClose,
   onSearch,
   search,
   credits,
@@ -21,6 +22,8 @@ export function Header({
 }: {
   title: string;
   onBack?: () => void;
+  /** `Type=Close`: only the Close icon, no title (portrait). */
+  onClose?: () => void;
   /** Shows the Search icon; the screen switches to `search` (SearchOpen) itself. */
   onSearch?: () => void;
   /** SearchOpen: back + the search field in place of the title. */
@@ -41,8 +44,26 @@ export function Header({
       <View style={styles.landscape}>
         <AppText style={styles.titleLandscape}>{title}</AppText>
         {action && (
-          <Button tone="outline" label={action.label} onPress={action.onPress} />
+          <Button
+            tone="outline"
+            label={action.label}
+            onPress={action.onPress}
+          />
         )}
+      </View>
+    );
+  }
+  if (onClose) {
+    return (
+      <View style={[styles.portrait, styles.closeOnly]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('APP_CLOSE')}
+          hitSlop={u(8)}
+          onPress={onClose}
+        >
+          <Icon name="close" size={30} />
+        </Pressable>
       </View>
     );
   }
@@ -116,7 +137,9 @@ export function Header({
             style={styles.credits}
           >
             <Icon name="credits" size={20} />
-            <AppText style={styles.creditsAmount}>{String(credits.amount)}</AppText>
+            <AppText style={styles.creditsAmount}>
+              {String(credits.amount)}
+            </AppText>
           </Pressable>
         )}
       </View>
@@ -135,6 +158,7 @@ const styles = StyleSheet.create({
   },
   portraitBack: { paddingBottom: u(15) },
   searchOpen: { gap: u(12), paddingBottom: u(10) },
+  closeOnly: { justifyContent: 'flex-start', paddingBottom: u(10) },
   grow: { flex: 1 },
   titleGroup: {
     flexDirection: 'row',
@@ -158,7 +182,11 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     backgroundColor: colors.black40,
   },
-  creditsAmount: { fontFamily: fonts.medium, fontSize: u(16), color: colors.snow },
+  creditsAmount: {
+    fontFamily: fonts.medium,
+    fontSize: u(16),
+    color: colors.snow,
+  },
   landscape: {
     minHeight: u(37),
     flexDirection: 'row',

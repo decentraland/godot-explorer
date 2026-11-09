@@ -95,6 +95,10 @@ export function TextField({
         style={[
           styles.box,
           multiline && styles.boxMultiline,
+          multiline &&
+            multilineHeight !== undefined && {
+              minHeight: u(multilineHeight),
+            },
           focused && styles.focused,
           !!error && styles.error,
           disabled && styles.boxDisabled,
@@ -119,10 +123,6 @@ export function TextField({
             styles.input,
             disabled && styles.textDisabled,
             multiline && styles.inputMultiline,
-            multiline &&
-              multilineHeight !== undefined && {
-                minHeight: u(multilineHeight),
-              },
           ]}
         />
         {suffix}
@@ -173,7 +173,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'transparent',
   },
-  boxMultiline: { alignItems: 'flex-start', paddingVertical: u(8) },
+  boxMultiline: {
+    alignItems: 'flex-start',
+    paddingVertical: u(8),
+    minHeight: u(108),
+  },
   boxDisabled: { backgroundColor: colors.black30 },
   focused: { borderColor: colors.lavender },
   error: { borderColor: colors.danger },
@@ -185,7 +189,7 @@ const styles = StyleSheet.create({
     color: colors.snow,
   },
   textDisabled: { color: colors.white20 },
-  inputMultiline: { minHeight: u(108), textAlignVertical: 'top' },
+  inputMultiline: { alignSelf: 'stretch', textAlignVertical: 'top' },
   helperAbove: {
     marginBottom: u(5),
     paddingBottom: u(4),

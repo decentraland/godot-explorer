@@ -1,3 +1,12 @@
+export { AvatarCard } from './AvatarCard';
+export { BrandBackground } from './BrandBackground';
+export {
+  DetailRow,
+  DISCOVER_CARD,
+  DiscoverCard,
+  DiscoverCardSkeleton,
+} from './DiscoverCard';
+export type { DetailType } from './DiscoverCard';
 export { ActionSquareButton } from './ActionSquareButton';
 export { AppText } from './AppText';
 export { Badge } from './Badge';
@@ -23,7 +32,8 @@ export { HudCircleButton } from './HudCircleButton';
 export { Icon } from './Icon';
 export type { IconName } from './Icon';
 export { IconButton } from './IconButton';
-export { ItemCard, SkeletonCard } from './ItemCard';
+export { ItemCard, RarityBackground, SkeletonCard } from './ItemCard';
+export type { ItemCardProps, ItemCardState } from './ItemCard';
 export { LinkButton } from './LinkButton';
 export { LinkRow } from './LinkRow';
 export { LoginButton } from './LoginButton';
@@ -63,6 +73,8 @@ export {
   radius,
   space,
   rarityColors,
+  lightRainbow,
+  motion,
 } from './tokens';
 export type { Rarity } from './tokens';
 export { hexToHsv, hsvToHex } from './colorMath';

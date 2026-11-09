@@ -178,8 +178,8 @@ export function EditProfile({
       <LinearFill
         stops={[
           { offset: 0, color: '#7D26B5' },
-          { offset: 0.3, color: '#470071' },
-          { offset: 1, color: '#470071' },
+          { offset: 0.3, color: colors.brand },
+          { offset: 1, color: colors.brand },
         ]}
         angle={20}
       />

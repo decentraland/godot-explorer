@@ -176,8 +176,8 @@ export function WearablesPanel(props: WearablesPanelProps) {
                 thumbnail={item.thumbnail}
                 art={<ItemArt category={item.category} name={item.name} />}
                 rarity={item.rarity}
-                equipped={equipped}
-                caption={
+                state={equipped ? 'unequip' : 'default'}
+                actionLabel={
                   showsUnequipStrip(item.category)
                     ? t('BACKPACK_UNEQUIP')
                     : undefined

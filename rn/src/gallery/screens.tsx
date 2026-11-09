@@ -12,6 +12,7 @@ import '../settings/gallery';
 import { StyleSheet, View } from 'react-native';
 import { BottomNav, colors, Menu } from '@dcl/ui-native';
 import './dsButtons';
+import './dsCards';
 import { registerPreview } from './registry';
 
 const noop = () => {};
@@ -53,9 +54,9 @@ registerPreview('extra/menu', {
     <View style={styles.menu}>
       <Menu
         items={[
-          { key: 'a', label: 'Text', icon: 'menuLocation' },
-          { key: 'b', label: 'Text', icon: 'menuLocation', selected: true },
-          { key: 'c', label: 'Text', icon: 'menuLocation', check: true },
+          { key: 'a', label: 'Text', icon: 'location' },
+          { key: 'b', label: 'Text', icon: 'location', selected: true },
+          { key: 'c', label: 'Text', icon: 'location', check: true },
         ]}
         onSelect={noop}
       />

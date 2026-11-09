@@ -2,7 +2,7 @@ import { u } from './scale';
 /** Design tokens from the "Design System Mobile" Figma file. Sizes are Figma px / 2 (dp). */
 export const colors = {
   ruby: '#FF2D55',
-  rubyPressed: '#E1002B',
+  rubyPressed: '#D80029',
   rubyDisabled: 'rgba(255,45,85,0.5)',
   /** Figma `ruby[200]` — `Input/Counter` at its limit. */
   ruby200: '#FF5F77',
@@ -56,9 +56,30 @@ export const colors = {
   green: '#30CD00',
   modal: '#4C147C',
   menu: '#1B002D',
+  /** Figma `background/brand` (the `Background` component). */
+  brand: '#470071',
   navbar: 'rgba(26,9,37,0.9)',
   black25: 'rgba(0,0,0,0.25)',
+  /** `Cards-Wearables` Equipped bar: Shadow at 80%. */
+  shadow80: 'rgba(22,21,24,0.8)',
+  black4: 'rgba(0,0,0,0.04)',
+  black8: 'rgba(0,0,0,0.08)',
+  black50: 'rgba(0,0,0,0.5)',
+  white4: 'rgba(255,255,255,0.04)',
+  white8: 'rgba(255,255,255,0.08)',
+  /** Figma `alpha/deep-purple-*`: Purple 500 `#350854` at 40% / 50% (Discover card without image). */
+  deepPurple40: 'rgba(53,8,84,0.4)',
+  deepPurple50: 'rgba(53,8,84,0.5)',
+  /** Figma `alpha/lavender-50`: Lavender Light at 50%. */
+  lavender50: 'rgba(232,185,255,0.5)',
 } as const;
+
+/** Figma `Gradients/Light Rainbow` (Featured tag, selected avatar card); CSS 147.6° = `LinearFill` 32. */
+export const lightRainbow = [
+  { offset: 0, color: '#FFBC5B' },
+  { offset: 0.505, color: colors.ruby },
+  { offset: 1, color: colors.magenta },
+];
 
 /** Figma `Elevation/Down|Up`: one shadow, 0/±4 offset, blur 4, Shadow at 50% — values ÷ 2 for
  * dp. `boxShadow` draws the same on both platforms (Android `elevation` ignores the colour). */
@@ -84,11 +105,11 @@ export const notificationTitle = {
 export const rarityColors = {
   base: { dark: colors.cardLight, light: colors.snow },
   common: { dark: '#73D3D3', light: '#ACF8F8' },
-  uncommon: { dark: '#FF8362', light: '#FFD6B2' },
+  uncommon: { dark: '#FF8362', light: '#FFE0B2' },
   rare: { dark: '#34CE76', light: '#73FFAF' },
-  epic: { dark: '#438FFF', light: '#81D1FF' },
-  legendary: { dark: '#A14BF3', light: '#DF9CFF' },
-  exotic: { dark: '#9CD71E', light: '#E4FFB8' },
+  epic: { dark: '#438FFF', light: '#81E1FF' },
+  legendary: { dark: '#A14BF3', light: '#E8B9FF' },
+  exotic: { dark: '#9CD71E', light: '#DBF0AD' },
   mythic: { dark: '#FF4BED', light: '#F6C1FF' },
   unique: { dark: '#FEA217', light: '#FFF280' },
 } as const;
@@ -145,6 +166,16 @@ export const iconSize = {
  * extend smaller controls with `hitSlop`. */
 export const border = { thin: 1 } as const;
 export const minTouchTarget = 44;
+
+/** Figma Motion page: durations in ms and the three cubic-bezier easings. */
+export const motion = {
+  duration: { instant: 100, fast: 150, base: 200, slow: 300 },
+  easing: {
+    standard: [0.2, 0, 0, 1],
+    enter: [0, 0, 0, 1],
+    exit: [0.3, 0, 1, 1],
+  },
+} as const;
 
 export const fonts = {
   regular: 'Inter-Regular',
