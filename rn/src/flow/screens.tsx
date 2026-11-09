@@ -27,7 +27,8 @@ import { isValidName, NAME_MAX, Provider } from './flowMachine';
 import { randomName } from './randomName';
 import { I18nKey, t } from '../i18n';
 
-const logo = require('../assets/logo.png');
+/** Figma `Loader/Logo`: the logo animated, 154 px source drawn at the splash's 130. */
+const loadingLogo = require('../assets/logo-loading.gif');
 const avatarShadow = require('../assets/avatar-shadow.png');
 const decentralandLogo = require('../assets/decentraland_logo.png');
 
@@ -39,7 +40,7 @@ export function SplashScreen({ onDone }: { onDone: () => void }) {
   return (
     <FlowFrame flat edgeToEdge>
       <View style={styles.center}>
-        <Image source={logo} style={styles.logo} resizeMode="contain" />
+        <Image source={loadingLogo} style={styles.logo} resizeMode="contain" />
       </View>
     </FlowFrame>
   );
