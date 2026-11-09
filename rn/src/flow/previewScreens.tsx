@@ -151,6 +151,7 @@ export function AvatarCreateScreen({
   onContinue: () => void;
   onBack: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const avatar = useAvatar();
   const [presets, setPresets] = useState<PresetAvatar[]>([]);
   // The core still holds the last session's avatar: the window stays closed until the preset is
@@ -193,7 +194,7 @@ export function AvatarCreateScreen({
         accessibilityLabel={t('APP_BACK')}
         onPress={onBack}
         hitSlop={12}
-        style={styles.avatarBack}
+        style={[styles.avatarBack, { top: Math.max(insets.top + u(4), u(43)) }]}
       >
         <Icon name="back" size={30} />
       </Pressable>
@@ -328,7 +329,8 @@ const styles = StyleSheet.create({
     gap: u(12),
   },
   centered: { textAlign: 'center' },
-  avatarBack: { position: 'absolute', left: u(24), top: u(43) },
+  /** Same place as the backpack's arrow (`PortraitLayout`), insets included, so it does not move. */
+  avatarBack: { position: 'absolute', left: u(24) },
   /** Figma's blurred ellipse under the feet (240×34 plus its blur), centred at (343, 820). */
   avatarShadow: {
     position: 'absolute',
