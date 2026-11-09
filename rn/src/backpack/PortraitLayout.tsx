@@ -52,7 +52,13 @@ export function PortraitLayout({
         <StageBackground bottom={heights[state.sheet]} />
         <View style={[styles.header, { paddingTop: top }]}>
           {onBack ? (
-            <BackButton onPress={onBack} style={{ left: u(18), top }} />
+            // The same arrow, size and place as the avatar screen it follows: the box is 1 dp
+            // larger on each side than the 30 dp arrow.
+            <BackButton
+              onPress={onBack}
+              size={30}
+              style={{ left: u(23), top: top - u(1) }}
+            />
           ) : null}
           {tools ? <HeaderRow controller={controller} /> : null}
         </View>
