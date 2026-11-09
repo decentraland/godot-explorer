@@ -102,6 +102,8 @@ impl DclUiDropdown {
     ) {
         let options = &new_value.options;
         let option_count = options.len() as i32;
+        // A shrink moves a cut-off selection to the last option without a signal.
+        let cut_off = self.base().get_selected() >= option_count;
         // Not `remove_item` in a loop: each removal shifts the rest down. No auto-select either,
         // unlike `add_item`, so `accept_empty` can leave nothing selected.
         self.base_mut().set_item_count(option_count);
@@ -116,7 +118,7 @@ impl DclUiDropdown {
         };
         // Also when the scene's option has only now arrived.
         let waiting = scene_index >= 0 && self.base().get_selected() == -1;
-        if self.scene_index != Some(scene_index) || waiting {
+        if self.scene_index != Some(scene_index) || waiting || cut_off {
             self.scene_index = Some(scene_index);
             let index = if scene_index < option_count {
                 scene_index

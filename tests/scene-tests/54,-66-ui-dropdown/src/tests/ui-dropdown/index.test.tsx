@@ -119,6 +119,19 @@ test('ui-dropdown: fewer options replace the old ones', async function (context)
   CustomReactEcsRenderer.destroy()
 })
 
+test('ui-dropdown: a selectedIndex past fewer options selects nothing', async function (context) {
+  CustomReactEcsRenderer.destroy()
+  await show(context, { options: letters, selectedIndex: 5 }, (shown) => shown.selected === 5)
+  const shown = await show(
+    context,
+    { options: ['X', 'Y', 'Z'], selectedIndex: 5, emptyLabel: 'None' },
+    (shown) => shown.options.length <= 3
+  )
+  assertEquals(shown.selected, -1, 'selected')
+  assertEquals(shown.text, 'None', 'text')
+  CustomReactEcsRenderer.destroy()
+})
+
 test('ui-dropdown: acceptEmpty with no selection shows the emptyLabel', async function (context) {
   CustomReactEcsRenderer.destroy()
   const shown = await show(
