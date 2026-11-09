@@ -147,6 +147,10 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
       }
     }
     setEmailError(null);
+    // Backing out of the avatar ends the session: the next one starts on the first look again.
+    if (step === 'avatar_create') {
+      setPreset(0);
+    }
     dispatch({ type: 'back' });
   }, [step]);
 

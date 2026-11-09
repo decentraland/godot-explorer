@@ -29,6 +29,8 @@ import {
 } from './presetAvatars';
 import { t } from '../i18n';
 
+/** The window opens anyway after this long: a failed preset list must not leave the stage empty. */
+const HOLD_TIMEOUT_MS = 5000;
 const stageBackground = require('../assets/avatar-stage-background.png');
 const createBackground = require('../assets/avatar-create-background.png');
 const createShadow = require('../assets/avatar-create-shadow.png');
@@ -60,9 +62,12 @@ export function StageImage({
 export function PreviewArea({
   inset = true,
   stage = 'full',
+  hold = false,
 }: {
   inset?: boolean;
   stage?: 'full' | 'create' | 'naming';
+  /** Keeps the avatar window closed: what the engine holds is not what the screen will show yet. */
+  hold?: boolean;
 }) {
   const avatar = useAvatar();
   return (
@@ -76,18 +81,20 @@ export function PreviewArea({
           </AppText>
         </View>
       )}
-      <AvatarHole
-        style={
-          stage === 'create'
-            ? styles.createHole
-            : stage === 'naming'
-            ? styles.namingHole
-            : inset
-            ? styles.hole
-            : styles.fill
-        }
-        focus={CameraFocus.Overall}
-      />
+      {!hold && (
+        <AvatarHole
+          style={
+            stage === 'create'
+              ? styles.createHole
+              : stage === 'naming'
+              ? styles.namingHole
+              : inset
+              ? styles.hole
+              : styles.fill
+          }
+          focus={CameraFocus.Overall}
+        />
+      )}
     </View>
   );
 }
@@ -146,6 +153,9 @@ export function AvatarCreateScreen({
 }) {
   const avatar = useAvatar();
   const [presets, setPresets] = useState<PresetAvatar[]>([]);
+  // The core still holds the last session's avatar: the window stays closed until the preset is
+  // applied, so that one is never drawn. With none held, the engine reports it once the window opens.
+  const [released, setReleased] = useState(() => avatar === null);
   useEffect(() => {
     let cancelled = false;
     // The edits resolve against the core's catalog: it has to be in before a preset is applied.
@@ -153,12 +163,15 @@ export function AvatarCreateScreen({
       ([found]) => {
         if (!cancelled) {
           setPresets(found);
+          setReleased(current => current || found.length === 0);
         }
       },
-      () => {},
+      () => !cancelled && setReleased(true),
     );
+    const giveUp = setTimeout(() => setReleased(true), HOLD_TIMEOUT_MS);
     return () => {
       cancelled = true;
+      clearTimeout(giveUp);
     };
   }, []);
   // An edit before the engine reports the avatar is dropped: apply again once it is there.
@@ -167,12 +180,13 @@ export function AvatarCreateScreen({
     const preset = presets[selected];
     if (preset && hasAvatar) {
       applyPresetAvatar(preset);
+      setReleased(true);
     }
   }, [presets, selected, hasAvatar]);
 
   return (
     <View style={styles.fill}>
-      <PreviewArea inset={false} stage="create" />
+      <PreviewArea inset={false} stage="create" hold={!released} />
       <Image source={createShadow} style={styles.avatarShadow} />
       <Pressable
         accessibilityRole="button"
