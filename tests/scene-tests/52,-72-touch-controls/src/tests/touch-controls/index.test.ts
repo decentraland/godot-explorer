@@ -1,6 +1,6 @@
 import { CameraMode, CameraType, Transform, engine } from '@dcl/sdk/ecs'
 import { Vector3 } from '@dcl/sdk/math'
-import { skipTest, test } from 'testing-library/src/testing'
+import { test } from 'testing-library/src/testing'
 import { assert } from 'testing-library/src/testing/assert'
 import { type TestFunctionContext } from 'testing-library/src/testing/types'
 import { assertMovePlayerTo } from 'testing-library/src/utils/helpers'
@@ -42,9 +42,7 @@ test('touch controls: dragging right turns the camera right', async function (co
   assert(turned > 10, `the camera turned ${turned} degrees, expected more than 10 to the right`)
 })
 
-// Skipped until the pinch camera switch is fixed: apply_pinch_zoom re-enters the borrowed Player
-// (player/body.rs) and the switch never happens.
-skipTest('touch controls: spreading two fingers goes first person, pinching goes back', async function (context) {
+test('touch controls: spreading two fingers goes first person, pinching goes back', async function (context) {
   await restart(context)
   assert(cameraMode() === CameraType.CT_THIRD_PERSON, `the test starts in third person, not ${cameraMode()}`)
   await pinch(context, 200, 20)
