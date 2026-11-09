@@ -105,8 +105,8 @@ export function reduceFlow(state: FlowState, action: FlowAction): FlowState {
         ? go(state, 'welcome_back', { name: action.name })
         : go(state, 'avatar_create');
     case 'authFailed':
-      if (state.step === 'guest_wait' && state.preview) {
-        // A preview that could not sign in is no longer honoured: the normal flow, with avatar creation.
+      if (state.step === 'guest_wait') {
+        // Back to Account Home to try again; a preview that could not sign in is no longer honoured.
         return go(state, 'account', { guest: false, preview: false });
       }
       return state.step === 'auth_wait' || state.step === 'email_entry'

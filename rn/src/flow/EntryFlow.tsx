@@ -8,6 +8,7 @@ import {
   nameTag,
   sendEmailCode,
   setAvatarName,
+  signOut,
   startBrowserSignIn,
   startGuest,
   verifyEmailCode,
@@ -42,24 +43,6 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
   const { step, provider } = flow;
 
   useEffect(() => {
-    const subscription = BackHandler.addEventListener(
-      'hardwareBackPress',
-      () => {
-        if (step === 'splash' || step === 'account') {
-          return false;
-        }
-        // The customize step asks before discarding; its own listener runs next.
-        if (step === 'avatar_customize') {
-          return false;
-        }
-        dispatch({ type: 'back' });
-        return true;
-      },
-    );
-    return () => subscription.remove();
-  }, [step]);
-
-  useEffect(() => {
     if (step === 'done') {
       onDone();
     }
@@ -73,8 +56,13 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
     let cancelled = false;
     const succeeded = async () => {
       acceptTerms().catch(() => {});
-      if (!cancelled) {
-        dispatch({ type: 'authSucceeded', ...(await welcome()) });
+      try {
+        const result = await welcome();
+        if (!cancelled) {
+          dispatch({ type: 'authSucceeded', ...result });
+        }
+      } catch (error) {
+        failed(error);
       }
     };
     const failed = (error?: unknown) =>
@@ -149,13 +137,36 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
   );
 
   const back = useCallback(() => {
-    // These return to the avatar, where the session must stay; the others leave a sign-in.
+    // These return to the avatar, where the session must stay. The others leave a sign-in:
+    // cancelled while it runs, signed out once it is done (a guest, or an account to name).
     if (step !== 'avatar_customize' && step !== 'avatar_naming') {
-      cancelSignIn();
+      if (alreadySignedIn()) {
+        signOut();
+      } else {
+        cancelSignIn();
+      }
     }
     setEmailError(null);
     dispatch({ type: 'back' });
   }, [step]);
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => {
+        if (step === 'splash' || step === 'account') {
+          return false;
+        }
+        // The customize step asks before discarding; its own listener runs next.
+        if (step === 'avatar_customize') {
+          return false;
+        }
+        back();
+        return true;
+      },
+    );
+    return () => subscription.remove();
+  }, [step, back]);
 
   const booted = useCallback(async () => {
     await whenInitialLinkRouted();
@@ -264,7 +275,7 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
       return (
         <NamingScreen
           tag={nameTag()}
-          preview={<PreviewArea inset={false} />}
+          preview={<PreviewArea stage="naming" />}
           onBack={back}
           onSubmit={name => {
             setAvatarName(name);

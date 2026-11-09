@@ -75,4 +75,36 @@ describe('screens render', () => {
       delete NativeModules.DclPush;
     }
   });
+
+  it('plays as guest again after backing out of Avatar Create', async () => {
+    jest.useFakeTimers();
+    try {
+      const tree = mount(<EntryFlow onDone={() => {}} />);
+      const playAsGuest = async () => {
+        await act(async () =>
+          tree.root
+            .findByProps({ accessibilityLabel: 'PLAY AS GUEST' })
+            .props.onPress(),
+        );
+        await act(async () => {
+          jest.advanceTimersByTime(500);
+        });
+        await act(async () => {});
+      };
+      await act(async () => {
+        jest.advanceTimersByTime(1500);
+      });
+      await act(async () => {});
+      await playAsGuest();
+      expect(JSON.stringify(tree.toJSON())).toContain('Choose your look');
+      await act(async () =>
+        tree.root.findByProps({ accessibilityLabel: 'Back' }).props.onPress(),
+      );
+      expect(JSON.stringify(tree.toJSON())).toContain('PLAY AS GUEST');
+      await playAsGuest();
+      expect(JSON.stringify(tree.toJSON())).toContain('Choose your look');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });

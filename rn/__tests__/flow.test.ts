@@ -98,6 +98,14 @@ describe('entry flow', () => {
     expect(state.name).toBe('Ana');
   });
 
+  it('returns to Account Home when the guest sign-in fails', () => {
+    const waiting = run([{ type: 'playAsGuest' }]);
+    expect(waiting.step).toBe('guest_wait');
+    expect(reduceFlow(waiting, { type: 'authFailed', message: 'x' }).step).toBe(
+      'account',
+    );
+  });
+
   it('returns to sign-in with a message when auth fails, and ignores stale auth results', () => {
     const waiting = run([
       { type: 'chooseSignIn' },

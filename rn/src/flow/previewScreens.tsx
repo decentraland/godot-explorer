@@ -19,6 +19,8 @@ import {
   Button,
   u,
 } from '@dcl/ui-native';
+import { core } from '../core';
+import { CameraFocus } from '../core/native';
 import { useAvatar } from '../backpack/useAvatar';
 import {
   applyPresetAvatar,
@@ -60,12 +62,12 @@ export function PreviewArea({
   stage = 'full',
 }: {
   inset?: boolean;
-  stage?: 'full' | 'create';
+  stage?: 'full' | 'create' | 'naming';
 }) {
   const avatar = useAvatar();
   return (
     <View style={styles.area}>
-      <StageImage variant={stage} />
+      <StageImage variant={stage === 'create' ? 'create' : 'full'} />
       {!avatar && (
         <View style={styles.loading}>
           <ActivityIndicator color="#FCFCFC" />
@@ -74,7 +76,18 @@ export function PreviewArea({
           </AppText>
         </View>
       )}
-      <AvatarHole style={inset ? styles.hole : styles.fill} />
+      <AvatarHole
+        style={
+          stage === 'create'
+            ? styles.createHole
+            : stage === 'naming'
+            ? styles.namingHole
+            : inset
+            ? styles.hole
+            : styles.fill
+        }
+        focus={CameraFocus.Overall}
+      />
     </View>
   );
 }
@@ -135,23 +148,27 @@ export function AvatarCreateScreen({
   const [presets, setPresets] = useState<PresetAvatar[]>([]);
   useEffect(() => {
     let cancelled = false;
-    fetchPresetAvatars().then(found => {
-      if (!cancelled) {
-        setPresets(found);
-      }
-    });
+    // The edits resolve against the core's catalog: it has to be in before a preset is applied.
+    Promise.all([fetchPresetAvatars(), core().loadAvatarCatalog()]).then(
+      ([found]) => {
+        if (!cancelled) {
+          setPresets(found);
+        }
+      },
+      () => {},
+    );
     return () => {
       cancelled = true;
     };
   }, []);
+  // An edit before the engine reports the avatar is dropped: apply again once it is there.
+  const hasAvatar = avatar !== null;
   useEffect(() => {
     const preset = presets[selected];
-    if (preset) {
-      applyPresetAvatar(preset, avatar);
+    if (preset && hasAvatar) {
+      applyPresetAvatar(preset);
     }
-    // Applying only when the selection (or the fetched list) changes, not on every avatar event.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [presets, selected]);
+  }, [presets, selected, hasAvatar]);
 
   return (
     <View style={styles.fill}>
@@ -259,6 +276,22 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   area: { ...StyleSheet.absoluteFill },
   hole: { flex: 1, marginTop: u(130), marginBottom: u(250) },
+  /** Figma AVATAR_CREATE 1450:7175: the avatar stands in a 672px tall box from y 165, feet on the shadow. */
+  createHole: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: u(82.5),
+    height: u(336),
+  },
+  /** Figma AVATAR_NAMING 1897:13029: the avatar stands from y 435 to 1317, under the name field. */
+  namingHole: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: u(217.5),
+    height: u(441),
+  },
   loading: {
     ...StyleSheet.absoluteFill,
     alignItems: 'center',

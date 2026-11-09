@@ -30,6 +30,7 @@ export const startBrowserSignIn = (provider?: 'google' | 'apple') =>
   core().signInBrowser(provider);
 
 export const cancelSignIn = () => core().cancelSignIn();
+export const signOut = () => core().signOut();
 
 /** Resolves once the app state says the user is signed in, rejects when a step fails. */
 export function whenSignedIn(): Promise<void> {

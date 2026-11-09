@@ -27,7 +27,7 @@ import { EntryFlow } from './src/flow/EntryFlow';
 
 function AppBody() {
   const [entered, setEntered] = useState(false);
-  const { push, reset, route } = useNav();
+  const { push, reset, setTab, route } = useNav();
   const onDone = useCallback(() => setEntered(true), []);
 
   const locale = useLocaleSync();
@@ -37,7 +37,8 @@ function AppBody() {
     core().firstScreenDrawn();
   }, []);
 
-  // Signing out or deleting the account sends the player back to the entry flow.
+  // Signing out or deleting the account sends the player back to the entry flow; the next
+  // session starts the menu on Discover, not on the tab it was signed out from.
   const coreTag = useCoreState().tag;
   const signedOut = coreTag === 'SignedOut';
   usePushRegistration(
@@ -47,8 +48,9 @@ function AppBody() {
     if (signedOut && entered) {
       setEntered(false);
       reset({ name: 'home' });
+      setTab('explore');
     }
-  }, [signedOut, entered, reset]);
+  }, [signedOut, entered, reset, setTab]);
 
   // A deep link navigates once the player is past the entry flow; one that arrives earlier waits.
   const waitingLink = useRef<LinkTarget | undefined>(undefined);
