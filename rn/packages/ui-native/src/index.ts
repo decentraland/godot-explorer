@@ -12,7 +12,7 @@ export { AppText } from './AppText';
 export { Badge } from './Badge';
 export { BottomNav } from './BottomNav';
 export type { NavKey } from './BottomNav';
-export { BottomSheet } from './BottomSheet';
+export { BottomSheet, useSheetDrag } from './BottomSheet';
 export { Button } from './Button';
 export { Checkbox } from './Checkbox';
 export { Chip } from './Chip';

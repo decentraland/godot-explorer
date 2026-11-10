@@ -9569,6 +9569,7 @@ export enum Control_Tags {
   ChatOpen = 'ChatOpen',
   HideUi = 'HideUi',
   FocusCamera = 'FocusCamera',
+  PreviewClip = 'PreviewClip',
   Equip = 'Equip',
   Unequip = 'Unequip',
   SetBodyShape = 'SetBodyShape',
@@ -9799,6 +9800,36 @@ export const Control = (() => {
 
     static instanceOf(obj: any): obj is FocusCamera_ {
       return obj.tag === Control_Tags.FocusCamera;
+    }
+  }
+
+  type PreviewClip__interface = {
+    tag: Control_Tags.PreviewClip;
+    inner: Readonly<{ bottom: number }>;
+  };
+  /**
+   * The avatar window is drawn only above this screen row, in device pixels: a card that slides
+   * over it covers the avatar instead of the avatar showing over the card. Negative: no limit.
+   */
+  class PreviewClip_ extends UniffiEnum implements PreviewClip__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.PreviewClip;
+    readonly inner: Readonly<{ bottom: number }>;
+    constructor(inner: { bottom: number }) {
+      super('Control', 'PreviewClip');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { bottom: number }): PreviewClip_ {
+      return new PreviewClip_(inner);
+    }
+
+    static instanceOf(obj: any): obj is PreviewClip_ {
+      return obj.tag === Control_Tags.PreviewClip;
     }
   }
 
@@ -10206,6 +10237,7 @@ export const Control = (() => {
     ChatOpen: ChatOpen_,
     HideUi: HideUi_,
     FocusCamera: FocusCamera_,
+    PreviewClip: PreviewClip_,
     Equip: Equip_,
     Unequip: Unequip_,
     SetBodyShape: SetBodyShape_,
@@ -10235,6 +10267,7 @@ export type Control = InstanceType<
     | 'ChatOpen'
     | 'HideUi'
     | 'FocusCamera'
+    | 'PreviewClip'
     | 'Equip'
     | 'Unequip'
     | 'SetBodyShape'
@@ -10289,18 +10322,22 @@ const FfiConverterTypeControl = (() => {
             focus: FfiConverterTypeCameraFocus.readFromCursor(c),
           });
         case 9:
+          return new Control.PreviewClip({
+            bottom: FfiConverterInt32.readFromCursor(c),
+          });
+        case 10:
           return new Control.Equip({
             urn: FfiConverterString.readFromCursor(c),
           });
-        case 10:
+        case 11:
           return new Control.Unequip({
             urn: FfiConverterString.readFromCursor(c),
           });
-        case 11:
+        case 12:
           return new Control.SetBodyShape({
             urn: FfiConverterString.readFromCursor(c),
           });
-        case 12:
+        case 13:
           return new Control.SetLook({
             bodyShape: FfiConverterString.readFromCursor(c),
             wearables: FfiConverterSequenceString.readFromCursor(c),
@@ -10308,38 +10345,38 @@ const FfiConverterTypeControl = (() => {
             hair: FfiConverterString.readFromCursor(c),
             eyes: FfiConverterString.readFromCursor(c),
           });
-        case 13:
+        case 14:
           return new Control.SetColor({
             target: FfiConverterTypeColorTarget.readFromCursor(c),
             color: FfiConverterString.readFromCursor(c),
           });
-        case 14:
+        case 15:
           return new Control.PlayPreviewEmote({
             urn: FfiConverterString.readFromCursor(c),
           });
-        case 15:
+        case 16:
           return new Control.SetEmoteSlot({
             slot: FfiConverterUInt32.readFromCursor(c),
             urn: FfiConverterString.readFromCursor(c),
           });
-        case 16:
-          return new Control.RandomizeAvatar();
         case 17:
+          return new Control.RandomizeAvatar();
+        case 18:
           return new Control.SetPreviewUrl({
             url: FfiConverterString.readFromCursor(c),
           });
-        case 18:
+        case 19:
           return new Control.SetName({
             name: FfiConverterString.readFromCursor(c),
           });
-        case 19:
-          return new Control.Reconnect();
         case 20:
+          return new Control.Reconnect();
+        case 21:
           return new Control.SetWorldSecret({
             realm: FfiConverterString.readFromCursor(c),
             secret: FfiConverterString.readFromCursor(c),
           });
-        case 21:
+        case 22:
           return new Control.AnswerSceneRequest({
             id: FfiConverterUInt32.readFromCursor(c),
             accepted: FfiConverterBool.readFromCursor(c),
@@ -10398,26 +10435,32 @@ const FfiConverterTypeControl = (() => {
           FfiConverterTypeCameraFocus.writeIntoCursor(inner.focus, c);
           return;
         }
-        case Control_Tags.Equip: {
+        case Control_Tags.PreviewClip: {
           c.writeI32(9);
           const inner = value.inner;
-          FfiConverterString.writeIntoCursor(inner.urn, c);
+          FfiConverterInt32.writeIntoCursor(inner.bottom, c);
           return;
         }
-        case Control_Tags.Unequip: {
+        case Control_Tags.Equip: {
           c.writeI32(10);
           const inner = value.inner;
           FfiConverterString.writeIntoCursor(inner.urn, c);
           return;
         }
-        case Control_Tags.SetBodyShape: {
+        case Control_Tags.Unequip: {
           c.writeI32(11);
           const inner = value.inner;
           FfiConverterString.writeIntoCursor(inner.urn, c);
           return;
         }
-        case Control_Tags.SetLook: {
+        case Control_Tags.SetBodyShape: {
           c.writeI32(12);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.urn, c);
+          return;
+        }
+        case Control_Tags.SetLook: {
+          c.writeI32(13);
           const inner = value.inner;
           FfiConverterString.writeIntoCursor(inner.bodyShape, c);
           FfiConverterSequenceString.writeIntoCursor(inner.wearables, c);
@@ -10427,54 +10470,54 @@ const FfiConverterTypeControl = (() => {
           return;
         }
         case Control_Tags.SetColor: {
-          c.writeI32(13);
+          c.writeI32(14);
           const inner = value.inner;
           FfiConverterTypeColorTarget.writeIntoCursor(inner.target, c);
           FfiConverterString.writeIntoCursor(inner.color, c);
           return;
         }
         case Control_Tags.PlayPreviewEmote: {
-          c.writeI32(14);
+          c.writeI32(15);
           const inner = value.inner;
           FfiConverterString.writeIntoCursor(inner.urn, c);
           return;
         }
         case Control_Tags.SetEmoteSlot: {
-          c.writeI32(15);
+          c.writeI32(16);
           const inner = value.inner;
           FfiConverterUInt32.writeIntoCursor(inner.slot, c);
           FfiConverterString.writeIntoCursor(inner.urn, c);
           return;
         }
         case Control_Tags.RandomizeAvatar: {
-          c.writeI32(16);
+          c.writeI32(17);
           return;
         }
         case Control_Tags.SetPreviewUrl: {
-          c.writeI32(17);
+          c.writeI32(18);
           const inner = value.inner;
           FfiConverterString.writeIntoCursor(inner.url, c);
           return;
         }
         case Control_Tags.SetName: {
-          c.writeI32(18);
+          c.writeI32(19);
           const inner = value.inner;
           FfiConverterString.writeIntoCursor(inner.name, c);
           return;
         }
         case Control_Tags.Reconnect: {
-          c.writeI32(19);
+          c.writeI32(20);
           return;
         }
         case Control_Tags.SetWorldSecret: {
-          c.writeI32(20);
+          c.writeI32(21);
           const inner = value.inner;
           FfiConverterString.writeIntoCursor(inner.realm, c);
           FfiConverterString.writeIntoCursor(inner.secret, c);
           return;
         }
         case Control_Tags.AnswerSceneRequest: {
-          c.writeI32(21);
+          c.writeI32(22);
           const inner = value.inner;
           FfiConverterUInt32.writeIntoCursor(inner.id, c);
           FfiConverterBool.writeIntoCursor(inner.accepted, c);
@@ -10533,6 +10576,12 @@ const FfiConverterTypeControl = (() => {
           const inner = value.inner;
           let size = 4;
           size += FfiConverterTypeCameraFocus.allocationSize(inner.focus);
+          return size;
+        }
+        case Control_Tags.PreviewClip: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterInt32.allocationSize(inner.bottom);
           return size;
         }
         case Control_Tags.Equip: {

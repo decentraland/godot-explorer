@@ -187,6 +187,7 @@ impl Host {
                 }
             }
             "focus_camera" => self.backpack.focus_camera(&text("focus")),
+            "preview_clip" => self.backpack.clip_bottom(int("bottom")),
             _ if AVATAR_CONTROLS.contains(&kind) => self.run_avatar_control(kind, args),
             _ if self.world_up.get() => self.run_world_control(kind, args),
             _ => {}

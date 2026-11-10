@@ -97,6 +97,7 @@ pub(super) fn control_payload(control: &Control) -> Option<(&'static str, VarDic
         Control::FocusCamera { focus } => {
             ("focus_camera", vdict! { "focus" => focus_name(*focus) })
         }
+        Control::PreviewClip { bottom } => ("preview_clip", vdict! { "bottom" => *bottom }),
         Control::SetPreviewUrl { url } => ("set_preview_url", vdict! { "url" => url.clone() }),
         Control::PlayPreviewEmote { urn } => {
             ("play_preview_emote", vdict! { "urn" => urn.clone() })

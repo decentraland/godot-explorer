@@ -6,6 +6,7 @@ import {
   Tabs,
   layout,
   u,
+  useSheetDrag,
 } from '@dcl/ui-native';
 import type { AvatarState } from '../core/native';
 import { t } from '../i18n';
@@ -66,6 +67,7 @@ export type WearablesPanelProps = {
 export function WearablesPanel(props: WearablesPanelProps) {
   const { catalog, avatar, tab, slot, filter, columns, bottomInset, busy } =
     props;
+  const drag = useSheetDrag();
   const items = catalog ? gridItems(tab, slot, catalog, avatar, filter) : [];
   const pills = props.subRow === 'pills';
   // The pill generation also colours the body shape, and drops the row when the list is empty.
@@ -143,7 +145,7 @@ export function WearablesPanel(props: WearablesPanelProps) {
 
   return (
     <View style={styles.fill}>
-      <View style={styles.tabs}>
+      <View style={styles.tabs} {...drag}>
         <Tabs
           items={TABS.map(entry => ({ key: entry.key, label: t(entry.label) }))}
           active={tab}

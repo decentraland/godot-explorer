@@ -62,6 +62,11 @@ pub enum Control {
     FocusCamera {
         focus: CameraFocus,
     },
+    /// The avatar window is drawn only above this screen row, in device pixels: a card that slides
+    /// over it covers the avatar instead of the avatar showing over the card. Negative: no limit.
+    PreviewClip {
+        bottom: i32,
+    },
     Equip {
         urn: String,
     },

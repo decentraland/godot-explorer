@@ -5,7 +5,9 @@ use std::cell::{Cell, RefCell};
 use godot::classes::control::{LayoutPreset, MouseFilter};
 use godot::classes::sub_viewport::UpdateMode;
 use godot::classes::texture_rect::{ExpandMode, StretchMode};
-use godot::classes::{CanvasLayer, DisplayServer, ImageTexture, Node, PackedScene, TextureRect};
+use godot::classes::{
+    CanvasLayer, Control, DisplayServer, ImageTexture, Node, PackedScene, TextureRect,
+};
 use godot::prelude::*;
 
 use super::state;
@@ -25,6 +27,7 @@ pub struct Backpack {
     /// The node the preview's canvas layer hangs from.
     host: Gd<Node>,
     layer: RefCell<Option<Gd<CanvasLayer>>>,
+    clipper: RefCell<Option<Gd<Control>>>,
     preview: RefCell<Option<Gd<AvatarPreview>>>,
     canvas_cull_mask: Cell<u32>,
     preload_pending: Cell<bool>,
@@ -40,6 +43,7 @@ impl Backpack {
         Self {
             host,
             layer: RefCell::new(None),
+            clipper: RefCell::new(None),
             preview: RefCell::new(None),
             canvas_cull_mask: Cell::new(0),
             preload_pending: Cell::new(false),
@@ -115,8 +119,16 @@ impl Backpack {
             p.hide_name = true;
         }
         preview.set_stretch(true);
-        layer.add_child(&preview);
+        // The preview keeps its size while a card covers part of it: the clipper cuts the drawing.
+        let mut clipper = Control::new_alloc();
+        clipper.set_anchors_and_offsets_preset(LayoutPreset::FULL_RECT);
+        clipper.set_clip_contents(true);
+        clipper.set_mouse_filter(MouseFilter::IGNORE);
+        clipper.set_visibility_layer(OVERLAY_CANVAS_LAYER);
+        layer.add_child(&clipper);
+        clipper.add_child(&preview);
         preview.set_visibility_layer(OVERLAY_CANVAS_LAYER);
+        *self.clipper.borrow_mut() = Some(clipper);
         *self.layer.borrow_mut() = Some(layer);
         *self.preview.borrow_mut() = Some(preview.clone());
         preview
@@ -141,7 +153,31 @@ impl Backpack {
         preview.set_size(rect.size * scale);
     }
 
+    /// Draws the preview only above this screen row, in device pixels; negative lifts the limit.
+    pub fn clip_bottom(&self, bottom: i32) {
+        let Some(mut clipper) = self.clipper.borrow().clone() else {
+            return;
+        };
+        if bottom < 0 {
+            clipper.set_anchors_and_offsets_preset(LayoutPreset::FULL_RECT);
+            return;
+        }
+        let window_width = DisplayServer::singleton().window_get_size().x;
+        let scale = match self.host.get_viewport() {
+            Some(v) if window_width > 0 => v.get_visible_rect().size.x / window_width as f32,
+            _ => 1.0,
+        };
+        let width = self
+            .host
+            .get_viewport()
+            .map_or(0.0, |v| v.get_visible_rect().size.x);
+        clipper.set_anchors_preset(LayoutPreset::TOP_LEFT);
+        clipper.set_position(Vector2::ZERO);
+        clipper.set_size(Vector2::new(width, bottom as f32 * scale));
+    }
+
     pub fn close(&self) {
+        self.clip_bottom(-1);
         if let Some(preview) = self.preview() {
             self.show_preview(&preview, false);
         }
