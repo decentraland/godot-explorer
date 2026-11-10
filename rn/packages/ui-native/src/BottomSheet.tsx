@@ -15,7 +15,8 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { colors, elevation, radii } from './tokens';
+import { SheetGlow } from './Sheet';
+import { colors, elevation, radius } from './tokens';
 import {
   DEFAULT_SNAP_CONFIG,
   nearestSnap,
@@ -35,8 +36,11 @@ export function useSheetDrag(): GestureResponderHandlers {
   return useContext(SheetDrag);
 }
 
+/** Space the handle takes above the content: Figma `Sheet` pt 16 px + the 8 px handle + gap 40 px. */
+export const SHEET_HANDLE_HEIGHT = u(32);
+
 /**
- * Sheet that rests at peek / half / full. Only the handle + `header` area
+ * Figma `Sheet` (Handle=On) that rests at peek / half / full. Only the handle + `header` area
  * drags, so scrollable `children` keep their own gestures. `snap` is
  * controlled: the sheet reports the target through `onSnapChange`.
  */
@@ -46,10 +50,6 @@ export function BottomSheet({
   containerHeight,
   config = DEFAULT_SNAP_CONFIG,
   header,
-  background,
-  handleWidth,
-  handlePadding,
-  backgroundHeight,
   onMovingChange,
   onVisibleChange,
   children,
@@ -59,15 +59,6 @@ export function BottomSheet({
   containerHeight?: number;
   config?: SnapConfig;
   header?: ReactNode;
-  /** Drawn behind the handle and body (e.g. a gradient); the solid fill stays underneath. */
-  background?: ReactNode;
-  /** Handle width in dp; defaults to 40. */
-  handleWidth?: number;
-  /** Vertical padding around the handle in dp; defaults to 10. */
-  handlePadding?: number;
-  /** dp the `background` covers from the sheet's top; over the visible part when that is shorter,
-   * so its last colour meets what sits under the sheet at every snap. */
-  backgroundHeight?: number;
   /** True from the moment a drag starts until the sheet has come to rest. */
   onMovingChange?: (moving: boolean) => void;
   /** dp of the sheet above the container's bottom, on every frame it moves and once at rest. */
@@ -180,34 +171,6 @@ export function BottomSheet({
     return [make(true).panHandlers, make(false).panHandlers];
   }, [offset, settle]);
 
-  const fitted = useMemo(() => {
-    if (!backgroundHeight) {
-      return undefined;
-    }
-    const { peek, full } = heights;
-    const shrinks = backgroundHeight > peek && full > backgroundHeight;
-    const input = [0, Math.max(0.001, full - backgroundHeight), full - peek];
-    // The layer shrinks from its top edge once the visible part is shorter than it.
-    const scaleY = shrinks
-      ? offset.interpolate({
-          inputRange: input,
-          outputRange: [1, 1, peek / backgroundHeight],
-          extrapolate: 'clamp',
-        })
-      : 1;
-    const translateY = shrinks
-      ? offset.interpolate({
-          inputRange: input,
-          outputRange: [0, 0, -(backgroundHeight - peek) / 2],
-          extrapolate: 'clamp',
-        })
-      : 0;
-    return {
-      height: backgroundHeight,
-      transform: [{ translateY }, { scaleY }],
-    };
-  }, [backgroundHeight, offset, heights]);
-
   const index = ORDER.indexOf(snap);
   const expanded = snap === 'full';
   const target = expanded ? 'half' : ORDER[index + 1];
@@ -219,32 +182,18 @@ export function BottomSheet({
         { height: heights.full, transform: [{ translateY: offset }] },
       ]}
     >
-      {fitted ? (
-        <Animated.View pointerEvents="none" style={[styles.backdrop, fitted]}>
-          {background}
-        </Animated.View>
-      ) : (
-        background
-      )}
+      <View style={styles.clip}>
+        <SheetGlow />
+      </View>
       <View {...grab}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={expanded ? 'Collapse sheet' : 'Expand sheet'}
           hitSlop={12}
           onPress={() => onSnapChange(target)}
-          style={[
-            styles.handleArea,
-            handlePadding !== undefined && {
-              paddingVertical: u(handlePadding),
-            },
-          ]}
+          style={styles.handleArea}
         >
-          <View
-            style={[
-              styles.handle,
-              handleWidth ? { width: u(handleWidth) } : null,
-            ]}
-          />
+          <View style={styles.handle} />
         </Pressable>
         {header}
       </View>
@@ -261,18 +210,27 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderTopLeftRadius: radii.sheet,
-    borderTopRightRadius: radii.sheet,
+    borderTopLeftRadius: radius['2xl'],
+    borderTopRightRadius: radius['2xl'],
     backgroundColor: colors.purple500,
+    ...elevation.up,
+  },
+  clip: {
+    ...StyleSheet.absoluteFill,
+    borderTopLeftRadius: radius['2xl'],
+    borderTopRightRadius: radius['2xl'],
     overflow: 'hidden',
     ...elevation.up,
   },
-  backdrop: { position: 'absolute', top: 0, left: 0, right: 0 },
-  handleArea: { alignItems: 'center', paddingVertical: u(10) },
+  handleArea: {
+    alignItems: 'center',
+    paddingTop: u(8),
+    paddingBottom: u(20),
+  },
   handle: {
-    width: u(40),
+    width: u(100),
     height: u(4),
-    borderRadius: u(2),
+    borderRadius: radius.xs,
     backgroundColor: colors.white30,
   },
   body: { flex: 1 },

@@ -1,13 +1,7 @@
 import { ComponentRef, useCallback, useRef, useState } from 'react';
 import { PixelRatio, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  BottomSheet,
-  colors,
-  LinearFill,
-  snapHeights,
-  u,
-} from '@dcl/ui-native';
+import { BottomSheet, colors, snapHeights, u } from '@dcl/ui-native';
 import type { SnapConfig } from '@dcl/ui-native';
 import { AvatarHole, StageBackground } from './AvatarStage';
 import {
@@ -24,8 +18,9 @@ import { core } from '../core';
 import { Control } from '../core/native';
 
 /** Sheet heights as fractions of the area above the footer (Figma 720x1600 frames). */
-const WEARABLES_SNAPS: SnapConfig = { peek: 24, half: 0.514, full: 0.863 };
-const EMOTES_SNAPS: SnapConfig = { peek: 24, half: 0.427, full: 0.863 };
+/** `peek` is Figma `Sheet` Height=Collapsed: 54 px, the handle alone. */
+const WEARABLES_SNAPS: SnapConfig = { peek: u(27), half: 0.514, full: 0.863 };
+const EMOTES_SNAPS: SnapConfig = { peek: u(27), half: 0.427, full: 0.863 };
 const SLOTS_GAP = u(12);
 
 export function PortraitLayout({
@@ -132,24 +127,12 @@ export function PortraitLayout({
           onSnapChange={sheet => dispatch({ type: 'sheet', sheet })}
           containerHeight={area || undefined}
           config={config}
-          handleWidth={100}
-          handlePadding={7}
-          // Figma's sheet body: the gradient runs over its first 34% (127 dp), solid after.
-          backgroundHeight={u(127)}
           onMovingChange={moving => {
             if (!moving) {
               setRest(heading.current);
             }
           }}
           onVisibleChange={clip}
-          background={
-            <LinearFill
-              stops={[
-                { offset: 0, color: colors.purple450 },
-                { offset: 1, color: colors.purple500 },
-              ]}
-            />
-          }
         >
           <SheetContent
             controller={controller}

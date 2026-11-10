@@ -17,7 +17,10 @@ import {
   LinkRow,
   Menu,
   PageDots,
+  ProfileCard,
   ProgressBar,
+  RarityLabel,
+  Sheet,
   Skeleton,
   SnapCarousel,
   EventBadge,
@@ -263,6 +266,18 @@ describe('Skeleton and EmptyState', () => {
     act(() => pressable(tree, 'RETRY').props.onPress());
     expect(onPress).toHaveBeenCalled();
   });
+
+  it('EmptyState renders text-only and small without an icon badge', () => {
+    const tree = render(<EmptyState size="sm" title="No friends yet" />);
+    expect(text(tree)).toContain('No friends yet');
+    act(() => tree.unmount());
+  });
+
+  it('RarityLabel shows the label it is given', () => {
+    const tree = render(<RarityLabel rarity="legendary" label="Legendary" />);
+    expect(text(tree)).toContain('Legendary');
+    act(() => tree.unmount());
+  });
 });
 
 describe('CollapsibleSection', () => {
@@ -390,5 +405,46 @@ describe('demo props', () => {
     ]) {
       expect(demos).toHaveProperty(key);
     }
+  });
+});
+
+describe('ProfileCard', () => {
+  it('draws the NAME tile and the credits price', () => {
+    let tree!: ReturnType<typeof create>;
+    act(() => {
+      tree = create(
+        <ProfileCard
+          type="name"
+          title="NAME"
+          name="Name"
+          nameSuffix="DCL.ETH"
+          price="0"
+        />,
+      );
+    });
+    const out = JSON.stringify(tree.toJSON());
+    for (const s of ['NAME', 'Name', 'DCL.ETH', '"0"']) {
+      expect(out).toContain(s);
+    }
+    act(() => tree.unmount());
+  });
+});
+
+describe('Sheet', () => {
+  it('pins the footer under a hug body and drops it when collapsed', () => {
+    let tree!: ReturnType<typeof create>;
+    act(() => {
+      tree = create(
+        <Sheet footer={<Text>Next</Text>}>
+          <Text>Body</Text>
+        </Sheet>,
+      );
+    });
+    expect(JSON.stringify(tree.toJSON())).toContain('Next');
+    act(() =>
+      tree.update(<Sheet height="collapsed" footer={<Text>Next</Text>} />),
+    );
+    expect(JSON.stringify(tree.toJSON())).not.toContain('Next');
+    act(() => tree.unmount());
   });
 });

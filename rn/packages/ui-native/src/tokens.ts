@@ -15,6 +15,7 @@ export const colors = {
   textDisabled: 'rgba(160,155,168,0.5)',
   lavender: '#E8B9FF',
   magenta: '#C640CD',
+  purple100: '#DCCBEC',
   purple350: '#691FA9',
   purple450: '#460F6F',
   purple500: '#350854',
@@ -58,6 +59,10 @@ export const colors = {
   green: '#30CD00',
   modal: '#4C147C',
   menu: '#1B002D',
+  /** `Card-Profile` Type=Name tile: base fill and its violet / peach glows. */
+  nameCard: '#604CB0',
+  nameCardViolet: '#BC93FF',
+  nameCardPeach: '#F4B57B',
   navbar: 'rgba(26,9,37,0.9)',
   black25: 'rgba(0,0,0,0.25)',
   /** `Cards-Wearables` Equipped bar: Shadow at 80%. */

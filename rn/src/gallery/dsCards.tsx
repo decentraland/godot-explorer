@@ -1,19 +1,27 @@
-// Design System Mobile: the Cards_Backpack, Cards_Discover and Skeleton pages, every variant.
+// Design System Mobile: the Cards_Backpack, Cards_Discover and Skeleton pages and the Modals page
+// `Sheet`, every variant.
 import { ScrollView, StyleSheet, View } from 'react-native';
 import {
   AppText,
   AvatarCard,
   BrandBackground,
+  Button,
   colors,
   DetailRow,
   DiscoverCard,
   DiscoverCardSkeleton,
+  EmptyState,
   EventBadge,
   EventTimeTag,
+  Icon,
+  fonts,
   ItemCard,
   LinearFill,
+  ProfileCard,
+  RarityLabel,
   RarityBackground,
   Rarity,
+  Sheet,
   Skeleton,
   u,
 } from '@dcl/ui-native';
@@ -75,6 +83,29 @@ registerPreview('extra/ds-cards-backpack', {
         <ItemCard style={styles.card} empty />
         <ItemCard style={styles.card} empty state="selected" />
         <ItemCard style={styles.card} empty state="disabled" />
+      </View>
+      <Label>Card-Profile</Label>
+      <View style={styles.row}>
+        <ProfileCard
+          title="Item Name Item Name Item Name"
+          rarity="epic"
+          price="0"
+          art={art}
+        />
+        <ProfileCard
+          type="emote"
+          title="Item Name Item Name Item Name"
+          rarity="epic"
+          price="0"
+          art={art}
+        />
+        <ProfileCard
+          type="name"
+          title="NAME"
+          name="Name"
+          nameSuffix="DCL.ETH"
+          price="0"
+        />
       </View>
       <Label>Avatar-Card</Label>
       <View style={styles.row}>
@@ -162,6 +193,74 @@ registerPreview('extra/ds-skeleton', {
   ),
 });
 
+registerPreview('extra/ds-empty-state', {
+  title: 'DS: EmptyState and RarityLabel',
+  orientation: 'portrait',
+  render: () => (
+    <View style={styles.page}>
+      <BrandBackground />
+      <View style={styles.content}>
+        <EmptyState
+          icon="search"
+          title="Something went wrong"
+          body="We couldn’t load the results. Please try again."
+        />
+        <EmptyState title="Nothing here yet" body="Find new ones in the Shop" />
+        <EmptyState
+          size="sm"
+          icon="peopleHeart"
+          title="No one nearby"
+          body="Try traveling somewhere else to meet new people."
+        />
+        <View style={styles.wrap}>
+          {RARITIES.map(rarity => (
+            <RarityLabel key={rarity} rarity={rarity} label={rarity} />
+          ))}
+        </View>
+        <View style={styles.wrap}>
+          {(['edit', 'add', 'copy'] as const).map(name => (
+            <Icon key={name} name={name} size={27} />
+          ))}
+        </View>
+      </View>
+    </View>
+  ),
+});
+
+registerPreview('extra/ds-sheet', {
+  title: 'DS: Sheet',
+  orientation: 'portrait',
+  render: () => (
+    <View style={styles.sheetPage}>
+      <Sheet height="collapsed" />
+      <Sheet>
+        <Label>Handle=On, Height=Hug</Label>
+      </Sheet>
+      <Sheet
+        handle={false}
+        footer={
+          <View style={styles.footerRow}>
+            <Button label="Edit" tone="secondary" big onPress={noop} />
+            <View style={styles.grow}>
+              <Button label="Next" big fullWidth onPress={noop} />
+            </View>
+          </View>
+        }
+      >
+        <View style={styles.entry}>
+          <AppText style={styles.entryTitle}>Choose your look</AppText>
+          <View style={styles.avatars}>
+            <AvatarCard selected />
+            <AvatarCard />
+            <AvatarCard />
+            <AvatarCard />
+          </View>
+        </View>
+      </Sheet>
+    </View>
+  ),
+});
+
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.paleBlack },
   content: { padding: u(16), gap: u(14) },
@@ -176,4 +275,20 @@ const styles = StyleSheet.create({
   },
   card: { width: u(96) },
   light: { gap: u(14), padding: u(10), backgroundColor: colors.snow },
+  sheetPage: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    gap: u(16),
+    backgroundColor: colors.paleBlack,
+  },
+  footerRow: { flexDirection: 'row', gap: u(9) },
+  grow: { flex: 1 },
+  entry: { gap: u(20) },
+  entryTitle: {
+    fontFamily: fonts.bold,
+    fontSize: u(18),
+    color: colors.snow,
+    textAlign: 'center',
+  },
+  avatars: { flexDirection: 'row', gap: u(12), overflow: 'hidden' },
 });

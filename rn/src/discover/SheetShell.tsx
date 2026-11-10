@@ -7,12 +7,16 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BottomSheet, colors, Icon, LinearFill, Snap, u } from '@dcl/ui-native';
+import {
+  BottomSheet,
+  colors,
+  Icon,
+  SHEET_HANDLE_HEIGHT,
+  SheetFooter,
+  Snap,
+  u,
+} from '@dcl/ui-native';
 import { t } from '../i18n';
-
-const GRADIENT_DP = 142;
-const HANDLE_DP = 100;
-const SHEET_TOP = '#450F6D';
 
 export type SheetSnap = 'collapsed' | 'expanded';
 
@@ -67,27 +71,19 @@ export function SheetShell({
       <BottomSheet
         snap={expanded ? 'full' : 'half'}
         onSnapChange={change}
-        handleWidth={HANDLE_DP}
-        background={
-          expanded ? undefined : (
-            <LinearFill
-              stops={[
-                { offset: 0, color: SHEET_TOP },
-                { offset: GRADIENT_DP / height, color: colors.purple500 },
-              ]}
-            />
-          )
-        }
         config={{ peek: 0, half: fraction, full: expandable ? 1 : fraction }}
       >
-        <View style={{ height: visible - u(24) }}>
+        <View style={{ height: visible - SHEET_HANDLE_HEIGHT }}>
           {expanded ? (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={t('DISCOVER_CLOSE')}
               hitSlop={12}
               onPress={onClose}
-              style={[styles.close, { marginTop: insets.top - u(24) }]}
+              style={[
+                styles.close,
+                { marginTop: insets.top - SHEET_HANDLE_HEIGHT },
+              ]}
             >
               <Icon name="close" size={20} strokeWidth={2.2} />
             </Pressable>
@@ -102,11 +98,7 @@ export function SheetShell({
           >
             {children(snap)}
           </ScrollView>
-          <View
-            style={[styles.footer, { paddingBottom: u(24) + insets.bottom }]}
-          >
-            {footer}
-          </View>
+          <SheetFooter bottomInset={insets.bottom}>{footer}</SheetFooter>
         </View>
       </BottomSheet>
     </View>
@@ -114,7 +106,7 @@ export function SheetShell({
 }
 
 const styles = StyleSheet.create({
-  scrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(24,3,48,0.72)' },
+  scrim: { ...StyleSheet.absoluteFill, backgroundColor: colors.black60 },
   close: {
     paddingHorizontal: u(24),
     paddingVertical: u(10),
@@ -122,5 +114,4 @@ const styles = StyleSheet.create({
   },
   content: { paddingHorizontal: u(24), paddingBottom: u(12) },
   contentExpanded: { paddingTop: u(24) },
-  footer: { paddingHorizontal: u(24), backgroundColor: colors.purple500 },
 });

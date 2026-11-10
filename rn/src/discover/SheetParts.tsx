@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.ruby,
   },
   jumpText: { fontFamily: 'Inter-Bold', fontSize: u(15) },
-  actions: { flexDirection: 'row', gap: u(6), marginTop: u(14) },
+  actions: { flexDirection: 'row', gap: u(6) },
   hero: {
     width: '100%',
     aspectRatio: 1 / HERO_RATIO,

@@ -46,7 +46,8 @@ export function PageDots({
   );
 }
 
-/** Horizontal carousel that settles on one item at a time. */
+/** Horizontal carousel that settles on one item at a time. `renderItem` gets the item's `position`
+ * relative to the settled one, following the scroll: 0 centred, -1 one slot to the left, 1 to the right. */
 export function SnapCarousel<T>({
   data,
   itemWidth,
@@ -62,7 +63,11 @@ export function SnapCarousel<T>({
   itemWidth: number;
   gap?: number;
   keyOf: (item: T) => string;
-  renderItem: (item: T, index: number) => ReactNode;
+  renderItem: (
+    item: T,
+    index: number,
+    position: Animated.AnimatedInterpolation<number>,
+  ) => ReactNode;
   onIndexChange?: (index: number) => void;
   /** Leading/trailing padding in dp so the first item can align with the page gutter. */
   inset?: number;
@@ -79,20 +84,16 @@ export function SnapCarousel<T>({
   return (
     <Animated.ScrollView
       horizontal
+      scrollEventThrottle={16}
+      onScroll={Animated.event(
+        [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+        { useNativeDriver: true },
+      )}
       showsHorizontalScrollIndicator={false}
       snapToInterval={step}
       decelerationRate="fast"
       contentOffset={{ x: initialIndex * step, y: 0 }}
       contentContainerStyle={{ paddingHorizontal: u(inset), gap: spacing }}
-      scrollEventThrottle={16}
-      onScroll={
-        sideScale === undefined
-          ? undefined
-          : Animated.event(
-              [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-              { useNativeDriver: true },
-            )
-      }
       onMomentumScrollEnd={e =>
         onIndexChange?.(
           indexFromOffset(
@@ -129,7 +130,15 @@ export function SnapCarousel<T>({
             },
           ]}
         >
-          {renderItem(item, i)}
+          {renderItem(
+            item,
+            i,
+            scrollX.interpolate({
+              inputRange: [(i - 1) * step, i * step, (i + 1) * step],
+              outputRange: [1, 0, -1],
+              extrapolate: 'clamp',
+            }),
+          )}
         </Animated.View>
       ))}
     </Animated.ScrollView>

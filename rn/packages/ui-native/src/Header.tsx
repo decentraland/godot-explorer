@@ -9,7 +9,7 @@ import { t } from './i18n';
 
 /** Figma `Header`. Portrait: Title / TitleSearch / Back / BackSearch / SearchOpen / Close, with the
  * optional `Badge/Credits` (and the Ticket action next to it on Back). Landscape: Title /
- * TitleButton, where `action` is a Secondary outline button. Orientation follows the window. */
+ * TitleButton, where `action` is a Secondary outline button, and Back (`onBack`: the Back icon alone). Orientation follows the window. */
 export function Header({
   title,
   onBack,
@@ -39,6 +39,20 @@ export function Header({
   action?: { label: string; onPress: () => void };
 }) {
   const { width, height } = useWindowDimensions();
+  if (width > height && onBack) {
+    return (
+      <View style={styles.landscapeBack}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('APP_BACK')}
+          hitSlop={u(8)}
+          onPress={onBack}
+        >
+          <Icon name="back" size={25} />
+        </Pressable>
+      </View>
+    );
+  }
   if (width > height) {
     return (
       <View style={styles.landscape}>
@@ -194,6 +208,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: u(8),
   },
+  landscapeBack: { flexDirection: 'row', alignItems: 'flex-end' },
   titleLandscape: {
     fontFamily: fonts.bold,
     fontSize: u(22),

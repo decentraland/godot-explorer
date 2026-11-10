@@ -78,8 +78,8 @@ function useKeyboardLift(active: boolean): number {
 }
 
 /** Figma `Modal/Dialog` over `Modal/Scrim`: Portrait card 520 wide, Landscape 720, `surface/modal`
- * with the glow, an optional `Icon/Modal` overlapping the top edge, and a CTA row whose buttons
- * share the width in equal parts (the designer's call, 2026-11-09). The scrim is Black 60% (the no-blur fallback); tapping it closes. */
+ * with the glow, an optional `Icon/Modal` overlapping the top edge, and a CTA row where every
+ * button fills an equal share. The scrim is Black 60% (the no-blur fallback); tapping it closes. */
 export function Dialog({
   visible,
   title,
