@@ -410,8 +410,10 @@ p 8; Players / Likes / Coords / World (truncates at 148) / Date / Duration. No s
 Selected 624×350 → 312×175dp, radius 8 (`u(4)`), 1px Lavender Light border, a Shadow 0 → 90% gradient over
 the bottom 169 px, Name-Button row px 32 py 30 gap 32 with `Pill/Large` SemiBold 26 Snow (2 lines) and a
 `Button/Primary` JumpIn 54 (radius 8, icon 24). Code follows those since 11-10. `State=Default` (the
-neighbours) is 530×300 with no text — **not built**: shrinking the side cards changes the carousel's
-motion, to agree with the designer first. `Image Not Found` 821:3478 = the Places ImageNotFound image
+neighbours) is 530×300 with no text; Discover-FeatureBanners (`Tz8ekjVNmv2OpkmfZb8KwU` 1767:39473) lays
+them out 8dp from the settled card, vertically centred, the settled one on the 24dp gutter. Code: the
+slots stay 312 + gap 8 and `SnapCarousel` hands each card its scroll `position`; `FeatureBanners` scales
+side cards to 0.85, pulls them in by the lost width and fades the gradient and text out. `Image Not Found` 821:3478 = the Places ImageNotFound image
 alone (already what `DiscoverCard` draws).
 
 ## Skeleton page — `Skeleton`, added 2026-11-09

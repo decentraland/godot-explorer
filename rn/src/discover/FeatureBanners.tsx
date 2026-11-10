@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import {
   AppText,
   colors,
@@ -23,53 +23,93 @@ const SCRIM = [
   { offset: 1, color: colors.shadow, opacity: 0.9 },
 ];
 
+/** `State=Default` (the cards beside the settled one): 530×300 px of the 624×350 Selected, no text. */
+const SIDE_SCALE = 0.85;
+/** Pulls a side card in so its visible edge sits 8 dp from the settled one, as in Discover-FeatureBanners. */
+const SIDE_SHIFT = (WIDTH * (1 - SIDE_SCALE)) / 2;
+
 function BannerCard({
   banner,
+  position,
+  active,
   onOpen,
   onJump,
 }: {
   banner: Banner;
+  position: Animated.AnimatedInterpolation<number>;
+  active: boolean;
   onOpen: () => void;
   onJump: () => void;
 }) {
+  const overlay = position.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: [0, 1, 0],
+  });
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={banner.title || banner.place.title}
-      onPress={onOpen}
+    <Animated.View
+      style={{
+        transform: [
+          {
+            translateX: position.interpolate({
+              inputRange: [-1, 0, 1],
+              outputRange: [u(SIDE_SHIFT), 0, -u(SIDE_SHIFT)],
+            }),
+          },
+          {
+            scale: position.interpolate({
+              inputRange: [-1, 0, 1],
+              outputRange: [SIDE_SCALE, 1, SIDE_SCALE],
+            }),
+          },
+        ],
+      }}
     >
-      <Thumb
-        uri={banner.image}
-        width={u(WIDTH)}
-        height={u(HEIGHT)}
-        radius={4}
-      />
-      <View style={styles.scrim} pointerEvents="none">
-        <LinearFill stops={SCRIM} angle={180} />
-      </View>
-      <View style={styles.border} pointerEvents="none" />
-      {banner.cta === 'arrow' ? (
-        <View style={styles.row}>
-          <AppText numberOfLines={2} style={styles.title}>
-            {banner.title}
-          </AppText>
-          <View style={styles.arrow}>
-            <Icon name="jump" size={12} />
-          </View>
-        </View>
-      ) : (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('COMMON_JUMP_IN')}
-          onPress={onJump}
-          style={styles.jump}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={banner.title || banner.place.title}
+        onPress={onOpen}
+      >
+        <Thumb
+          uri={banner.image}
+          width={u(WIDTH)}
+          height={u(HEIGHT)}
+          radius={4}
+        />
+        <Animated.View
+          style={[styles.scrim, { opacity: overlay }]}
+          pointerEvents="none"
         >
-          <AppText variant="button" style={styles.jumpText}>
-            {t('COMMON_JUMP_IN')}
-          </AppText>
-        </Pressable>
-      )}
-    </Pressable>
+          <LinearFill stops={SCRIM} angle={180} />
+        </Animated.View>
+        <View style={styles.border} pointerEvents="none" />
+        <Animated.View
+          style={[StyleSheet.absoluteFill, { opacity: overlay }]}
+          pointerEvents={active ? 'box-none' : 'none'}
+        >
+          {banner.cta === 'arrow' ? (
+            <View style={styles.row}>
+              <AppText numberOfLines={2} style={styles.title}>
+                {banner.title}
+              </AppText>
+              <View style={styles.arrow}>
+                <Icon name="jump" size={12} />
+              </View>
+            </View>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('COMMON_JUMP_IN')}
+              onPress={onJump}
+              style={styles.jump}
+            >
+              <AppText variant="button" style={styles.jumpText}>
+                {t('COMMON_JUMP_IN')}
+              </AppText>
+            </Pressable>
+          )}
+        </Animated.View>
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -112,9 +152,11 @@ export function FeatureBanners({
         inset={24}
         keyOf={b => b.id}
         onIndexChange={setIndex}
-        renderItem={banner => (
+        renderItem={(banner, i, position) => (
           <BannerCard
             banner={banner}
+            position={position}
+            active={i === index}
             onOpen={() => onOpen(banner)}
             onJump={() => onJump(banner)}
           />
