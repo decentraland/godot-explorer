@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
 import { Icon, IconName } from './Icon';
@@ -11,8 +11,6 @@ export type DropdownOption = {
   label: string;
   icon?: IconName;
   iconColor?: string;
-  /** Drawn instead of `icon` (a custom badge). */
-  iconNode?: ReactNode;
 };
 
 const FIELD_HEIGHT = 34;
@@ -70,7 +68,11 @@ export function Dropdown({
         direction === 'up' ? styles.listUp : styles.listDown,
       ]}
     >
-      <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
+      <ScrollView
+        nestedScrollEnabled
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.options}
+      >
         {options.map(option => {
           const isSelected = option.value === value;
           return (
@@ -91,15 +93,9 @@ export function Dropdown({
               >
                 {option.label}
               </AppText>
-              {(option.iconNode || option.icon) && (
+              {option.icon && (
                 <View style={styles.optionIcon}>
-                  {option.iconNode ?? (
-                    <Icon
-                      name={option.icon!}
-                      size={16}
-                      color={option.iconColor}
-                    />
-                  )}
+                  <Icon name={option.icon} size={16} color={option.iconColor} />
                 </View>
               )}
               <View style={styles.spacer} />
@@ -146,15 +142,13 @@ export function Dropdown({
           >
             {selected ? selected.label : placeholder}
           </AppText>
-          {(selected?.iconNode || selected?.icon) && (
+          {selected?.icon && (
             <View style={styles.optionIcon}>
-              {selected.iconNode ?? (
-                <Icon
-                  name={selected.icon!}
-                  size={16}
-                  color={selected.iconColor}
-                />
-              )}
+              <Icon
+                name={selected.icon}
+                size={16}
+                color={selected.iconColor}
+              />
             </View>
           )}
           <View style={styles.spacer} />
@@ -230,8 +224,8 @@ const styles = StyleSheet.create({
     borderColor: colors.lavender70,
     backgroundColor: colors.menu,
     padding: u(4),
-    gap: u(4),
   },
+  options: { gap: u(4) },
   listDown: { top: u(FIELD_HEIGHT + LIST_GAP), ...elevation.down },
   listUp: { bottom: u(FIELD_HEIGHT + LIST_GAP), ...elevation.up },
   row: {

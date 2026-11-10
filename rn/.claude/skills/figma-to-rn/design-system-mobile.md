@@ -6,7 +6,10 @@ Loader, Skeleton, EmptyState, Backgrounds, Spacing & Sizes, Elevation, Motion, S
 text fields) ultimately trace back to — check here **before** re-deriving a spec from a specific
 screen's node, and before assuming a value is screen-specific when it might be a shared token.
 Last full pass (every component set read through `get_design_context` metadata, no screenshots):
-**2026-11-10, second round** (Sheet `_Glow` fixed at 125dp, the EmptyState page, `Icon/Base` Edit / Add / Copy,
+**2026-11-10, third round** (every set on every page re-read value by value: `Modal/Claim`, `Button/Primary`
+`Type=Claim` and the 60×60 Dice square, redrawn Share / Like / Dislike / Emote / NavBar Social, Discover Pressed
+and Filter Disable icon colours, OptionsList gap, `RarityLabel` Exotic tint, EmptyState icon 80, `Image Not Found`)
+after **2026-11-10, second round** (Sheet `_Glow` fixed at 125dp, the EmptyState page, `Icon/Base` Edit / Add / Copy,
 `Header` Back Landscape, and two sets missed on 11-09: `RarityLabel` on Tags and `Feature` on Cards_Discover) after
 **2026-11-10** (`Panel` frame on the Modals page = `Sheet`, `Card-Profile`, Dialog buttons both Fill) after
 **2026-11-09** (the designer's changes since 11-06: Ruby Pressed and four rarity Light colours, the
@@ -44,6 +47,12 @@ Yellow `#FFC95B`, Melon `#FFA25A`, Violet `#A524B3`, Cloudy Sky `#716B7C`, Grass
 `#FFE5EA`, and the **System** scales (Success 100–500 `#C1EECF #65D890 #34CE77 #00B453 #00A146`,
 Error `#FFCDD4 #E97177 #FB3B3B #EC303A #CC1D2C` — 300 is `colors.danger`, Warning `#FFCD88 #FFB95B
 #FE9C2A #F38025 #EC7122`). The palette bar gradient starts at `#FFBC5B`, not Yellow.
+Added 11-10: `purple200` `#AE8AD2` (claimed button), `exoticTint` `#CAFF73`, `claimGradient`. Variables with no token
+yet (no RN consumer): `color/aqua` `#34FEE6` (`text/username`), `alpha/shadow-70|90`, `alpha/violet-70`, true
+`alpha/white-30` (#FFFFFF, code `white30` is Snow), `alpha/gray-30`, `alpha/purple-70` (inline in `IconButton`
+Discover Selected), `success/300` `#34CE77`; the `space/10…64` numeric spacers; gradient styles Rainbow, Flare,
+Cerise, Amethyst; effect styles NavBar/Landscape, NavBar/Portrait, Scrim/Blur. Most text styles have no `AppText`
+variant — components hard-code the matching size (Dialog, Header).
 
 Changed by the designer on 2026-11-09 (aligned with the Desktop/Web libraries): `rubyPressed`
 (`action/primary-pressed`, every `Button/Primary` Pressed) `#E1002B` → **`#D80029`**; rarity Light
@@ -129,13 +138,15 @@ older than the nodes: where they disagree the nodes win (Entry says "Icon 32x32"
 | Button radius | Large 16 (`radius/xl`); Medium 12 (`radius/lg`); Small 8 (`radius/sm`) | `radii.button` / `medium` / `small` |
 | Button icons | leading 32 / 28 / 24 (`icon/button-lg|md|sm`), `Icn/JumpIn` trailing at the same sizes; Reminder icon 54 | `iconSize` 16/14/12 dp, reminder 27 |
 | Button label | `Btn/Large|Medium|Small` Inter **Bold** 30/24/22, lh 100%, **uppercase**; Snow, Disabled `text/disabled` Silver 50% | `styles.label` (bold + uppercase) over `AppText variant="button"` |
-| Primary | Ruby / Pressed `#E1002B` / Disabled Ruby 50% | `ruby` / `rubyPressed` / `rubyDisabled` |
+| Primary | Ruby / Pressed `#D80029` / Disabled Ruby 50% | `ruby` / `rubyPressed` / `rubyDisabled` |
+| Primary `Type=Claim` 868:15081 (Medium only, added 11-10) | image fill: magenta `#C93EC5` → Ruby at 76% of the width; Pressed the same at 70% ("Claiming..."); Disabled `Purple/200` `#AE8AD2` with a **Snow** label | `tone="claim"` (`claimGradient`, `loading` = the 70% look with the label kept, `colors.purple200`) |
+| Primary `Icon=True, Text=False` Medium 877:15101 (Dice, added 11-10) | **60×60** radius 8, `Icon/Base` Dice 54 white; Disabled Ruby 50% + Snow 10% icon. Named Medium but it is not 74 tall — ask the designer | `IconButton variant="primary" big` (`u(30)`, icon 27) |
 | Secondary · Outline | Black 40% / Pressed Black 60% / Disabled Black 30%; Outline adds a 2px Snow border, Silver 50% when disabled | `secondary` + `outline`; `dark` is a code-only alias of `secondary` |
 | Primary `Text=False` 316:282 | 54×54 Ruby square, radius 8, `Icn/JumpIn` 24 | `IconButton variant="primary"` |
 | Reminder 594:589 | control/lg 96, px 24, py 16, gap 8, radius 12; Default purple 40% + **1px Snow border**; Pressed purple 60% (same border, Snow text); Selected Black 20% + 2px Ruby border + Ruby text/check | `tone="reminder"` (`selected` swaps border and colours) |
 | Entry 244:492 | 96 tall, radius 16, px 24; Google/Apple/Wallet Snow bg + Shadow text, logo 36 (gap 4, Wallet 10), Pressed White 70%, Disabled White 10% + content at 60%; Mail = Secondary with `Icon/Base` 38 + gap 8 | `LoginButton` |
-| Discover 4:1222 | 94×96 radius 16, `Icon/Base` 52; purple 40% / Pressed **60%** / Selected 70% + Lavender Light icon / Disabled 20% + Snow 30% icon | `IconButton variant="filled" big` |
-| Filter 4:1554 | Rebuilt 2026-11-06 (781:\*): **54×54 radius 8**, `Icon/Base` 40 (the new `Menu-Dot`); `State` Default / **Tap-Selected** (one state for press and selection: Black 60% + Lavender Light icon) / Disable (Black 30% + Silver 50% icon) × `Background` On/Off (Off = the glyph alone, same colours); no badge state any more | `IconButton variant="filled"` (`selected`, `background={false}`); the `badge` prop is gone |
+| Discover 4:1222 | 94×96 radius 16, `Icon/Base` 52; purple 40% / Pressed **60%** + Lavender Light icon (since 11-10) / Selected 70% + Lavender Light icon / Disabled 20% + Snow 30% icon | `IconButton variant="filled" big` |
+| Filter 4:1554 | Rebuilt 2026-11-06 (781:\*): **54×54 radius 8**, `Icon/Base` 40 (the new `Menu-Dot`); `State` Default / **Tap-Selected** (one state for press and selection: Black 60% + Lavender Light icon) / Disable (Black 30% + **Snow 10%** icon since 11-10) × `Background` On/Off (Off = the glyph alone, same colours); no badge state any more | `IconButton variant="filled"` (`selected`, `background={false}`); the `badge` prop is gone |
 | Social 300:383 | 54×54 radius 8, 2px border, `Icon/Base` 40; Black 40% / Pressed 60% with the border **and icon** in Ruby (Cancel) or Rare Light (Accept) / Disabled Black 30% + Silver 50% | `IconButton variant="outline" accentColor` |
 | Pill 10:293 | Large 60 / Medium 56, pl 14 pr 16 py 8 gap 4, icon 32; Large Default Black 40% + Pearl B2 26/34; Medium Default White 20% + White 70% B4 24/30; **Selected = Lavender Light + Shadow in every size** (States page); badge 22 at −4/−4 | `PillButton` |
 | Link 706:4763 | 54 tall, hug, no padding; `Link` Inter Medium 24 underline, `text/link` `#A0ABFF`; Pressed label at 70%; Disabled Silver 50% | `LinkButton` |
@@ -170,8 +181,8 @@ Audited 2026-11-03 against `Input/Field` 562:4820, `Input/Labeled` 562:4890, `In
 | Labeled | `Input` Medium 30 **Snow** label, gap 20 to the field; Disabled label White 30%; `Button=True` adds a `Button/Secondary` Outline Medium (radius 12) after the field, gap 16 | `label` Medium Snow, `marginBottom u(10)`; no `button` prop yet |
 | Label/Description | label + `Caption2` Regular 22 Pearl, gap 10, pb 8 | `helperAbove` `u(11)` Pearl, `marginBottom u(5)`, `paddingBottom u(4)` |
 | Search 562:5083 | 540×68, **px 10**, radius 12, Black 40%; `Icon/Base` search **56** Snow, gap 8; text Medium 30 Snow, placeholder Snow 50%; Typing/Focus = 1px Lavender Light border + `Icon/Base` close 40 Snow | `SearchField`: one look for every call site (the old `glass` pill and the always-bordered `framed` box are gone; `framed` only widens the gap after the back chevron) |
-| CodeSlots 562:5058 | 84×130 per digit, radius 16, Black 40%, 1px Shadow border; Typing = Lavender Light border + Black 70% + a 1px White caret 50 tall; Filled = Pearl border + `Input/Code` Semi Bold 48 Snow; Error = `#FB3B3B` border and digit | `CodeSlots` (hidden `TextInput`, `oneTimeCode`); the gap between slots is not specified in Figma — `u(8)` |
-| UniqueName 562:4908 | Dropdown field with `Icon/NameVerified` 32 after the name; Blocked = Gray text, no badge, no chevron; Focus = 1px Lavender Light border; Disabled Black 30% (`surface/overlayDisabled`) + White 20% | `UsernameField` → `Dropdown` with a hand-drawn `ClaimedSeal` — swap for the Figma asset and add Blocked when that screen is next touched |
+| CodeSlots 562:5058 | 84×130 per digit, radius 16, Black 40%, 1px Shadow border; Typing = Lavender Light border + Black 70% + a White caret 50 tall drawn with a 3.33 stroke (`u(1.66)` wide since 11-10); Filled = Pearl border + `Input/Code` Semi Bold 48 Snow; Error = `#FB3B3B` border and digit | `CodeSlots` (hidden `TextInput`, `oneTimeCode`); the gap between slots is not specified in Figma — `u(8)` |
+| UniqueName 562:4908 | Dropdown field with `Icon/NameVerified` 32 after the name; Blocked = Gray text, no badge, no chevron; Focus = 1px Lavender Light border; Disabled Black 30% (`surface/overlayDisabled`) + White 20% | `UsernameField` → `Dropdown` with `icon: 'nameVerified'` (the hand-drawn `ClaimedSeal` is gone since 11-10); Blocked still to add when that screen is next touched |
 | Counter 562:5035 | `B3` Regular 20 Pearl, "0/300"; Max = `ruby[200]` `#FF5F77` | `counterLabel` + `counter`/`counterMax` |
 | Label/ExternalLink | label + `Icn/NewChat` 32, gap 16, h 40 | not built (no consumer) |
 
@@ -205,9 +216,11 @@ Nothing on the page is missing from code;
 Sizes per family are the base sizes; the consuming component sets the drawn size (`Button` 32/28/24,
 `IconButton` 52/40, `Header` 60, `Search` 56, `Dropdown` 40, `Tabs` 32, `NavBar` 82/64).
 
-Re-export candidates (nodes edited after the export): `Icon/Base` Share/Like/Dislike (vectors
-640:1659–1680), `Icon/NavBar` Social inactive mask 641:903 and the Profile ring 641:2726, `Icon/Modal`
-Block (641:830–833). The NavBar description says Active uses "the nav gradient"; the exported active
+Re-exported 11-10 (third round): `Icon/Base` Share (now points right, two nodes on the left) and Share Filled,
+Like / Dislike and their Filled, Emote (two paths with a 0.5 stroke → `markup`), `Icon/NavBar` Social inactive
+(the mask path is painted white so luminance keeps it whole). Still to compare: the Profile ring 641:2726, `Icon/Modal`
+Block (641:830–833). `Icon/Base` Edit 852:124 is rotated 90° on the canvas and Add / Copy 180°, outside the set's
+frame (their export is empty) — code keeps the un-rotated geometry; ask the designer to straighten them. The NavBar description says Active uses "the nav gradient"; the exported active
 glyphs are flat `#E8B9FF` and code paints them so.
 
 Not imported (added 2026-11-09, no screen uses them yet): the **Shop** frame 785:253 (`shop/cart`,
@@ -242,7 +255,7 @@ Audited 2026-11-02 against `Control/Switch` 562:9023, `Control/Slider` 562:9048,
 | States | Focus/Open: 1px Lavender Light border · Disabled: **Black 30%** bg (`surface/overlayDisabled`, the `DropdownLabeled` Disabled instance since 11-06; the standalone `Input/Dropdown` node still says 20%), White 20% text, label White 30% · ReadOnly: no chevron, Gray text · Error: 1px `status/danger` #FB3B3B (the node has no message row; code draws one, States rule) | `fieldOpen` / `fieldDisabled` (`black30`) + `textDisabled` + `labelDisabled` / `readOnly` prop / `error` prop (`colors.danger`) |
 | Label | `Input/Label`: Medium 30 Snow, gap 20 to the field | `u(15)` medium, `marginBottom: u(10)` |
 | Options list | `surface/menu` #1B002D, 1px border (Down node says `alpha.violet70`, Up node says `border/menu` = Lavender Light 70% — the theme token wins), radius 12, padding 8, gap 8, `Elevation/Down` or `/Up` | `colors.menu`, `colors.lavender70`, `u(6)`/`u(4)`/`u(4)`, `elevation.down|up` |
-| Scroll height | 388 = p 8×2 + 5 rows × 68 + 4 gaps × 8 | `listHeight` counts the gaps (5 rows + 4 × `u(4)`) |
+| Scroll height | 388 = p 8×2 + 5 rows × 68 + 4 gaps × 8 | `listHeight` counts the gaps (5 rows + 4 × `u(4)`); the gap sits on the `ScrollView` content (it was on the outer list, so rows had none until 11-10) |
 | Action=Button / Action=Copy | a `Button/Primary` Medium ("CONNECT", since 11-06; was Secondary Outline) or an `Icon/Menu` copy stretched to the field height after the field, gap 16 | not built (no consumer) |
 | Option | 68 tall, px 16, radius 12; Selected = Black 40% bg + Lavender Light text + `Icon/Base` Check 40 | `row`/`rowSelected`/`textSelected`, check `size={20}` |
 
@@ -280,7 +293,25 @@ field as `children`. "Cancel" there is a standard `Button/Secondary` Black 40% a
 12), so `Dialog` gives each button an equal share — the old hug + fill made the row change with the
 labels.
 `Modal-Background` 671:4363 (Portrait 520×466 with the 458 card inset / Landscape 720×404) is the
-same card with the same glows and no content — not built.
+same card with the same glows and no content — not built as its own component; its description names
+custom modals such as the claim one, and `ClaimDialog` reuses `Dialog`'s `GLOW_TOP` / `GLOW_BOTTOM`.
+
+### `Modal/Claim` 871:701 — `ClaimDialog`, added 2026-11-10
+
+Reward claim modal for wearable campaigns over `Modal/Scrim`. Card 624×**680 fixed** (`u(312)`×`u(340)`),
+`surface/modal`, `radius/xl`, pt 64 pb 60 px 56, gap 24, items centred; glows are Dialog's falloff scaled to the
+card (top-right rx 252 / ry 251, bottom centred 26 px below the edge, rx 412 / ry 185). Text gap 16: title
+`Header/Title Landscape` Bold 44 (not `Modal/Title`), body `Modal/Body` 26/36. Reward slot `flex-1` centred =
+`reward` children (the dog and the flares are the campaign art). Button = `Button/Primary` `Type=Claim`, full
+width. `State`: Default ("Claim reward") / Loading (`Loader/Spinner` 150 in the slot, pt 70 pb 90, the button at
+70%) / Claimed (`Rays` 871:524 behind the reward, button `Purple/200`, "Tap to continue" H5 Medium 30 Snow with a
+0/0/9 black 50% text shadow 12 below the card; a tap anywhere closes). Motion (2 s loop in the prototype): rays
+rotate 51.4° linear (their symmetry, so the loop is seamless), scale 0 → 1 with a spring and fade in; the reward
+drops 72 px with a squash. Code: `ClaimDialog state='default|loading|claimed'`; the rays are a WebP rendered from
+the node's SVG (`assets/claim-rays.webp`) because RN has no overlay blend and Android caps blur at 25px — the
+overlay ovals are drawn as the purple they produce on `surface/modal`. Open with the designer: Loading's button
+reads "Claimed" in the modal but "Claiming..." on the Buttons page (gallery uses the latter), and the entry
+motion loops in the prototype (code plays it once, rotation loops).
 
 ### Panel frame (Modals page) — `Sheet`, `SheetFooter`, `BottomSheet`, added 2026-11-10
 
@@ -307,6 +338,9 @@ underline `u(3)` absolute at the bottom, dot `u(8)`, `icon` 16dp. A number badge
 count pill (no Figma source — a code-only extension).
 
 ## Headers page — `Header`
+
+Landscape Title / TitleButton rows are `items-end`: the title sits on the bottom edge of the 74 button (code since
+11-10). `ReadOnlyField` (no node) was replaced by `Dropdown readOnly` on 11-10 (Settings e-mail).
 
 `Header` 624:57. Portrait 720×176: pt 40, pb 24 (30 with Back), px 48; title H1 Bold 48 → `u(24)`;
 Back = `Icon/Base` 60 → `size={30}` + gap 8; Actions gap 32 → `u(16)`: Search 60, `Badge/Credits`
@@ -361,6 +395,11 @@ preview `extra/menu`.
 
 ## Cards_Backpack page — `ItemCard`, `RarityBackground`, `AvatarCard`, added 2026-11-09
 
+Since 11-10: Disable dims the whole background **with** its Snow border (80%); Premium + New shows only the New
+tag (no price pill); the New tag moves in with the Pressed inset (+2.5 / +2 dp); the image box is proportional
+(4.17% sides, 7.81% bottom) so `Card-Profile`'s 75dp tile keeps the layout. Card-Profile radius stays `radius.lg`
+(the node scales it to 9.375 px) — 1dp, left.
+
 `Rarity-Backgrounds` 785:970 (192, radius 12, 2px Snow border = 1dp): Purple 350 base + two radial
 glows, no blur — the rarity Light colour at (8%, 4%) r 78% and the base colour at (70%, 68%) r 100%
 (Exotic: Light twice). Default = Card Light `#B48CD7` + Snow / Gray glows at 90%; Disable = Silver +
@@ -414,7 +453,8 @@ neighbours) is 530×300 with no text; Discover-FeatureBanners (`Tz8ekjVNmv2Opkmf
 them out 8dp from the settled card, vertically centred, the settled one on the 24dp gutter. Code: the
 slots stay 312 + gap 8 and `SnapCarousel` hands each card its scroll `position`; `FeatureBanners` scales
 side cards to 0.85, pulls them in by the lost width and fades the gradient and text out. `Image Not Found` 821:3478 = the Places ImageNotFound image
-alone (already what `DiscoverCard` draws).
+alone: Deep Purple 50% on a 0.6px Lavender 50% border, radius 8, `imageOff` 72 px (24.5% of the width) Lavender
+70% — `DiscoverCard` (36dp) and the Discover `Thumb` fallback (24.5% of its width) since 11-10.
 
 ## Skeleton page — `Skeleton`, added 2026-11-09
 
@@ -426,8 +466,8 @@ alone (already what `DiscoverCard` draws).
 ## EmptyState page — `EmptyState`, added 2026-11-10
 
 `EmptyState` 866:372: `Icon` True/False × `Size` Large (624 wide → `u(312)`) / Small (480 → `u(240)`), gap 24.
-Icon badge 120 (`u(60)`), 4px Purple 100 `#DCCBEC` border (`colors.purple100`), `radius/2xl`, the icon 100
-(`size={50}`, Purple 100; swap = any `Icon/Base` or `Icon/NavBar`). Text Purple 100 centred: Large H2
+Icon badge 120 (`u(60)`), 4px Purple 100 `#DCCBEC` border (`colors.purple100`), `radius/2xl`, the icon **80** since 11-10
+(`size={40}`, Purple 100; swap = any `Icon/Base` or `Icon/NavBar`). Text Purple 100 centred: Large H2
 SemiBold 42 + B1 Regular 26/34, gap 10; Small H4 SemiBold 28 + Caption1 Regular 24, gap 6. Code:
 `EmptyState icon? title body? size='lg|sm'`; `actionLabel`/`onAction` stays as a code-only retry button
 (Profile load error) — the node has none. Examples 866:373 sit on `background/brand`.
@@ -490,7 +530,8 @@ Featured gradient bottom-left→top-right. `Tag/Category` 35:591 (h 42, White 10
 Bold 18 uppercase) needs the 12 MapPins icons, which are not an `Icon/*` family — left for the
 Discover pass; `src/discover/CategoryChips.tsx` is the current stand-in.
 `RarityLabel` 825:6933 (added 11-10, missed on 11-09) → `RarityLabel rarity label`: SemiBold 16 uppercase
-lh 1.25 in `rarityColors[r].dark` (Base: Gray) on the same colour at 20% (Base: Pearl 20%), px 8 py 4,
+lh 1.25 in `rarityColors[r].dark` (Base: Gray) on the same colour at 20% (Base: Pearl 20%; Exotic: `#CAFF73`, its
+node's own tint, `colors.exoticTint`), px 8 py 4,
 radius 6 (`u(3)`; the node reads a 6px `radius-xs` from another library, not this file's 4). The caller
 passes the translated name. No screen uses it yet (the profile strip dropped its tag on 11-10).
 

@@ -80,7 +80,7 @@ export function EventBadge({
 }
 
 /** Figma `RarityLabel` 825:6933: the rarity name in its Rarities colour on a 20% tint of it (Base: Gray
- * on Pearl 20%). The caller passes the translated name. */
+ * on Pearl 20%, Exotic: on its Light colour). The caller passes the translated name. */
 export function RarityLabel({
   rarity,
   label,
@@ -91,7 +91,10 @@ export function RarityLabel({
   const [text, tint] =
     rarity === 'base'
       ? [colors.gray, colors.pearl]
-      : [rarityColors[rarity].dark, rarityColors[rarity].dark];
+      : [
+          rarityColors[rarity].dark,
+          rarity === 'exotic' ? colors.exoticTint : rarityColors[rarity].dark,
+        ];
   return (
     <View style={[styles.rarity, { backgroundColor: `${tint}33` }]}>
       <AppText style={[styles.rarityText, { color: text }]}>{label}</AppText>

@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   slotError: { borderColor: colors.danger },
   digit: { fontFamily: fonts.semibold, fontSize: u(24), color: colors.snow },
   digitError: { color: colors.danger },
-  caret: { width: 1, height: u(25), backgroundColor: colors.white },
+  caret: { width: u(1.66), height: u(25), backgroundColor: colors.white },
   hidden: {
     position: 'absolute',
     opacity: 0,

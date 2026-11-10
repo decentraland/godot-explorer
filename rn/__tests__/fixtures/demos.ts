@@ -16,7 +16,6 @@ import {
   PageDots,
   SnapCarousel,
   ProgressBar,
-  ReadOnlyField,
   SearchField,
   Skeleton,
   Slider,
@@ -152,10 +151,6 @@ export const demos = {
     badge: 3,
     onPress: noop,
   } satisfies ComponentProps<typeof HudCircleButton>,
-  ReadOnlyField: {
-    label: 'Email',
-    value: 'name@email.com',
-  } satisfies ComponentProps<typeof ReadOnlyField>,
   ActionSquareButton: {
     icon: 'share',
     label: 'Share',

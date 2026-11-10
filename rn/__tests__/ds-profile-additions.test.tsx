@@ -134,14 +134,14 @@ describe('Figma-fidelity additions', () => {
     expect(out).toContain('flex-start');
   });
 
-  it('Dropdown draws an option badge node next to the label', () => {
+  it('Dropdown draws an option icon next to the label', () => {
     const out = text(
       render(
         <Dropdown
           label="Name"
           value="a"
           onChange={() => {}}
-          options={[{ value: 'a', label: 'Alpha', iconNode: <></> }]}
+          options={[{ value: 'a', label: 'Alpha', icon: 'nameVerified' }]}
         />,
       ),
     );

@@ -1625,6 +1625,21 @@
     "orientation": "portrait"
   },
   {
+    "id": "extra/ds-claim-default",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/ds-claim-loading",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/ds-claim-claimed",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
     "id": "extra/flow-terms",
     "source": "extra",
     "orientation": "portrait"

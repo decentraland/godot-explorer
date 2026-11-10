@@ -64,7 +64,11 @@ export function LoginButton({
             resizeMode="contain"
           />
         ) : (
-          <Icon name={spec.icon} size={spec.iconSize} color={contentColor} />
+          <Icon
+            name={spec.icon}
+            size={spec.iconSize}
+            color={spec.dark ? contentColor : undefined}
+          />
         )}
         <AppText
           variant="button"

@@ -121,7 +121,7 @@ export function DiscoverCard(
         ) : (
           missing && (
             <View style={styles.centre} pointerEvents="none">
-              <Icon name="imageOff" size={35} color={colors.lavender70} />
+              <Icon name="imageOff" size={36} color={colors.lavender70} />
             </View>
           )
         )}
