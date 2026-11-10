@@ -298,6 +298,18 @@ func get_static_body_3d(mesh_instance: MeshInstance3D):
 	return null
 
 
+## Scenes baked by an older build carry `backface_collision = true` inside the
+## saved PackedScene, in the local cache and in the published bucket alike, so
+## the bake alone does not reach them. Reading first keeps the setter's trimesh
+## rebuild off every instance of a GLB that is already one-sided.
+func _make_collider_one_sided(body_3d: StaticBody3D) -> void:
+	for child in body_3d.get_children(true):
+		if child is CollisionShape3D and child.shape is ConcavePolygonShape3D:
+			var shape := child.shape as ConcavePolygonShape3D
+			if shape.backface_collision:
+				shape.backface_collision = false
+
+
 ## Visible meshes are baked WITHOUT a collider (see scene.rs
 ## `bake_lazy_collider_faces`): the faces live in the shared mesh's metadata and
 ## the StaticBody3D + ConcavePolygonShape3D are built here the first time an
@@ -317,7 +329,7 @@ func _ensure_lazy_collider(mesh_instance: MeshInstance3D) -> StaticBody3D:
 			return null
 		shape = ConcavePolygonShape3D.new()
 		shape.set_faces(mesh.get_meta("dcl_faces"))
-		shape.backface_collision = mesh.get_meta("dcl_backface", true)
+		shape.backface_collision = false
 		mesh.set_meta("dcl_shape", shape)
 		# The shape owns its own copy of the faces (plus the BVH) — drop ours.
 		mesh.remove_meta("dcl_faces")
@@ -346,6 +358,7 @@ func set_mask_colliders(
 			if body_3d == null and visible_cmask != 0:
 				body_3d = _ensure_lazy_collider(node)
 			if body_3d != null:
+				_make_collider_one_sided(body_3d)
 				# Check if this is an invisible collider mesh (metadata set during GLTF processing)
 				var invisible_mesh = (
 					body_3d.has_meta("invisible_mesh")
