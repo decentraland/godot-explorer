@@ -17,6 +17,11 @@ The entry flow shipped looking nothing like `Mobile-Entry-Flow` because it was p
 4. **Approximated components.** A Figma "Buttons" instance has its own radius, height, weight and case. Using `PrimaryButton` without checking those makes every button off.
 5. **Copy and structure.** Labels, order of actions and legal line come from Figma, not from existing i18n keys. If the Figma text differs from the i18n catalogue, change the key (see the `i18n` skill), do not keep the old string.
 
+6. **Inherited screens are unaudited.** Screens that already had code (the first port, the old Godot lobby) were never
+   compared with the current Figma. Audit them like new ones, flow by flow, state by state, on the device renderer
+   (Android native), not only in the web gallery. The full protocol, scripts and pitfalls are in
+   `rn/.claude/skills/figma-to-rn/SKILL.md` §8: read it before declaring any flow done.
+
 ## Units
 
 Figma frames are **720×1600 px = 360×800 dp at 2x**. In code, write the Figma px **divided by 2** inside `u()` (`rn/packages/ui-native/src/scale.ts`), which scales so the 360×800 frame fits the phone: `min(min(w,h)/360, max(w,h)/800)`. Reviews compare Figma and device aligned by height, so verify that way (see `rn/.claude/skills/figma-to-rn/`, the detailed playbook with `scripts/text_rows.sh`).

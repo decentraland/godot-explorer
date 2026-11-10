@@ -16,6 +16,9 @@ measure, fix, re-measure — and only hand control back once position/size/color
 within ~1-2px. Report a compact table of what was checked and the before/after numbers, not a
 running narration of each step.
 
+**For a whole flow (several screens, states, a drawn order) read §8 first and follow it to the letter:
+the user does not review against Figma, this process does.**
+
 **This skill is young and is expected to keep improving — that's the point, not a gap to apologize
 for.** Several rounds of back-and-forth on one screen are fine; what matters is that each round
 teaches the skill something so the *next* screen needs fewer rounds. Every constant here (the
@@ -348,6 +351,83 @@ snow border; a frame that draws it at 60% is an instance override to flag, not a
 `button` u15, `caption` u12 — check these against a node's `text-[Npx]` before assuming a screen
 needs a bespoke font size). Extend an existing DS component additively (a new tone/variant) rather
 than hand-rolling a one-off style when the shape already exists elsewhere in the app.
+
+## 8. Flow audit protocol — "the Figma, not the person watching, finds the differences"
+
+The user's standing rule (2026-11-10): **no step of Figma → implementation may depend on them noticing.**
+A flow is done only when every frame of it, in every state, was compared against the *current* Figma
+and the differences are either fixed or listed as decisions. Everything below comes from mistakes made
+on `feat/entry-flow-parity`; each one cost a round trip the user should never have paid.
+
+### 8.1 Source of truth
+- The **current Figma** is the spec. Not the existing code, not the first RN port (it was a vague
+  approximation of the old Godot lobby), not another screen. Code that exists is *unaudited* until a
+  measured comparison says otherwise: never write "implemented" about a screen you did not measure
+  (an inventory that says "exists" was read by the user as "matches the design").
+- Inherited screens get the same audit as new ones. Opening the app on a device and finding a screen that is
+  not the Figma (Welcome Back was the old Godot one) is an audit failure, not a surprise.
+- **Name code 1:1 with the document.** Step ids and screen components carry the frame names
+  (`auth_otp_start` ↔ `AuthOtpStart` ↔ frame `AUTH_OTP_START`; states of one frame are props, not new
+  steps). A reviewer must be able to check a screen against its frame by name alone.
+
+### 8.2 Read the flow before the pixels
+1. List the frames of the flow in drawing order (`scripts/figma-reads.md` §1): the page repeats the flow once per
+   path (guest, Google, email, returning user), left to right, with `Line N` arrows and decision groups
+   ("Correct code", "New user"). The drawn order **is** the flow; do not reuse an older flow from the code.
+2. Read every `TEXT` note on the page near the frames: they are behaviour specs ("keyboard pushes the text field
+   and button up", "show the numeric keyboard, allow native paste", "background no gradient", "resend timeout 2 min",
+   "hide credits here"). Each one is a requirement with a test on a device.
+3. Make a checklist: one line per frame **and per state** (empty, focused with keyboard, valid, invalid, loading,
+   error, disabled, pressed) and per variant ("Loading..." vs "Opening browser..."). A frame that only differs by
+   an OS screenshot of the keyboard is still a state to implement (focus ring, caret, lift).
+4. Several copies of a frame exist. Diff them node by node (`figma-reads.md` §2) to find the live one; copies that
+   are equal prove nothing about the code. Re-read after the designer "cleans up": ids disappear, frames move,
+   sizes change (the splash logo went 145 → 142 → 130/140 between readings). Re-read at the start of each
+   session and again before saying done.
+5. Anything ambiguous or that looks like a design slip (a copy of another modal used as a frame, sample text
+   like "Text / 0/15", a double space, a link missing its underline) is implemented as drawn **or** the nearest
+   sensible reading, and goes in the report under **Decisions**. Never drop it silently, never ask the user to
+   discover it.
+
+### 8.3 Compare against the real renderer, every state
+- Export the frame at full resolution (`download_assets`, scale 1, png: 720×1600). The 461-px screenshot is only for
+  looking.
+- Capture the implementation on **Android native** (emulator or phone, debug build + Metro, preview deep link
+  `dclrn://preview/<gallery id>`; release builds have no gallery) and on web (`tools/ui-spec/ci_capture.sh`,
+  what CI snapshots). Web alone hid 4–5 px native offsets and the device-only behaviours (keyboard, line breaking).
+  When web and native disagree, find the cause (usually a text without an explicit `lineHeight`) instead of tuning
+  for one of them.
+- Measure with `scripts/measure.py` (bounding boxes and deltas per region) and sample colours with
+  `magick img -format '%[pixel:p{x,y}]' info:`. Target ≤ 2 px and exact colours. Expected non-bugs: the status bar
+  pushes safe-area-aware elements (back arrow) ~10 px down on a device; text that Figma fills with sample words.
+- Drive the **real flow** on the device too, not only previews: a state only reachable by interaction
+  (keyboard lift, blur validation, the screen after a back, a session the app remembers) is exactly where
+  previews lie.
+- Per-range text styling matters: `getRange*` for colour, weight and decoration of each run. One frame underlines links,
+  its sibling does not.
+
+### 8.4 Per-screen checklist (do all of it, unprompted)
+Text: size, weight, line height, colour, case, decoration per run, line breaks · fills, strokes (weight and colour
+per state), radii, shadows · every icon/logo at its drawn box, from the design's SVG (a PNG with padding looked 22 %
+smaller) · spacing and positions · background kind (glow / plain / photo / image: the notes say) · safe areas ·
+keyboard behaviour · copy in en/es/pt_BR · gallery entry per state, with the Figma node id in `notes` · tall and short viewport.
+
+### 8.5 Report shape (what the user reads)
+Per screen: frame id → what was compared (states) → measured deltas → fixes → **Decisions** (ambiguities, slips, behaviours
+chosen). Lead with what does not match. Do not write "coincide" without numbers behind it.
+
+### 8.6 Pitfalls found (each cost time)
+- Release APKs have no gallery/deep link; use `npx react-native run-android --main-activity com.godot.game.GodotAppLauncher
+  --extra-params -PdclNoGodot=true` + Metro + `adb reverse tcp:8081 tcp:8081` (uninstall a differently signed build first).
+- A `--no-godot` Android build that crashes on `libdclgodot.so`: delete `rn/android/build/generated/autolinking`.
+- `download_assets` rejects ids inside instances (`I123:4;5:6`): use the component's `mainComponent.id`.
+- Android's line breaker treats `a@b.com.` as an address and may drop the full stop alone on the next line; detect
+  with `onTextLayout` and move the address down instead (the frame wraps them together).
+- `AppText` does not forward arbitrary props (`onTextLayout`): use `Text` when you need them.
+- `prettier --write <dir>` reformats files you did not touch; `git add <dir>` takes stray untracked dirs along. Stage files
+  by name and look at `git diff --cached --stat`.
+- Renaming files/ids: do it with a script restricted to the flow files (`'account'` is also a settings section).
+- A frame's text that differs from i18n changes the key (all three languages), not the call site.
 
 ## Worked reference (Account Home, HIFI frame `1738:9473` in `H1Alvbe7sh0e0IyLckewMI`)
 
