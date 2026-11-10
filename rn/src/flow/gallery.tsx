@@ -1,7 +1,11 @@
 import { registerPreview } from '../gallery/registry';
 import { createMockApi } from '../backpack/mockApi';
+import { ApiProvider } from '../discover/ApiContext';
+import { FtueScreen } from '../discover/FtueScreen';
+import { createMockApi as createDiscoverApi } from '../discover/mockApi';
+import { PLACES } from '../discover/mockData';
 import { CustomizeStep } from './CustomizeStep';
-import { StageImage } from './previewScreens';
+import { AvatarCreateScreen, StageImage } from './previewScreens';
 import {
   AccountScreen,
   GuestCreateScreen,
@@ -20,10 +24,25 @@ const noop = () => {};
     render: () => <SplashScreen onDone={noop} />,
   }),
 );
+registerPreview('extra/flow-create', {
+  title: 'Flow: avatar create',
+  orientation: 'portrait',
+  notes:
+    'Figma AVATAR_CREATE 2776:23661; the presets are placeholders and no avatar shows.',
+  render: () => (
+    <AvatarCreateScreen
+      selected={0}
+      onSelect={noop}
+      onCustomize={noop}
+      onContinue={noop}
+      onBack={noop}
+    />
+  ),
+});
 registerPreview('extra/flow-naming', {
   title: 'Flow: avatar naming',
   orientation: 'portrait',
-  notes: 'Figma AVATAR_NAMING 1897:13029; the stage stands in for the avatar.',
+  notes: 'Figma AVATAR_NAMING 2776:22117; the stage stands in for the avatar.',
   render: () => (
     <NamingScreen
       initial="JuanPedro"
@@ -41,17 +60,17 @@ const customizeApi = createMockApi();
     [
       'extra/flow-customize',
       null,
-      'Figma AVATAR_CUSTOMIZE 1574:10070, opened on Face',
+      'Figma AVATAR_CUSTOMIZE 2760:15896, opened on Face',
     ],
     [
       'extra/flow-customize-finish',
       'finish',
-      'Figma 2669:31655: DONE asks to finish the look',
+      'Figma 2757:17247: DONE asks to finish the look',
     ],
     [
       'extra/flow-customize-discard',
       'discard',
-      'Figma 1835:9418: back asks to discard',
+      'Figma 2757:17014: back asks to discard',
     ],
   ] as const
 ).forEach(([id, prompt, notes]) =>
@@ -85,3 +104,18 @@ registerPreview('extra/flow-guest-create', {
     render: () => <AccountScreen onGuest={noop} onSignIn={noop} />,
   }),
 );
+
+const ftueApi = {
+  ...createDiscoverApi(),
+  ftuePlaces: async () => PLACES.slice(0, 4),
+};
+registerPreview('extra/flow-ftue', {
+  title: 'Flow: Discover FTUE',
+  orientation: 'portrait',
+  notes: 'Figma DISCOVER_FTUE 1458:8149; the places are mock data.',
+  render: () => (
+    <ApiProvider api={ftueApi}>
+      <FtueScreen username="Ana" onJump={noop} onSkip={noop} />
+    </ApiProvider>
+  ),
+});

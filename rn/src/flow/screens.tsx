@@ -459,7 +459,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: u(18),
   },
-  logo: { width: u(65), height: u(65) },
+  /** Figma `Loader/Logo`: the GIF drawn at 140 px, so its 143 px circle (of 154) measures the 130 of the static logo. */
+  logo: { width: u(70), height: u(70) },
   guestCreate: {
     flex: 1,
     alignItems: 'center',
@@ -478,7 +479,7 @@ const styles = StyleSheet.create({
     paddingTop: u(110),
     paddingBottom: u(82.5),
   },
-  brandMark: { width: u(55), height: u(55), alignSelf: 'center' },
+  brandMark: { width: u(50), height: u(50), alignSelf: 'center' },
   accountBody: {
     fontSize: u(20),
     lineHeight: u(24),

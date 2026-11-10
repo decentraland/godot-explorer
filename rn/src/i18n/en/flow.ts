@@ -46,7 +46,7 @@ export const flow = {
   FLOW_FINISH_LOOK_BODY: 'You can change your avatar again later.',
   FLOW_FINISH_LOOK_YES: 'Yes',
   FLOW_DISCARD_TITLE: 'Discard changes?',
-  FLOW_DISCARD_BODY: "Your avatar changes won't be saved.",
+  FLOW_DISCARD_BODY: 'Your avatar changes won’t be saved.',
   FLOW_DISCARD: 'Discard',
   FLOW_WELCOME_BACK: 'Welcome back,',
 } as const;

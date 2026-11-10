@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import {
   AppText,
+  BrandBackground,
   Button,
   colors,
   fonts,
@@ -80,6 +81,7 @@ export function FtueScreen({
 
   return (
     <View style={styles.root}>
+      <BrandBackground glow />
       <View style={styles.headline}>
         <AppText style={styles.welcome}>
           {t('FTUE_WELCOME_TITLE')}{' '}

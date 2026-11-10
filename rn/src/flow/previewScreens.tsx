@@ -16,6 +16,7 @@ import {
   lightRainbow,
   LinearFill,
   Button,
+  Sheet,
   Spinner,
   u,
 } from '@dcl/ui-native';
@@ -196,57 +197,54 @@ export function AvatarCreateScreen({
         <Icon name="back" size={30} />
       </Pressable>
       <View style={styles.avatarSheet}>
-        <View style={styles.avatarDetail}>
-          <LinearFill
-            stops={[
-              { offset: 0, color: colors.purple450 },
-              { offset: 1, color: colors.purple500 },
-            ]}
-          />
-          <AppText variant="heading" style={styles.avatarChooseTitle}>
-            {t('FLOW_AVATAR_CHOOSE_LOOK')}
-          </AppText>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            alwaysBounceHorizontal
-            overScrollMode="always"
-            style={styles.presetScroll}
-            contentContainerStyle={styles.presetRow}
-          >
-            {(presets.length ? presets : [null, null, null, null]).map(
-              (preset, i) => (
-                <PresetCard
-                  key={preset?.id ?? i}
-                  preset={preset}
-                  selected={i === selected}
-                  onPress={() => onSelect(i)}
+        <Sheet
+          footer={
+            <View style={styles.avatarFooterButtons}>
+              <View style={styles.avatarEditButton}>
+                <Button
+                  big
+                  tone="dark"
+                  label={t('FLOW_AVATAR_EDIT')}
+                  disabled={!avatar}
+                  onPress={onCustomize}
                 />
-              ),
-            )}
-          </ScrollView>
-        </View>
-        <View style={styles.avatarFooter}>
-          <View style={styles.avatarFooterButtons}>
-            <View style={styles.avatarEditButton}>
-              <Button
-                big
-                tone="dark"
-                label={t('FLOW_AVATAR_EDIT')}
-                disabled={!avatar}
-                onPress={onCustomize}
-              />
+              </View>
+              <View style={styles.avatarNextButton}>
+                <Button
+                  big
+                  label={t('FLOW_AVATAR_NEXT')}
+                  disabled={!avatar}
+                  onPress={onContinue}
+                />
+              </View>
             </View>
-            <View style={styles.avatarNextButton}>
-              <Button
-                big
-                label={t('FLOW_AVATAR_NEXT')}
-                disabled={!avatar}
-                onPress={onContinue}
-              />
-            </View>
+          }
+        >
+          <View style={styles.avatarContent}>
+            <AppText variant="heading" style={styles.avatarChooseTitle}>
+              {t('FLOW_AVATAR_CHOOSE_LOOK')}
+            </AppText>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              alwaysBounceHorizontal
+              overScrollMode="always"
+              style={styles.presetScroll}
+              contentContainerStyle={styles.presetRow}
+            >
+              {(presets.length ? presets : [null, null, null, null]).map(
+                (preset, i) => (
+                  <PresetCard
+                    key={preset?.id ?? i}
+                    preset={preset}
+                    selected={i === selected}
+                    onPress={() => onSelect(i)}
+                  />
+                ),
+              )}
+            </ScrollView>
           </View>
-        </View>
+        </Sheet>
       </View>
     </View>
   );
@@ -335,34 +333,20 @@ const styles = StyleSheet.create({
     width: u(148),
     height: u(45),
   },
-  avatarSheet: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    borderTopLeftRadius: u(12),
-    borderTopRightRadius: u(12),
-    boxShadow: [
-      { offsetX: 0, offsetY: -u(2), blurRadius: u(1), color: colors.black25 },
-    ],
-  },
-  avatarDetail: {
-    alignItems: 'center',
-    gap: u(19.5),
-    paddingTop: u(20),
-    paddingBottom: u(14),
-    borderTopLeftRadius: u(12),
-    borderTopRightRadius: u(12),
-    overflow: 'hidden',
-  },
+  /** Figma AVATAR_CREATE `Sheet`: the DS sheet with its handle, the title, 20 dp, the cards. */
+  avatarSheet: { position: 'absolute', bottom: 0, left: 0, right: 0 },
+  avatarContent: { gap: u(20) },
   avatarChooseTitle: {
-    marginTop: u(2.5),
     fontSize: u(18),
     lineHeight: u(17),
     textAlign: 'center',
   },
-  /** Edge to edge, so a dragged card leaves through the screen edge, not the margin. */
-  presetScroll: { alignSelf: 'stretch' },
+  /** Edge to edge of the sheet's 24 dp margin, so a dragged card leaves through the screen edge. */
+  presetScroll: {
+    alignSelf: 'stretch',
+    marginHorizontal: -u(24),
+    marginBottom: -u(3),
+  },
   presetRow: {
     flexDirection: 'row',
     gap: u(12),
@@ -383,12 +367,6 @@ const styles = StyleSheet.create({
   },
   presetCardSelected: { backgroundColor: colors.black70 },
   presetThumbnail: { width: '100%', height: '100%' },
-  avatarFooter: {
-    backgroundColor: colors.purple500,
-    paddingTop: u(9),
-    paddingHorizontal: u(24),
-    paddingBottom: u(43),
-  },
   avatarFooterButtons: { flexDirection: 'row', gap: u(9) },
   avatarEditButton: { width: u(103) },
   avatarNextButton: { flex: 1 },

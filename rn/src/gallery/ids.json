@@ -880,6 +880,11 @@
     "orientation": "portrait"
   },
   {
+    "id": "extra/flow-create",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
     "id": "extra/flow-naming",
     "source": "extra",
     "orientation": "portrait"
@@ -912,6 +917,11 @@
   {
     "id": "settings-portrait__account-home__738-8261",
     "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-ftue",
+    "source": "extra",
     "orientation": "portrait"
   },
   {
