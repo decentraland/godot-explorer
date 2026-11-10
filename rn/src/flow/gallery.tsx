@@ -6,7 +6,11 @@ import { createMockApi as createDiscoverApi } from '../discover/mockApi';
 import { PLACES } from '../discover/mockData';
 import { CustomizeStep } from './CustomizeStep';
 import { OtpModal } from './OtpModal';
-import { AvatarCreateScreen, StageImage } from './previewScreens';
+import {
+  AvatarCreateScreen,
+  StageImage,
+  WelcomeBackScreen,
+} from './previewScreens';
 import {
   AccountScreen,
   EmailScreen,
@@ -183,3 +187,12 @@ registerPreview('extra/flow-email', {
     ),
   }),
 );
+
+registerPreview('extra/flow-comeback', {
+  title: 'Flow: welcome back',
+  orientation: 'portrait',
+  notes: 'Figma COMEBACK 2776:23616; no avatar shows here.',
+  render: () => (
+    <WelcomeBackScreen name="Username" onContinue={noop} onUseAnother={noop} />
+  ),
+});

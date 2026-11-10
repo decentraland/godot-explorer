@@ -143,6 +143,8 @@ function back(state: FlowState): FlowState {
       return go(state, 'account', { guest: false, preview: false });
     case 'avatar_create':
       return go(state, state.guest ? 'account' : 'sign_in', { guest: false });
+    case 'welcome_back':
+      return go(state, 'sign_in');
     case 'avatar_customize':
       return go(state, 'avatar_create');
     case 'avatar_naming':

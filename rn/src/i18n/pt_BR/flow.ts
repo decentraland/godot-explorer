@@ -29,4 +29,7 @@ export const flow: Partial<Record<keyof typeof en, string>> = {
   FLOW_NAME_INVALID: 'Só letras, números e espaços',
   FLOW_NAME_RANDOMIZE: 'Nome aleatório',
   FLOW_LETS_GO: 'Vamos lá',
+  FLOW_WELCOME_BACK: 'Bem-vindo de volta',
+  FLOW_SIGNED_IN_AS: 'Você entrou como\n{name}.',
+  FLOW_USE_ANOTHER_ACCOUNT: 'Usar outra conta',
 };

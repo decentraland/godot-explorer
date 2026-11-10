@@ -38,7 +38,7 @@ export const flow = {
   FLOW_NAME_HINT: 'Avoid using your real name for safety',
   FLOW_NAME_INVALID: 'Letters, numbers and spaces only',
   FLOW_NAME_RANDOMIZE: 'Random name',
-  FLOW_LETS_GO: "Let's go",
+  FLOW_LETS_GO: 'Let’s Go',
   FLOW_AVATAR_CHOOSE_LOOK: 'Choose your look',
   FLOW_AVATAR_EDIT: 'EDIT',
   FLOW_AVATAR_NEXT: 'NEXT',
@@ -49,5 +49,7 @@ export const flow = {
   FLOW_DISCARD_TITLE: 'Discard changes?',
   FLOW_DISCARD_BODY: 'Your avatar changes won’t be saved.',
   FLOW_DISCARD: 'Discard',
-  FLOW_WELCOME_BACK: 'Welcome back,',
+  FLOW_WELCOME_BACK: 'Welcome back',
+  FLOW_SIGNED_IN_AS: 'You’re signed in as\n{name}.',
+  FLOW_USE_ANOTHER_ACCOUNT: 'Use another account',
 } as const;

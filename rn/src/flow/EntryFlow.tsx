@@ -270,6 +270,7 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
         <WelcomeBackScreen
           name={flow.name}
           onContinue={() => dispatch({ type: 'finish' })}
+          onUseAnother={back}
         />
       );
     case 'avatar_create':

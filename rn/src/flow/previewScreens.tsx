@@ -12,6 +12,7 @@ import { AvatarHole } from '../backpack/AvatarStage';
 import {
   AppText,
   colors,
+  fonts,
   Icon,
   lightRainbow,
   LinearFill,
@@ -66,7 +67,7 @@ export function PreviewArea({
   hold = false,
 }: {
   inset?: boolean;
-  stage?: 'full' | 'create' | 'naming';
+  stage?: 'full' | 'create' | 'naming' | 'welcome';
   /** Keeps the avatar window closed: what the engine holds is not what the screen will show yet. */
   hold?: boolean;
 }) {
@@ -86,6 +87,8 @@ export function PreviewArea({
               ? styles.createHole
               : stage === 'naming'
               ? styles.namingHole
+              : stage === 'welcome'
+              ? styles.welcomeHole
               : inset
               ? styles.hole
               : styles.fill
@@ -250,32 +253,45 @@ export function AvatarCreateScreen({
   );
 }
 
+/** Figma COMEBACK 2776:23616: the saved account's avatar on the stage, LET'S GO, and a way out. */
 export function WelcomeBackScreen({
   name,
   onContinue,
+  onUseAnother,
 }: {
   name: string;
   onContinue: () => void;
+  onUseAnother: () => void;
 }) {
-  const insets = useSafeAreaInsets();
   const avatar = useAvatar();
   return (
     <View style={styles.fill}>
-      <PreviewArea />
-      <View style={[styles.top, { paddingTop: insets.top + u(16) }]}>
-        <AppText variant="heading" style={styles.centered}>
+      <PreviewArea stage="welcome" />
+      <View style={styles.welcomeText}>
+        <AppText variant="heading" style={styles.welcomeTitle}>
           {t('FLOW_WELCOME_BACK')}
         </AppText>
-        <AppText variant="heading" style={styles.centered}>
-          {name}
+        <AppText variant="body" style={styles.welcomeCopy}>
+          {t('FLOW_SIGNED_IN_AS', { name })}
         </AppText>
       </View>
-      <View style={[styles.bottom, { paddingBottom: insets.bottom + 24 }]}>
+      <View style={styles.welcomeButtons}>
         <Button
+          big
+          fullWidth
           label={t('FLOW_LETS_GO')}
           disabled={!avatar}
           onPress={onContinue}
         />
+        <Pressable
+          accessibilityRole="button"
+          onPress={onUseAnother}
+          style={styles.welcomeLink}
+        >
+          <AppText variant="button" style={styles.welcomeLinkText}>
+            {t('FLOW_USE_ANOTHER_ACCOUNT')}
+          </AppText>
+        </Pressable>
       </View>
     </View>
   );
@@ -302,27 +318,50 @@ const styles = StyleSheet.create({
     top: u(217.5),
     height: u(441),
   },
+  /** Figma COMEBACK: the avatar stands from y 372 to 1215, between the copy and LET'S GO. */
+  welcomeHole: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: u(186),
+    height: u(421.5),
+  },
+  welcomeText: { position: 'absolute', top: u(61), left: 0, right: 0 },
+  welcomeTitle: {
+    marginTop: u(1.5),
+    fontSize: u(36),
+    lineHeight: u(43.5),
+    textAlign: 'center',
+  },
+  welcomeCopy: {
+    marginTop: u(0.5),
+    fontSize: u(20),
+    lineHeight: u(24),
+    textAlign: 'center',
+    color: colors.snow,
+  },
+  welcomeButtons: {
+    position: 'absolute',
+    left: u(32),
+    right: u(32),
+    bottom: u(64.5),
+  },
+  welcomeLink: {
+    height: u(40),
+    marginTop: u(19),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  welcomeLinkText: {
+    fontFamily: fonts.bold,
+    fontSize: u(15),
+    color: colors.white70,
+  },
   loading: {
     ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  top: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: u(24),
-  },
-  bottom: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: u(24),
-    gap: u(12),
-  },
-  centered: { textAlign: 'center' },
   /** Same place as the backpack's arrow (`PortraitLayout`), insets included, so it does not move. */
   avatarBack: { position: 'absolute', left: u(24) },
   /** Figma's blurred ellipse under the feet (240×34 plus its blur), centred at (343, 820). */
