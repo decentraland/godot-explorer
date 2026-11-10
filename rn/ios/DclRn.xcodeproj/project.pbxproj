@@ -22,10 +22,10 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		F0A7C0DE0000000000000010 /* Inter-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = Inter-Regular.ttf; path = ../android/app/src/rnassets/fonts/Inter-Regular.ttf; sourceTree = SOURCE_ROOT; };
-		F0A7C0DE0000000000000011 /* Inter-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = Inter-Medium.ttf; path = ../android/app/src/rnassets/fonts/Inter-Medium.ttf; sourceTree = SOURCE_ROOT; };
-		F0A7C0DE0000000000000012 /* Inter-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = Inter-SemiBold.ttf; path = ../android/app/src/rnassets/fonts/Inter-SemiBold.ttf; sourceTree = SOURCE_ROOT; };
-		F0A7C0DE0000000000000013 /* Inter-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = Inter-Bold.ttf; path = ../android/app/src/rnassets/fonts/Inter-Bold.ttf; sourceTree = SOURCE_ROOT; };
+		F0A7C0DE0000000000000010 /* Inter-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = Inter-Regular.ttf; path = DclRn/Fonts/Inter-Regular.ttf; sourceTree = "<group>"; };
+		F0A7C0DE0000000000000011 /* Inter-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = Inter-Medium.ttf; path = DclRn/Fonts/Inter-Medium.ttf; sourceTree = "<group>"; };
+		F0A7C0DE0000000000000012 /* Inter-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = Inter-SemiBold.ttf; path = DclRn/Fonts/Inter-SemiBold.ttf; sourceTree = "<group>"; };
+		F0A7C0DE0000000000000013 /* Inter-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = Inter-Bold.ttf; path = DclRn/Fonts/Inter-Bold.ttf; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* DclRn.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DclRn.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = DclRn/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = DclRn/Info.plist; sourceTree = "<group>"; };
