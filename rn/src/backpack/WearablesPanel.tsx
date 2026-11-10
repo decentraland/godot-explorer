@@ -196,8 +196,10 @@ export function WearablesPanel(props: WearablesPanelProps) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  /** Figma `Tabs`: the row is 64 px, its labels start 22 px in. */
   tabs: {
     paddingHorizontal: layout.gutter,
+    paddingTop: u(2.5),
     paddingBottom: u(12),
   },
   slotsScroll: { flexGrow: 0 },
