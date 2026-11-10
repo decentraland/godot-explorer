@@ -38,7 +38,9 @@ jobs:
       - uses: ./.github/actions/rn-npm-ci
 
       - name: Python imaging for the capture post-processing
-        run: sudo apt-get install -y --no-install-recommends python3-pil
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends python3-pil
 
       - name: Install Chromium
         working-directory: rn
