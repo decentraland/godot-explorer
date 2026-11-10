@@ -2,10 +2,12 @@
 
 File: `Jis8xv58qaDNy53OCGLeoh` ("Design System Mobile"). Pages: Colors, Buttons, Icons, Fonts, Tags,
 Names, Inputs, Dropdowns, Controls, Modals, Tabs, Headers, NavBar, Menu, Cards_Backpack, Cards_Discover,
-Loader, Skeleton, Backgrounds, Spacing & Sizes, Elevation, Motion, States, Safe areas. This is the source every screen's components (buttons, colors,
+Loader, Skeleton, EmptyState, Backgrounds, Spacing & Sizes, Elevation, Motion, States, Safe areas. This is the source every screen's components (buttons, colors,
 text fields) ultimately trace back to — check here **before** re-deriving a spec from a specific
 screen's node, and before assuming a value is screen-specific when it might be a shared token.
 Last full pass (every component set read through `get_design_context` metadata, no screenshots):
+**2026-11-10, second round** (Sheet `_Glow` fixed at 125dp, the EmptyState page, `Icon/Base` Edit / Add / Copy,
+`Header` Back Landscape, and two sets missed on 11-09: `RarityLabel` on Tags and `Feature` on Cards_Discover) after
 **2026-11-10** (`Panel` frame on the Modals page = `Sheet`, `Card-Profile`, Dialog buttons both Fill) after
 **2026-11-09** (the designer's changes since 11-06: Ruby Pressed and four rarity Light colours, the
 alpha tokens, the Cards_Backpack / Cards_Discover / Skeleton pages, `Header` Close, the `Background`
@@ -194,7 +196,10 @@ on 11-06 = `Icon/Base` Location at 25px centred in the 22 box, code `menuLocatio
 (82, 7 types × Active → `navBarPaths` + the profile SVGs), `Icon/Settings` 606:112 (32, 6 →
 `settingsPaths`; Gameplay is hidden in Figma), `Icon/Modal` 562:7607 (90×68, 8 → `modal*Svg`),
 `Logo/Connect` 17:386 (64, 5 → `logoPaths` + SVG strings), `Badge/Notification` 501:24 (22),
-`Icon/Credits` 681:67 (40, multicolour → `creditsSvg`). Nothing on the page is missing from code;
+`Icon/Credits` 681:67 (40, multicolour → `creditsSvg`). `Icon/Base` **Edit 852:124, Add 852:131, Copy
+852:137** (added 11-10) → `edit` / `add` / `copy` in `basePaths`, each vector placed with the node's inset;
+`copy` used to alias `menuCopy` and now draws the `Icon/Base` glyph (Profile and Settings copy buttons).
+Nothing on the page is missing from code;
 12 hand-drawn strokes (`plus`, `arrowRight`, `minus`, `bulb`, `hand`, `externalLink`, `eye`,
 `eyeOff`, `lock`, `star`, `flame`, `upArrow`), `chevronRight` and `profileRing` are code-only.
 Sizes per family are the base sizes; the consuming component sets the drawn size (`Button` 32/28/24,
@@ -279,7 +284,9 @@ same card with the same glows and no content — not built.
 
 ### Panel frame (Modals page) — `Sheet`, `SheetFooter`, `BottomSheet`, added 2026-11-10
 
-`Sheet` 841:1057 (720 wide): body = Purple 450 → Purple 500 at 34%, top radii `radius/2xl` 24, px 48,
+`Sheet` 841:1057 (720 wide): body = Purple 500 with `_Glow` 858:200 — Purple 450 → 500 over a **fixed 250 px
+(125dp)** at the top so it does not stretch with the height (was 450 → 500 at 34% until the second 11-10
+round; code: `SheetGlow`, shared by `Sheet` and `BottomSheet`), top radii `radius/2xl` 24, px 48,
 pb 30, gap 40, `Elevation/Up`; `Handle=On` pt 16 + `_Sheet/Handle` 841:1036 (200×8, Snow 30%,
 `radius/xs`), `Handle=Off` pt 40; `Height` Hug (Content min 200) / Fixed (Content fills and scrolls) /
 Collapsed (54 = the handle alone). `Sheet/Footer` 841:1039: 200 tall Purple 500, pt 18, px 48, a 96 button
@@ -311,6 +318,8 @@ the 68 field; code centred it until 11-06) — rendered with the DS `SearchField
 px 48 → `Header onClose` (label `APP_CLOSE`). Every Portrait variant is a fixed 176 tall
 (`items-end`); code hugs its content (≈62dp) because the screens add the status-bar inset on top —
 left as is, re-check against a full screen frame before forcing `u(88)`.
+**`Type=Back, Layout=Landscape`** 851:11541 (added 11-10): only `Icon/Base` Back 50, 528×50, `items-end`
+→ landscape `Header onBack` renders the Back icon alone (`size={25}`). No screen uses `Header` yet.
 Landscape 528×74: title Bold 44 → `u(22)`; TitleButton = `Button/Secondary` Outline → `tone="outline"`
 (border `border/thin` 2px = 1dp). Orientation from `useWindowDimensions`. The description lists a
 Portrait "Title" type the set does not have (code renders it anyway). `Badge/Credits` 681:148
@@ -397,6 +406,13 @@ Purple 40% + Lavender border; `Icon/Base` imageOff 70 / 80 in Lavender Light 70%
 the in-game Discover panel's loading rail.
 `Detail` 790:3188 → `DetailRow type value`: `Icon/Base` 32 + `Input/Value` Regular 30 Snow, gap 4,
 p 8; Players / Likes / Coords / World (truncates at 148) / Date / Duration. No screen uses it yet.
+`Feature` 819:3463 (missed on 11-09) = the Discover hero carousel (`src/discover/FeatureBanners.tsx`):
+Selected 624×350 → 312×175dp, radius 8 (`u(4)`), 1px Lavender Light border, a Shadow 0 → 90% gradient over
+the bottom 169 px, Name-Button row px 32 py 30 gap 32 with `Pill/Large` SemiBold 26 Snow (2 lines) and a
+`Button/Primary` JumpIn 54 (radius 8, icon 24). Code follows those since 11-10. `State=Default` (the
+neighbours) is 530×300 with no text — **not built**: shrinking the side cards changes the carousel's
+motion, to agree with the designer first. `Image Not Found` 821:3478 = the Places ImageNotFound image
+alone (already what `DiscoverCard` draws).
 
 ## Skeleton page — `Skeleton`, added 2026-11-09
 
@@ -404,6 +420,15 @@ p 8; Players / Likes / Coords / World (truncates at 148) / Date / Duration. No s
 8%. Wave = a half-width band (transparent → 8% at 48.4% → transparent) sweeping from −50% to 100% in
 1 s ease-out; Pulse = 8% → 4% and back, 0.75 s each way. Code: `animation` / `theme` props
 (defaults wave / dark); it was a 7% block with a 12% sheen at 1.2 s linear.
+
+## EmptyState page — `EmptyState`, added 2026-11-10
+
+`EmptyState` 866:372: `Icon` True/False × `Size` Large (624 wide → `u(312)`) / Small (480 → `u(240)`), gap 24.
+Icon badge 120 (`u(60)`), 4px Purple 100 `#DCCBEC` border (`colors.purple100`), `radius/2xl`, the icon 100
+(`size={50}`, Purple 100; swap = any `Icon/Base` or `Icon/NavBar`). Text Purple 100 centred: Large H2
+SemiBold 42 + B1 Regular 26/34, gap 10; Small H4 SemiBold 28 + Caption1 Regular 24, gap 6. Code:
+`EmptyState icon? title body? size='lg|sm'`; `actionLabel`/`onAction` stays as a code-only retry button
+(Profile load error) — the node has none. Examples 866:373 sit on `background/brand`.
 
 ## Spacing & Sizes page — `space`, `radius`, `controlHeight`, `iconSize`, `border`, `minTouchTarget`
 
@@ -462,6 +487,10 @@ InDays/Date = Snow bg, Shadow text + border (0.68px in Figma; 1dp hairline in co
 Featured gradient bottom-left→top-right. `Tag/Category` 35:591 (h 42, White 10% pill, 26px MapPins icon + Tags Semi
 Bold 18 uppercase) needs the 12 MapPins icons, which are not an `Icon/*` family — left for the
 Discover pass; `src/discover/CategoryChips.tsx` is the current stand-in.
+`RarityLabel` 825:6933 (added 11-10, missed on 11-09) → `RarityLabel rarity label`: SemiBold 16 uppercase
+lh 1.25 in `rarityColors[r].dark` (Base: Gray) on the same colour at 20% (Base: Pearl 20%), px 8 py 4,
+radius 6 (`u(3)`; the node reads a 6px `radius-xs` from another library, not this file's 4). The caller
+passes the translated name. No screen uses it yet (the profile strip dropped its tag on 11-10).
 
 ## Names page — in-world nametags, not built
 

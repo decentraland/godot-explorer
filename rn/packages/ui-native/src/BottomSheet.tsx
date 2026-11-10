@@ -7,7 +7,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { LinearFill } from './Gradient';
+import { SheetGlow } from './Sheet';
 import { colors, elevation, radius } from './tokens';
 import {
   DEFAULT_SNAP_CONFIG,
@@ -109,15 +109,7 @@ export function BottomSheet({
       ]}
     >
       <View style={styles.clip}>
-        <LinearFill
-          stops={[
-            { offset: 0, color: colors.purple450 },
-            {
-              offset: (0.34 * heights[snap]) / heights.full,
-              color: colors.purple500,
-            },
-          ]}
-        />
+        <SheetGlow />
       </View>
       <View {...responder.panHandlers}>
         <Pressable

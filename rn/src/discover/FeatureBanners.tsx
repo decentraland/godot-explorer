@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import {
   AppText,
   colors,
+  fonts,
   Icon,
   LinearFill,
   PageDots,
@@ -15,10 +16,11 @@ import { Thumb } from './Thumb';
 import type { Banner } from './types';
 
 const WIDTH = 312;
-const HEIGHT = 174;
+const HEIGHT = 175;
+/** Figma `Feature` 819:3463 (Selected): Shadow 0 → 90% over the bottom 84.5 dp. */
 const SCRIM = [
-  { offset: 0, color: '#000000', opacity: 0 },
-  { offset: 1, color: '#000000', opacity: 0.75 },
+  { offset: 0, color: colors.shadow, opacity: 0 },
+  { offset: 1, color: colors.shadow, opacity: 0.9 },
 ];
 
 function BannerCard({
@@ -40,7 +42,7 @@ function BannerCard({
         uri={banner.image}
         width={u(WIDTH)}
         height={u(HEIGHT)}
-        radius={6}
+        radius={4}
       />
       <View style={styles.scrim} pointerEvents="none">
         <LinearFill stops={SCRIM} angle={180} />
@@ -48,11 +50,11 @@ function BannerCard({
       <View style={styles.border} pointerEvents="none" />
       {banner.cta === 'arrow' ? (
         <View style={styles.row}>
-          <AppText variant="button" numberOfLines={2} style={styles.title}>
+          <AppText numberOfLines={2} style={styles.title}>
             {banner.title}
           </AppText>
           <View style={styles.arrow}>
-            <Icon name="jump" size={16} strokeWidth={2.4} />
+            <Icon name="jump" size={12} />
           </View>
         </View>
       ) : (
@@ -92,7 +94,7 @@ export function FeatureBanners({
         <Skeleton
           width={u(WIDTH)}
           height={HEIGHT}
-          radius={6}
+          radius={4}
           style={styles.skeleton}
         />
       </View>
@@ -130,7 +132,7 @@ const styles = StyleSheet.create({
   skeleton: { marginLeft: u(24) },
   border: {
     ...StyleSheet.absoluteFill,
-    borderRadius: u(6),
+    borderRadius: u(4),
     borderWidth: 0.5,
     borderColor: colors.lavender,
   },
@@ -139,24 +141,29 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: u(HEIGHT * 0.5),
-    borderBottomLeftRadius: u(6),
-    borderBottomRightRadius: u(6),
+    height: u(84.5),
+    borderBottomLeftRadius: u(4),
+    borderBottomRightRadius: u(4),
     overflow: 'hidden',
   },
   row: {
     position: 'absolute',
     left: u(16),
     right: u(16),
-    bottom: u(16),
+    bottom: u(15),
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: u(12),
+    alignItems: 'center',
+    gap: u(16),
   },
-  title: { flex: 1, fontSize: u(13), lineHeight: u(15.5), color: colors.snow },
+  title: {
+    flex: 1,
+    fontFamily: fonts.semibold,
+    fontSize: u(13),
+    color: colors.snow,
+  },
   arrow: {
-    width: u(28),
-    height: u(28),
+    width: u(27),
+    height: u(27),
     borderRadius: u(4),
     alignItems: 'center',
     justifyContent: 'center',

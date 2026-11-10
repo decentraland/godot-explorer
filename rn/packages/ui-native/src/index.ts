@@ -57,7 +57,7 @@ export { Slider, sliderValueFromX } from './Slider';
 export { Spinner } from './Spinner';
 export { Switch } from './Switch';
 export { Tabs } from './Tabs';
-export { EventBadge, EventTimeTag } from './Tags';
+export { EventBadge, EventTimeTag, RarityLabel } from './Tags';
 export type { EventTimeKind } from './Tags';
 export { counterLabel, TextField } from './TextField';
 export { ToastBubble, ToastProvider, toastReducer, useToast } from './Toast';

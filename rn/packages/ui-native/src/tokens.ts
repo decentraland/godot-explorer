@@ -15,6 +15,7 @@ export const colors = {
   textDisabled: 'rgba(160,155,168,0.5)',
   lavender: '#E8B9FF',
   magenta: '#C640CD',
+  purple100: '#DCCBEC',
   purple350: '#691FA9',
   purple450: '#460F6F',
   purple500: '#350854',

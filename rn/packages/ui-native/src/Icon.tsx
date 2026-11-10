@@ -127,7 +127,6 @@ const aliases = {
   compassActive: 'navExploreActive',
   compassFilled: 'navExploreActive',
   compassOutline: 'navExplore',
-  copy: 'menuCopy',
   dancer: 'emote',
   emotes: 'emote',
   flag: 'menuReport',

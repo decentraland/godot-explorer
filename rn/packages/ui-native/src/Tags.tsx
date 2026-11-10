@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
 import { LinearFill } from './Gradient';
 import { Icon } from './Icon';
-import { colors, fonts, lightRainbow } from './tokens';
+import { colors, fonts, lightRainbow, Rarity, rarityColors } from './tokens';
 import { u } from './scale';
 
 export type EventTimeKind =
@@ -79,6 +79,26 @@ export function EventBadge({
   );
 }
 
+/** Figma `RarityLabel` 825:6933: the rarity name in its Rarities colour on a 20% tint of it (Base: Gray
+ * on Pearl 20%). The caller passes the translated name. */
+export function RarityLabel({
+  rarity,
+  label,
+}: {
+  rarity: Rarity;
+  label: string;
+}) {
+  const [text, tint] =
+    rarity === 'base'
+      ? [colors.gray, colors.pearl]
+      : [rarityColors[rarity].dark, rarityColors[rarity].dark];
+  return (
+    <View style={[styles.rarity, { backgroundColor: `${tint}33` }]}>
+      <AppText style={[styles.rarityText, { color: text }]}>{label}</AppText>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: u(3) },
   tag: {
@@ -126,4 +146,16 @@ const styles = StyleSheet.create({
   count: { fontFamily: fonts.medium, fontSize: u(10), color: colors.snow },
   badge: { height: u(16) },
   badgeLabel: { fontFamily: fonts.semibold, fontSize: u(10) },
+  rarity: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: u(4),
+    paddingVertical: u(2),
+    borderRadius: u(3),
+  },
+  rarityText: {
+    fontFamily: fonts.semibold,
+    fontSize: u(8),
+    lineHeight: u(10),
+    textTransform: 'uppercase',
+  },
 });

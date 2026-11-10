@@ -10,12 +10,15 @@ import {
   DetailRow,
   DiscoverCard,
   DiscoverCardSkeleton,
+  EmptyState,
   EventBadge,
   EventTimeTag,
+  Icon,
   fonts,
   ItemCard,
   LinearFill,
   ProfileCard,
+  RarityLabel,
   RarityBackground,
   Rarity,
   Sheet,
@@ -184,6 +187,40 @@ registerPreview('extra/ds-skeleton', {
             theme="light"
             animation="pulse"
           />
+        </View>
+      </View>
+    </View>
+  ),
+});
+
+registerPreview('extra/ds-empty-state', {
+  title: 'DS: EmptyState and RarityLabel',
+  orientation: 'portrait',
+  render: () => (
+    <View style={styles.page}>
+      <BrandBackground />
+      <View style={styles.content}>
+        <EmptyState
+          icon="search"
+          title="Something went wrong"
+          body="We couldn’t load the results. Please try again."
+        />
+        <EmptyState title="Nothing here yet" body="Find new ones in the Shop" />
+        <EmptyState
+          size="sm"
+          icon="peopleHeart"
+          title="No one nearby"
+          body="Try traveling somewhere else to meet new people."
+        />
+        <View style={styles.wrap}>
+          {RARITIES.map(rarity => (
+            <RarityLabel key={rarity} rarity={rarity} label={rarity} />
+          ))}
+        </View>
+        <View style={styles.wrap}>
+          {(['edit', 'add', 'copy'] as const).map(name => (
+            <Icon key={name} name={name} size={27} />
+          ))}
         </View>
       </View>
     </View>

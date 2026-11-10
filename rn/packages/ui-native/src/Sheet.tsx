@@ -41,12 +41,7 @@ export function Sheet({
           fixed && styles.fill,
         ]}
       >
-        <LinearFill
-          stops={[
-            { offset: 0, color: colors.purple450 },
-            { offset: 0.34, color: colors.purple500 },
-          ]}
-        />
+        <SheetGlow />
         {handle && <View style={styles.handle} />}
         {height === 'hug' && <View style={styles.content}>{children}</View>}
         {fixed && (
@@ -62,6 +57,20 @@ export function Sheet({
       {footer && height !== 'collapsed' && (
         <SheetFooter bottomInset={footerInset}>{footer}</SheetFooter>
       )}
+    </View>
+  );
+}
+
+/** Figma `Sheet` `_Glow`: Purple 450 → 500 over a fixed 125 dp at the top, whatever the sheet height. */
+export function SheetGlow() {
+  return (
+    <View style={styles.glow} pointerEvents="none">
+      <LinearFill
+        stops={[
+          { offset: 0, color: colors.purple450 },
+          { offset: 1, color: colors.purple500 },
+        ]}
+      />
     </View>
   );
 }
@@ -97,6 +106,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: colors.purple500,
   },
+  glow: { position: 'absolute', top: 0, left: 0, right: 0, height: u(125) },
   bodyHandle: { paddingTop: u(8) },
   bodyNoHandle: { paddingTop: u(20) },
   handle: {

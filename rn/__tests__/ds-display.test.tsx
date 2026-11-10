@@ -19,6 +19,7 @@ import {
   PageDots,
   ProfileCard,
   ProgressBar,
+  RarityLabel,
   Sheet,
   Skeleton,
   SnapCarousel,
@@ -264,6 +265,18 @@ describe('Skeleton and EmptyState', () => {
     expect(text(tree)).toContain('Connection lost');
     act(() => pressable(tree, 'RETRY').props.onPress());
     expect(onPress).toHaveBeenCalled();
+  });
+
+  it('EmptyState renders text-only and small without an icon badge', () => {
+    const tree = render(<EmptyState size="sm" title="No friends yet" />);
+    expect(text(tree)).toContain('No friends yet');
+    act(() => tree.unmount());
+  });
+
+  it('RarityLabel shows the label it is given', () => {
+    const tree = render(<RarityLabel rarity="legendary" label="Legendary" />);
+    expect(text(tree)).toContain('Legendary');
+    act(() => tree.unmount());
   });
 });
 
