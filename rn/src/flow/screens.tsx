@@ -543,12 +543,13 @@ const styles = StyleSheet.create({
     width: u(196.2),
     height: u(59.65),
   },
+  /** Figma AVATAR_NAMING `Name`: title 36 px, a 24 px gap, the field from y 258. */
   naming: {
     position: 'absolute',
-    top: u(102),
+    top: u(99),
     left: u(33),
     right: u(36),
-    gap: u(5),
+    gap: u(12),
   },
   namingTitle: { fontSize: u(18), lineHeight: u(18) },
   namingRow: { flexDirection: 'row', alignItems: 'flex-start', gap: u(6.5) },
