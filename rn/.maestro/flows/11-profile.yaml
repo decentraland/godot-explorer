@@ -43,6 +43,12 @@ name: Profile
 - extendedWaitUntil:
     notVisible: "Leave without saving?"
     timeout: 10000
+# STAY can return focus to the name field, and then the keyboard covers CANCEL. Back is only sent when it does.
+- runFlow:
+    when:
+      notVisible: "CANCEL"
+    commands:
+      - hideKeyboard
 - tapOn: "CANCEL"
 - tapOn: "LEAVE"
 - extendedWaitUntil:
