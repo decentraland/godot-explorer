@@ -112,6 +112,6 @@ const styles = StyleSheet.create({
     paddingVertical: u(10),
     alignSelf: 'flex-start',
   },
-  content: { paddingHorizontal: u(24), paddingBottom: u(12) },
+  content: { paddingHorizontal: u(24), paddingBottom: u(15) },
   contentExpanded: { paddingTop: u(24) },
 });

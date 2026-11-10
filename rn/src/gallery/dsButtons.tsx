@@ -225,7 +225,33 @@ function DsButtons() {
           label="Medium"
           spec={PRIMARY_SPEC.medium}
           columns={STATES}
-          rows={primaryRows({})}
+          rows={[
+            ...primaryRows({}),
+            {
+              label: 'Type=Claim',
+              render: s => (
+                <Button
+                  tone="claim"
+                  label={off(s) ? 'Claimed' : 'Claim'}
+                  disabled={off(s)}
+                  onPress={noop}
+                />
+              ),
+            },
+            {
+              label: 'Icon=True · Text=False (Dice)',
+              render: s => (
+                <IconButton
+                  variant="primary"
+                  big
+                  icon="dice"
+                  disabled={off(s)}
+                  accessibilityLabel="Random"
+                  onPress={noop}
+                />
+              ),
+            },
+          ]}
         />
         <Block
           label="Small"

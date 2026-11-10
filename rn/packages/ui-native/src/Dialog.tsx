@@ -54,8 +54,8 @@ const glow = (peak: number) =>
     color: colors.mythic,
     opacity: peak * factor,
   }));
-const GLOW_TOP = glow(0.6);
-const GLOW_BOTTOM = glow(0.62);
+export const GLOW_TOP = glow(0.6);
+export const GLOW_BOTTOM = glow(0.62);
 
 /** Height of the on-screen keyboard while `active`, so the card can stay above it. */
 function useKeyboardLift(active: boolean): number {

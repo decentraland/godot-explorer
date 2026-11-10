@@ -1,11 +1,13 @@
 // Design System Mobile: the Cards_Backpack, Cards_Discover and Skeleton pages and the Modals page
-// `Sheet`, every variant.
-import { ScrollView, StyleSheet, View } from 'react-native';
+// `Sheet` and `Modal/Claim`, every variant.
+import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import {
   AppText,
   AvatarCard,
   BrandBackground,
   Button,
+  ClaimDialog,
+  ClaimState,
   colors,
   DetailRow,
   DiscoverCard,
@@ -28,6 +30,7 @@ import {
 import { registerPreview } from './registry';
 
 const noop = () => {};
+const claimReward = require('./assets/claim-reward.webp');
 const RARITIES: Rarity[] = [
   'base',
   'common',
@@ -262,6 +265,7 @@ registerPreview('extra/ds-sheet', {
 });
 
 const styles = StyleSheet.create({
+  reward: { width: u(157.32), height: u(119.86) },
   page: { flex: 1, backgroundColor: colors.paleBlack },
   content: { padding: u(16), gap: u(14) },
   label: { color: colors.snow },
@@ -292,3 +296,32 @@ const styles = StyleSheet.create({
   },
   avatars: { flexDirection: 'row', gap: u(12), overflow: 'hidden' },
 });
+
+for (const state of ['default', 'loading', 'claimed'] as ClaimState[]) {
+  registerPreview(`extra/ds-claim-${state}`, {
+    title: `DS: Modal/Claim ${state}`,
+    orientation: 'portrait',
+    render: () => (
+      <View style={styles.page}>
+        <BrandBackground />
+        <ClaimDialog
+          visible
+          state={state}
+          title="You’re all set"
+          body="Your email has been verified. Enjoy the free wearable!"
+          reward={<Image source={claimReward} style={styles.reward} />}
+          buttonLabel={
+            state === 'default'
+              ? 'Claim reward'
+              : state === 'loading'
+              ? 'Claiming...'
+              : 'Claimed'
+          }
+          continueLabel="Tap to continue"
+          onClaim={noop}
+          onRequestClose={noop}
+        />
+      </View>
+    ),
+  });
+}

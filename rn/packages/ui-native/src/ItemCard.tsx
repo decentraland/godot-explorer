@@ -182,7 +182,7 @@ export function ItemCard({
                       styles.emptyBg,
                       state === 'selected' && styles.emptySelectedBg,
                     ]
-                  : styles.bgBorder,
+                  : [styles.bgBorder, disabled && styles.disabledBg],
               ]}
             >
               {empty ? (
@@ -190,7 +190,11 @@ export function ItemCard({
                   opacity={state === 'selected' ? 0.5 : disabled ? 0.2 : 0.3}
                 />
               ) : (
-                <RarityBackground rarity={rarity} disabled={disabled} />
+                <RarityBackground
+                  rarity={rarity}
+                  disabled={disabled}
+                  style={disabled && styles.undimmed}
+                />
               )}
             </View>
             {!empty && (
@@ -232,7 +236,7 @@ export function ItemCard({
                 <Icon name="check" size={18} color={colors.snow} />
               </View>
             ) : null}
-            {price !== undefined && !action && (
+            {price !== undefined && !action && !newLabel && (
               <View style={styles.priceRow} pointerEvents="none">
                 <View style={styles.price}>
                   <Icon name="credits" size={13} />
@@ -241,7 +245,10 @@ export function ItemCard({
               </View>
             )}
             {newLabel ? (
-              <View style={styles.newTag} pointerEvents="none">
+              <View
+                style={[styles.newTag, tapped && styles.newTagInset]}
+                pointerEvents="none"
+              >
                 <AppText style={styles.newText}>{newLabel}</AppText>
               </View>
             ) : null}
@@ -285,12 +292,14 @@ const styles = StyleSheet.create({
   emptySelectedBg: { backgroundColor: colors.black60 },
   emptyDisabled: { opacity: 0.6 },
   disabledBg: { opacity: 0.8 },
+  undimmed: { opacity: 1 },
+  /** Proportional, so a smaller card (Card-Profile's 75 dp tile) keeps the 192 px layout. */
   image: {
     position: 'absolute',
     top: 0,
-    left: u(4),
-    right: u(4),
-    bottom: u(7.5),
+    left: '4.17%',
+    right: '4.17%',
+    bottom: '7.81%',
   },
   fill: { width: '100%', height: '100%' },
   dim: { opacity: 0.8 },
@@ -352,6 +361,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.xs,
     backgroundColor: colors.ruby,
   },
+  /** Pressed: the tag moves in with the inset background. */
+  newTagInset: { top: u(6.5), right: u(8) },
   newText: {
     fontFamily: fonts.bold,
     fontSize: u(9),

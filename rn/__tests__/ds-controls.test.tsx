@@ -5,7 +5,6 @@ import {
   Checkbox,
   Dropdown,
   Header,
-  ReadOnlyField,
   SearchField,
   Slider,
   Switch,
@@ -348,14 +347,6 @@ describe('SearchField', () => {
     expect(
       tree.root.findAllByProps({ accessibilityLabel: 'Clear search' }),
     ).toHaveLength(0);
-  });
-});
-
-describe('ReadOnlyField', () => {
-  it('renders label and value', () => {
-    const out = text(render(<ReadOnlyField label="Email" value="a@b.c" />));
-    expect(out).toContain('Email');
-    expect(out).toContain('a@b.c');
   });
 });
 

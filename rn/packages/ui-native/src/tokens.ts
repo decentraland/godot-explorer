@@ -16,6 +16,8 @@ export const colors = {
   lavender: '#E8B9FF',
   magenta: '#C640CD',
   purple100: '#DCCBEC',
+  /** `Purple/200`: the claimed (disabled) Claim button. */
+  purple200: '#AE8AD2',
   purple350: '#691FA9',
   purple450: '#460F6F',
   purple500: '#350854',
@@ -75,6 +77,8 @@ export const colors = {
   /** Figma `alpha/deep-purple-*`: Purple 500 `#350854` at 40% / 50% (Discover card without image). */
   deepPurple40: 'rgba(53,8,84,0.4)',
   deepPurple50: 'rgba(53,8,84,0.5)',
+  /** `RarityLabel` Exotic background base (drawn at 20%). */
+  exoticTint: '#CAFF73',
   /** Figma `alpha/lavender-50`: Lavender Light at 50%. */
   lavender50: 'rgba(232,185,255,0.5)',
 } as const;
@@ -84,6 +88,14 @@ export const lightRainbow = [
   { offset: 0, color: '#FFBC5B' },
   { offset: 0.505, color: colors.ruby },
   { offset: 1, color: colors.magenta },
+];
+
+/** `Button/Primary` `Type=Claim` image fill, read along its middle row: magenta into Ruby, which it
+ * reaches at 76% of the width (`LinearFill` 90). */
+export const claimGradient = [
+  { offset: 0, color: '#C93EC5' },
+  { offset: 0.76, color: colors.ruby },
+  { offset: 1, color: colors.ruby },
 ];
 
 /** Figma `Elevation/Down|Up`: one shadow, 0/±4 offset, blur 4, Shadow at 50% — values ÷ 2 for

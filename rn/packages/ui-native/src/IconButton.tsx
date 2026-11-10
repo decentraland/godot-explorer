@@ -7,7 +7,8 @@ import { u } from './scale';
 /** Figma's icon-only button family — `variant="filled"` covers both `Button/Discover` (`big`,
  * 94×96, purple overlay) and `Button/Filter` (default, 54×54, black overlay); `variant="outline"`
  * is `Button/Social` (54×54, 2px border, used for accept/cancel-style circular actions);
- * `variant="primary"` is `Button/Primary` `Text=False` (the 54×54 Ruby JumpIn square). Colors
+ * `variant="primary"` is `Button/Primary` `Text=False` (the 54×54 Ruby JumpIn square; `big` is the
+ * 60×60 Dice square with a 54 glyph). Colors
  * are passed directly, not a `tone` enum — this family's palette varies per concrete use (purple
  * nav overlay vs. black filter overlay vs. a semantic accept/cancel border) in a way a shared tone
  * system can't express without forcing unrelated cases through the same few names. */
@@ -30,7 +31,8 @@ export function IconButton({
   icon: IconName;
   onPress: () => void;
   variant?: 'filled' | 'outline' | 'primary';
-  /** `variant="filled"` only: the Large Discover size (94×96) — default is the Filter size (54×54). */
+  /** `variant="filled"`: the Large Discover size (94×96) instead of the Filter size (54×54);
+   * `variant="primary"`: the 60×60 Medium square instead of the 54×54 Small one. */
   big?: boolean;
   selected?: boolean;
   disabled?: boolean;
@@ -79,7 +81,7 @@ export function IconButton({
         accessibilityLabel={accessibilityLabel}
         accessibilityState={{ disabled }}
         style={pressed => [
-          styles.primary,
+          big ? styles.primaryBig : styles.primary,
           {
             backgroundColor: disabled
               ? colors.rubyDisabled
@@ -91,20 +93,21 @@ export function IconButton({
       >
         <Icon
           name={icon}
-          size={iconSize.buttonSm}
-          color={disabled ? colors.textDisabled : colors.snow}
+          size={big ? 27 : iconSize.buttonSm}
+          color={
+            disabled ? (big ? colors.snow10 : colors.textDisabled) : colors.snow
+          }
         />
       </PressableBase>
     );
   }
-  // Filter has one `Tap-Selected` state for both the press and the selection; Discover keeps a
-  // Snow glyph while pressed.
+  // Filter has one `Tap-Selected` state for both the press and the selection.
   const iconColor = (pressed: boolean) =>
     disabled
       ? big
         ? colors.white30
-        : colors.textDisabled
-      : selected || (pressed && !big)
+        : colors.snow10
+      : selected || pressed
       ? colors.lavender
       : colors.snow;
   return (
@@ -176,6 +179,13 @@ const styles = StyleSheet.create({
   primary: {
     width: u(27),
     height: u(27),
+    borderRadius: u(4),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryBig: {
+    width: u(30),
+    height: u(30),
     borderRadius: u(4),
     alignItems: 'center',
     justifyContent: 'center',

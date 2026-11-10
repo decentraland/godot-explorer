@@ -3,6 +3,8 @@ import { act, create, ReactTestInstance } from 'react-test-renderer';
 import { Pressable } from 'react-native';
 import {
   BottomSheet,
+  ClaimDialog,
+  ClaimState,
   Dialog,
   ToastProvider,
   nearestSnap,
@@ -30,6 +32,45 @@ function pressable(tree: ReturnType<typeof create>, label: string) {
   }
   return node;
 }
+
+describe('ClaimDialog', () => {
+  const claim = (state: ClaimState, onClaim = jest.fn(), onClose = jest.fn()) =>
+    render(
+      <ClaimDialog
+        visible
+        state={state}
+        title="You’re all set"
+        body="Enjoy the free wearable!"
+        reward={null}
+        buttonLabel="Claim reward"
+        continueLabel="Tap to continue"
+        onClaim={onClaim}
+        onRequestClose={onClose}
+      />,
+    );
+
+  it('claims from the default state', () => {
+    const onClaim = jest.fn();
+    const tree = claim('default', onClaim);
+    expect(text(tree)).not.toContain('Tap to continue');
+    act(() => pressable(tree, 'Claim reward').props.onPress());
+    expect(onClaim).toHaveBeenCalled();
+  });
+
+  it('locks the button while loading and shows the spinner', () => {
+    const tree = claim('loading');
+    expect(text(tree)).toContain('"disabled":true');
+    expect(text(tree)).toContain('progressbar');
+  });
+
+  it('closes on a tap once claimed', () => {
+    const onClose = jest.fn();
+    const tree = claim('claimed', jest.fn(), onClose);
+    expect(text(tree)).toContain('Tap to continue');
+    act(() => pressable(tree, 'Tap to continue').props.onPress());
+    expect(onClose).toHaveBeenCalled();
+  });
+});
 
 describe('Dialog', () => {
   it('renders title, body and fires button callbacks', () => {

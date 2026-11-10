@@ -71,16 +71,17 @@ export function Thumb({
       style={[
         styles.frame,
         { width, height, borderRadius: u(radius) },
+        broken && styles.broken,
         !bordered && styles.unframed,
       ]}
     >
       {broken ? (
-        <View style={styles.broken}>
+        <View style={styles.centre}>
+          {/* Figma `Image Not Found` 821:3478: the glyph is 24.5% of the frame width. */}
           <Icon
             name="imageOff"
-            size={28}
+            size={typeof width === 'number' ? (width * 0.2448) / u(1) : 36}
             color={colors.lavender70}
-            strokeWidth={1.6}
           />
         </View>
       ) : colorsFor ? (
@@ -113,9 +114,9 @@ const styles = StyleSheet.create({
   unframed: { borderWidth: 0 },
   fill: { width: '100%', height: '100%' },
   broken: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#3D0F66',
+    borderWidth: u(0.3),
+    borderColor: colors.lavender50,
+    backgroundColor: colors.deepPurple50,
   },
+  centre: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });

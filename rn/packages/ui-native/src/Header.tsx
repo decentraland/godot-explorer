@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
   landscape: {
     minHeight: u(37),
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
     gap: u(8),
   },

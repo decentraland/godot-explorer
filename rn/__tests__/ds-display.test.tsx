@@ -400,7 +400,6 @@ describe('demo props', () => {
       'PageDots',
       'SnapCarousel',
       'HudCircleButton',
-      'ReadOnlyField',
       'ActionSquareButton',
     ]) {
       expect(demos).toHaveProperty(key);

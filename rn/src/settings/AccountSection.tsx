@@ -5,8 +5,8 @@ import {
   Button,
   colors,
   Dialog,
+  Dropdown,
   fonts,
-  ReadOnlyField,
   u,
 } from '@dcl/ui-native';
 import { t } from '../i18n';
@@ -101,9 +101,14 @@ export function AccountSection({
               }}
             />
           ) : (
-            <ReadOnlyField
+            <Dropdown
+              readOnly
               label={t('SETTINGS_EMAIL')}
               value={account.email ?? ''}
+              options={[
+                { value: account.email ?? '', label: account.email ?? '' },
+              ]}
+              onChange={() => {}}
             />
           )}
         </View>

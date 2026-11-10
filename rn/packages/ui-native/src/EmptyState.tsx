@@ -28,7 +28,7 @@ export function EmptyState({
     <View style={[styles.root, small ? styles.rootSmall : styles.rootLarge]}>
       {icon && (
         <View style={styles.badge}>
-          <Icon name={icon} size={50} color={colors.purple100} />
+          <Icon name={icon} size={40} color={colors.purple100} />
         </View>
       )}
       <View style={[styles.text, small && styles.textSmall]}>

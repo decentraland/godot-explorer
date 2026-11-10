@@ -1,10 +1,12 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
+import { LinearFill } from './Gradient';
 import { Icon, IconName } from './Icon';
 import { PressableBase } from './internal/PressableBase';
 import { Spinner } from './Spinner';
 import {
   border,
+  claimGradient,
   colors,
   controlHeight,
   fonts,
@@ -20,7 +22,8 @@ export type ButtonTone =
   | 'ghost'
   | 'dark'
   | 'outline'
-  | 'reminder';
+  | 'reminder'
+  | 'claim';
 
 export function Button({
   label,
@@ -37,7 +40,9 @@ export function Button({
 }: {
   label: string;
   onPress: () => void;
-  /** `reminder` is Figma's `Button/Reminder` toggle (bell + "Remind me"): purple overlay by
+  /** `claim` is `Button/Primary` `Type=Claim`: the magenta→Ruby fill, 70% while pressed or
+   * `loading` (the label stays, e.g. "Claiming…"), Purple 200 with a Snow label when disabled.
+   * `reminder` is Figma's `Button/Reminder` toggle (bell + "Remind me"): purple overlay by
    * default, Ruby text and border on black when `selected`. The caller swaps the icon. */
   tone?: ButtonTone;
   disabled?: boolean;
@@ -60,14 +65,16 @@ export function Button({
   /** `ghost` has no Figma source (see §Disabled below) — everything else gets the explicit
    * `theme.colors.text.disabled` swatch instead of a dimmed tone colour. */
   const reminder = tone === 'reminder';
-  const labelColor =
-    tone === 'ghost'
-      ? colors.gray
-      : reminder && selected
-      ? colors.ruby
-      : inactive
-      ? colors.textDisabled
-      : colors.snow;
+  const claim = tone === 'claim';
+  const labelColor = claim
+    ? colors.snow
+    : tone === 'ghost'
+    ? colors.gray
+    : reminder && selected
+    ? colors.ruby
+    : inactive
+    ? colors.textDisabled
+    : colors.snow;
   const fontSize = big || reminder ? u(15) : small ? u(11) : u(12);
   const glyph = big
     ? iconSize.buttonLg
@@ -91,6 +98,8 @@ export function Button({
         tone === 'secondary' && styles.secondary,
         tone === 'dark' && styles.dark,
         tone === 'outline' && styles.outline,
+        claim && styles.claim,
+        claim && disabled && styles.claimDisabled,
         (icon || trailingIcon) && styles.withIcon,
         reminder && styles.reminder,
         reminder && selected && styles.reminderSelected,
@@ -116,21 +125,40 @@ export function Button({
         pressed && !inactive && reminder && !selected && styles.reminderPressed,
       ]}
     >
-      {loading ? (
-        <Spinner size={big ? 16 : small ? 12 : 14} />
-      ) : (
+      {pressed => (
         <>
-          {icon && (
-            <Icon name={icon} size={reminder ? 27 : glyph} color={labelColor} />
+          {claim && !disabled && (
+            <View
+              style={[
+                styles.claimFill,
+                (loading || pressed) && styles.claimDim,
+              ]}
+              pointerEvents="none"
+            >
+              <LinearFill stops={claimGradient} angle={90} />
+            </View>
           )}
-          <AppText
-            variant="button"
-            style={[styles.label, { color: labelColor, fontSize }]}
-          >
-            {label}
-          </AppText>
-          {trailingIcon && (
-            <Icon name={trailingIcon} size={glyph} color={labelColor} />
+          {loading && !claim ? (
+            <Spinner size={big ? 16 : small ? 12 : 14} />
+          ) : (
+            <>
+              {icon && (
+                <Icon
+                  name={icon}
+                  size={reminder ? 27 : glyph}
+                  color={labelColor}
+                />
+              )}
+              <AppText
+                variant="button"
+                style={[styles.label, { color: labelColor, fontSize }]}
+              >
+                {label}
+              </AppText>
+              {trailingIcon && (
+                <Icon name={trailingIcon} size={glyph} color={labelColor} />
+              )}
+            </>
           )}
         </>
       )}
@@ -183,4 +211,8 @@ const styles = StyleSheet.create({
   primaryPressed: { backgroundColor: colors.rubyPressed },
   darkPressed: { backgroundColor: colors.black60 },
   genericPressed: { opacity: 0.85 },
+  claim: { overflow: 'hidden' },
+  claimDisabled: { backgroundColor: colors.purple200 },
+  claimFill: { ...StyleSheet.absoluteFill },
+  claimDim: { opacity: 0.7 },
 });
