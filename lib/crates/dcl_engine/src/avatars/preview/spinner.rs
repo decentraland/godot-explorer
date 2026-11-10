@@ -49,10 +49,12 @@ impl IControl for PreviewSpinner {
 }
 
 impl PreviewSpinner {
-    /// A spinner of its fixed size, centred in its parent.
-    pub fn centred() -> Gd<Self> {
+    /// A spinner of its fixed size, centred across its parent and `centre` of the way down it.
+    pub fn centred(centre: f32) -> Gd<Self> {
         let mut spinner = Self::new_alloc();
         spinner.set_anchors_preset(LayoutPreset::CENTER);
+        spinner.set_anchor(Side::TOP, centre);
+        spinner.set_anchor(Side::BOTTOM, centre);
         spinner.set_offset(Side::LEFT, -SIZE * 0.5);
         spinner.set_offset(Side::TOP, -SIZE * 0.5);
         spinner.set_offset(Side::RIGHT, SIZE * 0.5);

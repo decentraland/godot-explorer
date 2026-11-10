@@ -22,6 +22,9 @@ const PREVIEW_SCENE: &str = "res://src/ui/pages/backpack/avatar_preview.tscn";
 /// In explorer mode only the preview is drawn by the main viewport (nameplates and other 2D layers
 /// are culled); `disable_3d` stops the world render.
 const OVERLAY_CANVAS_LAYER: u32 = 1 << 19;
+/// Where the loading spinner sits when a look is replaced, as a fraction of the window's height
+/// (Figma AVATAR_CREATE-Loading: its centre is at y 545 of the window that spans y 165 to 837).
+const LOADING_LOOK_CENTRE: f32 = 0.5655;
 
 pub struct Backpack {
     /// The node the preview's canvas layer hangs from.
@@ -201,6 +204,10 @@ impl Backpack {
     }
 
     async fn apply_avatar_now(&self, args: &VarDictionary) {
+        let replace = args
+            .get("replace")
+            .and_then(|v| v.try_to::<bool>().ok())
+            .unwrap_or(false);
         let strings = |key: &str| {
             args.get(key)
                 .and_then(|v| v.try_to::<PackedStringArray>().ok())
@@ -209,7 +216,10 @@ impl Backpack {
         let text = |key: &str| args.get(key).map(|v| v.to_string()).unwrap_or_default();
         let color = |key: &str| Color::from_html(text(key).as_str()).unwrap_or(Color::WHITE);
         let wearables = strings("wearables");
-        self.show_spinner();
+        self.show_spinner(replace);
+        if replace {
+            self.set_avatar_visible(false);
+        }
         let fetches = {
             let base_url = globals::realm().bind().get_profile_content_url();
             globals::content_provider()
@@ -217,7 +227,9 @@ impl Backpack {
                 .fetch_wearables(wearables.to_var_array(), base_url)
         };
         await_all(fetches.iter_shared().collect()).await;
-        self.freeze();
+        if !replace {
+            self.freeze();
+        }
         // Written right before the build, with no wait in between: the saved profile replaces the
         // identity's avatar when it arrives, and a look written earlier would be lost to it.
         let mut avatar = globals::player_identity().bind().get_mutable_avatar();
@@ -233,6 +245,9 @@ impl Backpack {
         self.refresh_avatar().await;
         next_frame().await;
         self.thaw();
+        if replace {
+            self.set_avatar_visible(true);
+        }
         if !same_wearables(
             &string_list(&avatar.bind().get_wearables()),
             &string_list(&wearables),
@@ -360,17 +375,32 @@ impl Backpack {
     }
 
     /// A ring over the avatar from the edit until the new look is drawn.
-    fn show_spinner(&self) {
+    fn show_spinner(&self, loading_look: bool) {
         if !self.is_shown() || self.spinner.borrow().is_some() {
             return;
         }
         let Some(mut preview) = self.preview() else {
             return;
         };
-        let mut spinner = PreviewSpinner::centred();
+        let mut spinner = PreviewSpinner::centred(if loading_look {
+            LOADING_LOOK_CENTRE
+        } else {
+            0.5
+        });
         spinner.set_visibility_layer(OVERLAY_CANVAS_LAYER);
         preview.add_child(&spinner);
         *self.spinner.borrow_mut() = Some(spinner);
+    }
+
+    /// The avatar node of the preview, shown or not; the spinner and the stage stay.
+    fn set_avatar_visible(&self, visible: bool) {
+        let Some(preview) = self.preview() else {
+            return;
+        };
+        let avatar = preview.bind().avatar.clone();
+        if let Some(mut avatar) = avatar {
+            avatar.set_visible(visible);
+        }
     }
 
     fn thaw(&self) {

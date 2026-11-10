@@ -43,6 +43,11 @@ fn signal_payload(command: &EngineCommand) -> Option<(&'static str, VarDictionar
         EngineCommand::HideAvatarPreview => Some(("hide_avatar_preview", VarDictionary::new())),
         EngineCommand::SetRendering(_) => None,
         EngineCommand::ApplyAvatar(avatar) => Some(("apply_avatar", avatar_args(avatar))),
+        EngineCommand::ApplyLook(avatar) => {
+            let mut args = avatar_args(avatar);
+            args.set("replace", true);
+            Some(("apply_avatar", args))
+        }
         EngineCommand::Control(control) => control_payload(control),
     }
 }

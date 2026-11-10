@@ -93,12 +93,17 @@ impl App {
     /// Runs a shell command: avatar edits are computed here and the result goes to the engine to
     /// render; the rest is forwarded, starting the engine if it is not up yet.
     pub fn control(&mut self, control: Control) {
+        let whole_look = matches!(control, Control::SetLook { .. });
         if let Some(edit) = self.edit_avatar(&control) {
             match edit {
                 Ok(next) if self.avatar.as_ref() != Some(&next) => {
                     self.events.avatar_changed(&next);
                     self.avatar = Some(next.clone());
-                    self.send(EngineCommand::ApplyAvatar(next));
+                    self.send(if whole_look {
+                        EngineCommand::ApplyLook(next)
+                    } else {
+                        EngineCommand::ApplyAvatar(next)
+                    });
                 }
                 Ok(_) => {}
                 Err(error) => tracing::warn!("avatar edit ignored: {error}"),
