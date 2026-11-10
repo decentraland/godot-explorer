@@ -99,7 +99,9 @@ describe('screens render', () => {
       await playAsGuest();
       expect(JSON.stringify(tree.toJSON())).toContain('Choose your look');
       // On a device the avatar hole has opened the preview by now: the state is not `SignedIn`.
-      act(() => core().showAvatarPreview({ x: 0, y: 0, width: 10, height: 10 }));
+      act(() =>
+        core().showAvatarPreview({ x: 0, y: 0, width: 10, height: 10 }),
+      );
       expect(core().state().tag).toBe('AvatarPreview');
       await act(async () =>
         tree.root.findByProps({ accessibilityLabel: 'Back' }).props.onPress(),

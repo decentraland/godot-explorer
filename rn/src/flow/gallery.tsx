@@ -4,20 +4,18 @@ import { ApiProvider } from '../discover/ApiContext';
 import { FtueScreen } from '../discover/FtueScreen';
 import { createMockApi as createDiscoverApi } from '../discover/mockApi';
 import { PLACES } from '../discover/mockData';
-import { CustomizeStep } from './CustomizeStep';
-import { OtpModal } from './OtpModal';
+import { AvatarCustomize } from './AvatarCustomize';
+import { AuthOtpEntercode } from './AuthOtpEntercode';
+import { AvatarCreate, StageImage, Comeback } from './previewScreens';
 import {
-  AvatarCreateScreen,
-  StageImage,
-  WelcomeBackScreen,
-} from './previewScreens';
-import {
-  AccountScreen,
-  EmailScreen,
-  GuestCreateScreen,
-  NamingScreen,
-  SignInScreen,
-  SplashScreen,
+  AccountHome,
+  AuthOtpStart,
+  AuthVerify,
+  AccountGuestCreate,
+  AvatarNaming,
+  AuthBrowserOpen,
+  AuthHome,
+  DclSplash,
 } from './screens';
 
 const noop = () => {};
@@ -28,7 +26,7 @@ const noop = () => {};
     title: 'Flow: splash',
     orientation: 'portrait',
     notes: 'Entry-flow splash; the Godot splash is native',
-    render: () => <SplashScreen onDone={noop} />,
+    render: () => <DclSplash onDone={noop} />,
   }),
 );
 registerPreview('extra/flow-create', {
@@ -37,7 +35,7 @@ registerPreview('extra/flow-create', {
   notes:
     'Figma AVATAR_CREATE 2776:23661; the presets are placeholders and no avatar shows.',
   render: () => (
-    <AvatarCreateScreen
+    <AvatarCreate
       selected={0}
       onSelect={noop}
       onCustomize={noop}
@@ -51,7 +49,7 @@ registerPreview('extra/flow-naming', {
   orientation: 'portrait',
   notes: 'Figma AVATAR_NAMING 2776:22117; the stage stands in for the avatar.',
   render: () => (
-    <NamingScreen
+    <AvatarNaming
       initial="JuanPedro"
       tag="1234"
       preview={<StageImage />}
@@ -86,7 +84,7 @@ const customizeApi = createMockApi();
     orientation: 'portrait',
     notes,
     render: () => (
-      <CustomizeStep
+      <AvatarCustomize
         key={id}
         api={customizeApi}
         initialPrompt={prompt}
@@ -101,14 +99,14 @@ registerPreview('extra/flow-guest-create', {
   title: 'Flow: guest create',
   orientation: 'portrait',
   notes: 'Entry flow: the guest account being created after Play as Guest',
-  render: () => <GuestCreateScreen />,
+  render: () => <AccountGuestCreate />,
 });
 ['738-8278', '738-8261'].forEach(node =>
   registerPreview(`settings-portrait__account-home__${node}`, {
     title: 'Flow: account home',
     orientation: 'portrait',
     notes: 'Entry-flow account screen shown after sign out or delete account',
-    render: () => <AccountScreen onGuest={noop} onSignIn={noop} />,
+    render: () => <AccountHome onGuest={noop} onSignIn={noop} />,
   }),
 );
 
@@ -131,7 +129,7 @@ registerPreview('extra/flow-signin', {
   title: 'Flow: sign in providers',
   orientation: 'portrait',
   notes: 'Figma AUTH_HOME_ANDROID // IOS 1842:13740.',
-  render: () => <SignInScreen error={null} onProvider={noop} onBack={noop} />,
+  render: () => <AuthHome error={null} onProvider={noop} onBack={noop} />,
 });
 
 registerPreview('extra/flow-email', {
@@ -139,7 +137,7 @@ registerPreview('extra/flow-email', {
   orientation: 'portrait',
   notes: 'Figma AUTH_OTP_START 1842:13788.',
   render: () => (
-    <EmailScreen
+    <AuthOtpStart
       initial=""
       error={null}
       busy={false}
@@ -166,14 +164,14 @@ registerPreview('extra/flow-email', {
     notes: `Figma ${frame}; the code is asked over the email screen.`,
     render: () => (
       <>
-        <EmailScreen
+        <AuthOtpStart
           initial=""
           error={null}
           busy={false}
           onSubmit={noop}
           onBack={noop}
         />
-        <OtpModal
+        <AuthOtpEntercode
           visible
           email="your@email.com"
           error={error}
@@ -193,6 +191,25 @@ registerPreview('extra/flow-comeback', {
   orientation: 'portrait',
   notes: 'Figma COMEBACK 2776:23616; no avatar shows here.',
   render: () => (
-    <WelcomeBackScreen name="Username" onContinue={noop} onUseAnother={noop} />
+    <Comeback name="Username" onContinue={noop} onUseAnother={noop} />
   ),
+});
+
+registerPreview('extra/flow-auth-browser-open', {
+  title: 'Flow: AUTH_BROWSER_OPEN',
+  orientation: 'portrait',
+  notes: 'Figma AUTH_BROWSER_OPEN 1564:9629.',
+  render: () => <AuthBrowserOpen onCancel={noop} />,
+});
+registerPreview('extra/flow-auth-browser-loading', {
+  title: 'Flow: AUTH_BROWSER_OPEN (back from the browser)',
+  orientation: 'portrait',
+  notes: 'Figma AUTH_BROWSER_OPEN 2582:15409.',
+  render: () => <AuthBrowserOpen loading onCancel={noop} />,
+});
+registerPreview('extra/flow-auth-verify', {
+  title: 'Flow: AUTH_VERIFY',
+  orientation: 'portrait',
+  notes: 'Figma AUTH_VERIFY / AUTH_SUCCESS / AUTH_ERROR 1842:14702.',
+  render: () => <AuthVerify />,
 });

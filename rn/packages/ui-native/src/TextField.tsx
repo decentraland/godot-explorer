@@ -31,6 +31,7 @@ export function TextField({
   multilineHeight,
   autoFocus = false,
   secureTextEntry = false,
+  onFocusChange,
 }: {
   label: string;
   value: string;
@@ -55,6 +56,8 @@ export function TextField({
   multilineHeight?: number;
   autoFocus?: boolean;
   secureTextEntry?: boolean;
+  /** Told when the field gains or loses focus, for a caller that validates on blur. */
+  onFocusChange?: (focused: boolean) => void;
 }) {
   const [focused, setFocused] = useState(false);
   const showClear = focused && value.length > 0 && !disabled && !!onClear;
@@ -117,8 +120,14 @@ export function TextField({
           secureTextEntry={secureTextEntry}
           autoCapitalize={autoCapitalize}
           keyboardType={keyboardType}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          onFocus={() => {
+            setFocused(true);
+            onFocusChange?.(true);
+          }}
+          onBlur={() => {
+            setFocused(false);
+            onFocusChange?.(false);
+          }}
           style={[
             styles.input,
             disabled && styles.textDisabled,
@@ -177,7 +186,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: u(10),
   },
-  label: { fontFamily: fonts.medium, fontSize: u(15), color: colors.snow },
+  /** Figma `Input-Label`: Medium 30 px in a 36 px line, so Android and web agree on the baseline. */
+  label: {
+    fontFamily: fonts.medium,
+    fontSize: u(15),
+    lineHeight: u(18),
+    color: colors.snow,
+  },
   labelDisabled: { color: colors.white30 },
   box: {
     minHeight: u(34),

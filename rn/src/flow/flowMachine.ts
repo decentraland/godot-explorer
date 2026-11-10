@@ -1,13 +1,14 @@
 /** Entry flow mirroring the 1.x lobby, portrait only; naming ends it, the FTUE screen stays out. */
 export type Step =
-  | 'splash'
-  | 'account'
-  | 'sign_in'
-  | 'auth_wait'
-  | 'email_entry'
-  | 'email_code'
-  | 'guest_wait'
-  | 'welcome_back'
+  | 'dcl_splash'
+  | 'account_home'
+  | 'auth_home'
+  | 'auth_browser_open'
+  | 'auth_otp_start'
+  | 'auth_otp_entercode'
+  | 'auth_verify'
+  | 'account_guest_create'
+  | 'comeback'
   | 'avatar_create'
   | 'avatar_customize'
   | 'avatar_naming'
@@ -35,6 +36,7 @@ export type FlowAction =
   | { type: 'chooseSignIn' }
   | { type: 'chooseProvider'; provider: Provider }
   | { type: 'emailSent'; email: string }
+  | { type: 'codeAccepted' }
   | { type: 'authSucceeded'; hasProfile: boolean; name: string }
   | { type: 'authFailed'; message: string }
   | { type: 'customizeAvatar' }
@@ -44,7 +46,7 @@ export type FlowAction =
   | { type: 'back' };
 
 export const initialFlow: FlowState = {
-  step: 'splash',
+  step: 'dcl_splash',
   guest: false,
   preview: false,
   provider: null,
@@ -67,55 +69,61 @@ const go = (
 export function reduceFlow(state: FlowState, action: FlowAction): FlowState {
   switch (action.type) {
     case 'booted':
-      return state.step === 'splash' ? go(state, 'account') : state;
+      return state.step === 'dcl_splash' ? go(state, 'account_home') : state;
     case 'recovered':
       // A restored account that already has a name goes straight into the app, as the lobby did.
-      if (state.step !== 'splash') {
+      if (state.step !== 'dcl_splash') {
         return state;
       }
       return action.hasProfile
         ? go(state, 'done', { name: action.name })
         : go(state, 'avatar_create');
     case 'playAsGuest':
-      return go(state, 'guest_wait', { guest: true, provider: null });
+      return go(state, 'account_guest_create', { guest: true, provider: null });
     case 'previewGuest':
-      return state.step === 'splash'
-        ? go(state, 'guest_wait', { guest: true, preview: true })
+      return state.step === 'dcl_splash'
+        ? go(state, 'account_guest_create', { guest: true, preview: true })
         : state;
     case 'guestReady':
-      if (state.step !== 'guest_wait') {
+      if (state.step !== 'account_guest_create') {
         return state;
       }
       return go(state, state.preview ? 'done' : 'avatar_create');
     case 'chooseSignIn':
-      return go(state, 'sign_in', { guest: false });
+      return go(state, 'auth_home', { guest: false });
     case 'chooseProvider':
       return action.provider === 'email'
-        ? go(state, 'email_entry', { provider: action.provider })
-        : go(state, 'auth_wait', { provider: action.provider });
+        ? go(state, 'auth_otp_start', { provider: action.provider })
+        : go(state, 'auth_browser_open', { provider: action.provider });
     case 'emailSent':
-      return state.step === 'email_entry'
-        ? go(state, 'email_code', { email: action.email })
+      return state.step === 'auth_otp_start'
+        ? go(state, 'auth_otp_entercode', { email: action.email })
+        : state;
+    case 'codeAccepted':
+      return state.step === 'auth_otp_entercode'
+        ? go(state, 'auth_verify')
         : state;
     case 'authSucceeded':
       // Also from the guest wait: a session the core still held makes the guest tap a sign-in.
       if (
-        state.step !== 'auth_wait' &&
-        state.step !== 'email_code' &&
-        state.step !== 'guest_wait'
+        state.step !== 'auth_browser_open' &&
+        state.step !== 'auth_verify' &&
+        state.step !== 'account_guest_create'
       ) {
         return state;
       }
       return action.hasProfile
-        ? go(state, 'welcome_back', { name: action.name })
+        ? go(state, 'comeback', { name: action.name })
         : go(state, 'avatar_create');
     case 'authFailed':
-      if (state.step === 'guest_wait') {
+      if (state.step === 'account_guest_create') {
         // Back to Account Home to try again; a preview that could not sign in is no longer honoured.
-        return go(state, 'account', { guest: false, preview: false });
+        return go(state, 'account_home', { guest: false, preview: false });
       }
-      return state.step === 'auth_wait' || state.step === 'email_entry'
-        ? go(state, 'sign_in', { error: action.message })
+      return state.step === 'auth_browser_open' ||
+        state.step === 'auth_verify' ||
+        state.step === 'auth_otp_start'
+        ? go(state, 'auth_home', { error: action.message })
         : state;
     case 'customizeAvatar':
       return go(state, 'avatar_customize');
@@ -132,19 +140,22 @@ export function reduceFlow(state: FlowState, action: FlowAction): FlowState {
 
 function back(state: FlowState): FlowState {
   switch (state.step) {
-    case 'sign_in':
-      return go(state, 'account');
-    case 'auth_wait':
-    case 'email_entry':
-      return go(state, 'sign_in');
-    case 'email_code':
-      return go(state, 'email_entry');
-    case 'guest_wait':
-      return go(state, 'account', { guest: false, preview: false });
+    case 'auth_home':
+      return go(state, 'account_home');
+    case 'auth_browser_open':
+    case 'auth_otp_start':
+      return go(state, 'auth_home');
+    case 'auth_otp_entercode':
+    case 'auth_verify':
+      return go(state, 'auth_otp_start');
+    case 'account_guest_create':
+      return go(state, 'account_home', { guest: false, preview: false });
     case 'avatar_create':
-      return go(state, state.guest ? 'account' : 'sign_in', { guest: false });
-    case 'welcome_back':
-      return go(state, 'sign_in');
+      return go(state, state.guest ? 'account_home' : 'auth_home', {
+        guest: false,
+      });
+    case 'comeback':
+      return go(state, 'auth_home');
     case 'avatar_customize':
       return go(state, 'avatar_create');
     case 'avatar_naming':
@@ -159,7 +170,7 @@ export const PREVIEW_STEPS: readonly Step[] = [
   'avatar_create',
   'avatar_customize',
   'avatar_naming',
-  'welcome_back',
+  'comeback',
 ];
 
 /** Name rule from the lobby's field: letters, digits and inner spaces, 15 characters at most. */

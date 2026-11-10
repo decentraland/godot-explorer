@@ -1,7 +1,9 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import {
   Image,
+  Keyboard,
   Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -29,7 +31,7 @@ const loadingLogo = require('../assets/logo-loading.gif');
 const avatarShadow = require('../assets/avatar-shadow.png');
 const decentralandLogo = require('../assets/decentraland_logo.png');
 
-export function SplashScreen({ onDone }: { onDone: () => void }) {
+export function DclSplash({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     const timer = setTimeout(onDone, 1200);
     return () => clearTimeout(timer);
@@ -43,9 +45,9 @@ export function SplashScreen({ onDone }: { onDone: () => void }) {
   );
 }
 
-/** Inline "Terms of Service, Privacy Policy, and Content Policy" disclaimer with real links,
- * shared by Account Home and Sign In. */
-function TermsDisclaimer() {
+/** Inline "Terms of Service, Privacy Policy, and Content Policy" disclaimer with real links: underlined
+ * on ACCOUNT_HOME, plain on AUTH_HOME, as the two frames draw it. */
+function TermsDisclaimer({ underline = false }: { underline?: boolean }) {
   const urls = core().urls();
   const links: Record<string, { label: string; url: string }> = {
     tos: { label: t('FLOW_TERMS_OF_SERVICE'), url: urls.termsOfService },
@@ -61,7 +63,7 @@ function TermsDisclaimer() {
           return link ? (
             <Text
               key={i}
-              style={styles.disclaimerLink}
+              style={[styles.disclaimerLink, underline && styles.underlined]}
               onPress={() => Linking.openURL(link.url)}
             >
               {link.label}
@@ -74,7 +76,7 @@ function TermsDisclaimer() {
   );
 }
 
-export function AccountScreen({
+export function AccountHome({
   onGuest,
   onSignIn,
 }: {
@@ -113,7 +115,7 @@ export function AccountScreen({
               onPress={onSignIn}
             />
           </View>
-          <TermsDisclaimer />
+          <TermsDisclaimer underline />
         </View>
       </View>
     </FlowFrame>
@@ -126,7 +128,7 @@ const BRAND_PROVIDERS: { key: Provider; label: I18nKey }[] = [
   { key: 'apple', label: 'FLOW_PROVIDER_APPLE' },
 ];
 
-export function SignInScreen({
+export function AuthHome({
   error,
   onProvider,
   onBack,
@@ -182,7 +184,7 @@ export function SignInScreen({
 
 /** Figma `ACCOUNT_GUEST_CREATE` (1800:9275): the guest account being created over the Account
  * Home photo. */
-export function GuestCreateScreen() {
+export function AccountGuestCreate() {
   return (
     <FlowFrame photo edgeToEdge>
       <View style={styles.guestCreate}>
@@ -195,14 +197,16 @@ export function GuestCreateScreen() {
   );
 }
 
-/** Figma AUTH_BROWSER_OPEN 1564:9629: the browser is opening for a provider; CANCEL comes back. */
-export function WaitScreen({
-  title,
+/** Figma AUTH_BROWSER_OPEN 1564:9629: the browser is opening for a provider, CANCEL comes back.
+ * `loading` is the 2582:15409 version, shown when the person returns from the browser. */
+export function AuthBrowserOpen({
+  loading = false,
   onCancel,
 }: {
-  title: string;
+  loading?: boolean;
   onCancel?: () => void;
 }) {
+  const title = t(loading ? 'FLOW_AUTH_LOADING_TITLE' : 'FLOW_AUTH_WAIT_TITLE');
   return (
     <FlowFrame edgeToEdge>
       <View style={styles.waitScroll}>
@@ -216,7 +220,7 @@ export function WaitScreen({
           <Spinner />
         </View>
       </View>
-      {onCancel ? (
+      {onCancel && !loading ? (
         <View style={styles.waitCancel}>
           <Button
             big
@@ -231,9 +235,23 @@ export function WaitScreen({
   );
 }
 
+/** Figma AUTH_VERIFY 1842:14702: "Confirming login..." between the accepted code and the avatar. */
+export function AuthVerify() {
+  return (
+    <FlowFrame edgeToEdge>
+      <View style={styles.guestCreate}>
+        <Spinner size={75} accessibilityLabel={t('FLOW_AUTH_VERIFY_TITLE')} />
+        <AppText variant="heading" style={styles.guestCreateTitle}>
+          {t('FLOW_AUTH_VERIFY_TITLE')}
+        </AppText>
+      </View>
+    </FlowFrame>
+  );
+}
+
 /** Figma `AVATAR_NAMING` (1897:13029): the name field with its `#tag` and a dice over the avatar
  * stage, LET'S GO at the bottom. */
-export function NamingScreen({
+export function AvatarNaming({
   initial,
   tag,
   preview,
@@ -323,8 +341,10 @@ const nameError = (name: string): string | undefined => {
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const isValidEmail = (email: string) => EMAIL_PATTERN.test(email.trim());
 
-/** Figma AUTH_OTP_START: the email, then NEXT; the code is asked in a modal over this screen. */
-export function EmailScreen({
+/** Figma AUTH_OTP_START 1842:13788 / 1842:14061 / 1842:14023: the email, then NEXT. With the keyboard
+ * up, the field and the button rise to keep 33 px above it (the frame's annotation); the code is
+ * asked in a modal over this screen. */
+export function AuthOtpStart({
   initial,
   error,
   busy,
@@ -338,20 +358,53 @@ export function EmailScreen({
   onBack: () => void;
 }) {
   const [email, setEmail] = useState(initial);
+  const [blurred, setBlurred] = useState(false);
+  const form = useRef<View>(null);
+  const formBottom = useRef(0);
+  const [lift, setLift] = useState(0);
+  const measure = () =>
+    form.current?.measureInWindow((_x, y, _w, h) => {
+      formBottom.current = y + h + formLift.current;
+    });
+  // The form's own offset is undone before measuring, so the lift never feeds back into itself.
+  const formLift = useRef(0);
+  formLift.current = lift;
+  useEffect(() => {
+    const ios = Platform.OS === 'ios';
+    const show = Keyboard.addListener(
+      ios ? 'keyboardWillShow' : 'keyboardDidShow',
+      event =>
+        setLift(
+          Math.max(
+            0,
+            formBottom.current + u(16.5) - event.endCoordinates.screenY,
+          ),
+        ),
+    );
+    const hide = Keyboard.addListener(
+      ios ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setLift(0),
+    );
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  const invalid = blurred && email.trim() !== '' && !isValidEmail(email);
   return (
     <FlowFrame onBack={onBack} edgeToEdge>
-      <ScrollView
-        contentContainerStyle={styles.emailScroll}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.emailScroll}>
         <AppText
           variant="heading"
           style={[styles.flowTitle, styles.signInTitle]}
         >
           {t('FLOW_EMAIL_TITLE')}
         </AppText>
-        <View style={styles.emailForm}>
+        <View
+          ref={form}
+          onLayout={measure}
+          style={[styles.emailForm, { transform: [{ translateY: -lift }] }]}
+        >
           <TextField
             label={t('FLOW_EMAIL_LABEL')}
             value={email}
@@ -359,8 +412,13 @@ export function EmailScreen({
             placeholder={t('FLOW_EMAIL_PLACEHOLDER')}
             keyboardType="email-address"
             autoCapitalize="none"
-            error={error ?? undefined}
-            autoFocus
+            error={error ?? (invalid ? t('FLOW_EMAIL_INVALID') : undefined)}
+            onClear={() => setEmail('')}
+            onFocusChange={focused => {
+              if (!focused) {
+                setBlurred(true);
+              }
+            }}
           />
           <Button
             big
@@ -370,7 +428,7 @@ export function EmailScreen({
             onPress={() => onSubmit(email.trim())}
           />
         </View>
-      </ScrollView>
+      </View>
     </FlowFrame>
   );
 }
@@ -397,7 +455,7 @@ const styles = StyleSheet.create({
   waitSpinner: { alignItems: 'center', marginTop: u(136) },
   waitCancel: { position: 'absolute', left: u(32), right: u(32), top: u(599) },
   /** Figma: the label starts at y 654, 150 px under the title; NEXT 40 px under the field. */
-  emailForm: { marginTop: u(75), gap: u(34) },
+  emailForm: { marginTop: u(75), gap: u(35) },
   /** Figma `Loader/Logo`: the GIF drawn at 140 px, so its 143 px circle (of 154) measures the 130 of the static logo. */
   logo: { width: u(70), height: u(70) },
   guestCreate: {
@@ -435,10 +493,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: colors.snow,
   },
-  disclaimerLink: {
-    color: colors.link,
-    textDecorationLine: 'underline',
-  },
+  disclaimerLink: { color: colors.link },
+  underlined: { textDecorationLine: 'underline' },
   error: { marginTop: u(12), color: colors.ruby },
   actions: { gap: u(23) },
   dividerRow: {
@@ -447,7 +503,7 @@ const styles = StyleSheet.create({
     gap: u(16),
     height: u(15.5),
   },
-  dividerLine: { flex: 1, height: 1, backgroundColor: colors.white30 },
+  dividerLine: { flex: 1, height: u(1), backgroundColor: colors.pearl },
   dividerLabel: {
     fontSize: u(12),
     lineHeight: u(14.5),

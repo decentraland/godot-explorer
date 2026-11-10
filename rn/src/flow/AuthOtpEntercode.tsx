@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Modal,
+  NativeSyntheticEvent,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
+  TextLayoutEventData,
   View,
 } from 'react-native';
 import {
@@ -26,7 +28,7 @@ export const isValidCode = (code: string) =>
 
 /** Figma AUTH_OTP_ENTERCODE / _VERIFY / _ERROR: the one-time code over the email screen. The code
  * is typed into a hidden field and drawn in six slots; the sixth digit submits it. */
-export function OtpModal({
+export function AuthOtpEntercode({
   visible,
   email,
   error,
@@ -57,7 +59,16 @@ export function OtpModal({
   }, [visible, initialCode]);
   useEffect(() => setEdited(false), [error]);
   const failed = !!error && !edited && !busy;
-  // The address is bold inside the sentence, whatever order the translation puts it in.
+  // The address is bold inside the sentence, whatever order the translation puts it in. Android
+  // may break a line between an address and the full stop after it, which the frame never does:
+  // then the address starts the next line, as the frame draws it.
+  const [pushed, setPushed] = useState(false);
+  useEffect(() => setPushed(false), [email]);
+  const checkStop = (event: NativeSyntheticEvent<TextLayoutEventData>) => {
+    if (event.nativeEvent.lines.some(line => /^\s*\./.test(line.text))) {
+      setPushed(true);
+    }
+  };
   const [before, after] = t('FLOW_CODE_BODY', { email: '\u0000' }).split(
     '\u0000',
   );
@@ -104,38 +115,44 @@ export function OtpModal({
             onPress={onClose}
             style={styles.close}
           >
-            <Icon name="close" size={27} />
+            <Icon name="close" size={24.5} />
           </Pressable>
           <View style={styles.icon}>
             <Icon name="mail" size={39} />
           </View>
           <View style={styles.text}>
             <AppText style={styles.title}>{t('FLOW_CODE_TITLE')}</AppText>
-            <AppText style={styles.body}>
-              {before}
+            <Text style={styles.body} onTextLayout={checkStop}>
+              {pushed ? `${before.trimEnd()}\n` : before}
               <Text style={styles.email}>{email}</Text>
               {after}
-            </AppText>
+            </Text>
           </View>
           <Pressable
             accessibilityRole="none"
             onPress={() => input.current?.focus()}
             style={styles.slots}
           >
-            {Array.from({ length: CODE_LENGTH }, (_, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.slot,
-                  code[i] ? styles.slotFilled : null,
-                  failed && styles.slotFailed,
-                ]}
-              >
-                <Text style={[styles.digit, failed && styles.digitFailed]}>
-                  {code[i] ?? ''}
-                </Text>
-              </View>
-            ))}
+            {Array.from({ length: CODE_LENGTH }, (_, i) => {
+              // Figma `Input/CodeSlots` State=Typing: the slot the next digit lands in.
+              const typing = !busy && !failed && i === code.length;
+              return (
+                <View
+                  key={i}
+                  style={[
+                    styles.slot,
+                    code[i] ? styles.slotFilled : null,
+                    typing && styles.slotTyping,
+                    failed && styles.slotFailed,
+                  ]}
+                >
+                  {typing ? <View style={styles.caret} /> : null}
+                  <Text style={[styles.digit, failed && styles.digitFailed]}>
+                    {code[i] ?? ''}
+                  </Text>
+                </View>
+              );
+            })}
             <TextInput
               ref={input}
               value={code}
@@ -199,7 +216,8 @@ const styles = StyleSheet.create({
     borderRadius: u(8),
     overflow: 'hidden',
   },
-  close: { position: 'absolute', top: u(16), right: u(16) },
+  /** Figma `Close`: the glyph is centred 47 px from the card's top and right edges. */
+  close: { position: 'absolute', top: u(11.25), right: u(11.25) },
   icon: {
     width: u(78),
     height: u(78),
@@ -214,8 +232,15 @@ const styles = StyleSheet.create({
     lineHeight: u(26.5),
     fontFamily: fonts.bold,
     textAlign: 'center',
+    color: colors.snow,
   },
-  body: { fontSize: u(13), lineHeight: u(17), textAlign: 'center' },
+  body: {
+    fontFamily: fonts.regular,
+    fontSize: u(13),
+    lineHeight: u(17),
+    textAlign: 'center',
+    color: colors.snow,
+  },
   email: { fontFamily: fonts.bold },
   slots: {
     flexDirection: 'row',
@@ -235,6 +260,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   slotFilled: { borderColor: colors.pearl },
+  slotTyping: {
+    borderWidth: 2,
+    borderColor: colors.lavender,
+    backgroundColor: colors.black70,
+  },
+  caret: {
+    position: 'absolute',
+    width: 1,
+    height: u(25),
+    backgroundColor: colors.snow,
+  },
   slotFailed: { borderColor: colors.danger },
   digit: {
     fontSize: u(24),
@@ -275,6 +311,7 @@ const styles = StyleSheet.create({
     fontSize: u(12),
     lineHeight: u(14.5),
     textAlign: 'center',
+    color: colors.snow,
   },
   resendLink: {
     fontFamily: fonts.medium,

@@ -106,7 +106,9 @@ describe('Header', () => {
         search={{ value: 'hat', onChangeText: () => {}, onClose }}
       />,
     );
-    expect(tree.root.findAllByProps({ value: 'hat' }).length).toBeGreaterThan(0);
+    expect(tree.root.findAllByProps({ value: 'hat' }).length).toBeGreaterThan(
+      0,
+    );
     act(() => pressable(tree, 'Back').props.onPress());
     expect(onClose).toHaveBeenCalled();
   });

@@ -955,6 +955,21 @@
     "orientation": "portrait"
   },
   {
+    "id": "extra/flow-auth-browser-open",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-auth-browser-loading",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-auth-verify",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
     "id": "menu__hud__106-2203",
     "source": "menu",
     "orientation": "landscape"

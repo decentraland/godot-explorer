@@ -138,7 +138,7 @@ function PresetCard({
   );
 }
 
-export function AvatarCreateScreen({
+export function AvatarCreate({
   onCustomize,
   selected,
   onSelect,
@@ -254,7 +254,7 @@ export function AvatarCreateScreen({
 }
 
 /** Figma COMEBACK 2776:23616: the saved account's avatar on the stage, LET'S GO, and a way out. */
-export function WelcomeBackScreen({
+export function Comeback({
   name,
   onContinue,
   onUseAnother,

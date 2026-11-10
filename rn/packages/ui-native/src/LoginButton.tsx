@@ -1,11 +1,9 @@
-import { Image, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
 import { Icon } from './Icon';
 import { PressableBase } from './internal/PressableBase';
 import { colors, fonts, radii } from './tokens';
 import { u } from './scale';
-
-const walletConnectLogo = require('../assets/wallet-connect.png');
 
 export type LoginProvider = 'google' | 'apple' | 'wallet' | 'email';
 
@@ -57,19 +55,11 @@ export function LoginButton({
           !spec.dark && disabled && styles.lightDisabledContent,
         ]}
       >
-        {spec.icon === 'wallet' ? (
-          <Image
-            source={walletConnectLogo}
-            style={styles.icon}
-            resizeMode="contain"
-          />
-        ) : (
-          <Icon
-            name={spec.icon}
-            size={spec.iconSize}
-            color={spec.dark ? contentColor : undefined}
-          />
-        )}
+        <Icon
+          name={spec.icon === 'wallet' ? 'walletConnect' : spec.icon}
+          size={spec.iconSize}
+          color={spec.dark ? contentColor : undefined}
+        />
         <AppText
           variant="button"
           style={[styles.label, { color: contentColor }]}
@@ -145,7 +135,6 @@ const styles = StyleSheet.create({
   },
   fullWidth: { alignSelf: 'stretch' },
   content: { flexDirection: 'row', alignItems: 'center' },
-  icon: { width: u(18), height: u(18) },
   label: { fontFamily: fonts.bold, textTransform: 'uppercase' },
   lightDisabledContent: { opacity: 0.6 },
 });

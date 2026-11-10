@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer, useState } from 'react';
-import { BackHandler } from 'react-native';
+import { AppState, BackHandler } from 'react-native';
 import {
   acceptTerms,
   alreadySignedIn,
@@ -16,24 +16,21 @@ import {
   whenSignedIn,
 } from './auth';
 import { core } from '../core';
-import { CustomizeStep } from './CustomizeStep';
+import { AvatarCustomize } from './AvatarCustomize';
 import { takePreviewLaunch, whenInitialLinkRouted } from './launchLink';
 import { askNotificationPermission } from '../notifications/push';
-import { OtpModal } from './OtpModal';
+import { AuthOtpEntercode } from './AuthOtpEntercode';
 import { initialFlow, reduceFlow } from './flowMachine';
+import { AvatarCreate, PreviewArea, Comeback } from './previewScreens';
 import {
-  AvatarCreateScreen,
-  PreviewArea,
-  WelcomeBackScreen,
-} from './previewScreens';
-import {
-  AccountScreen,
-  EmailScreen,
-  GuestCreateScreen,
-  NamingScreen,
-  SignInScreen,
-  SplashScreen,
-  WaitScreen,
+  AccountHome,
+  AuthOtpStart,
+  AccountGuestCreate,
+  AvatarNaming,
+  AuthHome,
+  DclSplash,
+  AuthBrowserOpen,
+  AuthVerify,
 } from './screens';
 import { t } from '../i18n';
 
@@ -52,6 +49,23 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
   const [preset, setPreset] = useState(0);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
+  // Figma shows AUTH_BROWSER_OPEN as "Loading..." once the person is back from the browser.
+  const [returned, setReturned] = useState(false);
+  useEffect(() => {
+    setReturned(false);
+    if (step !== 'auth_browser_open') {
+      return;
+    }
+    let away = false;
+    const subscription = AppState.addEventListener('change', next => {
+      if (next !== 'active') {
+        away = true;
+      } else if (away) {
+        setReturned(true);
+      }
+    });
+    return () => subscription.remove();
+  }, [step]);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,7 +90,7 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
             : t('FLOW_SIGN_IN_FAILED'),
       });
     if (
-      step === 'auth_wait' &&
+      step === 'auth_browser_open' &&
       (provider === 'google' || provider === 'apple' || provider === 'wallet')
     ) {
       try {
@@ -92,7 +106,7 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
         }
       }
       whenSignedIn().then(succeeded, failed);
-    } else if (step === 'guest_wait') {
+    } else if (step === 'account_guest_create') {
       startGuest().then(
         () => !cancelled && dispatch({ type: 'guestReady' }),
         () => (alreadySignedIn() ? succeeded() : failed()),
@@ -131,16 +145,23 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
       setEmailError(null);
       try {
         await verifyEmailCode(flow.email, code);
-        acceptTerms().catch(() => {});
-        dispatch({ type: 'authSucceeded', ...(await welcome()) });
       } catch (e) {
         setEmailError(
           authCode(e) === 'invalid_code'
             ? t('FLOW_CODE_INVALID')
             : t('FLOW_SIGN_IN_FAILED'),
         );
-      } finally {
         setBusy(false);
+        return;
+      }
+      setBusy(false);
+      // The code was right: "Confirming login..." until the profile is read.
+      dispatch({ type: 'codeAccepted' });
+      acceptTerms().catch(() => {});
+      try {
+        dispatch({ type: 'authSucceeded', ...(await welcome()) });
+      } catch {
+        dispatch({ type: 'authFailed', message: t('FLOW_SIGN_IN_FAILED') });
       }
     },
     [flow.email],
@@ -168,7 +189,7 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
     const subscription = BackHandler.addEventListener(
       'hardwareBackPress',
       () => {
-        if (step === 'splash' || step === 'account') {
+        if (step === 'dcl_splash' || step === 'account_home') {
           return false;
         }
         // The customize step asks before discarding; its own listener runs next.
@@ -211,11 +232,11 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
   }, []);
 
   switch (step) {
-    case 'splash':
-      return <SplashScreen onDone={booted} />;
-    case 'account':
+    case 'dcl_splash':
+      return <DclSplash onDone={booted} />;
+    case 'account_home':
       return (
-        <AccountScreen
+        <AccountHome
           onGuest={() => {
             commit();
             dispatch({ type: 'playAsGuest' });
@@ -226,9 +247,9 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
           }}
         />
       );
-    case 'sign_in':
+    case 'auth_home':
       return (
-        <SignInScreen
+        <AuthHome
           error={flow.error}
           onProvider={next =>
             dispatch({ type: 'chooseProvider', provider: next })
@@ -236,20 +257,20 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
           onBack={back}
         />
       );
-    case 'email_entry':
-    case 'email_code': {
+    case 'auth_otp_start':
+    case 'auth_otp_entercode': {
       // The code is asked in a modal over the email screen, which stays where it is.
-      const coding = step === 'email_code';
+      const coding = step === 'auth_otp_entercode';
       return (
         <>
-          <EmailScreen
+          <AuthOtpStart
             initial={flow.email}
             error={coding ? null : emailError}
             busy={busy && !coding}
             onSubmit={submitEmail}
             onBack={back}
           />
-          <OtpModal
+          <AuthOtpEntercode
             visible={coding}
             email={flow.email}
             error={coding ? emailError : null}
@@ -261,13 +282,15 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
         </>
       );
     }
-    case 'auth_wait':
-      return <WaitScreen title={t('FLOW_AUTH_WAIT_TITLE')} onCancel={back} />;
-    case 'guest_wait':
-      return <GuestCreateScreen />;
-    case 'welcome_back':
+    case 'auth_browser_open':
+      return <AuthBrowserOpen loading={returned} onCancel={back} />;
+    case 'auth_verify':
+      return <AuthVerify />;
+    case 'account_guest_create':
+      return <AccountGuestCreate />;
+    case 'comeback':
       return (
-        <WelcomeBackScreen
+        <Comeback
           name={flow.name}
           onContinue={() => dispatch({ type: 'finish' })}
           onUseAnother={back}
@@ -275,7 +298,7 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
       );
     case 'avatar_create':
       return (
-        <AvatarCreateScreen
+        <AvatarCreate
           selected={preset}
           onSelect={setPreset}
           onCustomize={() => dispatch({ type: 'customizeAvatar' })}
@@ -284,10 +307,10 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
         />
       );
     case 'avatar_customize':
-      return <CustomizeStep onDone={confirmAvatar} onDiscard={back} />;
+      return <AvatarCustomize onDone={confirmAvatar} onDiscard={back} />;
     case 'avatar_naming':
       return (
-        <NamingScreen
+        <AvatarNaming
           tag={nameTag()}
           preview={<PreviewArea stage="naming" />}
           onBack={back}

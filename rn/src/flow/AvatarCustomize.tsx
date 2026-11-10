@@ -8,7 +8,7 @@ import { t } from '../i18n';
 export type CustomizePrompt = 'finish' | 'discard';
 
 /** The entry flow's backpack, opened on Face: DONE asks to finish the look, back asks to discard. */
-export function CustomizeStep({
+export function AvatarCustomize({
   onDone,
   onDiscard,
   api,
