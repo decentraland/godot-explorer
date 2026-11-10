@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   root: { ...StyleSheet.absoluteFill, backgroundColor: colors.purple500 },
   hole: { position: 'absolute', top: 0, left: 0, right: 0 },
   footer: { position: 'absolute', left: 0, right: 0, bottom: 0 },
-  content: { paddingHorizontal: u(24), paddingTop: u(8) },
+  content: { paddingHorizontal: u(24) },
   close: { marginBottom: u(12), alignSelf: 'flex-start' },
   closeButton: {
     width: u(36),

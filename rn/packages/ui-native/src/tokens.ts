@@ -58,6 +58,10 @@ export const colors = {
   menu: '#1B002D',
   /** Figma `background/brand` (the `Background` component). */
   brand: '#470071',
+  /** `Card-Profile` Type=Name tile: base fill and its violet / peach glows. */
+  nameCard: '#604CB0',
+  nameCardViolet: '#BC93FF',
+  nameCardPeach: '#F4B57B',
   navbar: 'rgba(26,9,37,0.9)',
   black25: 'rgba(0,0,0,0.25)',
   /** `Cards-Wearables` Equipped bar: Shadow at 80%. */

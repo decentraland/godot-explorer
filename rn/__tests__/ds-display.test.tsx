@@ -17,7 +17,9 @@ import {
   LinkRow,
   Menu,
   PageDots,
+  ProfileCard,
   ProgressBar,
+  Sheet,
   Skeleton,
   SnapCarousel,
   EventBadge,
@@ -390,5 +392,46 @@ describe('demo props', () => {
     ]) {
       expect(demos).toHaveProperty(key);
     }
+  });
+});
+
+describe('ProfileCard', () => {
+  it('draws the NAME tile and the credits price', () => {
+    let tree!: ReturnType<typeof create>;
+    act(() => {
+      tree = create(
+        <ProfileCard
+          type="name"
+          title="NAME"
+          name="Name"
+          nameSuffix="DCL.ETH"
+          price="0"
+        />,
+      );
+    });
+    const out = JSON.stringify(tree.toJSON());
+    for (const s of ['NAME', 'Name', 'DCL.ETH', '"0"']) {
+      expect(out).toContain(s);
+    }
+    act(() => tree.unmount());
+  });
+});
+
+describe('Sheet', () => {
+  it('pins the footer under a hug body and drops it when collapsed', () => {
+    let tree!: ReturnType<typeof create>;
+    act(() => {
+      tree = create(
+        <Sheet footer={<Text>Next</Text>}>
+          <Text>Body</Text>
+        </Sheet>,
+      );
+    });
+    expect(JSON.stringify(tree.toJSON())).toContain('Next');
+    act(() =>
+      tree.update(<Sheet height="collapsed" footer={<Text>Next</Text>} />),
+    );
+    expect(JSON.stringify(tree.toJSON())).not.toContain('Next');
+    act(() => tree.unmount());
   });
 });

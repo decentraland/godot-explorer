@@ -6,6 +6,7 @@ Loader, Skeleton, Backgrounds, Spacing & Sizes, Elevation, Motion, States, Safe 
 text fields) ultimately trace back to — check here **before** re-deriving a spec from a specific
 screen's node, and before assuming a value is screen-specific when it might be a shared token.
 Last full pass (every component set read through `get_design_context` metadata, no screenshots):
+**2026-11-10** (`Panel` frame on the Modals page = `Sheet`, `Card-Profile`, Dialog buttons both Fill) after
 **2026-11-09** (the designer's changes since 11-06: Ruby Pressed and four rarity Light colours, the
 alpha tokens, the Cards_Backpack / Cards_Discover / Skeleton pages, `Header` Close, the `Background`
 component as gradients, the Shop and Chat icon families, `Menu/Item` text style). New nodes show up as ids above the previous pass's
@@ -249,8 +250,8 @@ The old `variant="settings"` (tighter paddings) is gone: the Figma field already
 gap 54), Landscape 720 (pt 54, pb 48, px 54, gap 48); `surface/modal` #4C147C (`colors.modal`) with
 the two glows (`surface/modal-glow`, `RadialFill` with dp radii); radius 16 → `u(8)`; title
 `Modal/Title` Bold 38 → `u(19)` Snow centred; body `Modal/Body` Regular 26 / lh 36 → `u(13)`/`u(18)`
-Snow; text gap 16; CTAs gap 32 (40 landscape) = `Button/Secondary` hugging + `Button/Primary` filling
-(the last button gets `flex: 1` + `fullWidth`). `Icon/Modal` (90×68) sits centred over the top edge
+Snow; text gap 16; CTAs gap 32 (40 landscape) = `Button/Secondary` + `Button/Primary`, both filling
+(every button gets `flex: 1` + `fullWidth`). `Icon/Modal` (90×68) sits centred over the top edge
 at `top: -34px`. Scrim: `surface/scrim` = Black 40% + a 12px background blur (`Scrim/Blur`); the description no
 longer mentions a no-blur value (it used to say 60%). RN has no blur library, so code keeps the
 Black 60% (`colors.black60`) fallback — a code-only decision to re-check with the designer.
@@ -270,8 +271,25 @@ label 520×458, 562:7771 with icon 520×414; frames fixed by the designer on 202
 content gap to 38 and the text gap to 24 (with label) / 32 — not modelled, the caller passes the
 field as `children`. "Cancel" there is a standard `Button/Secondary` Black 40% and the confirm
 `Button/Primary` starts Disabled.
+**Buttons re-read 11-10**: every variant now has both CTAs `Fill` (`flex-1`, `Btn/Medium` 74 / radius
+12), so `Dialog` gives each button an equal share — the old hug + fill made the row change with the
+labels.
 `Modal-Background` 671:4363 (Portrait 520×466 with the 458 card inset / Landscape 720×404) is the
 same card with the same glows and no content — not built.
+
+### Panel frame (Modals page) — `Sheet`, `SheetFooter`, `BottomSheet`, added 2026-11-10
+
+`Sheet` 841:1057 (720 wide): body = Purple 450 → Purple 500 at 34%, top radii `radius/2xl` 24, px 48,
+pb 30, gap 40, `Elevation/Up`; `Handle=On` pt 16 + `_Sheet/Handle` 841:1036 (200×8, Snow 30%,
+`radius/xs`), `Handle=Off` pt 40; `Height` Hug (Content min 200) / Fixed (Content fills and scrolls) /
+Collapsed (54 = the handle alone). `Sheet/Footer` 841:1039: 200 tall Purple 500, pt 18, px 48, a 96 button
+row (the description says 20dp of bottom space; the node has 46 px left over — code: `minHeight u(100)`
+and `max(u(20), bottomInset)`). Examples 841:1058: Profile, Backpack (Fixed), Backpack collapsed, Entry
+flow (Handle=Off + footer: `Button/Secondary` hug + `Button/Primary` fill, Large, gap 18) and Discover
+detail (over `Modal/Scrim`). Code: `Sheet` (static, `handle` / `height` / `footer`) and `SheetFooter`;
+`BottomSheet` (draggable) draws the same body and handle itself and exports `SHEET_HANDLE_HEIGHT`
+(`u(32)`); its old `background` / `handleWidth` / `handlePadding` props are gone. Backpack peek = 27dp
+(Collapsed), the Discover detail scrim = Black 60% like `Dialog`.
 
 ## Tabs page — `Tabs`
 
@@ -354,6 +372,14 @@ gone; the backpack grids map their strips onto `state`.
 Pressed Black 50% + 1px Lavender Light, Selected Black 70% + 4px **Light Rainbow** ring (SVG stroke,
 CSS 147.6°); the avatar image `contain` with 10.14% top/bottom margins. Not used by a screen on this
 branch (the entry flow's avatar picker is on `feat/entry-flow-parity`).
+`Card-Profile` 825:7523 (added 11-10, 150 wide → `ProfileCard`, `u(75)`): Black 40% card, radius 8;
+`Type=Wearable|Emote` = the `Cards-Wearables` tile scaled to 150 (code: `ItemCard` at 75dp), `Type=Name`
+= a 150 square radius 10, base `#604CB0` + violet `#BC93FF` (27%, 27%) and peach `#F4B57B` (85%, 117%)
+eight-stop glows, 1.56px Snow border, `shop/names` 28 (`Icon` `shopNames`) over Bold 24 name and
+Regular 18 suffix (`DCL.ETH`). Info: p 10, gap 6, title Semi Bold 16 Snow (two lines, ellipsis),
+`Badge/Credits` (coin 20 + Medium 16, gap 5, py 4); the Name info is fixed 92 with space-between.
+The profile's equipped strip (`EquippedRow`) uses it: the old rarity tag and category badge are not in
+the node and are gone. The price has no data source yet, so code shows the badge only when `price` is set.
 
 ## Cards_Discover page — `DiscoverCard`, `DiscoverCardSkeleton`, `DetailRow`, added 2026-11-09
 

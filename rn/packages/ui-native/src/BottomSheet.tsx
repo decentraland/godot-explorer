@@ -7,7 +7,8 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { colors, radii } from './tokens';
+import { LinearFill } from './Gradient';
+import { colors, elevation, radius } from './tokens';
 import {
   DEFAULT_SNAP_CONFIG,
   nearestSnap,
@@ -19,8 +20,11 @@ import { u } from './scale';
 
 const ORDER: Snap[] = ['peek', 'half', 'full'];
 
+/** Space the handle takes above the content: Figma `Sheet` pt 16 px + the 8 px handle + gap 40 px. */
+export const SHEET_HANDLE_HEIGHT = u(32);
+
 /**
- * Sheet that rests at peek / half / full. Only the handle + `header` area
+ * Figma `Sheet` (Handle=On) that rests at peek / half / full. Only the handle + `header` area
  * drags, so scrollable `children` keep their own gestures. `snap` is
  * controlled: the sheet reports the target through `onSnapChange`.
  */
@@ -30,9 +34,6 @@ export function BottomSheet({
   containerHeight,
   config = DEFAULT_SNAP_CONFIG,
   header,
-  background,
-  handleWidth,
-  handlePadding,
   children,
 }: {
   snap: Snap;
@@ -40,12 +41,6 @@ export function BottomSheet({
   containerHeight?: number;
   config?: SnapConfig;
   header?: ReactNode;
-  /** Drawn behind the handle and body (e.g. a gradient); the solid fill stays underneath. */
-  background?: ReactNode;
-  /** Handle width in dp; defaults to 40. */
-  handleWidth?: number;
-  /** Vertical padding around the handle in dp; defaults to 10. */
-  handlePadding?: number;
   children?: ReactNode;
 }) {
   const window = useWindowDimensions();
@@ -113,26 +108,26 @@ export function BottomSheet({
         { height: heights.full, transform: [{ translateY: offset }] },
       ]}
     >
-      {background}
+      <View style={styles.clip}>
+        <LinearFill
+          stops={[
+            { offset: 0, color: colors.purple450 },
+            {
+              offset: (0.34 * heights[snap]) / heights.full,
+              color: colors.purple500,
+            },
+          ]}
+        />
+      </View>
       <View {...responder.panHandlers}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={expanded ? 'Collapse sheet' : 'Expand sheet'}
           hitSlop={12}
           onPress={() => onSnapChange(target)}
-          style={[
-            styles.handleArea,
-            handlePadding !== undefined && {
-              paddingVertical: u(handlePadding),
-            },
-          ]}
+          style={styles.handleArea}
         >
-          <View
-            style={[
-              styles.handle,
-              handleWidth ? { width: u(handleWidth) } : null,
-            ]}
-          />
+          <View style={styles.handle} />
         </Pressable>
         {header}
       </View>
@@ -147,16 +142,26 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderTopLeftRadius: radii.sheet,
-    borderTopRightRadius: radii.sheet,
+    borderTopLeftRadius: radius['2xl'],
+    borderTopRightRadius: radius['2xl'],
     backgroundColor: colors.purple500,
+    ...elevation.up,
+  },
+  clip: {
+    ...StyleSheet.absoluteFill,
+    borderTopLeftRadius: radius['2xl'],
+    borderTopRightRadius: radius['2xl'],
     overflow: 'hidden',
   },
-  handleArea: { alignItems: 'center', paddingVertical: u(10) },
+  handleArea: {
+    alignItems: 'center',
+    paddingTop: u(8),
+    paddingBottom: u(20),
+  },
   handle: {
-    width: u(40),
+    width: u(100),
     height: u(4),
-    borderRadius: u(2),
+    borderRadius: radius.xs,
     backgroundColor: colors.white30,
   },
   body: { flex: 1 },

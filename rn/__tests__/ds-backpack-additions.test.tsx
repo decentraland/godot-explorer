@@ -36,8 +36,8 @@ describe('ItemCard states (Figma Cards-Wearables)', () => {
   });
 });
 
-describe('BottomSheet background and handle width', () => {
-  it('renders the background behind the content', () => {
+describe('BottomSheet', () => {
+  it('renders the Figma Sheet look without caller styling', () => {
     let tree!: ReturnType<typeof create>;
     act(() => {
       tree = create(
@@ -45,8 +45,6 @@ describe('BottomSheet background and handle width', () => {
           snap="half"
           onSnapChange={() => {}}
           containerHeight={600}
-          handleWidth={100}
-          background={<></>}
         />,
       );
     });
