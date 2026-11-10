@@ -1,0 +1,21 @@
+appId: org.decentraland.godotexplorer
+name: Friend sheet
+---
+# Friends are hardcoded in the app, so the sheet is checked by name.
+- runFlow: ../subflows/ensure-home.yaml
+- swipe:
+    direction: DOWN
+- swipe:
+    direction: DOWN
+- scroll
+- tapOn: "User p name"
+- assertVisible: "User p name #1234"
+- assertVisible: "Genesis Plaza"
+- assertVisible: "by Decentraland Foundation"
+- assertVisible: "JUMP IN"
+# This sheet has no close button: the dimmed area above it closes it.
+- tapOn:
+    point: "50%,8%"
+- extendedWaitUntil:
+    notVisible: "User p name #1234"
+    timeout: 15000

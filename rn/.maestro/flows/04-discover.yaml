@@ -1,0 +1,57 @@
+appId: org.decentraland.godotexplorer
+name: Discover home
+---
+# Featured, Popular and Events come from the public places and events services, so they change every day:
+# each rail is checked by "something with content sits between this title and the next". Friends, the
+# category chips and the bottom bar come from the app itself and are checked by name.
+- runFlow: ../subflows/ensure-home.yaml
+
+# Back to the top of the page (a previous run may have left it scrolled).
+- swipe:
+    direction: DOWN
+- swipe:
+    direction: DOWN
+
+# Featured carousel has no title: it sits between the page title and the first rail.
+- assertVisible:
+    text: ".+"
+    below: "Search"
+    above: "(Jump back in|Popular)"
+
+# Jump back in: shown once the guest has been in a world.
+- assertVisible:
+    text: ".+"
+    below: "Jump back in"
+    above: "Popular"
+
+# Popular.
+- assertVisible:
+    text: ".+"
+    below: "Popular"
+    above: "Friends.*"
+
+# Friends: placeholder people hardcoded in the app.
+- assertVisible: "Friends 5"
+- assertVisible: "User p name"
+- assertVisible: "Username"
+
+# Categories and Events sit below the rails; a fixed swipe brings them on screen.
+- swipe:
+    direction: UP
+- swipe:
+    direction: UP
+- assertVisible: "SOCIAL"
+- assertVisible: "MUSIC"
+- assertVisible: "GAME"
+- assertVisible: "ART"
+- assertVisible: "Events"
+- assertVisible:
+    text: ".+"
+    below: "Events"
+    above: "explore"
+
+# The bottom bar.
+- assertVisible: "explore"
+- assertVisible: "backpack"
+- assertVisible: "settings"
+- assertVisible: "profile"

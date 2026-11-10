@@ -1,0 +1,33 @@
+appId: org.decentraland.godotexplorer
+name: Guided tutorial
+---
+# Clean start. In the mock build the avatar preview and the world are placeholders and the data is the
+# fixed mock, so every screen below appears at once and in the same way on every run.
+- clearState
+- launchApp
+- extendedWaitUntil:
+    visible: "Before you start"
+    timeout: 30000
+- tapOn: "Accept and continue"
+- extendedWaitUntil:
+    visible: "Get started!"
+    timeout: 15000
+- tapOn: "Play as guest"
+- extendedWaitUntil:
+    visible: "Randomize"
+    timeout: 15000
+- tapOn: "Randomize"
+- tapOn: "Continue"
+# The mock always offers the tutorial. START begins it; its steps ask for gestures such as a pinch, which
+# Maestro cannot send, so only the first step and the way out are checked.
+- extendedWaitUntil:
+    visible: "Welcome to Decentraland!"
+    timeout: 30000
+- tapOn: "START"
+- assertVisible: "SKIP TUTORIAL"
+- assertVisible: "Pinch out for first person.*"
+- tapOn: "SKIP TUTORIAL"
+- extendedWaitUntil:
+    visible: ".*mock.*FPS.*"
+    timeout: 15000
+- assertNotVisible: "SKIP TUTORIAL"

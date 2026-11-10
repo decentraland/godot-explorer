@@ -1,0 +1,33 @@
+# Starting point for the flows that work on the Discover home. In the mock build nothing persists across
+# launches, so when the home is not on screen the fastest repair is the whole Entry plus leaving the world.
+appId: org.decentraland.godotexplorer
+---
+- launchApp:
+    stopApp: false
+
+# Another tab of the bottom bar (Backpack, Settings, Profile): go back to Discover.
+- runFlow:
+    when:
+      visible: "explore"
+    commands:
+      - tapOn: "explore"
+      - extendedWaitUntil:
+          visible: "Popular"
+          timeout: 15000
+          optional: true
+
+# "Popular" is a title of the home only.
+- runFlow:
+    when:
+      notVisible: "Popular"
+    commands:
+      - runFlow: ../flows/01-entry.yaml
+      # Leave the world the way a player does: Back asks for confirmation.
+      - back
+      - extendedWaitUntil:
+          visible: "Leave this world?"
+          timeout: 10000
+      - tapOn: "LEAVE"
+      - extendedWaitUntil:
+          visible: "Popular"
+          timeout: 15000

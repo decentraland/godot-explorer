@@ -1,0 +1,72 @@
+appId: org.decentraland.godotexplorer
+name: Sign in by email
+---
+# The mock core accepts the one-time code 123456 (src/core/mock/session.ts) and rejects any other.
+- clearState
+- launchApp
+- extendedWaitUntil:
+    visible: "Before you start"
+    timeout: 30000
+- tapOn: "Accept and continue"
+- extendedWaitUntil:
+    visible: "Get started!"
+    timeout: 15000
+- assertVisible: "CREATE ACCOUNT"
+- assertVisible: "SIGN IN"
+- assertVisible: "Play as guest"
+
+# Sign in offers four methods.
+- tapOn: "SIGN IN"
+- assertVisible: "Choose how you want to continue."
+- assertVisible: "Continue with Google"
+- assertVisible: "Continue with Apple"
+- assertVisible: "Continue with email"
+- assertVisible: "Connect a wallet"
+
+# Wallet waits for the wallet app; Cancel returns to the methods.
+- tapOn: "Connect a wallet"
+- assertVisible: "Signing you in"
+- tapOn: "Cancel"
+- assertVisible: "Continue with email"
+
+# CREATE ACCOUNT opens the same list of methods.
+- tapOn:
+    text: "Back"
+    index: 0
+- tapOn: "CREATE ACCOUNT"
+- assertVisible: "Continue with Google"
+- assertVisible: "Continue with email"
+
+# Email: the button waits for a valid address.
+- tapOn: "Continue with email"
+- assertVisible: "We'll send you a one-time code."
+- assertVisible:
+    text: "Send code"
+    enabled: false
+- inputText: "tester@example.com"
+- hideKeyboard
+- tapOn: "Send code"
+- extendedWaitUntil:
+    visible: "Enter your code"
+    timeout: 15000
+- assertVisible: "We sent a code to tester@example.com."
+
+# A wrong code is rejected and the screen stays.
+- inputText: "000000"
+- hideKeyboard
+- tapOn: "Verify"
+- assertVisible: "Enter your code"
+
+# The right code signs in a returning account and greets it.
+- tapOn: "6-digit code"
+- eraseText: 6
+- inputText: "123456"
+- hideKeyboard
+- tapOn: "Verify"
+- extendedWaitUntil:
+    visible: "Welcome back,"
+    timeout: 20000
+- tapOn: "Let's go"
+- extendedWaitUntil:
+    visible: "Popular"
+    timeout: 30000
