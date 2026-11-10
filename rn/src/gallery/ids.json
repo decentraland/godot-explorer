@@ -925,6 +925,31 @@
     "orientation": "portrait"
   },
   {
+    "id": "extra/flow-signin",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-email",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-code",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-code-verifying",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-code-error",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
     "id": "menu__hud__106-2203",
     "source": "menu",
     "orientation": "landscape"

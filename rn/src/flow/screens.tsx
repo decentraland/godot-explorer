@@ -1,14 +1,11 @@
 import { ReactNode, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Image,
-  KeyboardAvoidingView,
   Linking,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { core } from '../core';
@@ -144,7 +141,10 @@ export function SignInScreen({
         contentContainerStyle={styles.signInScroll}
         showsVerticalScrollIndicator={false}
       >
-        <AppText variant="heading" style={styles.flowTitle}>
+        <AppText
+          variant="heading"
+          style={[styles.flowTitle, styles.signInTitle]}
+        >
           {t('FLOW_SIGN_IN_TITLE')}
         </AppText>
         {error ? (
@@ -195,33 +195,37 @@ export function GuestCreateScreen() {
   );
 }
 
+/** Figma AUTH_BROWSER_OPEN 1564:9629: the browser is opening for a provider; CANCEL comes back. */
 export function WaitScreen({
   title,
-  body,
   onCancel,
 }: {
   title: string;
-  body: string;
   onCancel?: () => void;
 }) {
   return (
-    <FlowFrame>
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.snow} />
-        <AppText variant="heading" style={styles.title}>
+    <FlowFrame edgeToEdge>
+      <View style={styles.waitScroll}>
+        <AppText
+          variant="heading"
+          style={[styles.flowTitle, styles.signInTitle]}
+        >
           {title}
         </AppText>
-        <AppText variant="body" style={styles.copy}>
-          {body}
-        </AppText>
+        <View style={styles.waitSpinner}>
+          <Spinner />
+        </View>
       </View>
       {onCancel ? (
-        <Button
-          label={t('FLOW_CANCEL')}
-          tone="ghost"
-          fullWidth
-          onPress={onCancel}
-        />
+        <View style={styles.waitCancel}>
+          <Button
+            big
+            tone="secondary"
+            fullWidth
+            label={t('FLOW_CANCEL')}
+            onPress={onCancel}
+          />
+        </View>
       ) : null}
     </FlowFrame>
   );
@@ -316,131 +320,58 @@ const nameError = (name: string): string | undefined => {
 };
 
 /** One text field and a button: the email address, then the code it was sent. */
-function TextStep({
-  title,
-  body,
-  placeholder,
-  action,
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const isValidEmail = (email: string) => EMAIL_PATTERN.test(email.trim());
+
+/** Figma AUTH_OTP_START: the email, then NEXT; the code is asked in a modal over this screen. */
+export function EmailScreen({
+  initial,
   error,
-  initial = '',
-  keyboardType,
-  maxLength,
   busy,
-  valid,
   onSubmit,
   onBack,
 }: {
-  title: string;
-  body: string;
-  placeholder: string;
-  action: string;
-  error: string | null;
-  initial?: string;
-  keyboardType: 'email-address' | 'number-pad';
-  maxLength?: number;
-  busy: boolean;
-  valid: (value: string) => boolean;
-  onSubmit: (value: string) => void;
-  onBack: () => void;
-}) {
-  const [value, setValue] = useState(initial);
-  const [focused, setFocused] = useState(false);
-  return (
-    <FlowFrame onBack={onBack}>
-      <KeyboardAvoidingView
-        style={styles.fill}
-        behavior="padding"
-        keyboardVerticalOffset={u(48)}
-      >
-        <View style={styles.center}>
-          <AppText variant="heading" style={styles.title}>
-            {title}
-          </AppText>
-          <AppText variant="body" style={styles.copy}>
-            {body}
-          </AppText>
-          {error ? (
-            <AppText variant="caption" style={styles.error}>
-              {error}
-            </AppText>
-          ) : null}
-        </View>
-        <TextInput
-          value={value}
-          onChangeText={setValue}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          placeholder={placeholder}
-          placeholderTextColor={colors.white50}
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoFocus
-          keyboardType={keyboardType}
-          maxLength={maxLength}
-          editable={!busy}
-          style={[
-            styles.input,
-            styles.inputGap,
-            error ? styles.inputError : focused && styles.inputFocused,
-          ]}
-        />
-        <Button
-          label={action}
-          disabled={busy || !valid(value)}
-          fullWidth
-          onPress={() => onSubmit(value.trim())}
-        />
-      </KeyboardAvoidingView>
-    </FlowFrame>
-  );
-}
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-export const isValidEmail = (email: string) => EMAIL_PATTERN.test(email.trim());
-const CODE_PATTERN = /^\d{4,8}$/;
-export const isValidCode = (code: string) => CODE_PATTERN.test(code.trim());
-
-export function EmailScreen(props: {
   initial: string;
   error: string | null;
   busy: boolean;
   onSubmit: (email: string) => void;
   onBack: () => void;
 }) {
+  const [email, setEmail] = useState(initial);
   return (
-    <TextStep
-      {...props}
-      title={t('FLOW_EMAIL_TITLE')}
-      body={t('FLOW_EMAIL_BODY')}
-      placeholder={t('FLOW_EMAIL_PLACEHOLDER')}
-      action={t('FLOW_EMAIL_SEND')}
-      keyboardType="email-address"
-      valid={isValidEmail}
-    />
-  );
-}
-
-export function CodeScreen({
-  email,
-  ...props
-}: {
-  email: string;
-  error: string | null;
-  busy: boolean;
-  onSubmit: (code: string) => void;
-  onBack: () => void;
-}) {
-  return (
-    <TextStep
-      {...props}
-      title={t('FLOW_CODE_TITLE')}
-      body={t('FLOW_CODE_BODY', { email })}
-      placeholder={t('FLOW_CODE_PLACEHOLDER')}
-      action={t('FLOW_CODE_VERIFY')}
-      keyboardType="number-pad"
-      maxLength={8}
-      valid={isValidCode}
-    />
+    <FlowFrame onBack={onBack} edgeToEdge>
+      <ScrollView
+        contentContainerStyle={styles.emailScroll}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <AppText
+          variant="heading"
+          style={[styles.flowTitle, styles.signInTitle]}
+        >
+          {t('FLOW_EMAIL_TITLE')}
+        </AppText>
+        <View style={styles.emailForm}>
+          <TextField
+            label={t('FLOW_EMAIL_LABEL')}
+            value={email}
+            onChangeText={setEmail}
+            placeholder={t('FLOW_EMAIL_PLACEHOLDER')}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            error={error ?? undefined}
+            autoFocus
+          />
+          <Button
+            big
+            fullWidth
+            label={t('FLOW_NEXT')}
+            disabled={busy || !isValidEmail(email)}
+            onPress={() => onSubmit(email.trim())}
+          />
+        </View>
+      </ScrollView>
+    </FlowFrame>
   );
 }
 
@@ -451,7 +382,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'space-between',
     paddingTop: u(165),
-    paddingBottom: u(82.5),
+    paddingBottom: u(74.5),
   },
   flowTitle: {
     fontSize: u(36),
@@ -459,6 +390,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: u(18),
   },
+  signInTitle: { marginTop: 0 },
+  emailScroll: { paddingTop: u(165) },
+  /** Figma AUTH_BROWSER_OPEN: the title at y 330, the 150 px spinner from y 776, CANCEL at y 1198. */
+  waitScroll: { paddingTop: u(165) },
+  waitSpinner: { alignItems: 'center', marginTop: u(136) },
+  waitCancel: { position: 'absolute', left: u(32), right: u(32), top: u(599) },
+  /** Figma: the label starts at y 654, 150 px under the title; NEXT 40 px under the field. */
+  emailForm: { marginTop: u(75), gap: u(34) },
   /** Figma `Loader/Logo`: the GIF drawn at 140 px, so its 143 px circle (of 154) measures the 130 of the static logo. */
   logo: { width: u(70), height: u(70) },
   guestCreate: {
@@ -491,13 +430,6 @@ const styles = StyleSheet.create({
   },
   accountActions: { gap: u(24) },
   accountButtons: { gap: u(24) },
-  title: { marginTop: u(16), textAlign: 'center' },
-  copy: {
-    marginTop: u(8),
-    textAlign: 'center',
-    opacity: 0.85,
-    paddingHorizontal: u(16),
-  },
   disclaimer: {
     lineHeight: u(18),
     textAlign: 'center',
@@ -512,29 +444,17 @@ const styles = StyleSheet.create({
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: u(12),
-    marginVertical: u(4),
+    gap: u(16),
+    height: u(15.5),
   },
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.white30 },
   dividerLabel: {
+    fontSize: u(12),
+    lineHeight: u(14.5),
     textTransform: 'none',
     color: colors.pearl,
     fontFamily: 'Inter-Regular',
   },
-  input: {
-    height: u(34),
-    borderRadius: u(6),
-    paddingHorizontal: u(16),
-    color: colors.snow,
-    fontFamily: 'Inter-Medium',
-    fontSize: u(15),
-    backgroundColor: colors.black40,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  inputFocused: { borderColor: colors.lavender },
-  inputError: { borderColor: colors.ruby },
-  inputGap: { marginBottom: u(16) },
   namingBack: { position: 'absolute', top: u(43), left: u(24) },
   /** Figma's blurred ellipse under the feet (318×45 plus its blur), centred at (337.5, 1288). */
   namingShadow: {

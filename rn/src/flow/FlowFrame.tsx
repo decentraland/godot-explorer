@@ -1,13 +1,12 @@
 import { ReactNode } from 'react';
 import { ImageBackground, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, Icon, u } from '@dcl/ui-native';
+import { BrandBackground, colors, Icon, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 
 const photoBackground = require('../assets/photo-background.png');
-const gradientBackground = require('../assets/flow-gradient-background.png');
 
-/** Magenta-to-purple full-screen backdrop (the plain brand `Background` when `flat`, the lobby's photo background
+/** Full-screen backdrop (the brand `Background` with its glows, plain when `flat`, the lobby's photo background
  * when `photo`) with safe-area padding and an optional back button. `edgeToEdge` skips the
  * safe-area padding: the Figma margin is already generous enough to clear the notch/status bar
  * on its own, so adding insets on top double-pads — for screens with their own exact Figma
@@ -37,11 +36,7 @@ export function FlowFrame({
       ) : flat ? (
         <View style={styles.flat} />
       ) : (
-        <ImageBackground
-          source={gradientBackground}
-          style={StyleSheet.absoluteFill}
-          resizeMode="cover"
-        />
+        <BrandBackground glow />
       )}
       <View
         style={[
@@ -59,9 +54,9 @@ export function FlowFrame({
           accessibilityLabel={t('APP_BACK')}
           onPress={onBack}
           hitSlop={12}
-          style={[styles.back, { top: insets.top + u(16) }]}
+          style={[styles.back, { top: Math.max(insets.top + u(4), u(43)) }]}
         >
-          <Icon name="back" size={24} />
+          <Icon name="back" size={30} />
         </Pressable>
       ) : null}
     </View>
@@ -72,11 +67,6 @@ const styles = StyleSheet.create({
   root: { ...StyleSheet.absoluteFill, backgroundColor: colors.purple350 },
   flat: { ...StyleSheet.absoluteFill, backgroundColor: colors.brand },
   content: { flex: 1, paddingHorizontal: u(32) },
-  back: {
-    position: 'absolute',
-    left: u(32),
-    width: u(40),
-    height: u(40),
-    justifyContent: 'center',
-  },
+  /** The same arrow, size and place as on the avatar screens (Figma Header: 60 px at 48, 86). */
+  back: { position: 'absolute', left: u(24) },
 });

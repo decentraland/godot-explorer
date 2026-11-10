@@ -23,7 +23,7 @@ export { CollapsibleSection } from './CollapsibleSection';
 export { HsvSliders, Swatch, SwatchRow } from './ColorPicker';
 export { ClaimDialog } from './ClaimDialog';
 export type { ClaimState } from './ClaimDialog';
-export { Dialog } from './Dialog';
+export { Dialog, GLOW_BOTTOM, GLOW_TOP } from './Dialog';
 export type { DialogButton, DialogIcon } from './Dialog';
 export { Dropdown } from './Dropdown';
 export type { DropdownOption } from './Dropdown';

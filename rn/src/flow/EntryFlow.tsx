@@ -19,6 +19,7 @@ import { core } from '../core';
 import { CustomizeStep } from './CustomizeStep';
 import { takePreviewLaunch, whenInitialLinkRouted } from './launchLink';
 import { askNotificationPermission } from '../notifications/push';
+import { OtpModal } from './OtpModal';
 import { initialFlow, reduceFlow } from './flowMachine';
 import {
   AvatarCreateScreen,
@@ -27,7 +28,6 @@ import {
 } from './previewScreens';
 import {
   AccountScreen,
-  CodeScreen,
   EmailScreen,
   GuestCreateScreen,
   NamingScreen,
@@ -51,6 +51,7 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
   const [busy, setBusy] = useState(false);
   const [preset, setPreset] = useState(0);
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -114,6 +115,15 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
       setBusy(false);
     }
   }, []);
+
+  const resend = useCallback(async () => {
+    setResending(true);
+    try {
+      await submitEmail(flow.email);
+    } finally {
+      setResending(false);
+    }
+  }, [submitEmail, flow.email]);
 
   const submitCode = useCallback(
     async (code: string) => {
@@ -227,33 +237,32 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
         />
       );
     case 'email_entry':
+    case 'email_code': {
+      // The code is asked in a modal over the email screen, which stays where it is.
+      const coding = step === 'email_code';
       return (
-        <EmailScreen
-          initial={flow.email}
-          error={emailError}
-          busy={busy}
-          onSubmit={submitEmail}
-          onBack={back}
-        />
+        <>
+          <EmailScreen
+            initial={flow.email}
+            error={coding ? null : emailError}
+            busy={busy && !coding}
+            onSubmit={submitEmail}
+            onBack={back}
+          />
+          <OtpModal
+            visible={coding}
+            email={flow.email}
+            error={coding ? emailError : null}
+            busy={busy && !resending}
+            onSubmit={submitCode}
+            onResend={resend}
+            onClose={back}
+          />
+        </>
       );
-    case 'email_code':
-      return (
-        <CodeScreen
-          email={flow.email}
-          error={emailError}
-          busy={busy}
-          onSubmit={submitCode}
-          onBack={back}
-        />
-      );
+    }
     case 'auth_wait':
-      return (
-        <WaitScreen
-          title={t('FLOW_AUTH_WAIT_TITLE')}
-          body={t('FLOW_AUTH_WAIT_BODY')}
-          onCancel={back}
-        />
-      );
+      return <WaitScreen title={t('FLOW_AUTH_WAIT_TITLE')} onCancel={back} />;
     case 'guest_wait':
       return <GuestCreateScreen />;
     case 'welcome_back':

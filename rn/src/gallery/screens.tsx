@@ -25,9 +25,7 @@ registerPreview('extra/flow-account', {
 registerPreview('extra/flow-wait', {
   title: 'Flow: wait',
   orientation: 'portrait',
-  render: () => (
-    <WaitScreen title="Signing you in" body="One moment" onCancel={noop} />
-  ),
+  render: () => <WaitScreen title={'Opening\nbrowser...'} onCancel={noop} />,
 });
 registerPreview('extra/nav-bar', {
   title: 'NavBar: portrait bar',

@@ -5,11 +5,14 @@ import { FtueScreen } from '../discover/FtueScreen';
 import { createMockApi as createDiscoverApi } from '../discover/mockApi';
 import { PLACES } from '../discover/mockData';
 import { CustomizeStep } from './CustomizeStep';
+import { OtpModal } from './OtpModal';
 import { AvatarCreateScreen, StageImage } from './previewScreens';
 import {
   AccountScreen,
+  EmailScreen,
   GuestCreateScreen,
   NamingScreen,
+  SignInScreen,
   SplashScreen,
 } from './screens';
 
@@ -119,3 +122,64 @@ registerPreview('extra/flow-ftue', {
     </ApiProvider>
   ),
 });
+
+registerPreview('extra/flow-signin', {
+  title: 'Flow: sign in providers',
+  orientation: 'portrait',
+  notes: 'Figma AUTH_HOME_ANDROID // IOS 1842:13740.',
+  render: () => <SignInScreen error={null} onProvider={noop} onBack={noop} />,
+});
+
+registerPreview('extra/flow-email', {
+  title: 'Flow: email',
+  orientation: 'portrait',
+  notes: 'Figma AUTH_OTP_START 1842:13788.',
+  render: () => (
+    <EmailScreen
+      initial=""
+      error={null}
+      busy={false}
+      onSubmit={noop}
+      onBack={noop}
+    />
+  ),
+});
+(
+  [
+    ['extra/flow-code', 'AUTH_OTP_ENTERCODE 1842:14149', null, false],
+    ['extra/flow-code-verifying', 'AUTH_OTP_VERIFY 1842:14336', null, true],
+    [
+      'extra/flow-code-error',
+      'AUTH_OTP_ERROR 1842:14452',
+      'The code is invalid or expired. Please resend code.',
+      false,
+    ],
+  ] as const
+).forEach(([id, frame, error, busy]) =>
+  registerPreview(id, {
+    title: `Flow: code (${frame.split(' ')[0]})`,
+    orientation: 'portrait',
+    notes: `Figma ${frame}; the code is asked over the email screen.`,
+    render: () => (
+      <>
+        <EmailScreen
+          initial=""
+          error={null}
+          busy={false}
+          onSubmit={noop}
+          onBack={noop}
+        />
+        <OtpModal
+          visible
+          email="your@email.com"
+          error={error}
+          busy={busy}
+          onSubmit={noop}
+          onResend={noop}
+          onClose={noop}
+          initialCode={busy || error ? '111111' : ''}
+        />
+      </>
+    ),
+  }),
+);

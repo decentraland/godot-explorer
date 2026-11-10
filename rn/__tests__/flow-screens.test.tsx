@@ -37,7 +37,9 @@ describe('entry flow Figma screens', () => {
   });
 
   it('account screen shows the welcome copy', () => {
-    const tree = mount(<AccountScreen onGuest={jest.fn()} onSignIn={jest.fn()} />);
+    const tree = mount(
+      <AccountScreen onGuest={jest.fn()} onSignIn={jest.fn()} />,
+    );
     const json = JSON.stringify(tree.toJSON());
     expect(json).toContain('Welcome to Decentraland');
     expect(json).toContain('Discover a world shaped');
@@ -58,7 +60,8 @@ describe('entry flow Figma screens', () => {
 
 describe('email sign-in screens', () => {
   it('validates the address and the code before enabling the button', () => {
-    const { isValidCode, isValidEmail } = require('../src/flow/screens');
+    const { isValidEmail } = require('../src/flow/screens');
+    const { isValidCode } = require('../src/flow/OtpModal');
     expect(isValidEmail('ana@example.com')).toBe(true);
     expect(isValidEmail('ana@example')).toBe(false);
     expect(isValidEmail('not an email')).toBe(false);
