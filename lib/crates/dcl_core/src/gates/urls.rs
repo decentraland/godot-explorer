@@ -4,9 +4,6 @@
 
 use crate::{env::DclEnvironment, realm, urls};
 
-/// Fixed universal-link host for shared scenes (`/open?position=x,y` or `?realm=<world>`).
-const MOBILE_OPEN: &str = "https://mobile.dclexplorer.com/open";
-
 /// The dev-only realm picker's non-default entry: the SDK team's Goerli Plaza copy.
 const SDK_TEAM_REALM: &str = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest";
 
@@ -80,7 +77,7 @@ pub struct Urls {
     pub auth_api_requests: String,
 
     /// Base of shared scene links; see `scene_link`.
-    pub mobile_open: String,
+    pub jump_places: String,
     /// Realms the dev-only picker offers.
     pub dev_realms: Vec<String>,
 }
@@ -122,7 +119,7 @@ pub fn build() -> Urls {
         auth_api_base: urls::auth_api_base(),
         auth_api_requests: urls::auth_api_requests(),
 
-        mobile_open: MOBILE_OPEN.to_string(),
+        jump_places: urls::jump_places(),
         dev_realms: vec![
             urls::main_realm(),
             SDK_TEAM_REALM.to_string(),
@@ -147,17 +144,17 @@ pub fn marketplace_item(contract_address: &str, item_id: &str) -> String {
 
 /// Web link that opens the explorer in a world.
 pub fn jump_realm_link(realm_name: &str) -> String {
-    format!("{}/jump/?realm={}", urls::host(), encode(realm_name))
+    format!("{}?realm={}", urls::jump_places(), encode(realm_name))
 }
 
 /// Web link that opens the explorer at a Genesis City position (`"x,y"`).
 pub fn jump_position_link(position: &str) -> String {
-    format!("{}/jump/?position={}", urls::host(), encode(position))
+    format!("{}?position={}", urls::jump_places(), encode(position))
 }
 
-/// Web page of an event.
+/// Shareable link to an event: opens its details in the app.
 pub fn event_link(event_id: &str) -> String {
-    format!("{}/events/event/?id={}", urls::host(), encode(event_id))
+    format!("{}?id={}", urls::jump_events(), encode(event_id))
 }
 
 /// Shareable link to a scene: `position=x,y` in Genesis City, `realm=<world>` otherwise.
@@ -174,7 +171,7 @@ pub fn scene_link(realm_url: &str, x: i32, y: i32) -> String {
             .unwrap_or_default();
         format!("realm={name}")
     };
-    format!("{MOBILE_OPEN}?{query}")
+    format!("{}?{query}", urls::jump_places())
 }
 
 #[cfg(test)]
@@ -214,7 +211,7 @@ mod tests {
             ("auth_mobile_frontend", &all.auth_mobile_frontend),
             ("auth_api_base", &all.auth_api_base),
             ("auth_api_requests", &all.auth_api_requests),
-            ("mobile_open", &all.mobile_open),
+            ("jump_places", &all.jump_places),
         ] {
             assert!(
                 value.starts_with("http://")
@@ -229,16 +226,16 @@ mod tests {
 
     #[test]
     fn links_encode_their_parameter() {
-        assert!(jump_position_link("-9,-9").ends_with("/jump/?position=-9%2C-9"));
-        assert!(jump_realm_link("a b.dcl.eth").ends_with("/jump/?realm=a%20b.dcl.eth"));
-        assert!(event_link("x&y").ends_with("/events/event/?id=x%26y"));
+        assert!(jump_position_link("-9,-9").ends_with("/jump/places?position=-9%2C-9"));
+        assert!(jump_realm_link("a b.dcl.eth").ends_with("/jump/places?realm=a%20b.dcl.eth"));
+        assert!(event_link("x&y").ends_with("/jump/events?id=x%26y"));
     }
 
     #[test]
     fn scene_links_name_a_position_in_genesis_and_a_world_elsewhere() {
         assert_eq!(
             scene_link(&urls::main_realm(), 3, -4),
-            "https://mobile.dclexplorer.com/open?position=3,-4"
+            "https://decentraland.org/jump/places?position=3,-4"
         );
         assert_eq!(
             scene_link(
@@ -246,7 +243,7 @@ mod tests {
                 0,
                 0
             ),
-            "https://mobile.dclexplorer.com/open?realm=foo.dcl.eth"
+            "https://decentraland.org/jump/places?realm=foo.dcl.eth"
         );
     }
 }

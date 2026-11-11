@@ -251,10 +251,10 @@ describe('share and links', () => {
         linkQuery: 'realm=spacerunner.dcl.eth',
       }),
     ).toBe(
-      '📍 Join Me At Space Runner following this link: https://mobile.dclexplorer.com/open?realm=spacerunner.dcl.eth',
+      '📍 Join Me At Space Runner following this link: https://decentraland.org/jump/places?realm=spacerunner.dcl.eth',
     );
     expect(sceneLink('position=1,2')).toBe(
-      'https://mobile.dclexplorer.com/open?position=1,2',
+      'https://decentraland.org/jump/places?position=1,2',
     );
   });
 

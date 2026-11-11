@@ -18,7 +18,7 @@ export function getMenuApi(): MenuApi {
 }
 
 export const sceneLink = (query: string): string =>
-  `${core().urls().mobileOpen}?${query}`;
+  `${core().urls().jumpPlaces}?${query}`;
 
 /** `position=x,y` in Genesis City, `realm=<world>` otherwise (the core builds the link). */
 export function linkQueryFor(realm: string, x: number, y: number): string {

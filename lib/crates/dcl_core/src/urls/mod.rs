@@ -200,6 +200,11 @@ pub fn jump_events() -> String {
     )
 }
 
+/// Base of shared place/world links (`?position=x,y` or `?realm=<world>`).
+pub fn jump_places() -> String {
+    format!("{}/jump/places", host())
+}
+
 // Seasonal Discover assets: one folder per season key, the same on every environment.
 pub fn seasonal_assets() -> &'static str {
     "https://mobile-ota.dclregenesislabs.xyz/seasons/"

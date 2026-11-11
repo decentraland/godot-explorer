@@ -47,7 +47,7 @@ fn every_field_is_a_url_in_every_environment() {
             &all.auth_mobile_frontend,
             &all.auth_api_base,
             &all.auth_api_requests,
-            &all.mobile_open,
+            &all.jump_places,
         ];
         for field in fields {
             assert!(

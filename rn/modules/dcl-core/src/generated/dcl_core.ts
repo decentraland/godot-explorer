@@ -9150,7 +9150,7 @@ export type Urls = {
   /**
    * Base of shared scene links; see `scene_link`.
    */
-  mobileOpen: string;
+  jumpPlaces: string;
   /**
    * Realms the dev-only picker offers.
    */
@@ -9206,7 +9206,7 @@ const FfiConverterTypeUrls = (() => {
         authMobileFrontend: FfiConverterString.readFromCursor(c),
         authApiBase: FfiConverterString.readFromCursor(c),
         authApiRequests: FfiConverterString.readFromCursor(c),
-        mobileOpen: FfiConverterString.readFromCursor(c),
+        jumpPlaces: FfiConverterString.readFromCursor(c),
         devRealms: FfiConverterSequenceString.readFromCursor(c),
       };
     }
@@ -9240,7 +9240,7 @@ const FfiConverterTypeUrls = (() => {
       FfiConverterString.writeIntoCursor(value.authMobileFrontend, c);
       FfiConverterString.writeIntoCursor(value.authApiBase, c);
       FfiConverterString.writeIntoCursor(value.authApiRequests, c);
-      FfiConverterString.writeIntoCursor(value.mobileOpen, c);
+      FfiConverterString.writeIntoCursor(value.jumpPlaces, c);
       FfiConverterSequenceString.writeIntoCursor(value.devRealms, c);
     }
     allocationSize(value: TypeName): number {
@@ -9274,7 +9274,7 @@ const FfiConverterTypeUrls = (() => {
         FfiConverterString.allocationSize(value.authMobileFrontend) +
         FfiConverterString.allocationSize(value.authApiBase) +
         FfiConverterString.allocationSize(value.authApiRequests) +
-        FfiConverterString.allocationSize(value.mobileOpen) +
+        FfiConverterString.allocationSize(value.jumpPlaces) +
         FfiConverterSequenceString.allocationSize(value.devRealms)
       );
     }
