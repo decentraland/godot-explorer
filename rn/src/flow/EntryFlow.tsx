@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer, useState } from 'react';
-import { AppState, BackHandler } from 'react-native';
+import { BackHandler } from 'react-native';
 import {
   acceptTerms,
   alreadySignedIn,
@@ -49,28 +49,16 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
   const [preset, setPreset] = useState(0);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
-  // Figma shows AUTH_BROWSER_OPEN as "Loading..." once the person is back from the browser.
+  // Figma: "Opening browser..." until the browser hands the login back, then "Loading..." while the
+  // profile is read.
   const [returned, setReturned] = useState(false);
-  useEffect(() => {
-    setReturned(false);
-    if (step !== 'auth_browser_open') {
-      return;
-    }
-    let away = false;
-    const subscription = AppState.addEventListener('change', next => {
-      if (next !== 'active') {
-        away = true;
-      } else if (away) {
-        setReturned(true);
-      }
-    });
-    return () => subscription.remove();
-  }, [step]);
+  useEffect(() => setReturned(false), [step]);
 
   useEffect(() => {
     let cancelled = false;
     const succeeded = async () => {
       acceptTerms().catch(() => {});
+      setReturned(true);
       try {
         const result = await welcome();
         if (!cancelled) {
