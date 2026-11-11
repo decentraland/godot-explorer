@@ -196,6 +196,8 @@ export function AccountGuestCreate() {
 
 /** Figma AUTH_BROWSER_OPEN 1564:9629: the browser is opening for a provider, CANCEL comes back.
  * `loading` is the 2582:15409 version, shown when the person returns from the browser. */
+const LOADING_ESCAPE_MS = 8000;
+
 export function AuthBrowserOpen({
   loading = false,
   onCancel,
@@ -204,6 +206,16 @@ export function AuthBrowserOpen({
   onCancel?: () => void;
 }) {
   const title = t(loading ? 'FLOW_AUTH_LOADING_TITLE' : 'FLOW_AUTH_WAIT_TITLE');
+  // Closing the browser without finishing sends no event: after a while Loading offers the way out.
+  const [stuck, setStuck] = useState(false);
+  useEffect(() => {
+    setStuck(false);
+    if (!loading) {
+      return;
+    }
+    const timer = setTimeout(() => setStuck(true), LOADING_ESCAPE_MS);
+    return () => clearTimeout(timer);
+  }, [loading]);
   return (
     <FlowFrame edgeToEdge>
       <View style={styles.waitScroll}>
@@ -217,7 +229,7 @@ export function AuthBrowserOpen({
           <Spinner />
         </View>
       </View>
-      {onCancel && !loading ? (
+      {onCancel && (!loading || stuck) ? (
         <View style={styles.waitCancel}>
           <Button
             big
