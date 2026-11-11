@@ -59,7 +59,7 @@ export const flow: Partial<Record<keyof typeof en, string>> = {
   FLOW_AUTH_WAIT_TITLE: 'Abriendo\nel navegador...',
   FLOW_AUTH_LOADING_TITLE: 'Cargando...',
   FLOW_AUTH_VERIFY_TITLE: 'Confirmando\ninicio de sesión...',
-  FLOW_EMAIL_INVALID: 'Formato no válido. Usa solo letras y números.',
+  FLOW_EMAIL_INVALID: 'Formato no válido.',
   FLOW_GUEST_WAIT_TITLE: 'Preparando todo…',
   FLOW_CANCEL: 'Cancelar',
 };
