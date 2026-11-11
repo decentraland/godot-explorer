@@ -50,6 +50,11 @@ export const flow: Partial<Record<keyof typeof en, string>> = {
   FLOW_CODE_RESEND_PROMPT: '¿No recibiste un email?',
   FLOW_CODE_RESEND: 'Reenviar código',
   FLOW_CODE_INVALID: 'El código no es válido o venció. Reenvía el código.',
+  FLOW_UPDATE_TITLE: 'Actualización\ndisponible',
+  FLOW_UPDATE_COPY:
+    'Hay una nueva versión de Decentraland disponible. Actualiza ahora para tener las últimas correcciones y mejoras.',
+  FLOW_UPDATE: 'Actualizar',
+  FLOW_UPDATE_LATER: 'Más tarde',
   FLOW_AUTH_WAIT_TITLE: 'Abriendo\nel navegador...',
   FLOW_AUTH_LOADING_TITLE: 'Cargando...',
   FLOW_AUTH_VERIFY_TITLE: 'Confirmando\ninicio de sesión...',

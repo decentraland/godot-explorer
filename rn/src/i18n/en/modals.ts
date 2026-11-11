@@ -1,10 +1,6 @@
 /** Copy of the dialogs the player meets: scene requests, entry refusals, disconnects, update and device notices. */
 export const modals = {
   NOTIFICATIONS_LIMITED_PERFORMANCE: 'Limited performance',
-  AUTH_UPDATE_BODY:
-    'A new version of Decentraland is available. Update for the best experience.',
-  AUTH_UPDATE_TITLE: 'New Version Available',
-  COMMON_UPDATE: 'UPDATE',
   MODAL_BAN_KICKED_BODY: 'Please contact support for more information.',
   MODAL_BAN_KICKED_PRIMARY: 'BACK TO DISCOVER',
   MODAL_BAN_KICKED_TITLE: "You've been banned",

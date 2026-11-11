@@ -1,6 +1,7 @@
 /** Entry flow mirroring the 1.x lobby, portrait only; naming ends it, the FTUE screen stays out. */
 export type Step =
   | 'dcl_splash'
+  | 'update_available'
   | 'account_home'
   | 'auth_home'
   | 'auth_browser_open'
@@ -25,10 +26,14 @@ export type FlowState = {
   email: string;
   name: string;
   error: string | null;
+  /** The version gate's verdict on `update_available`: no LATER when required. */
+  updateRequired: boolean;
 };
 
 export type FlowAction =
   | { type: 'booted' }
+  | { type: 'updateGate'; required: boolean }
+  | { type: 'updateLater' }
   | { type: 'recovered'; hasProfile: boolean; name: string }
   | { type: 'playAsGuest' }
   | { type: 'previewGuest' }
@@ -53,6 +58,7 @@ export const initialFlow: FlowState = {
   email: '',
   name: '',
   error: null,
+  updateRequired: false,
 };
 
 const go = (
@@ -70,6 +76,14 @@ export function reduceFlow(state: FlowState, action: FlowAction): FlowState {
   switch (action.type) {
     case 'booted':
       return state.step === 'dcl_splash' ? go(state, 'account_home') : state;
+    case 'updateGate':
+      return state.step === 'dcl_splash'
+        ? go(state, 'update_available', { updateRequired: action.required })
+        : state;
+    case 'updateLater':
+      return state.step === 'update_available' && !state.updateRequired
+        ? go(state, 'dcl_splash')
+        : state;
     case 'recovered':
       // A restored account that already has a name goes straight into the app, as the lobby did.
       if (state.step !== 'dcl_splash') {

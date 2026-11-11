@@ -970,6 +970,16 @@
     "orientation": "portrait"
   },
   {
+    "id": "extra/flow-update",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-update-forced",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
     "id": "menu__hud__106-2203",
     "source": "menu",
     "orientation": "landscape"

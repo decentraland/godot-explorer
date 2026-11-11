@@ -10,6 +10,18 @@ const run = (actions: FlowAction[], from: FlowState = initialFlow) =>
   actions.reduce(reduceFlow, from);
 
 describe('entry flow', () => {
+  it('the version gate shows Update available; LATER resumes the boot, a required one has no LATER', () => {
+    const soft = run([{ type: 'updateGate', required: false }]);
+    expect(soft.step).toBe('update_available');
+    expect(reduceFlow(soft, { type: 'updateLater' }).step).toBe('dcl_splash');
+    const hard = run([{ type: 'updateGate', required: true }]);
+    expect(reduceFlow(hard, { type: 'updateLater' })).toBe(hard);
+    const account = run([{ type: 'booted' }]);
+    expect(reduceFlow(account, { type: 'updateGate', required: true })).toBe(
+      account,
+    );
+  });
+
   it('goes splash → account', () => {
     expect(run([{ type: 'booted' }]).step).toBe('account_home');
   });

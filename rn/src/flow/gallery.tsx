@@ -6,6 +6,7 @@ import { createMockApi as createDiscoverApi } from '../discover/mockApi';
 import { PLACES } from '../discover/mockData';
 import { AvatarCustomize } from './AvatarCustomize';
 import { AuthOtpEntercode } from './AuthOtpEntercode';
+import { UpdateAvailable } from './UpdateAvailable';
 import { AvatarCreate, StageImage, Comeback } from './previewScreens';
 import {
   AccountHome,
@@ -212,4 +213,16 @@ registerPreview('extra/flow-auth-verify', {
   orientation: 'portrait',
   notes: 'Figma AUTH_VERIFY / AUTH_SUCCESS / AUTH_ERROR 1842:14702.',
   render: () => <AuthVerify />,
+});
+registerPreview('extra/flow-update', {
+  title: 'Flow: Update available',
+  orientation: 'portrait',
+  notes: 'Figma Update available 1546:14269.',
+  render: () => <UpdateAvailable required={false} onLater={noop} />,
+});
+registerPreview('extra/flow-update-forced', {
+  title: 'Flow: Update available (forced)',
+  orientation: 'portrait',
+  notes: 'Figma Update available 1546:14186.',
+  render: () => <UpdateAvailable required onLater={noop} />,
 });

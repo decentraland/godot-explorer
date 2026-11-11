@@ -31,6 +31,11 @@ export const flow = {
   FLOW_CODE_RESEND_PROMPT: 'Didn’t get an email?',
   FLOW_CODE_RESEND: 'Resend Code',
   FLOW_CODE_INVALID: 'The code is invalid or expired. Please resend code.',
+  FLOW_UPDATE_TITLE: 'Update\navailable',
+  FLOW_UPDATE_COPY:
+    'A new version of Decentraland is available. Update now for the latest fixes and improvements.',
+  FLOW_UPDATE: 'Update',
+  FLOW_UPDATE_LATER: 'Later',
   FLOW_AUTH_WAIT_TITLE: 'Opening\u00A0\nbrowser...',
   FLOW_AUTH_LOADING_TITLE: 'Loading...',
   FLOW_AUTH_VERIFY_TITLE: 'Confirming\nlogin...',

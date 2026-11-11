@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { BackHandler } from 'react-native';
 import {
   acceptTerms,
@@ -16,6 +16,8 @@ import {
   whenSignedIn,
 } from './auth';
 import { core } from '../core';
+import { UpdateDecision } from '../core/native';
+import { UpdateAvailable } from './UpdateAvailable';
 import { AvatarCustomize } from './AvatarCustomize';
 import { takePreviewLaunch, whenInitialLinkRouted } from './launchLink';
 import { askNotificationPermission } from '../notifications/push';
@@ -180,6 +182,10 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
         if (step === 'dcl_splash' || step === 'account_home') {
           return false;
         }
+        // A required update has nowhere to go back to.
+        if (step === 'update_available') {
+          return true;
+        }
         // The customize step asks before discarding; its own listener runs next.
         if (step === 'avatar_customize') {
           return false;
@@ -191,8 +197,23 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
     return () => subscription.remove();
   }, [step, back]);
 
+  const gateChecked = useRef(false);
   const booted = useCallback(async () => {
     await whenInitialLinkRouted();
+    // The version gate asks once per launch, before the account screens; LATER comes back here.
+    if (!gateChecked.current) {
+      gateChecked.current = true;
+      const gate = await core()
+        .versionGate()
+        .catch(() => null);
+      if (gate && gate.decision !== UpdateDecision.Proceed) {
+        dispatch({
+          type: 'updateGate',
+          required: gate.decision === UpdateDecision.Required,
+        });
+        return;
+      }
+    }
     const preview = takePreviewLaunch();
     if (core().state().tag === 'SignedIn') {
       try {
@@ -222,6 +243,16 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
   switch (step) {
     case 'dcl_splash':
       return <DclSplash onDone={booted} />;
+    case 'update_available':
+      return (
+        <UpdateAvailable
+          required={flow.updateRequired}
+          onLater={() => {
+            core().snoozeVersionGate();
+            dispatch({ type: 'updateLater' });
+          }}
+        />
+      );
     case 'account_home':
       return (
         <AccountHome
