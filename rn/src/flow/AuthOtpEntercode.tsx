@@ -311,7 +311,8 @@ const styles = StyleSheet.create({
     width: u(42),
     height: u(65),
     borderRadius: u(8),
-    borderWidth: 1,
+    // Figma strokes the slots at 1 px; the Typing one at 2.
+    borderWidth: 0.5,
     borderColor: colors.shadow,
     backgroundColor: colors.black40,
     alignItems: 'center',
@@ -319,6 +320,7 @@ const styles = StyleSheet.create({
   },
   slotFilled: { borderColor: colors.pearl },
   slotTyping: {
+    borderWidth: 1,
     borderColor: colors.lavender,
     backgroundColor: colors.black70,
   },
