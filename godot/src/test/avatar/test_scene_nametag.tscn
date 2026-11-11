@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3 uid="uid://scenenametagtest01"]
+[gd_scene format=3 uid="uid://bj4mexcqksbey"]
 
-[ext_resource type="Script" path="res://src/test/avatar/test_scene_nametag.gd" id="1_nametag"]
+[ext_resource type="Script" uid="uid://2iryl4wxqmxl" path="res://src/test/avatar/test_scene_nametag.gd" id="1_nametag"]
 
 [node name="TestSceneNametag" type="Node"]
 script = ExtResource("1_nametag")

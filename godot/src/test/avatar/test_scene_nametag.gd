@@ -9,7 +9,7 @@ extends Node
 # compiles before the autoloads exist.
 
 ## Guards against a silent early return: every check below must have run.
-const EXPECTED_CHECKS := 13
+const EXPECTED_CHECKS := 14
 
 var _failures: Array[String] = []
 var _checks: int = 0
@@ -71,6 +71,7 @@ func _test_colors_and_text() -> void:
 		Node.AUTO_TRANSLATE_MODE_DISABLED,
 		plate._label.auto_translate_mode
 	)
+	_expect("scene text is drawn in a plain Label", true, plate._label is Label)
 	_expect(
 		"corner radius is half the height", plate.size.y * 0.5, plate._style.corner_radius_top_left
 	)

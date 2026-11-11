@@ -69,9 +69,14 @@ func _sync_size() -> void:
 	size = custom_minimum_size
 
 
-## Measured per character: `get_string_size` collapses a spaces-only label to zero,
-## and spaces are exactly how a scene widens a text-less plate (protocol#474).
+## Shaped measurement, so ligatures and RTL scripts land on the exact width. A
+## spaces-only label collapses to zero there, and spaces are exactly how a scene
+## widens a text-less plate (protocol#474), so that case is measured per character.
 func _text_width() -> float:
+	if not label_text.strip_edges().is_empty():
+		return minf(
+			FONT.get_string_size(label_text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x, MAX_WIDTH
+		)
 	var total := 0.0
 	for index in label_text.length():
 		total += FONT.get_char_size(label_text.unicode_at(index), FONT_SIZE).x
