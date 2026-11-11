@@ -443,6 +443,11 @@ chosen). Lead with what does not match. Do not write "coincide" without numbers 
   centre and its card is 514 px wide): report it under Decisions; do not bend the shared component for one frame.
 - Release-style captures hide gallery-only states; screens fed by mock data differ from Figma samples (`{Username}`,
   "Text / 0/15", jackets as thumbnails): compare structure and geometry, not sample content.
+- **Follow the flow's arrows before mapping frames to steps.** They are often plain `VECTOR`/`LINE` nodes, not
+  `CONNECTOR`s, so a connector query returns nothing: list the row's top-level nodes sorted by x and read what lies
+  between two frames. Two frames with the same name (AUTH_BROWSER_OPEN "Opening browser..." and "Loading...") are two
+  steps until proven otherwise, and frames between them (AUTH_WEB_MAGIC, GoogleScreen) are the browser's, not ours.
+  Never invent the trigger for a state change (app foreground, a timer): derive it from what the frames show happening.
 - A frame's text that differs from i18n changes the key (all three languages), not the call site.
 
 ## Worked reference (Account Home, HIFI frame `1738:9473` in `H1Alvbe7sh0e0IyLckewMI`)
