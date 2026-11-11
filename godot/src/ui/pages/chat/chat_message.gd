@@ -35,8 +35,10 @@ var nickname_color_hex: String = "ffffff"
 var is_own_message: bool = false
 var has_claimed_name: bool = false
 var reduce_text: bool = false
-
-var _address: String = ""
+## What set_chat received, so another chat view can replay this message.
+var address: String = ""
+var message: String = ""
+var timestamp: float = 0.0
 
 @onready var rich_text: RichTextLabel = %RichTextLabel_Message
 @onready var message_panel: PanelContainer = %PanelContainer_Message
@@ -75,9 +77,11 @@ func _configure_richtext_theme(richtext_label: RichTextLabel) -> void:
 	richtext_label.add_theme_font_override("mono_font", MULTILINGUAL_REGULAR)
 
 
-func set_chat(address: String, message: String, _timestamp: float) -> void:
-	_address = address
-	var new_text: String = message
+func set_chat(new_address: String, new_message: String, new_timestamp: float) -> void:
+	address = new_address
+	message = new_message
+	timestamp = new_timestamp
+	var new_text: String = new_message
 	if address != "system":
 		new_text = escape_bbcode(new_text)
 
@@ -113,7 +117,7 @@ func _build_chat_rich_text(processed_message: String) -> String:
 		chunks.append("[img=22]res://assets/check-mark.svg[/img]")
 	chunks.append(SEP_HEADER_TO_MESSAGE)
 	# System already includes its own BBCode ([color], [b], ...); don't wrap in [b] or nesting breaks.
-	if _address == "system":
+	if address == "system":
 		chunks.append(processed_message)
 	else:
 		chunks.append("[b]%s[/b]" % processed_message)
@@ -153,7 +157,7 @@ func _set_system_sender() -> void:
 func _apply_message_background() -> void:
 	var box := StyleBoxFlat.new()
 	box.set_corner_radius_all(5)
-	if _address == "system":
+	if address == "system":
 		box.bg_color = BG_SYSTEM
 	elif is_own_message:
 		box.bg_color = BG_OWN

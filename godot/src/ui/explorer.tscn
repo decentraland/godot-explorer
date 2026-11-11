@@ -31,6 +31,7 @@
 [ext_resource type="PackedScene" uid="uid://bycjwh7mskrsd" path="res://src/helpers_components/chat_handler.tscn" id="32_cq187"]
 [ext_resource type="Resource" uid="uid://ntu4pnce7xxr" path="res://src/ui/layouts/hud_margins.tres" id="34_hudmg"]
 [ext_resource type="PackedScene" uid="uid://v3ktu5kra0ql" path="res://src/ui/components/organisms/preview_hud_panel/preview_hud_panel.tscn" id="35_prevhud"]
+[ext_resource type="PackedScene" uid="uid://buxjoxmdm2l6v" path="res://src/ui/components/organisms/video_focus_mode/video_focus_mode.tscn" id="36_vfocus"]
 [ext_resource type="Script" uid="uid://fwc0yeqxg4fh" path="res://src/logic/render_ready_probe.gd" id="36_rready"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_c5h7v"]
@@ -306,6 +307,12 @@ size_flags_horizontal = 2
 size_flags_vertical = 2
 icon = ExtResource("27_close")
 icon_normal = ExtResource("27_close")
+
+[node name="VideoFocusMode" parent="UI" instance=ExtResource("36_vfocus")]
+unique_name_in_owner = true
+editor_description = "Full-screen video + Nearby chat (issue #1381). After SafeAreaHud so it covers the HUD, chat and navbar and takes their taps; before Control_Menu, the dialogs and Loading so those still draw over it."
+visible = false
+layout_mode = 1
 
 [node name="InteractableAreaDebug" type="ColorRect" parent="UI" unique_id=146097443]
 unique_name_in_owner = true
