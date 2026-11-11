@@ -17,14 +17,16 @@ name: 📱 Mobile Build & Distribute (iOS TestFlight + Android APK)
 #   - The `build` label on a PR (alias: `build-ios` for backward compatibility)
 #   - Manual workflow dispatch on the main / 1.x / release branch
 #
-# Why pull_request_target. The label flow runs as pull_request_target: this file, the local
-# actions and the scripts come from the BASE branch, and github.ref is the base branch, so the
-# `mobile-release` environment (deployment branches main / 1.x / release / release-*) admits the
-# orchestration jobs. The only jobs that run the PR's code are the build jobs inside the called
-# workflows, which hold no secrets. Every R2 key is written under a segment computed here from
-# event data (`pr-<N>` for PRs), never from a branch name, so PR runs and main/release
-# distributions never share an R2 key. Branch names and other PR-controlled strings reach shell
-# steps only through `env:`.
+# Why pull_request_target. GitHub reads a pull_request_target workflow from the default branch
+# whatever the PR's base, so the label on a PR into 1.x runs main's mobile_build_label_1x.yml,
+# which calls this file at 1.x through workflow_call (the event context stays
+# pull_request_target). github.ref is main there, so the `mobile-release` environment (deployment
+# branches main / 1.x / release / release-*) admits the orchestration jobs, and their checkouts
+# take TRUSTED_REF so this line's scripts and actions run, not main's. The only jobs that run the
+# PR's code are the build jobs inside the called workflows, which hold no secrets. Every R2 key is
+# written under a segment computed here from event data (`pr-<N>` for PRs), never from a branch
+# name, so PR runs and main/release distributions never share an R2 key. Branch names and other
+# PR-controlled strings reach shell steps only through `env:`.
 #
 # The Android leg rebuilds only when the R2 APK is missing or its baked number was superseded on a
 # store; otherwise it reuses that APK and just surfaces the R2 download link. It does NOT push to
@@ -36,8 +38,8 @@ on:
       - release          # every release push → full distribution
   schedule:
     - cron: '0 9 * * 1-5'  # weekdays 09:00 UTC → main, only if changed since last build
-  pull_request_target:
-    types: [labeled]
+  # The `build` label, via main's mobile_build_label_1x.yml (see above).
+  workflow_call:
   workflow_dispatch:
     inputs:
       ref:
@@ -53,6 +55,11 @@ on:
 
 permissions:
   contents: read
+
+env:
+  # The PR's base under the label flow (prepare's `if` allows only main / 1.x / release*); empty
+  # otherwise, so the checkouts keep the triggering ref.
+  TRUSTED_REF: ${{ github.event_name == 'pull_request_target' && github.base_ref || '' }}
 
 jobs:
   prepare:
@@ -101,6 +108,7 @@ jobs:
       # Base branch under pull_request_target: trusted scripts and actions.
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
+          ref: ${{ env.TRUSTED_REF }}
           persist-credentials: false
 
       - name: Resolve build context
@@ -342,6 +350,7 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
+          ref: ${{ env.TRUSTED_REF }}
           persist-credentials: false
 
       - name: Validate required secrets
@@ -474,6 +483,7 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
+          ref: ${{ env.TRUSTED_REF }}
           persist-credentials: false
 
       # The build number + version string come from prepare's single authoritative allocation — the
@@ -542,6 +552,7 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
+          ref: ${{ env.TRUSTED_REF }}
           persist-credentials: false
 
       - name: Watch the godot-asc-deploy run
@@ -641,6 +652,7 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
+          ref: ${{ env.TRUSTED_REF }}
           persist-credentials: false
       - name: Report → failed/cancelled
         env:
@@ -712,6 +724,7 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
+          ref: ${{ env.TRUSTED_REF }}
           persist-credentials: false
 
       - name: Report — Android resolve started
@@ -868,6 +881,7 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
+          ref: ${{ env.TRUSTED_REF }}
           persist-credentials: false
 
       - name: Validate required secrets
