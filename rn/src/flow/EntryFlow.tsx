@@ -42,6 +42,8 @@ const RESEND_WAIT_MS = 2 * 60 * 1000;
 export function EntryFlow({ onDone }: { onDone: () => void }) {
   const [flow, dispatch] = useReducer(reduceFlow, initialFlow);
   const { step, provider } = flow;
+  const previewLaunch = useRef(false);
+  previewLaunch.current = flow.preview;
 
   useEffect(() => {
     if (step === 'done') {
@@ -102,7 +104,25 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
       whenSignedIn().then(succeeded, failed);
     } else if (step === 'account_guest_create') {
       startGuest().then(
-        () => !cancelled && dispatch({ type: 'guestReady' }),
+        // One guest per device: the core hands back the same account, and one that already has a
+        // name is welcomed back instead of being made again (a preview launch skips the avatar).
+        async () => {
+          if (cancelled) {
+            return;
+          }
+          if (!previewLaunch.current) {
+            const result = await welcome().catch(() => null);
+            if (cancelled) {
+              return;
+            }
+            if (result?.hasProfile) {
+              acceptTerms().catch(() => {});
+              dispatch({ type: 'authSucceeded', ...result });
+              return;
+            }
+          }
+          dispatch({ type: 'guestReady' });
+        },
         () => (alreadySignedIn() ? succeeded() : failed()),
       );
     }
