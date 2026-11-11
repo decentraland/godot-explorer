@@ -149,31 +149,50 @@ Con el cielo fijado (`Dynamic Skybox` OFF) el mismo 2.x dio **15.18 / 14.42 / 13
 77.6 / 72.6): **2.2× menos que la misma build con el sol alto**. La variable sol mueve el resultado más
 que la diferencia entre builds, así que ninguna comparación es válida sin fijarla.
 
-### El ajuste de cielo no llega al mundo
+### El ajuste de cielo sí llega al mundo, pero no a 2.x
 
-Elegir una hora en `Custom Skybox` no cambia nada medible después de reiniciar la app. Misma build,
-mismo perfil, mismo ajuste fijado, una ventana por preset, cada una después de un lanzamiento limpio:
+Se probó en una parcela **sin escena** (`100,100`), que es el único lugar donde el reloj no se lo queda
+la escena: en Genesis Plaza `scene_runner/components/skybox_time.rs` pone `sdk_skybox_time_active = true`
+y el mundo ignora el ajuste del cliente. Con `Dynamic Skybox` OFF y `Custom Skybox` elegido a mano, en
+la misma sesión y con el perfil en `High`:
 
-| preset elegido | luma de la ventana |
-|---|---:|
-| Midnight | 63.4 |
-| Afternoon | 61.6 |
-| Midday | 66.8 |
-| Morning | 60.6 |
+| build | preset elegido | luma del mundo | fps |
+|---|---|---:|---:|
+| 1.x | Midnight | 34.4 | — |
+| 1.x | Morning | 77.9 | — |
+| 1.x | **Midday** | **110.6 / 111.5 / 111.9** | **33.96 / 40.29 / 36.70** |
+| 2.x | **Midday** | **33.1** | no se midió |
 
-Cuatro soles distintos, un solo render. Y el mismo label tampoco significa la misma luz en las dos
-builds: con `Morning` fijado, la ventana mide luma ≈ 75 en 2.x y 105–112 en 1.x, porque 1.x es otro
-engine. Conclusión: el ajuste no sirve como variable de control. Se registra la luminancia de cada
-ventana en `state.json` y sólo se comparan corridas de la misma banda.
+1.x responde a los tres presets, con una separación de 76 puntos de luma. 2.x no: el panel guarda
+`Midday`, el preview pinta cielo de día y tras reiniciar el panel lo sigue mostrando, pero el mundo
+renderiza **noche**. La ruta está en el código: `lib/crates/dcl_engine/src/sky/skybox_time.rs` lee
 
-La luz tampoco se mueve rápido: doce ventanas de 30 s en una misma sesión de 2.x, espaciadas 111 s,
-dieron luma 56.4–61.0 (fps 18.4–22.9, mediana 21.5, p50 50 ms, CPU ~190 %). O sea: dentro de una
-sesión la luz es estable, y lo que difiere entre builds es **cómo renderiza cada una**, no la hora.
+```rust
+engine.setting("skybox_time".into()).try_to::<f64>().unwrap_or(0.0)
+```
 
-### La matriz HIGH no se puede parear, y por qué
+y `0.0` normalizado es medianoche. Un valor que no llega como número se convierte, sin aviso, en la
+hora más oscura posible. En 1.x el mismo ajuste sí llega, así que todo el que ponga `Dynamic Skybox` OFF
+en 2.x ve noche a cualquier hora: **la matriz pedida (dynamic OFF + HIGH) no se puede medir en 2.x hasta
+que esto se arregle**, y arreglarlo no es parte de un PR de medición.
 
-Con `HIGH` + dynamic OFF, la misma etiqueta de ajuste produce ventanas con luma sistemáticamente
-distinta por build, y el fps la sigue:
+Las capturas que lo prueban están en
+`docs/bench/data/2x-vs-1x-3206/android-a54/sky-fixed-midday/evidence/` (`2x-settings-midday-stored.png`
+con el panel mostrando Midday, `2x-world-at-midday-setting.png` en noche, `1x-world-at-midday-setting.png`
+en día), y el resumen en `sky-fixed-midday/RESULT.json`.
+
+### Qué sí sale de la niebla: la luz mueve el resultado más que el build
+
+Aunque el sol no se pueda fijar, su efecto se midió. Mismo build, mismo perfil, misma temperatura:
+**31.3 fps con el sol alto contra 13.5–15.2 fps con el sol bajo**, es decir **2.2×**, más que cualquier
+diferencia entre 1.x y 2.x. Doce ventanas de 30 s en una sola sesión de 2.x, espaciadas 111 s, dieron
+luma 56.4–61.0 (fps 18.4–22.9, mediana 21.5, p50 50 ms, CPU ~190 %): dentro de una sesión la luz es
+estable, así que esa banda es una condición reproducible.
+
+### La matriz HIGH en Genesis Plaza no se puede parear
+
+Con `HIGH` + dynamic OFF en la plaza, la misma etiqueta de ajuste produce ventanas con luma
+sistemáticamente distinta por build, y el fps la sigue:
 
 | build | corridas | fps | luma | p50 | CPU |
 |---|---|---:|---|---:|---:|
@@ -183,11 +202,8 @@ distinta por build, y el fps la sigue:
 | 2.x | `2x-drift` s1–s12 | 21.5 (mediana) | 56.4–61.0 | 50.0 | ~190 % |
 | 2.x | `2x-sky-r1..r3` | 15.2 / 14.4 / 13.5 | 75.5 / 77.6 / 72.6 | 66.7–75.0 | 133–149 % |
 
-No hay un par comparable: 1.x nunca baja de luma 86 en estas corridas y 2.x nunca sube de 78 con el
-mismo ajuste. La relación tampoco es monótona (2.x a luma 57–61 hace 21.5 fps; a luma 72–78 hace
-13.5–15.2), así que no se puede extrapolar. **La conclusión honesta es que la matriz `HIGH` necesita
-una escena con el cielo controlable, y que hasta entonces no se publica un Δ % de esa matriz.** Queda
-como primer ítem del roadmap (A1/C1).
+1.x nunca baja de luma 86 en estas corridas y 2.x nunca sube de 78 con el mismo ajuste, así que no
+existe un par comparable. **No se publica un Δ % de esa matriz.**
 
 ### Qué cambió en el método
 
@@ -200,6 +216,8 @@ como primer ítem del roadmap (A1/C1).
   ventana entera y hundió una corrida a luma 48.9.
 - Matriz pareada: se alternan builds con reinstalación por corrida (el cambio de buildCode obliga a
   desinstalar), `state.json` por corrida y comparación sólo entre corridas de luma cercana.
+- Cielo: se mide en la parcela `100,100` cuando se quiere el reloj fijo (en Genesis Plaza manda la
+  escena) y las ventanas de una condición se toman en una sola sesión, sin relanzar.
 
 **Lo que sigue válido:** §1 (5 + 5 corridas con los defaults que se entregan, dynamic graphics ON)
 no se toca. Con el cap encendido los dos builds quedan clavados en ~18 fps y el sol no mueve la aguja;

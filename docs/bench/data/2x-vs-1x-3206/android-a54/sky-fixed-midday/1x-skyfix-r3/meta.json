@@ -1,0 +1,32 @@
+{
+  "label": "1x-skyfix-r3",
+  "build": "1x",
+  "scenario": "sky-fixed-midday",
+  "device": "SM-A546E",
+  "device_serial": "R5CW60624NE",
+  "pkg": "org.decentraland.godotexplorer",
+  "version_name": "1.16.1(2688)",
+  "pid_before": 10726,
+  "trace_wall_seconds": 30.16,
+  "started_at": "2026-11-11T13:14:57-0300",
+  "frames": {
+    "frames": "1107",
+    "fps_avg": "36.700000",
+    "span_s": "29.960000",
+    "interval_p50_ms": "25.110000",
+    "interval_p95_ms": "33.880000",
+    "interval_p99_ms": "42.070000",
+    "interval_max_ms": "50.660000",
+    "fps_p1_low": "23.770000",
+    "fps_p5_low": "29.520000",
+    "fps_median": "39.820000",
+    "pct_missed_deadline": "86.540000",
+    "jank_any": "1107"
+  },
+  "rss_peak_kb": 1746363,
+  "rss_steady_kb": 1705367,
+  "mem_samples": 18,
+  "notes": "one session, pinned sky set live, no relaunch",
+  "thermal_end_c": 46.7,
+  "cpu_mean_pct": 121.2
+}

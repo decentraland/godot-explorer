@@ -19,6 +19,9 @@ WINDOW=${WINDOW:-30}
 SETTLE=${SETTLE:-25}
 TARGET_TEMP=${TARGET_TEMP:-40}
 SCENARIO=${SCENARIO:-gp-hi-pair}
+# Scene-free parcel by default only when asked: Genesis Plaza owns the sky clock, so the pinned
+# skybox only applies where there is no scene (POSITION=100,100 for the forced-sky matrix).
+POSITION=${POSITION:-0,0}
 SERIAL=${ANDROID_SERIAL:-R5CW60624NE}
 PKG=org.decentraland.godotexplorer
 DEVICE_TAG=${DEVICE_TAG:-android-a54}
@@ -60,7 +63,7 @@ ensure_build() {
 launch_world() {
   sh_ am force-stop "$PKG"
   sh_ logcat -c
-  sh_ am start -a android.intent.action.VIEW -d "'decentraland://open?position=0,0'" "$PKG" >/dev/null
+  sh_ am start -a android.intent.action.VIEW -d "'decentraland://open?position=$POSITION'" "$PKG" >/dev/null
   for _ in $(seq 1 40); do
     # A fresh install stops at the entry flow: take it the way the runner does.
     if [ "$BUILD" = "2x" ]; then
@@ -183,7 +186,7 @@ ensure_build
 probe_profile() {  # relaunch and report the profile the engine actually loaded
   sh_ am force-stop "$PKG"
   sh_ logcat -c
-  sh_ am start -a android.intent.action.VIEW -d "'decentraland://open?position=0,0'" "$PKG" >/dev/null 2>&1 || true
+  sh_ am start -a android.intent.action.VIEW -d "'decentraland://open?position=$POSITION'" "$PKG" >/dev/null 2>&1 || true
   local i
   for i in $(seq 1 45); do
     sh_ logcat -d 2>/dev/null | grep -q '\[RenderReady\]' && break
@@ -227,7 +230,7 @@ cool_down
 # run's "verified settings" come from a launch that had already finished.
 sh_ logcat -c
 t0=$(python3 -c 'import time;print(int(time.time()*1000))')
-total=$(sh_ am start -W -a android.intent.action.VIEW -d "'decentraland://open?position=0,0'" "$PKG" 2>&1 |
+total=$(sh_ am start -W -a android.intent.action.VIEW -d "'decentraland://open?position=$POSITION'" "$PKG" 2>&1 |
   sed -n 's/.*TotalTime: \([0-9]*\).*/\1/p' | head -1)
 pid=$(sh_ pidof "$PKG" 2>/dev/null | tr ' ' '\n' | head -1)
 for _ in $(seq 1 90); do
