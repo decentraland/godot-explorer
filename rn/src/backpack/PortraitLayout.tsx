@@ -139,6 +139,7 @@ export function PortraitLayout({
             copy={copy}
             subRow={subRow}
             bottomInset={heights.full - heights[state.sheet]}
+            entry={!tools}
           />
         </BottomSheet>
         {tools ? (

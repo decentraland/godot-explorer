@@ -16,12 +16,15 @@ export function SheetContent({
   subRow,
   columns,
   bottomInset = 0,
+  entry = false,
 }: {
   controller: BackpackController;
   copy: EmptyCopy;
   subRow?: SubRow;
   columns?: number;
   bottomInset?: number;
+  /** The entry flow's editor (Figma AVATAR_CUSTOMIZE): bigger category tiles, no colour row. */
+  entry?: boolean;
 }) {
   const { state, dispatch, catalog, avatar, slot } = controller;
   const target = state.colorTarget;
@@ -72,6 +75,7 @@ export function SheetContent({
       busy={controller.busy}
       copy={copy}
       subRow={subRow}
+      entry={entry}
       onTab={tab => dispatch({ type: 'tab', tab })}
       onSlot={next => dispatch({ type: 'slot', slot: next })}
       onToggle={controller.toggleWearable}

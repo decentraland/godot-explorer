@@ -1,5 +1,7 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
 import {
+  AppText,
+  colors,
   ItemCard,
   PillButton,
   SlotTile,
@@ -55,6 +57,8 @@ export type WearablesPanelProps = {
   busy?: string | null;
   copy: EmptyCopy;
   subRow?: SubRow;
+  /** The entry flow's editor: 62 dp category tiles and no colour row, as Figma AVATAR_CUSTOMIZE draws it. */
+  entry?: boolean;
   onTab: (tab: TabKey) => void;
   onSlot: (slot: Slot) => void;
   onToggle: (item: Wearable, equipped: boolean) => void;
@@ -104,13 +108,32 @@ export function WearablesPanel(props: WearablesPanelProps) {
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.slotsScroll}
-          contentContainerStyle={styles.slots}
+          contentContainerStyle={props.entry ? styles.entrySlots : styles.slots}
         >
           {SLOTS[tab].map(entry => {
             const worn = catalog
               ? equippedItem(entry, catalog, avatar)
               : undefined;
-            return (
+            return props.entry ? (
+              <View key={entry.key} style={styles.entrySlot}>
+                <ItemCard
+                  style={styles.entryCard}
+                  label={t(entry.label)}
+                  thumbnail={worn?.thumbnail}
+                  art={
+                    worn ? (
+                      <ItemArt category={worn.category} name={worn.name} />
+                    ) : undefined
+                  }
+                  empty={!worn}
+                  state={slot?.key === entry.key ? 'selected' : 'default'}
+                  onPress={() => props.onSlot(entry)}
+                />
+                <AppText variant="body" style={styles.entryLabel}>
+                  {t(entry.label)}
+                </AppText>
+              </View>
+            ) : (
               <SlotTile
                 key={entry.key}
                 label={t(entry.label)}
@@ -128,7 +151,7 @@ export function WearablesPanel(props: WearablesPanelProps) {
           })}
         </ScrollView>
       )}
-      {color && avatar && showSwatches ? (
+      {color && avatar && showSwatches && !props.entry ? (
         <View style={styles.swatches}>
           <SwatchStrip
             palette={palette}
@@ -208,6 +231,17 @@ const styles = StyleSheet.create({
     gap: u(16),
     paddingBottom: u(12),
   },
+  /** Figma AVATAR_CUSTOMIZE `Categories`: 124 px `Cards-Wearables` (emote wheel) tiles 32 px apart, the
+   * 24 px label 4 px under each, 40 px above the cards. */
+  entrySlots: {
+    paddingHorizontal: layout.gutter,
+    paddingTop: u(4),
+    gap: u(16),
+    paddingBottom: u(20),
+  },
+  entrySlot: { width: u(62), alignItems: 'center', gap: u(2) },
+  entryCard: { width: u(62), height: u(62) },
+  entryLabel: { fontSize: u(12), lineHeight: u(14.5), color: colors.snow },
   swatches: { paddingBottom: u(12) },
   busy: { opacity: 0.55 },
   pills: {

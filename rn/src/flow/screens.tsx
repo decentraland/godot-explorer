@@ -29,7 +29,6 @@ import { I18nKey, t } from '../i18n';
 /** Figma `Loader/Logo`: the logo animated, 154 px source drawn at the splash's 130. */
 const loadingLogo = require('../assets/logo-loading.gif');
 const avatarShadow = require('../assets/avatar-shadow.png');
-const decentralandLogo = require('../assets/decentraland_logo.png');
 
 export function DclSplash({ onDone }: { onDone: () => void }) {
   useEffect(() => {
@@ -87,11 +86,9 @@ export function AccountHome({
     <FlowFrame photo edgeToEdge>
       <View style={styles.accountContainer}>
         <View>
-          <Image
-            source={decentralandLogo}
-            style={styles.brandMark}
-            resizeMode="contain"
-          />
+          <View style={styles.brandMark}>
+            <Icon name="nameLogo" size={50} />
+          </View>
           <AppText variant="heading" style={styles.flowTitle}>
             {t('FLOW_ACCOUNT_TITLE')}
           </AppText>
@@ -476,7 +473,8 @@ const styles = StyleSheet.create({
     paddingTop: u(110),
     paddingBottom: u(82.5),
   },
-  brandMark: { width: u(50), height: u(50), alignSelf: 'center' },
+  /** Figma `Logo` 100 px, the DS vector. */
+  brandMark: { alignSelf: 'center' },
   accountBody: {
     fontSize: u(20),
     lineHeight: u(24),
@@ -528,7 +526,14 @@ const styles = StyleSheet.create({
     right: u(34.5),
     gap: u(8),
   },
-  namingTitle: { fontSize: u(18), lineHeight: u(18) },
+  /** The 36 px title in the font's own line (Android clips descenders to a shorter one); the extra
+   * height is taken back so the frame's positions hold. */
+  namingTitle: {
+    fontSize: u(18),
+    lineHeight: u(22),
+    marginTop: -u(2.5),
+    marginBottom: -u(1.5),
+  },
   namingRow: { flexDirection: 'row', alignItems: 'flex-start', gap: u(6.5) },
   namingTag: { fontSize: u(12), lineHeight: u(12), color: colors.snow },
   namingDice: {

@@ -53,6 +53,8 @@ export function Tabs<K extends string>({
               variant="tab"
               style={[
                 { color },
+                // An explicit line keeps Android's font padding out of the baseline.
+                { lineHeight: u((labelSize ?? 14) * 1.2) },
                 labelSize !== undefined && { fontSize: u(labelSize) },
               ]}
             >

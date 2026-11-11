@@ -328,13 +328,13 @@ const styles = StyleSheet.create({
   },
   welcomeText: { position: 'absolute', top: u(61), left: 0, right: 0 },
   welcomeTitle: {
-    marginTop: u(1.5),
+    marginTop: u(0.5),
     fontSize: u(36),
     lineHeight: u(43.5),
     textAlign: 'center',
   },
   welcomeCopy: {
-    marginTop: u(0.5),
+    marginTop: u(1.5),
     fontSize: u(20),
     lineHeight: u(24),
     textAlign: 'center',
@@ -375,9 +375,12 @@ const styles = StyleSheet.create({
   /** Figma AVATAR_CREATE `Sheet`: the DS sheet with its handle, the title, 20 dp, the cards. */
   avatarSheet: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   avatarContent: { gap: u(20) },
+  /** Figma draws this 36 px title in a 34 px line and lets it overflow; Android clips to the line,
+   * so the line is the font's own height and the 10 px it adds are taken back below. */
   avatarChooseTitle: {
     fontSize: u(18),
-    lineHeight: u(17),
+    lineHeight: u(22),
+    marginBottom: -u(5),
     textAlign: 'center',
   },
   /** Edge to edge of the sheet's 24 dp margin, so a dragged card leaves through the screen edge. */
