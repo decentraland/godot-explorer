@@ -45,8 +45,8 @@ const MODAL_ICON = {
 } as const;
 
 /** `surface/modal-glow`: two Mythic radial gradients in the card fill, one on the top-right
- * corner (210×190) and one under the bottom edge (343×140 portrait, 475×140 landscape), with
- * Figma's eased six-stop falloff. */
+ * corner (242×173 portrait, 210×190 landscape) and one under the bottom edge (395×127 portrait,
+ * 475×140 landscape), with Figma's eased six-stop falloff. */
 const FALLOFF = [1, 0.669, 0.399, 0.192, 0.055, 0];
 const glow = (peak: number) =>
   FALLOFF.map((factor, i) => ({
@@ -58,7 +58,7 @@ export const GLOW_TOP = glow(0.6);
 export const GLOW_BOTTOM = glow(0.62);
 
 /** Height of the on-screen keyboard while `active`, so the card can stay above it. */
-function useKeyboardLift(active: boolean): number {
+export function useKeyboardLift(active: boolean): number {
   const [height, setHeight] = useState(0);
   useEffect(() => {
     if (!active) {
@@ -77,7 +77,7 @@ function useKeyboardLift(active: boolean): number {
   return height;
 }
 
-/** Figma `Modal/Dialog` over `Modal/Scrim`: Portrait card 520 wide, Landscape 720, `surface/modal`
+/** Figma `Modal/Dialog` over `Modal/Scrim`: Portrait card 600 wide, Landscape 720, `surface/modal`
  * with the glow, an optional `Icon/Modal` overlapping the top edge, and a CTA row where every
  * button fills an equal share. The scrim is Black 60% (the no-blur fallback); tapping it closes. */
 export function Dialog({
@@ -129,15 +129,15 @@ export function Dialog({
               stops={GLOW_TOP}
               cx={1}
               cy={0}
-              rxDp={u(105)}
-              ryDp={u(95)}
+              rxDp={u(landscape ? 105 : 121)}
+              ryDp={u(landscape ? 95 : 86.5)}
             />
             <RadialFill
               stops={GLOW_BOTTOM}
               cx={0.5}
               cy={1.04}
-              rxDp={u(landscape ? 237.5 : 171.5)}
-              ryDp={u(70)}
+              rxDp={u(landscape ? 237.5 : 197.5)}
+              ryDp={u(landscape ? 70 : 63.5)}
             />
           </View>
           <View style={[styles.content, landscape && styles.contentLandscape]}>
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.modal,
   },
   cardPortrait: {
-    width: u(260),
+    width: u(300),
     paddingTop: u(32),
     paddingBottom: u(30),
     paddingHorizontal: u(28),

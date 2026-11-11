@@ -1,5 +1,5 @@
 // Design System Mobile: the Cards_Backpack, Cards_Discover and Skeleton pages and the Modals page
-// `Sheet` and `Modal/Claim`, every variant.
+// `Sheet`, `Modal/Claim` and `MOdal-OTP`, every variant.
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import {
   AppText,
@@ -8,6 +8,8 @@ import {
   Button,
   ClaimDialog,
   ClaimState,
+  OtpDialog,
+  OtpState,
   colors,
   DetailRow,
   DiscoverCard,
@@ -295,6 +297,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   avatars: { flexDirection: 'row', gap: u(12), overflow: 'hidden' },
+  otpEmail: { fontFamily: fonts.semibold, fontSize: u(13), color: colors.snow },
 });
 
 for (const state of ['default', 'loading', 'claimed'] as ClaimState[]) {
@@ -319,6 +322,39 @@ for (const state of ['default', 'loading', 'claimed'] as ClaimState[]) {
           }
           continueLabel="Tap to continue"
           onClaim={noop}
+          onRequestClose={noop}
+        />
+      </View>
+    ),
+  });
+}
+
+for (const state of ['default', 'verifying', 'error'] as OtpState[]) {
+  registerPreview(`extra/ds-otp-${state}`, {
+    title: `DS: MOdal-OTP ${state}`,
+    orientation: 'portrait',
+    render: () => (
+      <View style={styles.page}>
+        <BrandBackground />
+        <OtpDialog
+          visible
+          state={state}
+          title="Enter verification code"
+          body={
+            <>
+              One time password sent to{' '}
+              <AppText style={styles.otpEmail}>your@email.com</AppText>. Please
+              enter the code below to complete verification.
+            </>
+          }
+          code={state === 'default' ? '' : '111111'}
+          onChangeCode={noop}
+          codeLabel="Verification code"
+          errorMessage="The code is invalid or expired. Please resend code."
+          verifyingLabel="Verifying..."
+          resendPrompt="Didn’t get an email?"
+          resendLabel="Resend Code"
+          onResend={noop}
           onRequestClose={noop}
         />
       </View>

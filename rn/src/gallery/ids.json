@@ -1640,6 +1640,21 @@
     "orientation": "portrait"
   },
   {
+    "id": "extra/ds-otp-default",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/ds-otp-verifying",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/ds-otp-error",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
     "id": "extra/flow-terms",
     "source": "extra",
     "orientation": "portrait"
