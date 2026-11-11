@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: colors.snow,
   },
-  resendOff: { color: colors.white30 },
+  resendOff: { color: colors.textDisabled },
   resendLink: {
     fontFamily: fonts.medium,
     color: colors.link,
