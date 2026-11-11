@@ -261,7 +261,6 @@ const styles = StyleSheet.create({
   },
   slotFilled: { borderColor: colors.pearl },
   slotTyping: {
-    borderWidth: 2,
     borderColor: colors.lavender,
     backgroundColor: colors.black70,
   },

@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
   waitSpinner: { alignItems: 'center', marginTop: u(136) },
   waitCancel: { position: 'absolute', left: u(32), right: u(32), top: u(599) },
   /** Figma: the label starts at y 654, 150 px under the title; NEXT 40 px under the field. */
-  emailForm: { marginTop: u(75), gap: u(35) },
+  emailForm: { marginTop: u(75), gap: u(35.5) },
   /** Figma `Loader/Logo`: the GIF drawn at 140 px, so its 143 px circle (of 154) measures the 130 of the static logo. */
   logo: { width: u(70), height: u(70) },
   guestCreate: {

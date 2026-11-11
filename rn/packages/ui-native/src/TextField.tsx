@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: u(10),
+    marginBottom: u(8.5),
   },
   /** Figma `Input-Label`: Medium 30 px in a 36 px line, so Android and web agree on the baseline. */
   label: {
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
   },
   labelDisabled: { color: colors.white30 },
   box: {
-    minHeight: u(34),
+    minHeight: u(35),
     borderRadius: u(6),
     paddingHorizontal: u(8),
     gap: u(5),
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   counter: { fontFamily: fonts.regular, fontSize: u(10), color: colors.pearl },
   counterMax: { color: colors.ruby200 },
   descriptionRow: {
-    marginTop: u(4),
+    marginTop: u(2),
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
