@@ -369,30 +369,28 @@ export function AuthOtpStart({
   const [email, setEmail] = useState(initial);
   const [blurred, setBlurred] = useState(false);
   const form = useRef<View>(null);
-  const formBottom = useRef(0);
-  const [lift, setLift] = useState(0);
-  const measure = () =>
-    form.current?.measureInWindow((_x, y, _w, h) => {
-      formBottom.current = y + h + formLift.current;
-    });
+  // The form rests 51 px (Figma) above the keyboard, so the lift follows both: the keyboard coming
+  // up and the form growing once there is text (NEXT sits lower when filled).
+  const [formBottom, setFormBottom] = useState(0);
+  const [keyboardTop, setKeyboardTop] = useState<number | null>(null);
+  const lift =
+    keyboardTop === null ? 0 : Math.max(0, formBottom + u(25.5) - keyboardTop);
+  const liftRef = useRef(0);
+  liftRef.current = lift;
   // The form's own offset is undone before measuring, so the lift never feeds back into itself.
-  const formLift = useRef(0);
-  formLift.current = lift;
+  const measure = () =>
+    form.current?.measureInWindow((_x, y, _w, h) =>
+      setFormBottom(y + h + liftRef.current),
+    );
   useEffect(() => {
     const ios = Platform.OS === 'ios';
     const show = Keyboard.addListener(
       ios ? 'keyboardWillShow' : 'keyboardDidShow',
-      event =>
-        setLift(
-          Math.max(
-            0,
-            formBottom.current + u(16.5) - event.endCoordinates.screenY,
-          ),
-        ),
+      event => setKeyboardTop(event.endCoordinates.screenY),
     );
     const hide = Keyboard.addListener(
       ios ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setLift(0),
+      () => setKeyboardTop(null),
     );
     return () => {
       show.remove();
