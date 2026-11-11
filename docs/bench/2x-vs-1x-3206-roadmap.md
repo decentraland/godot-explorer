@@ -22,7 +22,13 @@ importa.
    (`Morning` mide luma 75 en 2.x y 112 en 1.x), y en Genesis Plaza la escena puede tomar el control
    del reloj. Por eso la condición no se verifica por el label sino por la **luminancia de la ventana**
    (ítem A1), y por eso la iluminación pasó a ser el primer workstream técnico (C).
-3. **Antes de tocar nada hay que poder medir barato.** Hoy medir una cosa cuesta ~10 h de teléfono,
+3. **El sol no se puede fijar desde el cliente.** Con `Dynamic Skybox` OFF y `Custom Skybox = Midday`
+   en las dos builds, el mismo cliente siguió midiendo ventanas de luminancia media 53 y 140 en la misma
+   sesión: en Genesis Plaza el reloj lo maneja la escena (`SkyboxTime`), no el ajuste. Además el mismo
+   preset renderiza distinto en cada build (luma ~75 en 2.x, ~105–112 en 1.x). Consecuencia: el sol pasa
+   a tratarse como **covariable medida**, no como variable controlada, y la comparación se hace
+   muestreando cada build a lo largo del ciclo y comparando a **luminancia pareja** (`run_drift.sh`).
+4. **Antes de tocar nada hay que poder medir barato.** Hoy medir una cosa cuesta ~10 h de teléfono,
    taps a ciegas y cooldown manual; el instrumento (Perfetto) no existe en iOS y no aguanta un soak
    largo. Los ítems del workstream A no optimizan nada: hacen que los demás sean evaluables.
 
@@ -64,17 +70,18 @@ Cada ítem: **E**videncia · **A**cción · **V**alidación · costo · riesgo.
 Es el workstream que no optimiza pero habilita todo lo demás.
 
 **A1 · Fijar las condiciones de la escena (sol, N avatares, clima de calidad).**
-- **E.** Mismo perfil y misma temperatura de arranque: 31.3 fps con el sol alto y 14.4 con el sol bajo.
-  Apagar `Dynamic Skybox` **no alcanza**: el preset `Morning` renderiza distinto en cada build (luma
-  75 vs 112) y en Genesis Plaza la escena puede quedarse con el reloj (`SkyboxTime`), así que el
-  label del panel no prueba nada.
-- **A.** Dos reglas: (1) `Dynamic Skybox` OFF en los dos builds, (2) la condición se verifica por
-  **luminancia media de la ventana**, guardada en `state.json` y usada para **parear** las corridas —
-  sólo se comparan corridas de luma cercana, nunca medianas de poblaciones distintas.
-- **V.** Dos corridas del mismo build con luma dentro de ±5 y fps dentro de ±5 %.
-- **Costo** S · **Riesgo** bajo. **Estado:** hecho en el runner (`state.json`) y aplicado en
-  `gp-hi-ab/`; `gp-hi-fixed-sky/` y `gp-hi-midday/` quedan como evidencia de que el preset solo no
-  alcanza.
+- **E.** El sol no se puede fijar desde el cliente: con `Dynamic Skybox` OFF y `Custom Skybox = Midday`
+  en las dos builds, la misma sesión de 2.x midió ventanas de luma 53.5 y 140.4, y el ciclo se mueve en
+  minutos (muestreos consecutivos: 58.6 → 41.8 → 41.5 → 58.1). En Genesis Plaza el reloj lo controla la
+  escena (`SkyboxTime`), y el mismo preset renderiza distinto en cada build (luma ~75 en 2.x,
+  ~105–112 en 1.x).
+- **A.** Dejar de intentar fijarlo: `run_drift.sh` muestrea **una** build N veces a lo largo del ciclo y
+  guarda `sampling.csv` (luma, fps, p50, p99, cpu, temperatura, hora). La comparación entre builds se
+  hace **a luminancia pareja**, no por medianas de poblaciones distintas.
+- **V.** Dos builds con muestras en la misma banda de luma (|Δ| ≤ 5) y fps dentro de ±5 % para el mismo
+  estado de luz.
+- **Costo** S · **Riesgo** bajo. **Estado:** hecho en el runner (`state.json` + `run_drift.sh`);
+  `gp-hi-fixed-sky/` y `gp-hi-midday/` quedan como evidencia de que el preset solo no alcanza.
 
 **A2 · Args de engine por deeplink en 2.x.**
 - **E.** El shell RN arma `BOOT_ARGS` fijo (`rn/android/app/src/godot/java/com/dclrn/MainActivity.kt`),
@@ -139,7 +146,8 @@ Es el workstream que no optimiza pero habilita todo lo demás.
 **C1 · Entender por qué el sol bajo cuesta 2.2×.**
 - **E.** Mismo build, mismo perfil, misma temperatura: 31.3 fps con luma 117 vs 14.4 fps con luma 78
   (en 1.x el mismo patrón: 24.5 fps con luma 129 vs 15.5 con luma 78). La diferencia entre builds es
-  de decenas de %, la del sol es de más del doble.
+  de decenas de %, la del sol es de más del doble. El ciclo lo maneja la escena: con `Midday` fijado y
+  el dynamic skybox apagado, la misma sesión midió luma 53.5 y 140.4, y el ciclo se mueve en minutos.
 - **A.** Con A3: comparar a mediodía y de noche `draw_calls`, `objects_in_frame`, luces activas,
   overdraw y tiempo de GPU. Hipótesis: muchas luces/emisiones encendidas + IBL distinta + más
   materiales con blend.
@@ -399,6 +407,12 @@ WINDOW=30 SETTLE=25 TARGET_TEMP=34 SCENARIO=gp-hi-fixed-sky \
 
 # tabla agregada desde los CSV crudos (saltea escenarios con INVALID.md)
 python3 scripts/bench/2x-vs-1x/summarize.py --root docs/bench/data/2x-vs-1x-3206
+
+# el sol no se puede fijar desde el cliente: se muestrea una build mientras la luz se mueve
+BUILD=2x LABEL=2x-drift SAMPLES=12 GAP=75 scripts/bench/2x-vs-1x/run_drift.sh
+
+# iOS: fps del HUD del engine vía árbol de accesibilidad (1 Hz, sin frame timeline)
+SETTLE=25 SAMPLES=20 scripts/bench/2x-vs-1x/ios_hud_sample.sh 2x-ios-r1
 ```
 
 Cada corrida deja: `frames.csv`, `cpu.csv`, `mem.csv`, `thermal.csv`, `meminfo-*.log`,

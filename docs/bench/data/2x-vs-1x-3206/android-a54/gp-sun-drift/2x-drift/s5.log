@@ -1,0 +1,15 @@
+{
+  "frames": "691",
+  "fps_avg": "22.890000",
+  "span_s": "29.930000",
+  "interval_p50_ms": "41.710000",
+  "interval_p95_ms": "58.330000",
+  "interval_p99_ms": "67.660000",
+  "interval_max_ms": "116.610000",
+  "fps_p1_low": "14.780000",
+  "fps_p5_low": "17.140000",
+  "fps_median": "23.980000",
+  "pct_missed_deadline": "15.770000",
+  "jank_any": "691"
+}
+wrote docs/bench/data/2x-vs-1x-3206/android-a54/gp-sun-drift/2x-drift/s5

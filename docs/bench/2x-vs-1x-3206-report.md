@@ -149,10 +149,45 @@ Con el cielo fijado (`Dynamic Skybox` OFF) el mismo 2.x dio **15.18 / 14.42 / 13
 77.6 / 72.6): **2.2× menos que la misma build con el sol alto**. La variable sol mueve el resultado más
 que la diferencia entre builds, así que ninguna comparación es válida sin fijarla.
 
-Peor: **el preset no significa lo mismo en las dos builds.** Con `Morning` en ambas, la ventana mide
-luma ≈ 75 en 2.x y ≈ 105–112 en 1.x; en 1.x, pasar a `Midday` lleva la luz a luma ≈ 140. Por eso la
-condición no se verifica con el label del panel sino con la **luminancia de la ventana**, que ahora se
-guarda por corrida en `state.json` junto a la temperatura de arranque.
+### El ajuste de cielo no llega al mundo
+
+Elegir una hora en `Custom Skybox` no cambia nada medible después de reiniciar la app. Misma build,
+mismo perfil, mismo ajuste fijado, una ventana por preset, cada una después de un lanzamiento limpio:
+
+| preset elegido | luma de la ventana |
+|---|---:|
+| Midnight | 63.4 |
+| Afternoon | 61.6 |
+| Midday | 66.8 |
+| Morning | 60.6 |
+
+Cuatro soles distintos, un solo render. Y el mismo label tampoco significa la misma luz en las dos
+builds: con `Morning` fijado, la ventana mide luma ≈ 75 en 2.x y 105–112 en 1.x, porque 1.x es otro
+engine. Conclusión: el ajuste no sirve como variable de control. Se registra la luminancia de cada
+ventana en `state.json` y sólo se comparan corridas de la misma banda.
+
+La luz tampoco se mueve rápido: doce ventanas de 30 s en una misma sesión de 2.x, espaciadas 111 s,
+dieron luma 56.4–61.0 (fps 18.4–22.9, mediana 21.5, p50 50 ms, CPU ~190 %). O sea: dentro de una
+sesión la luz es estable, y lo que difiere entre builds es **cómo renderiza cada una**, no la hora.
+
+### La matriz HIGH no se puede parear, y por qué
+
+Con `HIGH` + dynamic OFF, la misma etiqueta de ajuste produce ventanas con luma sistemáticamente
+distinta por build, y el fps la sigue:
+
+| build | corridas | fps | luma | p50 | CPU |
+|---|---|---:|---|---:|---:|
+| 1.x | `1x-v3-r3` | 14.06 | 86.0 | 67.0 | 170.7 % |
+| 1.x | `1x-v3-r1` | 26.87 | 101.6 | 33.4 | 182.2 % |
+| 1.x | `1x-v3-r2` | 15.83 | 117.6 | 58.4 | 181.7 % |
+| 2.x | `2x-drift` s1–s12 | 21.5 (mediana) | 56.4–61.0 | 50.0 | ~190 % |
+| 2.x | `2x-sky-r1..r3` | 15.2 / 14.4 / 13.5 | 75.5 / 77.6 / 72.6 | 66.7–75.0 | 133–149 % |
+
+No hay un par comparable: 1.x nunca baja de luma 86 en estas corridas y 2.x nunca sube de 78 con el
+mismo ajuste. La relación tampoco es monótona (2.x a luma 57–61 hace 21.5 fps; a luma 72–78 hace
+13.5–15.2), así que no se puede extrapolar. **La conclusión honesta es que la matriz `HIGH` necesita
+una escena con el cielo controlable, y que hasta entonces no se publica un Δ % de esa matriz.** Queda
+como primer ítem del roadmap (A1/C1).
 
 ### Qué cambió en el método
 

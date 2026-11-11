@@ -1,0 +1,32 @@
+{
+  "label": "2x-drift-s8",
+  "build": "2x",
+  "scenario": "gp-sun-drift",
+  "device": "SM-A546E",
+  "device_serial": "R5CW60624NE",
+  "pkg": "org.decentraland.godotexplorer",
+  "version_name": "2.0.0(2723)",
+  "pid_before": 14942,
+  "trace_wall_seconds": 30.18,
+  "started_at": "2026-11-11T12:15:34-0300",
+  "frames": {
+    "frames": "646",
+    "fps_avg": "21.400000",
+    "span_s": "29.890000",
+    "interval_p50_ms": "49.910000",
+    "interval_p95_ms": "66.620000",
+    "interval_p99_ms": "83.280000",
+    "interval_max_ms": "124.920000",
+    "fps_p1_low": "12.010000",
+    "fps_p5_low": "15.010000",
+    "fps_median": "20.030000",
+    "pct_missed_deadline": "24.920000",
+    "jank_any": "643"
+  },
+  "rss_peak_kb": 2533508,
+  "rss_steady_kb": 2407080,
+  "mem_samples": 17,
+  "notes": "",
+  "thermal_end_c": 48.8,
+  "cpu_mean_pct": 200.7
+}
