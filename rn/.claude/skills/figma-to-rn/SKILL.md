@@ -448,6 +448,13 @@ chosen). Lead with what does not match. Do not write "coincide" without numbers 
   between two frames. Two frames with the same name (AUTH_BROWSER_OPEN "Opening browser..." and "Loading...") are two
   steps until proven otherwise, and frames between them (AUTH_WEB_MAGIC, GoogleScreen) are the browser's, not ours.
   Never invent the trigger for a state change (app foreground, a timer): derive it from what the frames show happening.
+- **Android balances the lines of a paragraph; Figma fills each line greedily.** A copy that wraps one word earlier
+  than the frame needs `textBreakStrategy="simple"` (`AppText` forwards it).
+- **A shadow on a wrapper follows the wrapper's corners, not its child's.** A rounded `Sheet` under a square
+  wrapper drew a straight shadow band over the corners; give the wrapper the same radii and zoom the corner 600 %.
+- **A state the frame draws but the text query misses** (a disabled link, a countdown "(2:00)") lives in a component
+  variant: read the component set (`Button/Link` Default / Pressed / Disabled) for the exact fill, opacity and
+  decoration, and check the frame's own copy of it for flips (the waiting frames mirror it).
 - A frame's text that differs from i18n changes the key (all three languages), not the call site.
 
 ## Worked reference (Account Home, HIFI frame `1738:9473` in `H1Alvbe7sh0e0IyLckewMI`)
