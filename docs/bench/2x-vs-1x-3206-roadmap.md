@@ -15,13 +15,10 @@ importa.
 1. **El problema demostrado no es el frame medio.** A igualdad de configuración, 2.x ya hace más fps
    que 1.x; lo que empeora es la **cola** (p99 +11.9 %, fps p1 −10.6 %) *gastando 10.3 % menos CPU*.
    Eso es trabajo periódico dentro del frame, no falta de throughput.
-2. **La medición estaba dominada por una variable que nadie estaba fijando: el sol.** Con
-   `Dynamic Skybox` encendido el mismo build dio **31.3 fps a mediodía y 14.4 fps con el sol bajo** en
-   la misma plaza y con la misma temperatura de arranque: **2.2×**, más que cualquier diferencia entre
-   builds. Peor: el preset con el que se intenta fijarlo **no significa lo mismo en los dos builds**
-   (`Morning` mide luma 75 en 2.x y 112 en 1.x), y en Genesis Plaza la escena puede tomar el control
-   del reloj. Por eso la condición no se verifica por el label sino por la **luminancia de la ventana**
-   (ítem A1), y por eso la iluminación pasó a ser el primer workstream técnico (C).
+2. **La medición estaba dominada por una variable que nadie estaba fijando: el sol.** Mismo build y misma
+   temperatura de arranque: 31.3 fps con el sol alto contra 14.4 con el sol bajo, **2.2×**, más que la
+   diferencia entre builds. La iluminación pasó a ser el primer workstream técnico (C), y el sol dejó de
+   tratarse como un ajuste (punto siguiente, ítem A1).
 3. **El sol no se puede fijar desde el cliente.** Con `Dynamic Skybox` OFF y `Custom Skybox = Midday`
    en las dos builds, el mismo cliente siguió midiendo ventanas de luminancia media 53 y 140 en la misma
    sesión: en Genesis Plaza el reloj lo maneja la escena (`SkyboxTime`), no el ajuste. Además el mismo
