@@ -950,6 +950,11 @@
     "orientation": "portrait"
   },
   {
+    "id": "extra/flow-code-resend-wait",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
     "id": "extra/flow-comeback",
     "source": "extra",
     "orientation": "portrait"

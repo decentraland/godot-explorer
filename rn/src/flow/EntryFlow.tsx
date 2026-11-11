@@ -36,6 +36,8 @@ import {
 } from './screens';
 import { t } from '../i18n';
 
+const RESEND_WAIT_MS = 2 * 60 * 1000;
+
 /** Portrait-only entry flow: splash → account → (auth) → avatar → name → app. */
 export function EntryFlow({ onDone }: { onDone: () => void }) {
   const [flow, dispatch] = useReducer(reduceFlow, initialFlow);
@@ -51,6 +53,8 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
   const [preset, setPreset] = useState(0);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
+  // Every code is sent with a 2 minute wait before the next one can be asked for.
+  const [resendAt, setResendAt] = useState(0);
   // Figma: "Opening browser..." until the browser hands the login back, then "Loading..." while the
   // profile is read.
   const [returned, setReturned] = useState(false);
@@ -112,6 +116,7 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
     setEmailError(null);
     try {
       await sendEmailCode(email);
+      setResendAt(Date.now() + RESEND_WAIT_MS);
       dispatch({ type: 'emailSent', email });
     } catch {
       setEmailError(t('FLOW_EMAIL_SEND_FAILED'));
@@ -295,6 +300,7 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
             error={coding ? emailError : null}
             busy={busy && !resending}
             onSubmit={submitCode}
+            resendAt={resendAt}
             onResend={resend}
             onClose={back}
           />

@@ -37,6 +37,7 @@ export function AuthOtpEntercode({
   onResend,
   onClose,
   initialCode = '',
+  resendAt = 0,
 }: {
   visible: boolean;
   email: string;
@@ -47,6 +48,8 @@ export function AuthOtpEntercode({
   onClose: () => void;
   /** The digits the slots start with, for the gallery. */
   initialCode?: string;
+  /** When the link text turns on again (epoch ms): Figma disables it for 2 minutes after each send. */
+  resendAt?: number;
 }) {
   const input = useRef<TextInput>(null);
   const [code, setCode] = useState(initialCode);
@@ -59,6 +62,16 @@ export function AuthOtpEntercode({
   }, [visible, initialCode]);
   useEffect(() => setEdited(false), [error]);
   const failed = !!error && !edited && !busy;
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const wait = resendAt - Date.now();
+    if (wait <= 0) {
+      return;
+    }
+    const timer = setTimeout(() => setNow(Date.now()), wait);
+    return () => clearTimeout(timer);
+  }, [resendAt]);
+  const resendOff = now < resendAt;
   // The address is bold inside the sentence, whatever order the translation puts it in. Android
   // may break a line between an address and the full stop after it, which the frame never does:
   // then the address starts the next line, as the frame draws it.
@@ -182,8 +195,9 @@ export function AuthOtpEntercode({
             {t('FLOW_CODE_RESEND_PROMPT')}{' '}
             <Text
               accessibilityRole="link"
-              onPress={onResend}
-              style={styles.resendLink}
+              accessibilityState={{ disabled: resendOff }}
+              onPress={resendOff ? undefined : onResend}
+              style={[styles.resendLink, resendOff && styles.resendOff]}
             >
               {t('FLOW_CODE_RESEND')}
             </Text>
@@ -312,6 +326,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: colors.snow,
   },
+  resendOff: { color: colors.white30 },
   resendLink: {
     fontFamily: fonts.medium,
     color: colors.link,

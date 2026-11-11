@@ -187,6 +187,33 @@ registerPreview('extra/flow-email', {
   }),
 );
 
+registerPreview('extra/flow-code-resend-wait', {
+  title: 'Flow: code (Resend Code waiting)',
+  orientation: 'portrait',
+  notes: 'Figma note: the link text is disabled for 2 minutes after each send.',
+  render: () => (
+    <>
+      <AuthOtpStart
+        initial=""
+        error={null}
+        busy={false}
+        onSubmit={noop}
+        onBack={noop}
+      />
+      <AuthOtpEntercode
+        visible
+        email="your@email.com"
+        error={null}
+        busy={false}
+        onSubmit={noop}
+        onResend={noop}
+        onClose={noop}
+        resendAt={Number.MAX_SAFE_INTEGER}
+      />
+    </>
+  ),
+});
+
 registerPreview('extra/flow-comeback', {
   title: 'Flow: welcome back',
   orientation: 'portrait',
