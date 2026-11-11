@@ -293,10 +293,12 @@ print(json.dumps({"luma_mean": round(luma, 1), "thermal_start_c": float(thermal[
 PY2
 luma=$(sed -n 's/.*"luma_mean": \([0-9.]*\).*/\1/p' "$OUT/state.json")
 # A modal over the world or a wrong pose reads as a different scene: below this the window is not the
-# world (the tutorial run measured luma 48 against 75-140 for the real thing).
-if python3 -c "import sys; sys.exit(0 if float('$luma') < 55 else 1)"; then
+# world (the tutorial run measured luma 48 against 75-140 for the real thing). LUMA_MIN exists because the
+# world-clock arms measure at night on purpose, where the same scene legitimately reads ~47.
+LUMA_MIN=${LUMA_MIN:-55}
+if python3 -c "import sys; sys.exit(0 if float('$luma') < float('$LUMA_MIN') - 0.001 else 1)"; then
   echo "[FAIL] window is not the plain world (luma $luma): an overlay or a wrong pose"
-  printf 'Window luma %.1f is far below every valid run in this scenario: an overlay (the first-run\ntutorial dims the world to ~48) or a different pose.\n' "$luma" > "$OUT/INVALID.md"
+  printf 'Window luma %.1f is far below the floor %s: an overlay (the first-run tutorial dims the world)\nor a different pose.\n' "$luma" "$LUMA_MIN" > "$OUT/INVALID.md"
   exit 1
 fi
 if python3 -c "import sys; sys.exit(0 if float('$luma') >= 100 else 1)"; then :; else
