@@ -427,6 +427,22 @@ chosen). Lead with what does not match. Do not write "coincide" without numbers 
 - `prettier --write <dir>` reformats files you did not touch; `git add <dir>` takes stray untracked dirs along. Stage files
   by name and look at `git diff --cached --stat`.
 - Renaming files/ids: do it with a script restricted to the flow files (`'account'` is also a settings section).
+- **A `lineHeight` at or below the font size clips descenders on Android** (the "y" of "your" lost its tail in two
+  titles and the dialog title; Figma draws such titles overflowing their 34 px box). Crop and zoom every title
+  with descenders on the device. Fix: the font's own line (~1.2 × size) and take the added height back with
+  negative margins so the frame's positions hold; check web and native both.
+- **Text without a `lineHeight` sits ~4 px lower on Android than on web** (font padding). Set the line height the frame
+  draws (Figma label 36 px → `u(18)`) on shared components (`TextField` label, `Tabs`): that fixes every screen that
+  uses them, instead of one screen's margin.
+- `exportAsync({ format: 'SVG_STRING' })` on a component inside `use_figma` returns the whole vector in one string
+  (`download_assets` returns one file per layer): use it for logos and illustrations. Check `iconSvgs.ts` first;
+  the DS already had `nameLogo` (same mark) and `walletConnect`.
+- Before redrawing a tile, card or button, look for the DS variant: the editor's category tiles are
+  `Cards-Wearables EmoteWheel=On` = `ItemCard state="selected" | empty` at 62 dp, not `SlotTile`.
+- A frame may place a shared component differently from the code (the finish-look dialog sits 47 px above the screen
+  centre and its card is 514 px wide): report it under Decisions; do not bend the shared component for one frame.
+- Release-style captures hide gallery-only states; screens fed by mock data differ from Figma samples (`{Username}`,
+  "Text / 0/15", jackets as thumbnails): compare structure and geometry, not sample content.
 - A frame's text that differs from i18n changes the key (all three languages), not the call site.
 
 ## Worked reference (Account Home, HIFI frame `1738:9473` in `H1Alvbe7sh0e0IyLckewMI`)
