@@ -77,7 +77,7 @@ Entry flow, per build (once per install; every later launch enters straight from
 `ui.sh texts` dumps every visible text with its bounds; that is how the 2.x driver finds nodes and
 how the report's screen table was navigated.
 
-## 4. Fixed pose and graphics profile
+## 4. Fixed pose, graphics profile and sky
 
 - **Pose:** `decentraland://open?position=0,0`. The client spawns at `position "0,-2"` (both builds
   log the same value) and nothing moves the camera: no touch input during the window.
@@ -98,6 +98,20 @@ how the report's screen table was navigated.
 
   A run where the two builds report a different `profile`, or where 2.x does not log
   `enabled=false`, is void.
+
+  The taps are not trustworthy on their own: in `gp-hi-pair/` the panel showed `High` while the
+  engine loaded profile `0` on two 1.x runs and profile `2` on one 2.x run (see that directory's
+  `INVALID.md`). The profile that counts is the one the engine logged, so the guard reads
+  `"profile":3` out of the `[RenderReady]` of **that run's own pid** (`logcat -c` before launch, then
+  filter by the pid reported by `pidof`), and checks that no `Profile (downgrade|upgrade)` line
+  appears inside the window. Anything else writes `INVALID.md`.
+
+- **Sky: pinned to one time of day.** `Dynamic Skybox` OFF in **both** builds (`Custom Skybox` follows
+  the toggle and lands on `Morning` = 06:00; 1.x exposes the same toggle in the in-world panel). With
+  it ON the sun follows the world clock and the same build swings between ~31 fps at midday and ~15
+  fps at sunrise in this scene — larger than the difference between the builds, which is why
+  `gp-hi-pair/` is invalid. The measured frame's mean luminance is written to `state.json` as the
+  fingerprint of that state, together with the starting temperature.
 
 ## 5. What is measured, and how
 

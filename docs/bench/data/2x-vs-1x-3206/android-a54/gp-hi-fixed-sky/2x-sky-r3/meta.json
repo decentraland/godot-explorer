@@ -1,0 +1,32 @@
+{
+  "label": "2x-sky-r3",
+  "build": "2x",
+  "scenario": "gp-hi-fixed-sky",
+  "device": "SM-A546E",
+  "device_serial": "R5CW60624NE",
+  "pkg": "org.decentraland.godotexplorer",
+  "version_name": "2.0.0(2723)",
+  "pid_before": 22070,
+  "trace_wall_seconds": 30.15,
+  "started_at": "2026-11-11T10:50:40-0300",
+  "frames": {
+    "frames": "406",
+    "fps_avg": "13.470000",
+    "span_s": "29.860000",
+    "interval_p50_ms": "75.050000",
+    "interval_p95_ms": "83.430000",
+    "interval_p99_ms": "91.590000",
+    "interval_max_ms": "99.960000",
+    "fps_p1_low": "10.920000",
+    "fps_p5_low": "11.990000",
+    "fps_median": "13.330000",
+    "pct_missed_deadline": "39.900000",
+    "jank_any": "406"
+  },
+  "rss_peak_kb": 2349387,
+  "rss_steady_kb": 2296891,
+  "mem_samples": 18,
+  "notes": "",
+  "thermal_end_c": 46.2,
+  "cpu_mean_pct": 146.6
+}

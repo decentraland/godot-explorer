@@ -54,6 +54,9 @@ def read_run(run_dir: Path) -> dict:
     launch = run_dir.parent / f"{meta['label']}-launch.json"
     if launch.exists():
         row.update(json.loads(launch.read_text()))
+    state = run_dir / "state.json"
+    if state.exists():
+        row.update(json.loads(state.read_text()))
     log = run_dir.parent / f"launch-{meta['label']}.log"
     if log.exists():
         text = log.read_text(errors="replace")
@@ -131,6 +134,25 @@ def main() -> None:
             "",
             f"**Budget:** fps ≥ 1.x → **{verdict_fps}**; RSS ≤ 1.x + 100 MB "
             f"({rss_budget:.0f} MB) → **{verdict_rss}**",
+            "",
+            "Per run: the sky is the biggest confounder in this scene, so `luma` (mean screen "
+            "luminance of the measured frame) and the starting temperature go next to the fps. Runs "
+            "whose luma do not belong to the same band are not a comparison, whatever the medians say.",
+            "",
+            "| run | fps avg | p50 ms | p99 ms | CPU % | T start °C | luma |",
+            "|---|---:|---:|---:|---:|---:|---:|",
+        ]
+        for run in sorted(runs, key=lambda r: (r["build"], r["label"])):
+            lines.append(
+                f"| {run['label']} ({run['build']}) | "
+                f"{fmt(run.get('fps_avg'), '{:.1f}')} | "
+                f"{fmt(run.get('interval_p50_ms'), '{:.1f}')} | "
+                f"{fmt(run.get('interval_p99_ms'), '{:.1f}')} | "
+                f"{fmt(run.get('cpu_mean_pct'), '{:.1f}')} | "
+                f"{fmt(run.get('thermal_start_c'), '{:.1f}')} | "
+                f"{fmt(run.get('luma_mean'), '{:.1f}')} |"
+            )
+        lines += [
             "",
         ]
         sections.append("\n".join(lines))

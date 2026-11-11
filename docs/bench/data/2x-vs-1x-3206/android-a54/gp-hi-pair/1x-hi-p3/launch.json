@@ -1,0 +1,6 @@
+{
+  "build": "1x",
+  "label": "1x-hi-p3",
+  "am_total_time_ms": 295,
+  "cold_launch_to_render_ready_ms": 1004
+}

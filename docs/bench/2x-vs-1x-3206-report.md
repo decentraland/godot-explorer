@@ -105,6 +105,77 @@ N avatares.
 (`SKIP`). Son overlays del motor dibujados sobre el mundo: suman UI a 1.x durante la ventana. No
 invierte el resultado (2.x es peor en la cola, no mejor), pero es una asimetría real y se declara.
 
+## 1.1 Corrección posterior: dos confusores que invalidaron la matriz HIGH
+
+La primera versión de este reporte publicó una matriz con `HIGH` + dynamic graphics OFF (escenario
+`gp-hi-pair/`) que ya no se sostiene. Al re-leer la evidencia de cada corrida aparecieron dos variables
+que no estaban controladas, y las dos mueven el resultado más que la diferencia entre builds.
+
+### El perfil no era `HIGH` en todas las corridas
+
+Los ajustes se aplican tapeando el panel, y el panel mostró `High` mientras el engine cargaba otro
+preset. La prueba está en el campo `profile` del JSON de `[RenderReady]` de cada corrida (2 = medium,
+3 = high):
+
+| corrida | profile cargado | fps |
+|---|---:|---:|
+| `1x-hi-p1` | **0 (low)** | 24.49 |
+| `1x-hi-p2` | 3 | 15.47 |
+| `1x-hi-p3` | 3 | 15.92 |
+| `1x-hi-p4` | **0 (low)** | 13.50 |
+| `2x-hi-p1` | **2 (medium)** | 31.31 |
+| `2x-hi-p2` | 3 | 30.53 |
+
+La corrida que más se repitió (24.49 fps, el "outlier" de 1.x que se re-midió cuatro veces) corrió en
+**low**, y la mejor de 2.x (31.31 fps) en **medium**. El directorio queda marcado inválido en
+`gp-hi-pair/INVALID.md`.
+
+### La hora del mundo no estaba fijada
+
+Con `Dynamic Skybox` encendido el sol avanza, y esta escena cuesta distinto según dónde esté. La
+luminancia media de la captura de la ventana (`luma`: media del canal L de `screen.png`) contra fps,
+todas las corridas de `gp-hi-pair/`:
+
+| luma | build | fps |
+|---:|---|---:|
+| 129.4 | 1.x | 24.49 |
+| 128.5 | 2.x | 30.53 |
+| 117.6 | 2.x | 31.31 |
+| 90.3 | 1.x | 15.92 |
+| 89.5 | 1.x | 13.50 |
+| 78.0 | 1.x | 15.47 |
+
+Con el cielo fijado (`Dynamic Skybox` OFF) el mismo 2.x dio **15.18 / 14.42 / 13.47 fps** (luma 75.5 /
+77.6 / 72.6): **2.2× menos que la misma build con el sol alto**. La variable sol mueve el resultado más
+que la diferencia entre builds, así que ninguna comparación es válida sin fijarla.
+
+Peor: **el preset no significa lo mismo en las dos builds.** Con `Morning` en ambas, la ventana mide
+luma ≈ 75 en 2.x y ≈ 105–112 en 1.x; en 1.x, pasar a `Midday` lleva la luz a luma ≈ 140. Por eso la
+condición no se verifica con el label del panel sino con la **luminancia de la ventana**, que ahora se
+guarda por corrida en `state.json` junto a la temperatura de arranque.
+
+### Qué cambió en el método
+
+- Guard nuevo: la corrida se acepta sólo si el `[RenderReady]` **de su propio pid** trae
+  `"profile":3` y no aparece ninguna línea `Profile (downgrade|upgrade)` dentro de la ventana. El guard
+  ya abortó tres corridas 1.x que habían arrancado en profile 0.
+- `logcat -c` antes de cada lanzamiento: antes el buffer traía líneas de lanzamientos anteriores y una
+  corrida quedó "verificada" con la evidencia de otra.
+- Se descarta el tutorial de primer uso (`Welcome to Decentraland`): es un modal que oscurece la
+  ventana entera y hundió una corrida a luma 48.9.
+- Matriz pareada: se alternan builds con reinstalación por corrida (el cambio de buildCode obliga a
+  desinstalar), `state.json` por corrida y comparación sólo entre corridas de luma cercana.
+
+**Lo que sigue válido:** §1 (5 + 5 corridas con los defaults que se entregan, dynamic graphics ON)
+no se toca. Con el cap encendido los dos builds quedan clavados en ~18 fps y el sol no mueve la aguja;
+lo que queda invalidado es la matriz `HIGH` + dynamic OFF de `gp-hi-pair/`.
+
+**iOS quedó medible.** El HUD del engine está en el árbol de accesibilidad: `/Users/lordmanuel/bin/iphone ui`
+devuelve `2.0.0.2723-e3b7aa1-staging - 60 FPS` (muestreo a 1 Hz; primeras muestras 59–60 fps en Bloom
+Garden con los ajustes que se entregan). Además los ajustes de iOS son scriptables: `Documents/settings.json`
+del contenedor de la app se lee y se escribe con `xcrun devicectl device copy from|to`, con las claves
+`dynamic_graphics_enabled`, `dynamic_skybox`, `skybox_time` y `graphic_profile`.
+
 ## 2. Carga y arranque
 
 | métrica | 1.x | 2.x | Δ |
@@ -233,7 +304,16 @@ de Settings.
    `frames.csv` de cada corrida (máx 100 ms en 2.x vs 92 ms en 1.x) y las trazas de Perfetto los
    ubican — candidato a investigar en una issue aparte: trabajo del hilo JS/RN intercalado con el
    render, o GC.
-2. **El fps medio no es comparable con dynamic graphics ON.** Los dos builds se autolimitan a
+2. **El sol pesa más que el build.** Con `Dynamic Skybox` OFF y la misma configuración, 2.x pasó de
+   31.3 fps (sol alto) a 13.5–15.2 fps (sol bajo): 2.2×. Se descubrió después de cerrar la primera
+   versión y obligó a invalidar la matriz `HIGH` (§1.1).
+3. **El panel de ajustes puede mentir.** Tres de seis corridas de `gp-hi-pair/` arrancaron en profile
+   0 o 2 con el panel mostrando `High`; la única prueba válida del perfil es el `[RenderReady]` del
+   pid de esa corrida, no lo que dice la UI ni un `logcat` sin filtrar.
+4. **iOS quedó medible en fps y con ajustes scriptables.** El HUD del engine aparece en el árbol de
+   accesibilidad (muestreo a 1 Hz, sin frame timeline) y `Documents/settings.json` se escribe desde
+   `devicectl`, así que la matriz se puede correr en iPhone sin tocar el cliente.
+5. **El fps medio no es comparable con dynamic graphics ON.** Los dos builds se autolimitan a
    ~18 fps en este teléfono. Para que el benchmark pueda ver diferencia haría falta un flag de
    arranque que lo desactive (y, del lado 1.x, que el runner `gp_benchmark` sea invocable también en
    2.x: hoy el shell RN usa `BOOT_ARGS` fijo y descarta los parámetros de engine del deeplink).
@@ -322,6 +402,14 @@ y no están en el árbol de accesibilidad). **Red degradada**: sin ejecutar (pro
 9. **UI sólo con lado 2.x y con piso de 0.5 s**: ver §6. En 1.x esas pantallas se dibujan en el motor
    y no hay árbol de accesibilidad, así que no se midieron; y el probe por capturas no distingue nada
    por debajo de una captura (~0.5 s), que es el caso de Settings.
+
+10. **La matriz `HIGH` definitiva se mide pareada.** El preset de cielo renderiza distinto en cada
+    build (mismo label, luma 75 vs 105–112), así que se alternan builds con la misma configuración y
+    se compara sólo entre corridas de luma cercana; el número final es un par, no un promedio suelto.
+11. **`summarize.py` no corrige por luma.** Agrega por corrida y puede juntar en una misma mediana dos
+    corridas con el sol en posiciones distintas; las tablas de `gp-hi-pair/` lo muestran.
+12. **iOS no tiene frame timeline.** El fps sale de muestrear el HUD cada 1–2 s: hay fps medio, no hay
+    p50/p99 de frame time en iOS.
 
 ## 11. Qué haría falta para cerrar lo que falta
 

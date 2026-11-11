@@ -64,3 +64,7 @@ scripts/bench/.env.bak
 /metro.log
 /shots/
 /visual-report/
+
+# Perfetto captures from the 2.x-vs-1.x benchmark runs: hundreds of MB per scenario, and the CSVs
+# next to them carry every number the report quotes.
+*.perfetto-trace
