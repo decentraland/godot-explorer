@@ -955,6 +955,11 @@
     "orientation": "portrait"
   },
   {
+    "id": "extra/flow-email-filled",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
     "id": "extra/flow-email-invalid",
     "source": "extra",
     "orientation": "portrait"

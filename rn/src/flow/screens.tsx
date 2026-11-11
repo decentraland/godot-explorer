@@ -400,6 +400,7 @@ export function AuthOtpStart({
     };
   }, []);
   const invalid = blurred && email.trim() !== '' && !isValidEmail(email);
+  const filled = email.trim() !== '' && !error && !invalid;
   return (
     <FlowFrame onBack={onBack} edgeToEdge>
       <View style={styles.emailScroll}>
@@ -412,7 +413,12 @@ export function AuthOtpStart({
         <View
           ref={form}
           onLayout={measure}
-          style={[styles.emailForm, { transform: [{ translateY: -lift }] }]}
+          style={[
+            styles.emailForm,
+            // Figma `Input/Field` State=Filled keeps NEXT 8 px further down than Default and Error.
+            filled && styles.emailFormFilled,
+            { transform: [{ translateY: -lift }] },
+          ]}
         >
           <TextField
             label={t('FLOW_EMAIL_LABEL')}
@@ -473,6 +479,7 @@ const styles = StyleSheet.create({
   /** Figma: the label starts at y 654, 150 px under the title; NEXT 40 px under the field. */
   /** The form spans 624 px (48 px margins), 16 px wider each side than the 64 px title column. */
   emailForm: { marginTop: u(75), gap: u(28), marginHorizontal: -u(8) },
+  emailFormFilled: { gap: u(32) },
   /** Figma `Loader/Logo`: the GIF drawn at 140 px, so its 143 px circle (of 154) measures the 130 of the static logo. */
   logo: { width: u(70), height: u(70) },
   guestCreate: {

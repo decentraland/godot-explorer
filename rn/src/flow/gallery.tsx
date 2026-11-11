@@ -215,6 +215,21 @@ registerPreview('extra/flow-code-resend-wait', {
   ),
 });
 
+registerPreview('extra/flow-email-filled', {
+  title: 'Flow: email (filled)',
+  orientation: 'portrait',
+  notes: 'Figma AUTH_OTP_START 1842:14023.',
+  render: () => (
+    <AuthOtpStart
+      initial="name@email.com"
+      error={null}
+      busy={false}
+      onSubmit={noop}
+      onBack={noop}
+    />
+  ),
+});
+
 registerPreview('extra/flow-email-invalid', {
   title: 'Flow: email (invalid)',
   orientation: 'portrait',
