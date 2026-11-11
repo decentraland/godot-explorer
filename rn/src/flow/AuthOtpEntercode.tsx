@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  Dimensions,
+  Keyboard,
   Modal,
   NativeSyntheticEvent,
   Pressable,
@@ -62,6 +64,20 @@ export function AuthOtpEntercode({
   }, [visible, initialCode]);
   useEffect(() => setEdited(false), [error]);
   const failed = !!error && !edited && !busy;
+  // Figma: centred; with the numeric keyboard up the card rests 50 px above it (top at y 140).
+  const [keyboardTop, setKeyboardTop] = useState<number | null>(null);
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', event =>
+      setKeyboardTop(event.endCoordinates.screenY),
+    );
+    const hide = Keyboard.addListener('keyboardDidHide', () =>
+      setKeyboardTop(null),
+    );
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     if (resendAt <= Date.now()) {
@@ -113,7 +129,16 @@ export function AuthOtpEntercode({
       statusBarTranslucent
       onRequestClose={onClose}
     >
-      <View style={styles.scrim}>
+      <View
+        style={[
+          styles.scrim,
+          keyboardTop !== null && {
+            ...styles.scrimLifted,
+            paddingBottom:
+              Dimensions.get('window').height - keyboardTop + u(25),
+          },
+        ]}
+      >
         <View style={styles.card} accessibilityViewIsModal>
           <View style={styles.clip} pointerEvents="none">
             <RadialFill
@@ -145,7 +170,11 @@ export function AuthOtpEntercode({
           </View>
           <View style={styles.text}>
             <AppText style={styles.title}>{t('FLOW_CODE_TITLE')}</AppText>
-            <Text style={styles.body} onTextLayout={checkStop}>
+            <Text
+              style={styles.body}
+              textBreakStrategy="simple"
+              onTextLayout={checkStop}
+            >
               {pushed ? `${before.trimEnd()}\n` : before}
               <Text style={styles.email}>{email}</Text>
               {after}
@@ -220,16 +249,17 @@ export function AuthOtpEntercode({
   );
 }
 
-/** Figma `Modal` 619×810 at (51, 304) of the 720×1600 frame, every size in px / 2. */
+/** Figma `MOdal-OTP` 620×810, centred on the 720×1600 frame (y 395), every size in px / 2. */
 const styles = StyleSheet.create({
+  scrimLifted: { justifyContent: 'flex-end' },
   scrim: {
     flex: 1,
     alignItems: 'center',
-    paddingTop: u(152),
+    justifyContent: 'center',
     backgroundColor: colors.black40,
   },
   card: {
-    width: u(309.5),
+    width: u(310),
     paddingTop: u(48),
     paddingBottom: u(14),
     paddingHorizontal: u(16),
@@ -260,7 +290,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: colors.snow,
   },
+  // 8 px wider than the frame's 556 px box: Android measures the first sentence a hair longer.
   body: {
+    marginHorizontal: -u(4),
     fontFamily: fonts.regular,
     fontSize: u(13),
     lineHeight: u(17),

@@ -1,4 +1,5 @@
 import { registerPreview } from '../gallery/registry';
+import { t } from '../i18n';
 import { createMockApi } from '../backpack/mockApi';
 import { ApiProvider } from '../discover/ApiContext';
 import { FtueScreen } from '../discover/FtueScreen';
@@ -166,7 +167,7 @@ registerPreview('extra/flow-email', {
     render: () => (
       <>
         <AuthOtpStart
-          initial=""
+          initial="your@email.com"
           error={null}
           busy={false}
           onSubmit={noop}
@@ -194,7 +195,7 @@ registerPreview('extra/flow-code-resend-wait', {
   render: () => (
     <>
       <AuthOtpStart
-        initial=""
+        initial="your@email.com"
         error={null}
         busy={false}
         onSubmit={noop}
@@ -211,6 +212,21 @@ registerPreview('extra/flow-code-resend-wait', {
         resendAt={Date.now() + 120000}
       />
     </>
+  ),
+});
+
+registerPreview('extra/flow-email-invalid', {
+  title: 'Flow: email (invalid)',
+  orientation: 'portrait',
+  notes: 'Figma AUTH_OTP_EMAILINVALID 2846:44232.',
+  render: () => (
+    <AuthOtpStart
+      initial="name@email.com"
+      error={t('FLOW_EMAIL_INVALID')}
+      busy={false}
+      onSubmit={noop}
+      onBack={noop}
+    />
   ),
 });
 

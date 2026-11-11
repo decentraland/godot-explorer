@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: u(8.5),
+    marginBottom: u(9.5),
   },
   /** Figma `Input-Label`: Medium 30 px in a 36 px line, so Android and web agree on the baseline. */
   label: {
@@ -242,6 +242,7 @@ const styles = StyleSheet.create({
     marginTop: u(4),
     fontFamily: fonts.regular,
     fontSize: u(10),
+    lineHeight: u(12),
     color: colors.pearl,
   },
   hintInRow: { marginTop: 0, flexShrink: 1 },

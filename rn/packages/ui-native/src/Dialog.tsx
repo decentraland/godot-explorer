@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.modal,
   },
   cardPortrait: {
-    width: u(260),
+    width: u(300),
     paddingTop: u(32),
     paddingBottom: u(30),
     paddingHorizontal: u(28),

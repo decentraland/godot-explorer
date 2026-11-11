@@ -40,7 +40,7 @@ export const flow = {
   FLOW_AUTH_WAIT_TITLE: 'Opening\u00A0\nbrowser...',
   FLOW_AUTH_LOADING_TITLE: 'Loading...',
   FLOW_AUTH_VERIFY_TITLE: 'Confirming\nlogin...',
-  FLOW_EMAIL_INVALID: 'Invalid email.',
+  FLOW_EMAIL_INVALID: 'Invalid format. Use letters and numbers only.',
   FLOW_GUEST_WAIT_TITLE: 'Getting you ready…',
   FLOW_CANCEL: 'Cancel',
   FLOW_NAME_TITLE: 'Pick your Name',
