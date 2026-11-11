@@ -87,6 +87,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # Same as mobile_distribute's: under the label flow the run's own ref is main, not this line.
+  TRUSTED_REF: ${{ github.event_name == 'pull_request_target' && github.base_ref || '' }}
+
 concurrency:
   group: ios-r2-${{ github.actor }}-${{ inputs.ref }}
   cancel-in-progress: true
@@ -278,6 +282,7 @@ jobs:
       # scripts and local actions are used from it.
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
+          ref: ${{ env.TRUSTED_REF }}
           persist-credentials: false
 
       - uses: actions/download-artifact@v4
