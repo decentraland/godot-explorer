@@ -208,7 +208,7 @@ registerPreview('extra/flow-code-resend-wait', {
         onSubmit={noop}
         onResend={noop}
         onClose={noop}
-        resendAt={Number.MAX_SAFE_INTEGER}
+        resendAt={Date.now() + 120000}
       />
     </>
   ),

@@ -30,6 +30,7 @@ export const flow = {
   FLOW_CODE_VERIFYING: 'Verifying...',
   FLOW_CODE_RESEND_PROMPT: 'Didn’t get an email?',
   FLOW_CODE_RESEND: 'Resend Code',
+  FLOW_CODE_RESEND_WAIT: 'Resend Code ({time})',
   FLOW_CODE_INVALID: 'The code is invalid or expired. Please resend code.',
   FLOW_UPDATE_TITLE: 'Update\navailable',
   FLOW_UPDATE_COPY:

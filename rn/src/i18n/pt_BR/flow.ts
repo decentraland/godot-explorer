@@ -49,6 +49,7 @@ export const flow: Partial<Record<keyof typeof en, string>> = {
   FLOW_CODE_VERIFYING: 'Verificando...',
   FLOW_CODE_RESEND_PROMPT: 'Não recebeu um email?',
   FLOW_CODE_RESEND: 'Reenviar código',
+  FLOW_CODE_RESEND_WAIT: 'Reenviar código ({time})',
   FLOW_CODE_INVALID: 'O código é inválido ou expirou. Reenvie o código.',
   FLOW_UPDATE_TITLE: 'Atualização\ndisponível',
   FLOW_UPDATE_COPY:

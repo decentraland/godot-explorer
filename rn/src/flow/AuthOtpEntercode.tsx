@@ -64,14 +64,24 @@ export function AuthOtpEntercode({
   const failed = !!error && !edited && !busy;
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
-    const wait = resendAt - Date.now();
-    if (wait <= 0) {
+    if (resendAt <= Date.now()) {
       return;
     }
-    const timer = setTimeout(() => setNow(Date.now()), wait);
-    return () => clearTimeout(timer);
+    setNow(Date.now());
+    const timer = setInterval(() => {
+      setNow(Date.now());
+      if (Date.now() >= resendAt) {
+        clearInterval(timer);
+      }
+    }, 1000);
+    return () => clearInterval(timer);
   }, [resendAt]);
   const resendOff = now < resendAt;
+  const left = Math.max(0, Math.ceil((resendAt - now) / 1000));
+  const countdown = `${Math.floor(left / 60)}:${String(left % 60).padStart(
+    2,
+    '0',
+  )}`;
   // The address is bold inside the sentence, whatever order the translation puts it in. Android
   // may break a line between an address and the full stop after it, which the frame never does:
   // then the address starts the next line, as the frame draws it.
@@ -199,7 +209,9 @@ export function AuthOtpEntercode({
               onPress={resendOff ? undefined : onResend}
               style={[styles.resendLink, resendOff && styles.resendOff]}
             >
-              {t('FLOW_CODE_RESEND')}
+              {resendOff
+                ? t('FLOW_CODE_RESEND_WAIT', { time: countdown })
+                : t('FLOW_CODE_RESEND')}
             </Text>
           </AppText>
         </View>
