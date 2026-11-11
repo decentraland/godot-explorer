@@ -40,7 +40,7 @@ cámara quieta en el spawn, ventana de 30 s con el teléfono enfriado a ≤34 °
 
 | Hecho medido | Número | Dónde |
 |---|---|---|
-| Con `dynamic OFF` + perfil `HIGH`, 2.x sostiene más fps que 1.x | 2.x 30.5–31.3 fps (p50 33.3 ms) · 1.x matriz pareada en `gp-hi-pair/` | `gp-hi-pair/` |
+| Con `dynamic OFF` + perfil `HIGH` no se puede comparar tal como se midió | 1.x luma 86–118 vs 2.x 57–78; el fps sigue a la luz | `gp-hi-pair/` (inválido), `gp-hi-v3/`, `gp-sun-drift/` |
 | El sol manda sobre todo lo demás | 2.x: 31.3 fps (luma 117) → 14.4 fps (luma 78), mismo build, mismo perfil, 2.2× | `gp-hi-pair/2x-hi-p1` vs `gp-hi-fixed-sky/2x-sky-r2` |
 | El perfil hay que verificarlo en el log, no en el panel | 3 de 6 corridas de `gp-hi-pair` arrancaron en profile 0 o 2 con el panel mostrando `High` | `gp-hi-pair/INVALID.md` |
 | El preset de cielo no significa lo mismo en los dos builds | `Morning`: luma 75 (2.x) vs 105–112 (1.x); `Midday` en 1.x mueve la luz a luma 140 | `gp-hi-fixed-sky/`, `gp-hi-midday/` |
