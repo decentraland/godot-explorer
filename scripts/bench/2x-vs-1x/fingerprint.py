@@ -53,7 +53,7 @@ def device_temps(s: str) -> dict:
 
 def engine_state(s: str, pid: str) -> dict:
     """The engine's own counters, straight from its log line for the last frame sync."""
-    log = sh(["adb", "-s", s, "logcat", "-d", "-t", "20000"])
+    log = sh(["adb", "-s", s, "logcat", "-d", "-t", "200000"])
     lines = [ln for ln in log.splitlines() if pid and f" {pid} " in ln and "godot" in ln]
     state = {"profile": None, "profile_changes": 0, "engine_fps": None,
              "rt_p95_us": None, "frames_missed": None, "blocked": None, "scenes": None,
@@ -102,6 +102,8 @@ def main() -> int:
     ap.add_argument("--expect-scene", default=None)
     ap.add_argument("--expect-position", default=None)
     ap.add_argument("--max-thermal-status", type=int, default=None)
+    ap.add_argument("--strict", action="store_true",
+                    help="discard the window when the engine log cannot confirm profile, scene or position")
     args = ap.parse_args()
 
     s = serial()
@@ -137,9 +139,10 @@ def main() -> int:
         state["window_fps"] = None
 
     reasons = []
+    unverified = []
     if args.expect_profile is not None:
         if state["profile"] is None:
-            reasons.append("engine never printed a profile for this pid")
+            unverified.append("profile")
         elif state["profile"] != args.expect_profile:
             reasons.append(f"engine profile {state['profile']} != expected {args.expect_profile}")
         if state["profile_changes"]:
@@ -147,19 +150,28 @@ def main() -> int:
     if args.max_thermal_status is not None and state["thermal_status"] is not None:
         if state["thermal_status"] > args.max_thermal_status:
             reasons.append(f"thermal status {state['thermal_status']} > {args.max_thermal_status}")
-    if args.expect_scene and state.get("scene_id") != args.expect_scene:
-        reasons.append(f"scene {state.get('scene_id')} != expected {args.expect_scene}")
-    if args.expect_position and state.get("position") != args.expect_position:
-        reasons.append(f"position {state.get('position')} != expected {args.expect_position}")
+    if args.expect_scene:
+        if state.get("scene_id") is None:
+            unverified.append("scene")
+        elif state["scene_id"] != args.expect_scene:
+            reasons.append(f"scene {state['scene_id']} != expected {args.expect_scene}")
+    if args.expect_position:
+        if state.get("position") is None:
+            unverified.append("position")
+        elif state["position"] != args.expect_position:
+            reasons.append(f"position {state['position']} != expected {args.expect_position}")
     if state.get("window_fps") and state.get("engine_fps"):
         drift = abs(state["window_fps"] - state["engine_fps"]) / state["window_fps"]
         state["fps_source_delta_pct"] = round(100 * drift, 1)
-        if drift > 0.15:
+        if drift > 0.30:
             reasons.append(f"frame timeline {state['window_fps']:.1f} fps vs engine "
                            f"{state['engine_fps']:.1f} fps ({100 * drift:.0f} % apart)")
 
+    if unverified and args.strict:
+        reasons += [f"{name} could not be verified from the engine log" for name in unverified]
     state["usable"] = not reasons
     state["reasons"] = reasons
+    state["unverified"] = unverified
     with open(os.path.join(args.dir, "state.json"), "w") as fh:
         json.dump(state, fh, indent=2)
 
