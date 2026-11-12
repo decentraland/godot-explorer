@@ -1760,6 +1760,11 @@
     "orientation": "portrait"
   },
   {
+    "id": "extra/ds-otp-resent",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
     "id": "extra/flow-account",
     "source": "extra",
     "orientation": "portrait"

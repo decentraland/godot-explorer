@@ -329,9 +329,15 @@ for (const state of ['default', 'loading', 'claimed'] as ClaimState[]) {
   });
 }
 
-for (const state of ['default', 'verifying', 'error'] as OtpState[]) {
-  registerPreview(`extra/ds-otp-${state}`, {
-    title: `DS: MOdal-OTP ${state}`,
+// `resent`: Default right after a resend, with `Message-CodeResent` Disable's countdown.
+for (const [id, state] of [
+  ['default', 'default'],
+  ['verifying', 'verifying'],
+  ['error', 'error'],
+  ['resent', 'default'],
+] as [string, OtpState][]) {
+  registerPreview(`extra/ds-otp-${id}`, {
+    title: `DS: MOdal-OTP ${id}`,
     orientation: 'portrait',
     render: () => (
       <View style={styles.page}>
@@ -353,7 +359,8 @@ for (const state of ['default', 'verifying', 'error'] as OtpState[]) {
           errorMessage="The code is invalid or expired. Please resend code."
           verifyingLabel="Verifying..."
           resendPrompt="Didn’t get an email?"
-          resendLabel="Resend Code"
+          resendLabel={id === 'resent' ? '00:30' : 'Resend Code'}
+          resendDisabled={id === 'resent'}
           onResend={noop}
           onRequestClose={noop}
         />

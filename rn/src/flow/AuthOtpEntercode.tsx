@@ -59,10 +59,10 @@ export function AuthOtpEntercode({
   }, [resendAt]);
   const resendOff = now < resendAt;
   const left = Math.max(0, Math.ceil((resendAt - now) / 1000));
-  const countdown = `${Math.floor(left / 60)}:${String(left % 60).padStart(
-    2,
-    '0',
-  )}`;
+  // `Message-CodeResent` Disable: the countdown replaces the label, as mm:ss.
+  const countdown = `${String(Math.floor(left / 60)).padStart(2, '0')}:${String(
+    left % 60,
+  ).padStart(2, '0')}`;
 
   // The address is bold inside the sentence, whatever order the translation puts it in.
   const [before, after] = t('FLOW_CODE_BODY', { email: '\u0000' }).split(
@@ -97,11 +97,7 @@ export function AuthOtpEntercode({
       errorMessage={error ?? ''}
       verifyingLabel={t('FLOW_CODE_VERIFYING')}
       resendPrompt={t('FLOW_CODE_RESEND_PROMPT')}
-      resendLabel={
-        resendOff
-          ? t('FLOW_CODE_RESEND_WAIT', { time: countdown })
-          : t('FLOW_CODE_RESEND')
-      }
+      resendLabel={resendOff ? countdown : t('FLOW_CODE_RESEND')}
       resendDisabled={resendOff}
       onResend={onResend}
       onRequestClose={onClose}

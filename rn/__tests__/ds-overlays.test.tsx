@@ -75,7 +75,12 @@ describe('ClaimDialog', () => {
 });
 
 describe('OtpDialog', () => {
-  const otp = (state: OtpState, onResend = jest.fn(), onClose = jest.fn()) =>
+  const otp = (
+    state: OtpState,
+    onResend = jest.fn(),
+    onClose = jest.fn(),
+    resendDisabled = false,
+  ) =>
     render(
       <OtpDialog
         visible
@@ -88,7 +93,8 @@ describe('OtpDialog', () => {
         errorMessage="The code is invalid"
         verifyingLabel="Verifying..."
         resendPrompt="Didn’t get an email?"
-        resendLabel="Resend Code"
+        resendLabel={resendDisabled ? '00:30' : 'Resend Code'}
+        resendDisabled={resendDisabled}
         onResend={onResend}
         onRequestClose={onClose}
       />,
@@ -120,6 +126,15 @@ describe('OtpDialog', () => {
     expect(onResend).toHaveBeenCalled();
     act(() => pressable(tree, 'Close').props.onPress());
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it('shows the countdown as a disabled link', () => {
+    const tree = otp('default', jest.fn(), jest.fn(), true);
+    const link = tree.root.findAll(
+      n => n.props.accessibilityRole === 'link' && n.props.onPress,
+    )[0];
+    expect(link.props.disabled).toBe(true);
+    expect(text(tree)).toContain('00:30');
   });
 });
 

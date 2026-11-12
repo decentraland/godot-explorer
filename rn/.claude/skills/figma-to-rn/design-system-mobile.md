@@ -328,13 +328,18 @@ Close = the bare `close` glyph 31.7 Snow at 90% at the top-right (`Icon close` 2
 gap 48: header gap 36 = a 156 Black 40% circle with `Icon/Base` Email 78, then text gap 22 = `Header/Title
 Landscape` Bold 44 + Regular 26 lh 130% with the address Semi Bold (`body` takes nodes). `OTP-Input` = six
 `Input/CodeSlots` 10 apart (the first spacing Figma draws; `CodeSlots` gap `u(5)`, was `u(8)`) and a message row
-8 below, Regular 20 **Ruby** `#FF2D55` Title Case — the node, not the States page's `status/danger`; the row keeps
+8 below, Regular 20 Title Case, drawn **Ruby** `#FF2D55` but coded `status/danger` `#FB3B3B` (`colors.danger`) per the States rule, user decision 2026-11-12; the row keeps
 its height while hidden (`CodeSlots errorMessage`). Then 78 to "Didn’t get an email? **Resend Code**" (Regular 24
 Snow + `Button/Link` Medium periwinkle underline, a nested `Text` so it wraps as one line). `State`: Default /
 Verifying (all slots Filled; a row 6 below the slots: `loading 2` 48 + "Verifying..." Semi Bold 24, 7 apart — code
 `Spinner size={24}`, whose ring is a bit thicker than the 4 px one drawn) / Error (slots Error + message).
 `CodeSlots` marks only the next empty slot as Typing, so a full code shows every slot Filled.
-No Landscape variant: the 405 dp card does not fit a landscape phone, so `OtpDialog` scrolls inside the scrim.
+No Landscape variant on purpose: the app is locked to portrait while the OTP shows (the flow's job), so `OtpDialog`
+is portrait only and lifts above the keyboard like `Dialog`.
+`Message-CodeResent` 906:15903 (added 11-12): the resend line as its own set, a row gap 10 of Regular 24 Snow
+"Didn't get an email? " + Medium 24 `#A0ABFF` underlined; **Disable** swaps "Resend Code" for the countdown
+"00:30" in the same link style (not greyed) → `resendLabel` carries the countdown while `resendDisabled`.
+`Modal-Background` has no instance anywhere in the file (checked 11-12): `Modal/Dialog` draws its own card.
 Not wired into the entry flow here (that screen is `feat/entry-flow-parity`'s job).
 
 ### Panel frame (Modals page) — `Sheet`, `SheetFooter`, `BottomSheet`, added 2026-11-10

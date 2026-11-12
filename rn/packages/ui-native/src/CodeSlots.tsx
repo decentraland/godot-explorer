@@ -93,11 +93,11 @@ export function CodeSlots({
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: u(5), justifyContent: 'center' },
   withMessage: { gap: u(4) },
-  /** `OTP-Input`'s message is Ruby and Title Case on the node, not the States page's `status/danger`. */
+  /** `status/danger` per the States rule (the `OTP-Input` node draws Ruby); Title Case as drawn. */
   message: {
     minHeight: u(12),
     fontSize: u(10),
-    color: colors.ruby,
+    color: colors.danger,
     textAlign: 'center',
     textTransform: 'capitalize',
   },
