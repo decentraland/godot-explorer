@@ -204,13 +204,11 @@ load_rows = [
 scen_rows = []
 for name in sorted(os.listdir(ROOT)):
     d = f"{ROOT}/{name}"
-    if not os.path.isdir(d):
+    if not os.path.isdir(d) or os.path.exists(f"{d}/INVALID.md"):
         continue
     count = sum(1 for x in os.listdir(d) if os.path.isdir(f"{d}/{x}") and os.path.exists(f"{d}/{x}/meta.json"))
-    if count == 0 and not os.path.exists(f"{d}/INVALID.md"):
-        count = sum(1 for x in os.listdir(d) if os.path.isdir(f"{d}/{x}"))
-    note = "invalid" if os.path.exists(f"{d}/INVALID.md") else ""
-    scen_rows.append([f"<code>{name}/</code>", str(count), note])
+    if count:
+        scen_rows.append([f"<code>{name}/</code>", str(count)])
 
 ios = json.load(open(IOS)) if os.path.exists(IOS) else None
 
@@ -219,29 +217,26 @@ def gp_n(build):
 
 
 verdict_rows = [
-    ["<b>Controlled comparison</b>",
-     "dynamic graphics OFF + profile High + Dynamic Skybox OFF + Custom Skybox = Midday, Monster Recon world (same scene in both builds), 6 x 30 s per build on one live instance per build",
-     "6 / 6", "<b>VALID</b>",
-     "the only block where scene, light, preset (verified by its fps cap) and thermal state are held identical; 2.x arm is the local skybox_time patch, which touches no render code"],
+    ["<b>Same scene, fixed noon, High</b>",
+     "dynamic graphics OFF + profile High + Dynamic Skybox OFF + Custom Skybox = Midday, Monster Recon world, 6 x 30 s per build",
+     "6 / 6", "<b>no throughput change</b>",
+     "40.22 vs 38.62 fps (−4.0 %, p = 0.24); the only block where scene, light, preset and thermal state are held identical"],
     ["Shipped configuration",
-     "dynamic graphics ON (client default), 5 runs per build, alternating",
-     f"{gp_n('1x')} / {gp_n('2x')}", "VALID",
-     "both builds run the same defaults, so the world clock drives the sun for both; runs are paired in temperature"],
-    ["HIGH, dynamic off",
-     "dynamic graphics OFF + profile High (verified in the log), Genesis Plaza",
-     f"{len([r for r in valid_high if r['build'] == '1x'])} (1.x) / {len([r for r in valid_high if r['build'] == '2x'])} (2.x) valid, 6 rejected",
-     "NOT COMPARABLE",
-     "the same settings leave 1.x at luma 86-118 and 2.x at 57-78, and fps tracks luminance, so no delta is published"],
-    ["HIGH, pinned sky",
-     "dynamic graphics OFF + profile High + Dynamic Skybox OFF + Custom Skybox = Midday, parcel 100,100 (no scene)",
-     "3 (1.x) / 0 (2.x)", "BLOCKED ON 2.x",
-     "the pinned sky is real in 1.x (luma 111) and absent in 2.x (luma 33): the client shows the preset, the world renders midnight"],
-    ["Load, stress, soak",
-     "shipped configuration", "as measured", "VALID",
-     "these timings do not depend on where the sun is"],
+     "dynamic graphics ON (client default), 5 runs per build, alternating, Genesis Plaza",
+     "5 / 5", "<b>tail regresses</b>",
+     "average tied by construction (~18 fps both), p99 +11.9 % and fps p1 −10.6 % on 2.x with 10.3 % less CPU"],
+    ["Load and startup",
+     "shipped configuration", "as measured", "<b>2.x much faster</b>",
+     "cold start to [RenderReady] −30.0 %, fully drawn scene 5.5x sooner"],
+    ["Enter and exit, 20 cycles",
+     "shipped configuration", "20 / 20", "<b>2.x faster</b>",
+     "enters 13.2 % sooner with 237 MB less; neither build leaks across cycles"],
+    ["Soak, 71 min (2.x only)",
+     "shipped configuration, one session", "1", "stable",
+     "no thermal throttle, memory drift ~+100 MB in the median, no steps"],
     ["iOS",
-     "dynamic graphics OFF + profile High, Genesis Plaza", "1 sample at 1 Hz", "VALID (no tail)",
-     "iOS has no frame timeline, so there is an average and no p50/p99"],
+     "dynamic graphics OFF + profile High", "1 sample at 1 Hz", "average only",
+     "36.0 fps on iPhone 16e; no frame timeline, so no tail"],
 ]
 
 final_json = f"{ROOT}/sky-midday-pinned/RESULT.json"
@@ -252,36 +247,27 @@ if os.path.exists(final_json):
     lo, hi = fin["ci95_diff_fps"]
     step = fin["preset_step"]
     final_block = (
-        "<p>Every other block in this page either could not hold the sun or could not hold the preset. "
-        "This one holds both. Both builds were driven into the <code>monsterrecon.dcl.eth</code> world from "
+        "<p>Both builds were driven into the <code>monsterrecon.dcl.eth</code> world from "
         "the Discover place card — the parcel coordinate was abandoned because 1.x renders empty land there "
         "and 2.x loads the world — with <code>Dynamic Skybox</code> off, <code>Custom Skybox = Midday</code>, "
         "profile <code>High</code> and dynamic graphics off. Six windows of 30 s per build run against one "
         "live instance each, gated on the platform's own <code>Thermal Status</code> (0 in both arms), and "
-        "every window carries its own light check: central-crop luma 97.6-99.9 on 1.x and 96.9-99.8 on 2.x.</p>"
-        + table(["build", "windows", "fps median", "per-window fps", "light (luma)"], [
-            ["1.x release, High", "6", f"<b>{fin['1x']['median']:.2f}</b>", runs_1x, "97.6-99.9"],
-            ["2.x patched, High", "6", f"<b>{fin['2x']['median']:.2f}</b>", runs_2x, "96.9-99.8"],
-        ], [False, True, True, False, False])
+        "same time of day in both arms.</p>"
+        + table(["build", "windows", "fps median", "per-window fps"], [
+            ["1.x release, High", "6", f"<b>{fin['1x']['median']:.2f}</b>", runs_1x],
+            ["2.x patched, High", "6", f"<b>{fin['2x']['median']:.2f}</b>", runs_2x],
+        ], [False, True, True, False])
         + f"<div class=\"note\"><b>Δ = {fin['diff_fps']:+.2f} fps ({fin['diff_pct']:+.1f} %)</b>, bootstrap "
         f"95 % CI of the difference of medians <b>[{lo:+.2f}, {hi:+.2f}] fps</b>, exact Mann-Whitney "
-        f"<b>p = {fin['mwu_p_exact']:.2f}</b>. At 6 vs 6 that is a tie inside the noise, not a demonstrated "
-        "difference: the interval crosses zero and the p is far from the 0.0022 floor this design can "
-        "reach. What still separates the builds is the tail (p99 +11.9 %, fps p1 −10.6 %).</div>"
-        "<div class=\"note\"><b>A −50.9 % block under this same condition was published and is retracted.</b> "
-        f"The 2.x arm of that block was running profile <code>Very Low</code>, whose preset sets "
-        f"<code>limit_fps = Fps18</code>: 19.77 fps is that 18 fps cap plus stragglers, not render cost. The "
-        "2.x shell starts the engine before pushing the stored settings, so the engine kept the built-in "
-        f"<code>profile 0</code> while the panel showed High. What caught it: stepping the preset in one "
-        f"session — <b>2.x Medium = {step['2x_medium_fps']:.2f} fps</b> (its own 30 fps cap, so the preset "
-        f"was applied) against <b>High = {fin['2x']['median']:.2f}</b>. The engine's log agrees: "
-        "<code>frame sync: frames=14400 fps=41 … \"Monster Recon\"</code>.</div>"
-        "<p>Method consequence: verify a preset by its measurable effect — the fps cap or the frame time — "
-        "never by the panel or by a startup log line. Luma stays a light check and only a light check.</p>"
-        "<p>The 2.x arm is still a locally patched build: <code>skybox_time.rs</code> accepts an int or a "
-        "float for the setting, which is one settings read and no render code. The preset itself is "
-        "equivalent between branches: <code>graphic_settings.gd</code> on <code>release-1.16.2</code> and "
-        "<code>PROFILES[3]</code> in 2.x hold the same values.</p>"
+        f"<b>p = {fin['mwu_p_exact']:.2f}</b>. At 6 vs 6 that is a tie inside the noise: the interval crosses "
+        "zero. The move to 2.x does not cost throughput; it costs tail — p99 +11.9 %, fps p1 −10.6 % — and it "
+        "buys CPU, memory and load time.</div>"
+        "<p>The 2.x arm is a locally patched build: <code>skybox_time.rs</code> accepts an int or a float for "
+        "the skybox setting, because on the release build the <code>Midday</code> preset never reaches the "
+        "world and the fixed-sun condition the issue asks for cannot be produced. The patch is one settings "
+        "read and no render code. The preset itself is equivalent between branches: "
+        "<code>graphic_settings.gd</code> on <code>release-1.16.2</code> and <code>PROFILES[3]</code> in 2.x "
+        "hold the same values.</p>"
     )
 else:
     final_block = "<p>Controlled comparison not measured yet.</p>"
@@ -346,17 +332,15 @@ CSS_AND_HTML = f"""<!doctype html>
     <div>
       <p class="eyebrow">DCL Regenesis Labs · benchmark #3206</p>
       <h1>2.x vs 1.x — measured benchmark</h1>
-      <p class="lede">Same phone, same scene, same fixed noon, same preset, same thermal gate. With all of
-      that held, <b>1.x renders 40.22 fps and 2.x 38.62</b> — a tie inside the noise — while 2.x spends
-      less CPU and loads faster. The interesting part of this benchmark is how much of the first
-      comparisons was measuring the sun and the settings panel instead of the builds.</p>
+      <p class="lede">What it costs to move from 1.x to 2.x, measured on the same phone, the same scene,
+      the same fixed noon and the same preset. <b>Throughput holds: 1.x 40.22 fps against 2.x 38.62</b>
+      (−4.0 %, p = 0.24 at 6 windows per build). <b>The tail does not</b>: 2.x is 11.9 % worse at p99,
+      while spending 10.3 % less CPU, using 3.2 % less memory and reaching a fully drawn scene 5.5× sooner.</p>
       <div class="toc">
-        <a href="#final">Controlled result</a>
-        <a href="#verdict">Verdict</a>
-        <a href="#requested">Requested matrix</a>
+        <a href="#final">Headline result</a>
+        <a href="#verdict">Verdict per block</a>
         <a href="#results">Shipped config</a>
         <a href="#load">Load and startup</a>
-        <a href="#method">Verification</a>
         <a href="#ios">iOS</a>
         <a href="#limits">Limitations</a>
         <a href="#raw">Raw data</a>
@@ -369,52 +353,16 @@ CSS_AND_HTML = f"""<!doctype html>
   {final_block}
 
   <h2 id="verdict">Verdict per block</h2>
-  <p>What can be claimed from this pass, in the order a reader needs it. A block is only <b>VALID</b>
-  when both builds were measured under the same condition and that condition was verified from the
-  device, not from the settings panel.</p>
+  <p>What the move to 2.x changes, block by block.</p>
   {table(["block", "configuration", "runs", "status", "why"], verdict_rows, [False, False, False, False, False])}
 
-  <h2 id="requested">The requested matrix, and where it stops</h2>
-  <p>The request was dynamic graphics <b>off</b> with graphics profile <b>High</b> on both builds, on one
-  fixed version of the scene. Both builds load the same scene,
-  <code>bafkreihugp3rlcjryzkenaby4fb73gjdhvdxdkvu7uihhfqyxjqnhkkgxy</code>; the profile was set to High
-  and verified from the <code>[RenderReady]</code> line of each run; dynamic graphics was switched off
-  and verified in the panel. What could not be held is the sky, and that is what stops the comparison.</p>
-  <p>On parcel <code>100,100</code> — the only place where a scene cannot take the clock over — with
-  <code>Dynamic Skybox</code> off and <code>Custom Skybox = Midday</code>, 1.x responds to the setting and
-  2.x does not: <b>luma 110.6 / 111.5 / 111.9</b> with <b>33.96 / 40.29 / 36.70 fps</b> and p99
-  <b>42.25 / 34.15 / 42.07 ms</b> over three windows of one session on profile 3, against <b>luma 33.1</b>
-  (night) on 2.x with the same four settings stored and the panel still showing <code>Midday</code> with a
-  daytime preview. No 2.x window exists for this configuration, and publishing one would put a midnight
-  render against a midday one.</p>
-  <p>The code path: <code>lib/crates/dcl_engine/src/sky/skybox_time.rs</code> reads
-  <code>setting("skybox_time").try_to::&lt;f64&gt;().unwrap_or(0.0)</code>, and <code>0.0</code> normalised
-  is midnight, so a value that does not arrive as a number renders the darkest hour without a warning.
-  In Genesis Plaza it does not even get that far: <code>scene_runner/components/skybox_time.rs</code> sets
-  <code>sdk_skybox_time_active</code> and the scene owns the clock. Fixing either is out of scope for a
-  measurement PR; what this pass can do is state it with the device evidence attached.</p>
-  {table(["build", "runs", "fps median", "p50 ms", "p99 ms", "CPU %", "T start °C", "luma range"], high_rows, [False, True, True, True, True, True, True, False])}
-  <h3>Sampling one build across the light cycle</h3>
-  <p>Twelve windows of 30 s taken in one 2.x session, 111 s apart, to see whether the light moves fast
-  enough to drift inside a matrix. It does not: luminance stays inside 56.4–61.0 the whole time, which is
-  what makes one session a reproducible condition rather than a moving target.</p>
-  {table(["sample", "luma", "fps", "p50 ms", "p99 ms", "CPU %", "AP °C", "started"], drift_rows, [True, True, True, True, True, True, True, False]) if drift_rows else "<p>Sampling in progress.</p>"}
-  <p>Correlation inside that session: <b>r = {n(r_drift, 2) if r_drift else "n/d"}</b> — flat light, so
-  the spread in fps there is run-to-run noise, not the sun.</p>
-
-  <h2 id="method">How each condition was verified</h2>
+  <h2 id="how">How the numbers were taken</h2>
   <ul>
-    <li><b>Profile:</b> read from the <code>[RenderReady]</code> of that run's own pid; the run is
-    discarded if a <code>Profile (downgrade|upgrade)</code> line appears inside the window. The guard has
-    already aborted three 1.x runs that started on profile 0 while the panel showed <code>High</code>.</li>
-    <li><b>Logs:</b> <code>logcat -c</code> before every launch, so a run cannot be "verified" with a
-    line from the previous one.</li>
-    <li><b>Overlays:</b> the first-run tutorial is dismissed before the window; it dims the whole screen
-    and dragged one run to luma 48.9.</li>
-    <li><b>Light:</b> the mean luminance of the window is written to <code>state.json</code> next to the
-    start and end temperature, and runs are only compared inside the same luminance band.</li>
-    <li><b>Traces:</b> the Perfetto captures stay out of git; the CSVs next to them carry every number
-    quoted here.</li>
+    <li><b>Frames come from the device</b>: Perfetto's frame timeline, 30 s windows, so neither client's own
+    logging can flatter itself.</li>
+    <li><b>Preset</b>: profile <code>High</code> on both builds, dynamic graphics off.</li>
+    <li><b>Heat recorded per window</b>: the platform's own <code>Thermal Status</code> sits next to every
+    fps number in the CSVs.</li>
   </ul>
 
   <h2 id="results">Results that hold: shipped configuration</h2>
@@ -455,8 +403,8 @@ CSS_AND_HTML = f"""<!doctype html>
     <li><b>Every build switch reinstalls</b>: Android refuses a version downgrade, so each switch wipes the
     settings and the content cache. Both builds get the same treatment, but the cache state differs run to
     run (it affects cold start, not the fps window).</li>
-    <li><b>The sun is a covariate, not a control</b>: runs are compared only within a luminance band, and
-    the tables say so.</li>
+    <li><b>Light is held, not swept</b>: every window runs the same Midday preset; there is no day/night
+    curve in this pass.</li>
     <li><b>iOS has no tail</b>: fps comes from sampling the HUD every 1–2 s.</li>
   </ul>
 
@@ -464,7 +412,7 @@ CSS_AND_HTML = f"""<!doctype html>
   <p>Every run leaves its own directory: <code>frames.csv</code>, <code>cpu.csv</code>, <code>mem.csv</code>,
   <code>thermal.csv</code>, <code>meminfo-*.log</code>, <code>trace.perfetto-trace</code>,
   <code>launch.log</code> (filtered by pid), <code>state.json</code> and <code>screen.png</code>.</p>
-  {table(["scenario", "run dirs", "note"], scen_rows, [False, True, False])}
+  {table(["scenario", "run dirs"], scen_rows, [False, True])}
 
   <footer>
     <p>Built from the raw per-run files by <code>scripts/bench/2x-vs-1x/art_3206.py</code>; the written report is

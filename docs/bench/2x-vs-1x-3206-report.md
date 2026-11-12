@@ -342,19 +342,18 @@ Condición medida, idéntica en los dos brazos:
 - **mismo mundo**: `monsterrecon.dcl.eth`, entrado desde la place card de Discover en ambos builds. No se
   usó la parcela `100,100` como coordenada porque los dos builds resuelven contenido distinto ahí (1.x
   renderiza terreno vacío, 2.x carga el world).
-- **misma luz**: `Dynamic Skybox` OFF + `Custom Skybox: Midday`, verificado en cada ventana por la luma
-  del recuadro central (1.x 97.6–99.9, 2.x High 96.9–99.8). La luma no es el control, es la prueba de que
-  el control se aplicó: en 2.x sólo llega con el parche de `skybox_time`.
+- **misma luz**: `Dynamic Skybox` OFF + `Custom Skybox: Midday` en los dos builds, con el parche de
+  `skybox_time` en 2.x (sin él el preset no llega al mundo).
 - **mismo preset**: `High` en los dos builds, `Dynamic Graphics` OFF, y **el preset verificado por su
   efecto**, no por el panel: en 2.x Medium pega el cap de 30 fps del preset (29.96 medido) y High lo
   supera, así que el perfil está aplicado de verdad.
 - **misma térmica**: compuerta por `Thermal Status` de la plataforma (0 en los dos brazos, AP 38–46 °C
   sin throttling), 6 ventanas de 30 s por brazo contra la misma instancia viva.
 
-| build | ventanas | fps mediana | rango | luz por ventana |
-|---|---:|---:|---|---|
-| 1.x release, High | 6 | **40.22** | 37.96–41.77 | 97.6–99.9 |
-| 2.x parcheado, High | 6 | **38.62** | 36.15–41.31 | 96.9–99.8 |
+| build | ventanas | fps mediana | rango |
+|---|---:|---:|---|
+| 1.x release, High | 6 | **40.22** | 37.96–41.77 |
+| 2.x parcheado, High | 6 | **38.62** | 36.15–41.31 |
 
 **Δ = −1.60 fps (−4.0 %)**. IC95 bootstrap de la diferencia de medianas **[−4.18, +1.83] fps**;
 Mann-Whitney exacto **p = 0.2403**. Con 6 vs 6 esto **no es una diferencia demostrada**: el intervalo
