@@ -128,9 +128,13 @@ impl SkyboxTime {
         let seconds = if dynamic {
             DclGlobalTime::get_world_time() as f32
         } else {
-            engine
-                .setting("skybox_time".into())
+            // `skybox_time` is SettingKind::Int, so the store hands back a Variant::Int and a strict
+            // `try_to::<f64>()` fails, which silently meant midnight at every preset. Both numeric kinds
+            // are accepted here, the same way `world::explorer::setting_f32` does it.
+            let value = engine.setting("skybox_time".into());
+            value
                 .try_to::<f64>()
+                .or_else(|_| value.try_to::<i64>().map(|v| v as f64))
                 .unwrap_or(0.0) as f32
         };
         seconds / SECONDS_PER_DAY

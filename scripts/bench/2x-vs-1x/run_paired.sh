@@ -231,7 +231,12 @@ cool_down
 # A locked screen leaves Godot's window at viewVisibility=8 and no RenderReady is ever printed, which
 # reads downstream as "did not start on profile 3". Five runs were lost to that before the lock screen was
 # found, so the keyguard is dismissed here and its state recorded with the run.
+#
+# The app is also stopped first: delivered to a live instance, the intent re-enters the world without a
+# fresh RenderReady, so the guard timed out on a run whose engine was already up.
 sh_ input keyevent KEYCODE_WAKEUP >/dev/null 2>&1 || true
+sh_ am force-stop "$PKG" >/dev/null 2>&1 || true
+sleep 1
 sh_ wm dismiss-keyguard >/dev/null 2>&1 || true
 unlocked=$(sh_ dumpsys window 2>/dev/null | grep -cE 'mDreamingLockscreen=true|isKeyguardShowing=true' || true)
 sh_ logcat -c
@@ -288,20 +293,27 @@ dismiss_tutorial() {
 dismiss_tutorial
 
 sleep "$SETTLE"
+WINDOW_START_UTC=$(python3 -c 'import time;print("%.3f" % time.time())')
 python3 "$HERE/bench_android.py" --serial "$SERIAL" window \
   --label "$LABEL" --build "$BUILD" --scenario "$SCENARIO" --seconds "$WINDOW" \
   --out "$OUT" > "$OUT/window.json"
 # Fingerprint of the state the run actually measured: the sky time is the biggest confounder in this
 # scene (the same build gives ~20 fps at night and ~31 fps at noon), so it is recorded next to the
 # temperature instead of being assumed.
-python3 - "$OUT" "$(ap_temp)" <<'PY2' > "$OUT/state.json"
+python3 - "$OUT" "$(ap_temp)" "$WINDOW_START_UTC" <<'PY2' > "$OUT/state.json"
 import json, sys
 from PIL import Image, ImageStat
-out, temp = sys.argv[1], sys.argv[2]
+out, temp, start = sys.argv[1], sys.argv[2], sys.argv[3]
 luma = ImageStat.Stat(Image.open(f"{out}/screen.png").convert("L")).mean[0]
 thermal = open(f"{out}/thermal.csv").read().splitlines()[1].split(",")
+# The in-game hour at the moment the window opened, not the hour it was scheduled for: the thermal gate
+# can delay a window by a couple of minutes, which is 24 in-game minutes, and that is the difference the
+# scene cost follows.
+epoch = float(start)
 print(json.dumps({"luma_mean": round(luma, 1), "thermal_start_c": float(thermal[1]),
-                  "thermal_skin_start_c": float(thermal[2]), "thermal_end_ap_c": float(temp or 0)},
+                  "thermal_skin_start_c": float(thermal[2]), "thermal_end_ap_c": float(temp or 0),
+                  "window_start_utc": start,
+                  "window_start_phase_s": round((epoch * 12) % 86400, 1)},
                  indent=2))
 PY2
 luma=$(sed -n 's/.*"luma_mean": \([0-9.]*\).*/\1/p' "$OUT/state.json")
