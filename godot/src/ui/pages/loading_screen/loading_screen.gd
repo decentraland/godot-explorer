@@ -54,7 +54,8 @@ func _ready() -> void:
 	Global.scene_runner.loading_started.connect(_on_scene_runner_loading_started)
 	# A realm change that fails (unknown world, unreachable /about) never reaches a loaded
 	# scene, so nothing else would ever take this screen down: it would hang over the place
-	# the user never left (#2471). Every failure path in Realm.async_set_realm emits this.
+	# the user never left (#2471). Realm emits this on every failed realm change, whether it
+	# came in as a realm string or as a resolved destination.
 	if is_instance_valid(Global.realm):
 		Global.realm.realm_change_failed.connect(_on_realm_change_failed)
 

@@ -1,10 +1,11 @@
 name: Save WarpBuild cache (main only)
 description: >
-  Persist the Rust build + cargo registry caches, but ONLY on a push to main. PR builds
-  restore the cache (via set-up-warp-cache) without paying the multi-minute save on every
-  push; only the less-frequent main build refreshes it, which PRs then restore from. Keys
-  come from set-up-warp-cache's outputs (captured before the build, so generated .rs files
-  under target/ can't shift the key between restore and save).
+  Persist the Rust build + cargo registry caches, but ONLY from a trusted main build (push, cron
+  or dispatch): a labelled PR run under pull_request_target also has github.ref == main, and
+  must not write it. PR builds restore the cache (via set-up-warp-cache) without paying the
+  multi-minute save on every push; only the less-frequent main build refreshes it, which PRs
+  then restore from. Keys come from set-up-warp-cache's outputs (captured before the build, so
+  generated .rs files under target/ can't shift the key between restore and save).
 inputs:
   cargo-key:
     description: cargo-key output from set-up-warp-cache.
@@ -13,11 +14,18 @@ inputs:
     description: rust-key output from set-up-warp-cache.
     required: true
 
+  rust-hit:
+    description: rust-hit output from set-up-warp-cache; an exact hit skips the save.
+    required: false
+    default: 'false'
+
 runs:
   using: composite
   steps:
     - name: WarpCache save - Cargo Registry (main only)
-      if: github.ref == 'refs/heads/main'
+      if: >-
+        (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') &&
+        github.ref == 'refs/heads/main'
       uses: WarpBuilds/cache/save@v1.4.6
       with:
         path: |
@@ -28,7 +36,9 @@ runs:
         key: ${{ inputs.cargo-key }}
 
     - name: WarpCache save - Rust Build (main only)
-      if: github.ref == 'refs/heads/main'
+      if: >-
+        (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') &&
+        github.ref == 'refs/heads/main' && inputs.rust-hit != 'true'
       uses: WarpBuilds/cache/save@v1.4.6
       with:
         path: |

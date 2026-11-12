@@ -210,13 +210,8 @@ func _async_set_realm(new_realm_string: String) -> bool:
 		_emit_realm_change_failed(new_realm_string, reason)
 		return false
 
-	# Guard malformed /about `content` BEFORE committing realm state. A null/missing
-	# `content` or a non-String `content.publicUrl` would otherwise throw at
-	# `content_base_url` below — after realm state was already partially committed and with
-	# NO `realm_change_failed` emitted — leaving a silently stuck loading screen (F-11 / RC-6).
-	# (`or` short-circuits, so `.get()` is never called on a non-Dictionary `content`.)
-	var about_content = json.get("content")
-	if not about_content is Dictionary or not about_content.get("publicUrl") is String:
+	json = DestinationResolver.normalize_about(json)
+	if not DestinationResolver.about_is_usable(json):
 		var reason := "/about missing or malformed content.publicUrl"
 		printerr("[REALM] ", reason, " for ", new_realm_string)
 		_emit_realm_change_failed(new_realm_string, reason)
@@ -230,6 +225,12 @@ func _async_set_realm(new_realm_string: String) -> bool:
 func async_apply_destination(dest: Destination) -> bool:
 	if not dest.is_ready():
 		push_error("Realm.async_apply_destination called with a %s destination" % dest)
+		return false
+	# The resolver gates this for every kind, but the about may also be the in-memory copy.
+	if not DestinationResolver.about_is_usable(dest.about):
+		_emit_realm_change_failed(
+			dest.realm_string, "/about missing or malformed content.publicUrl"
+		)
 		return false
 
 	realm_changing.emit()
@@ -253,11 +254,7 @@ func _async_commit_realm(
 	search_new_pos: bool,
 	known_scenes: Dictionary = {}
 ) -> bool:
-	realm_string = new_realm_string
-	realm_url = candidate_realm_url
-	realm_about = json
-
-	var configuration: Dictionary = realm_about.get("configurations", {})
+	var configuration: Dictionary = json.get("configurations", {})
 
 	realm_scene_urns.clear()
 	for urn in configuration.get("scenesUrn", []):
@@ -299,12 +296,16 @@ func _async_commit_realm(
 			configuration.get("cityLoaderContentServer", "")
 		)
 
-	var new_lambda_server_base_url = realm_about.get("lambdas", {}).get(
+	var new_lambda_server_base_url = json.get("lambdas", {}).get(
 		"publicUrl", DclUrls.peer_lambdas()
 	)
 	if not new_lambda_server_base_url.is_empty():
 		new_lambda_server_base_url = Realm.ensure_ends_with_slash(new_lambda_server_base_url)
 
+	# Everything above only read `json`; from here on the realm state is the new realm.
+	realm_string = new_realm_string
+	realm_url = candidate_realm_url
+	realm_about = json
 	self.set_lambda_server_base_url(new_lambda_server_base_url)
 
 	realm_name = configuration.get("realmName", "no_realm_name")
@@ -348,7 +349,7 @@ func _async_commit_realm(
 	set_realm_min_bounds(min_bounds)
 	set_realm_max_bounds(max_bounds)
 
-	content_base_url = Realm.ensure_ends_with_slash(realm_about.get("content", {}).get("publicUrl"))
+	content_base_url = Realm.ensure_ends_with_slash(json.get("content", {}).get("publicUrl"))
 
 	# For DCL worlds, always resolve spawn position from scene metadata
 	# since the caller may not know the correct parcel coordinates.
@@ -426,13 +427,22 @@ func async_request_set_position(scene_urn):
 		)
 	elif res is RequestResponse:
 		var response: RequestResponse = res
-		var json: Dictionary = response.get_string_response_as_json()
-		if json == null:
-			printerr("do_request_json failed because json_string is not a valid json")
+		var json = response.get_string_response_as_json()
+		if not json is Dictionary:
+			printerr("[REALM] scene entity is not a JSON object: ", url)
 			return
 
-		var base_pos = json.get("metadata", {}).get("scene", {}).get("base", "0,0")
-		var coord = base_pos.split(",")
+		# The entity comes from the realm's own content server, so its shape is not guaranteed.
+		var metadata = json.get("metadata")
+		var scene = metadata.get("scene") if metadata is Dictionary else null
+		var base_pos = scene.get("base") if scene is Dictionary else null
+		if not base_pos is String:
+			printerr("[REALM] scene entity has no metadata.scene.base: ", url)
+			return
+		var coord: PackedStringArray = base_pos.split(",")
+		if coord.size() != 2 or not coord[0].is_valid_int() or not coord[1].is_valid_int():
+			printerr("[REALM] malformed scene base '", base_pos, "': ", url)
+			return
 		var x = int(coord[0])
 		var y = int(coord[1])
 		var explorer = Global.get_explorer()
