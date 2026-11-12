@@ -50,6 +50,14 @@ const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some(
 );
 const PROTOCOL_NPM_DIST_TAG: &str = "next";
 
+// POC: protocol PR #506 (AvatarShape on player entities + AvatarEquippedData.wearables) has no
+// npm build yet, so its two proto files are laid over the pinned tarball from the PR head commit.
+const PROTOCOL_PR_506_COMMIT: &str = "c43d1e18f53b1a0b6c17855daac32e9057fe0176";
+const PROTOCOL_PR_506_FILES: [&str; 2] = [
+    "proto/decentraland/sdk/components/avatar_equipped_data.proto",
+    "proto/decentraland/sdk/components/avatar_shape.proto",
+];
+
 fn get_protocol_url() -> Result<String, anyhow::Error> {
     if let Some(url) = PROTOCOL_FIXED_VERSION_URL {
         return Ok(url.to_string());
@@ -99,6 +107,15 @@ pub fn install_dcl_protocol() -> Result<(), anyhow::Error> {
         create_directory_all(&dest_path)?;
         let mut file = File::create(dest_path)?;
         io::copy(&mut entry, &mut file)?;
+    }
+
+    for file in PROTOCOL_PR_506_FILES {
+        let url =
+            format!("https://raw.githubusercontent.com/decentraland/protocol/{PROTOCOL_PR_506_COMMIT}/{file}");
+        let bytes = http_get_bytes(&url, "Download of a protocol PR #506 file")?;
+        let dest_path = Path::new(destination_path.as_str()).join(file);
+        create_directory_all(&dest_path)?;
+        fs::write(dest_path, bytes)?;
     }
 
     spinner.finish_with_message("✅ Protocol files installed");
