@@ -173,6 +173,10 @@ impl DclUrls {
         urls::jump_events().to_godot()
     }
     #[func]
+    pub fn jump_places() -> GString {
+        urls::jump_places().to_godot()
+    }
+    #[func]
     pub fn account_deletion() -> GString {
         urls::account_deletion().to_godot()
     }
