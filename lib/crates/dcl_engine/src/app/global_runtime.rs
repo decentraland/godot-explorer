@@ -398,6 +398,8 @@ async fn finish_boot(started_ms: u64) {
         "[Startup] global._ready end: {}ms",
         godot::classes::Time::singleton().get_ticks_msec() - started_ms
     );
+    global.clone().bind_mut().is_boot_finished = true;
+    global.signals().boot_finished().emit();
 }
 
 fn ensure_content_dir() {

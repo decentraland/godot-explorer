@@ -194,8 +194,8 @@ The label is automatically removed after the build is triggered on PRs.
 # Run integration tests
 cargo run -- run --itest
 
-# Run scene tests
-cargo run -- run --stest
+# Run scene tests (tests/scene-tests/, see docs/scene-tests.md)
+scripts/ci/scene-tests.sh
 
 # Generate test coverage
 rustup component add llvm-tools-preview

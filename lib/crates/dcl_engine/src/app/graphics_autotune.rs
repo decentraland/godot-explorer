@@ -28,8 +28,12 @@ fn setting_i32(name: &str) -> i32 {
         .unwrap_or(0) as i32
 }
 
-fn bench_mode() -> bool {
-    globals::cli().bind().bench_mode
+/// Benchmarks and scene tests keep the graphics they started with, so their numbers and
+/// screenshots stay comparable from run to run.
+fn fixed_graphics() -> bool {
+    let cli = globals::cli();
+    let cli = cli.bind();
+    cli.bench_mode || cli.scene_test_mode
 }
 
 #[godot_api]
@@ -39,11 +43,11 @@ impl GraphicsAutotune {
     }
 
     /// Whether the first-launch benchmark should run (a phone, on a first launch or a dev build).
-    /// Skipped in bench mode: it calls `viewport_set_measure_render_time` and could clobber the
+    /// Skipped in bench and scene-test mode: it calls `viewport_set_measure_render_time` and could clobber the
     /// benchmark runner's own measurement state.
     #[func]
     pub fn should_run_first_launch_benchmark(&self) -> bool {
-        if bench_mode() {
+        if fixed_graphics() {
             return false;
         }
         let completed = globals::engine()
@@ -85,8 +89,8 @@ impl GraphicsAutotune {
     /// work would only add CPU noise and race the thermal-cap signal with the bench setup.
     #[func]
     pub fn init_dynamic_graphics(&mut self) {
-        if bench_mode() {
-            godot_print!("[DynamicGraphics] skipped (bench_mode=true)");
+        if fixed_graphics() {
+            godot_print!("[DynamicGraphics] skipped (bench or scene-test mode)");
             return;
         }
         let global = DclGlobal::singleton();
