@@ -29,15 +29,6 @@ importa.
    preset de calidad decide el techo de fps. Medido en una sesión y una escena: `Medium` clavado en
    **29.96** (su cap) contra `High` en **38.62**. El ítem J3 rehace los presets contra el renderer
    actual y separa calidad de cap.
-4. **Medir ya cuesta minutos, no días.** El instrumento está montado: Perfetto 51.2 en el device, ventanas
-   de 30 s (~35 s por ventana incluido el pull), `trace_processor` para el frame timeline, y
-   `fingerprint.py` cierra cada ventana verificando **perfil del motor**, **escena y posición de spawn**
-   (del `[RenderReady]` del propio engine), **dos fuentes de fps** (frame timeline contra el contador del
-   engine, con alarma si difieren >15 %) y estado térmico,
-   escribiendo `state.json` y `INVALID.md` cuando la ventana no sirve. La luminancia de pantalla **no** es
-   un control: depende del ángulo de cámara y de dónde está parado el avatar. Lo que sigue caro es cambiar de
-   build (~5 min, porque Android rechaza downgrade y hay que reinstalar) y el enfriamiento térmico.
-
 Lo que **no** priorizaría todavía: frame medio, memoria y bajar calidad por defecto (ver §4).
 
 ---
@@ -75,35 +66,7 @@ Cada ítem: **E**videncia · **A**cción · **V**alidación · costo · riesgo.
 
 Es el workstream que no optimiza pero habilita todo lo demás.
 
-**A1 · Que el ajuste de cielo llegue al motor (bloquea toda la matriz HIGH).**
-- **E.** En 2.x, `Dynamic Skybox` OFF + `Custom Skybox = Midday` guardado (el panel lo muestra y el
-  preview pinta día) renderiza **noche**: luma 33.1 en la parcela 100,100, contra 110.6–111.9 del mismo
-  ajuste en 1.x. Causa: `sky/skybox_time.rs` lee `setting("skybox_time").try_to::<f64>().unwrap_or(0.0)`
-  y `0.0` es medianoche, así que un valor que no llega como número cae en la hora más oscura sin aviso.
-- **A.** Verificar el valor en el borde: leerlo como `Variant` y aceptar entero, float o texto numérico;
-  si no es convertible, dejar el reloj dinámico y emitir un warning en vez de asumir medianoche.
-- **V.** Con el ajuste en cada uno de los cuatro presets, la luma del mundo difiere en ≥ 40 puntos entre
-  Midnight y Midday, y el valor leído coincide con el preset elegido en el log del engine.
-- **Costo** S · **Riesgo** bajo. **Estado:** bug abierto, no tocado (este repo mide, no arregla).
-- **Por qué primero:** sin esto no hay comparación posible con el sol fijo, y además es un bug visible:
-  cualquiera que apague el skybox dinámico ve noche a cualquier hora.
-
-**A2 · Fijar las condiciones de la escena (sol, N avatares, clima de calidad).**
-- **E.** El sol no se puede fijar desde el cliente: con `Dynamic Skybox` OFF y `Custom Skybox = Midday`
-  en las dos builds, la misma sesión de 2.x midió ventanas de luma 53.5 y 140.4, y el ciclo se mueve en
-  minutos (muestreos consecutivos: 58.6 → 41.8 → 41.5 → 58.1). En Genesis Plaza el reloj lo controla la
-  escena (`SkyboxTime`), y el mismo preset renderiza distinto en cada build (luma ~75 en 2.x,
-  ~105–112 en 1.x).
-- **A.** Dejar de intentar fijarlo: `run_drift.sh` muestrea **una** build N veces a lo largo del ciclo y
-  guarda `sampling.csv` (luma, fps, p50, p99, cpu, temperatura, hora). La comparación entre builds se
-  hace **a luminancia pareja**, no por medianas de poblaciones distintas.
-- **V.** Dos builds con muestras en la misma banda de luma (|Δ| ≤ 5) y fps dentro de ±5 % para el mismo
-  estado de luz.
-- **Costo** S · **Riesgo** bajo. **Estado:** el runner ya guarda `state.json` con la luma y
-  `run_drift.sh` muestrea la deriva; **bloqueado para 2.x** por A1;
-  `gp-hi-fixed-sky/` y `gp-hi-midday/` quedan como evidencia de que el preset solo no alcanza.
-
-**A3 · Args de engine por deeplink en 2.x.**
+**A1 · Args de engine por deeplink en 2.x.**
 - **E.** El shell RN arma `BOOT_ARGS` fijo (`rn/android/app/src/godot/java/com/dclrn/MainActivity.kt`),
   así que los parámetros que 1.x acepta por deeplink (benchmark runner, `pulse=false`, calidad, pose)
   se descartan en 2.x. Por eso el §1 del reporte terminó midiendo el cap de dynamic graphics.
@@ -113,7 +76,7 @@ Es el workstream que no optimiza pero habilita todo lo demás.
   calidad y perfil quedan reflejados en el log de arranque.
 - **Costo** S · **Riesgo** bajo (plumbing). **Depende de** nada.
 
-**A4 · Contadores dentro del cliente (fps + renderer).**
+**A2 · Contadores dentro del cliente (fps + renderer).**
 - **E.** En Android se mide con Perfetto; **en iOS no hay fuente** (§5 sólo midió arranque y
   footprint) y el soak de 71 min perdió la frame timeline por tamaño de buffer.
 - **A.** Log periódico y campos en el debug hub: fps, p50/p95/p99 del `delta`, frames > 50 ms,
@@ -122,15 +85,15 @@ Es el workstream que no optimiza pero habilita todo lo demás.
 - **V.** Tiene que coincidir con Perfetto en la misma ventana de 30 s (si no, el instrumento no sirve).
 - **Costo** S/M · **Riesgo** bajo. **Habilita** B1, C1, D1, K2.
 
-**A5 · Gate de performance en CI.**
+**A3 · Gate de performance en CI.**
 - **E.** Una sola comparación consumió ~10 h de teléfono, cooldown y taps.
 - **A.** Job con un A54 colgado de un runner (o device farm) que corra tres escenarios (`gp` noon,
   `gp` dusk, soak de 20 min) contra una baseline versionada; falla por umbral, no por comparación
   entre builds.
 - **V.** El gate detecta una regresión inyectada a propósito (p. ej. +20 % en p99).
-- **Costo** M · **Riesgo** medio (un gate que flapea se ignora; empezar en `warn`). **Depende de** A1–A5.
+- **Costo** M · **Riesgo** medio (un gate que flapea se ignora; empezar en `warn`). **Depende de** A1–A1.
 
-**A6 · Fingerprint de estado por corrida y auto-invalidación.**
+**A4 · Fingerprint de estado por corrida y auto-invalidación.**
 - **E.** Se tiraron cuatro corridas por estado oculto: 1.x midiendo defaults por un doble tap, 1.x con
   el panel abierto (15 vs 24 fps), dos veces el mundo reanudado tras reinstalar y una con el perfil
   puesto pero el `logcat` de otro lanzamiento.
@@ -151,7 +114,7 @@ Es el workstream que no optimiza pero habilita todo lo demás.
   imágenes, storage) · subida de texturas al entrar avatares nuevos · transición de LOD/impostor ·
   flush de CRDT de escena en un frame grande.
 - **V.** p99 y fps p1 bajan con mediana y PSS intactos, en `gp` noon y en `gp` dusk.
-- **Costo** M · **Riesgo** bajo (diagnóstico). **Depende de** A4.
+- **Costo** M · **Riesgo** bajo (diagnóstico). **Depende de** A2.
 
 **B2 · Presupuesto de frame explícito.**
 - **E.** Hoy no hay un número que diga cuánto puede costar cada sistema; el fps resultante es la
@@ -236,10 +199,10 @@ caliente.
 **E1 · ¿GPU o CPU? Partir el frame.**
 - **E.** 2.x sostiene 30 fps con CPU ~185 % (a HIGH, cap apagado) y 119 % con el cap puesto. Con esos
   números no se puede elegir la palanca sin dividir el frame.
-- **A.** Con A4, medir tiempo de GPU por frame y comparar con el tiempo de CPU; separar submit,
+- **A.** Con A2, medir tiempo de GPU por frame y comparar con el tiempo de CPU; separar submit,
   shadows, post (bloom/AA) y geometría.
 - **V.** Un veredicto con número: "en `gp` noon HIGH, el frame es X % GPU / Y % CPU en el p99".
-- **Costo** M · **Riesgo** bajo. **Depende de** A4.
+- **Costo** M · **Riesgo** bajo. **Depende de** A2.
 
 **E2 · Draw calls, instancing y batching de props repetidos.**
 - **E.** Genesis Plaza repite carteles, guirnaldas, macetas y banners; hoy nadie sabe cuántos draw
@@ -271,7 +234,7 @@ caliente.
 - **A.** Cronometrar por sistema en builds de benchmark y publicar el top 10 por escena (GP como
   referencia).
 - **V.** Ranking estable entre corridas (±5 %).
-- **Costo** S/M · **Riesgo** bajo. **Depende de** A4.
+- **Costo** S/M · **Riesgo** bajo. **Depende de** A2.
 
 ### G. Arranque y contenido
 
@@ -307,7 +270,7 @@ caliente.
 - **A.** Medir tiempo de bundle y trabajo del hilo RN en segundo plano mientras se juega (analytics,
   imágenes, storage); diferir lo que no sea de la ventana visible.
 - **V.** Ningún trabajo del shell dentro de la ventana de juego; arranque del shell contado aparte.
-- **Costo** S/M · **Riesgo** bajo. **Depende de** A4.
+- **Costo** S/M · **Riesgo** bajo. **Depende de** A2.
 
 ### I. Memoria y térmica
 
@@ -374,10 +337,10 @@ caliente.
   fuente real y no requiere tocar el cliente. Primera muestra: 59–60 fps en Bloom Garden con los
   ajustes que se entregan.
 - **A.** Envolver el muestreo en un script (N muestras, mediana, escena y ajustes anotados) y correr
-  el mismo escenario que en Android; para p50/p99 sigue haciendo falta A4.
+  el mismo escenario que en Android; para p50/p99 sigue haciendo falta A2.
 - **V.** fps de iOS en el reporte con su método declarado (muestreo del HUD, no frametimeline).
 - **Costo** S · **Riesgo** bajo. **Estado:** la fuente existe y está probada; falta el escenario
-  pareado y, si se quieren colas, A4.
+  pareado y, si se quieren colas, A2.
 
 **K2 · Paridad de métricas entre plataformas.**
 - **E.** Android mide memoria con PSS y térmica con `thermalservice`; iOS no tiene equivalente
@@ -391,7 +354,7 @@ caliente.
 
 ## 3. Targets propuestos (SLO de benchmark)
 
-Medidos con la condición de A1/A2 (cielo fijo verificado por luma, ventana de 30 s, arranque térmico ≤34 °C, mediana de 3).
+Medidos con escena fija a mediodía, ventana de 30 s, arranque térmico ≤34 °C, mediana de 3).
 
 | Escenario | Hoy | Target |
 |---|---|---|
@@ -402,7 +365,7 @@ Medidos con la condición de A1/A2 (cielo fijo verificado por luma, ventana de 3
 | Soak 20 min | +42 MB/71 min | pendiente ≤20 MB/20 min, sin throttling |
 | Shell RN Discover/Backpack | 2.27 s / 1.85 s | ≤1 s cada uno |
 
-Los targets son propuestas a discutir, no compromisos: se fijan después de A4, cuando el número sea
+Los targets son propuestas a discutir, no compromisos: se fijan después de A2, cuando el número sea
 barato de medir.
 
 ---
@@ -423,22 +386,23 @@ barato de medir.
 ## 5. Secuencia
 
 ```
-A1 (el ajuste de cielo llega al motor) ──> A2 (condiciones) ─┬─> A6 (fingerprint) ──> A5 (CI)
-                                                             └─> A3 (deeplink) ──> D1 (avatares) ──> D2/D3
-A4 (contadores) ──┬─> B1 (hitches) ──> B2 (presupuesto)
-                  ├─> C1 (día/noche) ──> C2 (luces por perfil)
-                  ├─> E1 (GPU vs CPU) ──> E2 / E3
-                  ├─> F1/F2 (runtime de escena)
-                  └─> K1 (iOS)
-G1 (arranque) ──> G2 (pipelines)          H1/H2 (shell RN)          I1/I2 (memoria y térmica)
-J1 (target por tier) ──> J2 (perfiles por device)
+A1 (engine args por deeplink) ──┬─> D1 (curva de avatares) ──> D2/D3
+A2 (contadores del cliente) ────┬─> B1 (hitches) ──> B2 (presupuesto de frame)
+                                ├─> C1 (luz horneada) ──> C2 (impostores de prop) ──> C3 (caché)
+                                ├─> E1 (GPU vs CPU) ──> E2 / E3
+                                ├─> F1/F2 (runtime de escena)
+                                └─> K1 (iOS)
+A3 (gate de CI) ── depende de A2 y A4
+A4 (fingerprint por corrida) ──> A3
+G1 (arranque) ──> G2 (pipelines)     H1/H2 (shell RN)     I1/I2 (memoria y térmica)
+J3 (rehacer perfiles) ──> J1 (target por tier) ──> J2 (perfiles por device)
 ```
 
-**Ahora (esta semana):** A1 (hecho), A5 (cerrar), A2, A3. Baratos y desbloquean el resto.
+**Ahora (esta semana):** A4 (hecho), A3 (cerrar), A1, A2. Baratos y desbloquean el resto.
 **Siguiente:** B1 + C1 + E1 — las tres preguntas que la medición ya abrió; con sus respuestas se
 decide si el trabajo grande está en el runtime, en la iluminación o en el render.
 **Después:** D1/D2, G1, H1, I1 en paralelo por áreas distintas.
-**Largo plazo:** A4 (CI), J2 (más devices), E2 si E1 dice que el frame es GPU-bound.
+**Largo plazo:** A2 (CI), J2 (más devices), E2 si E1 dice que el frame es GPU-bound.
 
 ---
 
@@ -446,11 +410,11 @@ decide si el trabajo grande está en el runtime, en la iluminación o en el rend
 
 - **Optimizar contra la métrica equivocada.** Todo esto asume que fps/p99 bajo condiciones fijas
   representan la experiencia. Si el usuario juega de noche en un mundo distinto, la prioridad cambia:
-  por eso C1 y A1 están arriba.
+  por eso C1 y B1 están arriba.
 - **Regresión visual silenciosa.** Los ítems que tocan calidad (C2, D2, E3, J1) necesitan aprobación
   con capturas, no sólo con fps.
 - **Un solo device.** Todas las conclusiones son del A54/Adreno. J2 existe para eso.
-- **El instrumento se vuelve el producto.** A3/A4 son medios; si el gate de CI no se pone en `fail`
+- **El instrumento se vuelve el producto.** A1/A2 son medios; si el gate de CI no se pone en `fail`
   en un mes, es señal de que los umbrales están mal, no de que el gate sobre.
 
 ---
