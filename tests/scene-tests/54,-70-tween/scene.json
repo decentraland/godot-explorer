@@ -1,0 +1,45 @@
+{
+  "ecs7": true,
+  "runtimeVersion": "7",
+  "display": {
+    "title": "Tween Unit Test",
+    "description": "Tween Unit Test",
+    "navmapThumbnail": "images/scene-thumbnail.png",
+    "favicon": "favicon_asset"
+  },
+  "owner": "",
+  "contact": {
+    "name": "Seba",
+    "email": ""
+  },
+  "main": "bin/game.js",
+  "tags": [],
+  "scene": {
+    "parcels": [
+      "54,-70"
+    ],
+    "base": "54,-70"
+  },
+  "spawnPoints": [
+    {
+      "name": "spawn1",
+      "position": {
+        "x": 8,
+        "y": 0,
+        "z": 5
+      },
+      "cameraTarget": {
+        "x": 8,
+        "y": 2,
+        "z": 12
+      },
+      "default": true
+    }
+  ],
+  "requiredPermissions": [
+    "ALLOW_TO_TRIGGER_AVATAR_EMOTE",
+    "ALLOW_TO_MOVE_PLAYER_INSIDE_SCENE"
+  ],
+  "featureToggles": {},
+  "name": "mode-testing"
+}

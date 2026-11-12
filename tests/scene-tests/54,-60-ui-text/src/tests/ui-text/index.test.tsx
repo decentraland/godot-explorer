@@ -1,8 +1,8 @@
 import { CustomReactEcsRenderer } from 'testing-library/src/utils/ui'
-import { test } from 'testing-library/src/testing'
+import { renderTest, skipTest, test } from 'testing-library/src/testing'
 import ReactEcs, { Label } from '@dcl/sdk/react-ecs'
 import { Color4 } from '@dcl/sdk/math'
-import { Entity, UiBackground, UiText, engine } from '@dcl/sdk/ecs'
+import { Entity, UiBackground, UiCanvasInformation, UiText, engine } from '@dcl/sdk/ecs'
 import { MainCanvas } from 'testing-library/src/utils/ui/item'
 import { Rgba, renderedUi, sameColor, settled } from 'testing-library/src/utils/engine'
 import { assert, assertEquals } from 'testing-library/src/testing/assert'
@@ -60,4 +60,42 @@ test('ui-text: blue label on a red canvas', async function (context) {
   const background = (await renderedUi(canvas)).background
   assert(sameColor(background?.color, [1, 0, 0, 1]), `canvas ${JSON.stringify(background?.color)}`)
   CustomReactEcsRenderer.destroy()
+})
+
+// #2638: the scene reads its canvas and the safe area (`interactableArea`: the screen minus notches
+// and system bars) from UiCanvasInformation. Values depend on the device; what must hold is that
+// they are there and the canvas is the size the UI is laid out in.
+test('ui-text: the canvas information gives the size the UI is laid out in', async function (context) {
+  CustomReactEcsRenderer.destroy()
+  CustomReactEcsRenderer.setUiRenderer(() => <MainCanvas color={Color4.Red()} />)
+  await context.helpers.waitNTicks(10)
+  const canvas = UiCanvasInformation.getOrNull(engine.RootEntity)
+  assert(canvas !== null, 'no UiCanvasInformation on the root entity')
+  assert(canvas!.width > 0 && canvas!.height > 0, `canvas ${canvas!.width} x ${canvas!.height}`)
+  const root = withComponentValue(UiBackground, withComponent(UiBackground), () => true)
+  const ui = await settled(context, () => renderedUi(root), (ui) => ui.size[0] > 0)
+  const close = (a: number, b: number) => Math.abs(a - b) <= 2
+  assert(close(ui.size[0], canvas!.width) && close(ui.size[1], canvas!.height), `the full-screen UI is ${ui.size[0]} x ${ui.size[1]}, the canvas ${canvas!.width} x ${canvas!.height}`)
+  CustomReactEcsRenderer.destroy()
+})
+
+// Skipped until #3245 is fixed: before the app measures the safe area, interactableArea insets the
+// whole canvas (the windowed run never measures it).
+skipTest('ui-text: the canvas information gives a safe area inside the canvas', async function (context) {
+  await context.helpers.waitNTicks(10)
+  const canvas = UiCanvasInformation.getOrNull(engine.RootEntity)
+  assert(canvas !== null, 'no UiCanvasInformation on the root entity')
+  const inset = canvas!.interactableArea
+  assert(inset !== undefined, 'no interactableArea')
+  const sides = [inset!.top, inset!.right, inset!.bottom, inset!.left]
+  assert(sides.every((side) => side >= 0), `negative inset ${JSON.stringify(inset)}`)
+  assert(inset!.left + inset!.right < canvas!.width && inset!.top + inset!.bottom < canvas!.height, `inset ${JSON.stringify(inset)} leaves no area in ${canvas!.width} x ${canvas!.height}`)
+})
+
+// The pixel ratio is the window's size over the canvas's: only a run that draws has a window.
+renderTest('ui-text: the canvas information gives a device pixel ratio', async function (context) {
+  await context.helpers.waitNTicks(10)
+  const canvas = UiCanvasInformation.getOrNull(engine.RootEntity)
+  assert(canvas !== null, 'no UiCanvasInformation on the root entity')
+  assert(canvas!.devicePixelRatio > 0, `device pixel ratio ${canvas!.devicePixelRatio}`)
 })
