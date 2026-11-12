@@ -1,77 +1,49 @@
-import { useCallback, useEffect, useReducer, useState } from 'react';
-import { BackHandler, StyleSheet, View } from 'react-native';
-import { BackpackScreen } from '../backpack/BackpackScreen';
-import { Button, u } from '@dcl/ui-native';
-import type { Place } from '../discover/api';
-import { useApi } from '../discover/ApiContext';
-import { ftuePlaces } from '../discover/ftue';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { BackHandler } from 'react-native';
 import {
   acceptTerms,
   alreadySignedIn,
   authCode,
   cancelSignIn,
+  nameTag,
   sendEmailCode,
   setAvatarName,
+  signOut,
   startBrowserSignIn,
   startGuest,
-  termsAccepted,
   verifyEmailCode,
   welcome,
   whenSignedIn,
 } from './auth';
 import { core } from '../core';
+import { UpdateDecision } from '../core/native';
+import { UpdateAvailable } from './UpdateAvailable';
+import { AvatarCustomize } from './AvatarCustomize';
 import { takePreviewLaunch, whenInitialLinkRouted } from './launchLink';
+import { askNotificationPermission } from '../notifications/push';
+import { AuthOtpEntercode } from './AuthOtpEntercode';
 import { initialFlow, reduceFlow } from './flowMachine';
-import { FtueStep } from './FtueStep';
+import { AvatarCreate, PreviewArea, Comeback } from './previewScreens';
 import {
-  AvatarCreateScreen,
-  PreviewArea,
-  WelcomeBackScreen,
-} from './previewScreens';
-import {
-  AccountScreen,
-  CodeScreen,
-  EmailScreen,
-  NamingScreen,
-  SignInScreen,
-  SplashScreen,
-  TermsScreen,
-  WaitScreen,
+  AccountHome,
+  AuthOtpStart,
+  AccountGuestCreate,
+  AvatarNaming,
+  AuthHome,
+  DclSplash,
+  AuthBrowserOpen,
+  AuthVerify,
 } from './screens';
 import { t } from '../i18n';
 
-/** Portrait-only entry flow: splash → terms → account → (auth) → avatar → name → welcome → app. */
-export function EntryFlow({
-  onDone,
-  onJumpIn,
-}: {
-  onDone: () => void;
-  onJumpIn?: (place: Place) => Promise<boolean>;
-}) {
+const RESEND_WAIT_MS = 2 * 60 * 1000;
+
+/** Portrait-only entry flow: splash → account → (auth) → avatar → name → app. */
+export function EntryFlow({ onDone }: { onDone: () => void }) {
   const [flow, dispatch] = useReducer(reduceFlow, initialFlow);
   const { step, provider } = flow;
-  const api = useApi();
-
-  // Ahead of the FTUE gate, so deciding the single-place bypass never waits on the network.
-  useEffect(() => {
-    if (step === 'avatar_create') {
-      ftuePlaces(api);
-    }
-  }, [step, api]);
-
-  useEffect(() => {
-    const subscription = BackHandler.addEventListener(
-      'hardwareBackPress',
-      () => {
-        if (step === 'splash' || step === 'terms') {
-          return false;
-        }
-        dispatch({ type: 'back' });
-        return true;
-      },
-    );
-    return () => subscription.remove();
-  }, [step]);
+  const previewLaunch = useRef(false);
+  previewLaunch.current = flow.preview;
 
   useEffect(() => {
     if (step === 'done') {
@@ -79,24 +51,31 @@ export function EntryFlow({
     }
   }, [step, onDone]);
 
-  // Only an account without a profile reaches the welcome after its avatar: it was made here.
-  useEffect(() => {
-    if (step === 'ftue') {
-      try {
-        core().ftueMarkNewPlayer();
-      } catch {
-        // Signed out meanwhile: there is no account to remember.
-      }
-    }
-  }, [step]);
-
   const [busy, setBusy] = useState(false);
+  const [preset, setPreset] = useState(0);
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+  // Every code is sent with a 2 minute wait before the next one can be asked for.
+  const [resendAt, setResendAt] = useState(0);
+  // Figma: "Opening browser..." until the browser hands the login back, then "Loading..." while the
+  // profile is read.
+  const [returned, setReturned] = useState(false);
+  useEffect(() => setReturned(false), [step]);
 
   useEffect(() => {
     let cancelled = false;
-    const succeeded = async () =>
-      !cancelled && dispatch({ type: 'authSucceeded', ...(await welcome()) });
+    const succeeded = async () => {
+      acceptTerms().catch(() => {});
+      setReturned(true);
+      try {
+        const result = await welcome();
+        if (!cancelled) {
+          dispatch({ type: 'authSucceeded', ...result });
+        }
+      } catch (error) {
+        failed(error);
+      }
+    };
     const failed = (error?: unknown) =>
       !cancelled &&
       dispatch({
@@ -107,7 +86,7 @@ export function EntryFlow({
             : t('FLOW_SIGN_IN_FAILED'),
       });
     if (
-      step === 'auth_wait' &&
+      step === 'auth_browser_open' &&
       (provider === 'google' || provider === 'apple' || provider === 'wallet')
     ) {
       try {
@@ -123,9 +102,27 @@ export function EntryFlow({
         }
       }
       whenSignedIn().then(succeeded, failed);
-    } else if (step === 'guest_wait') {
+    } else if (step === 'account_guest_create') {
       startGuest().then(
-        () => !cancelled && dispatch({ type: 'guestReady' }),
+        // One guest per device: the core hands back the same account, and one that already has a
+        // name is welcomed back instead of being made again (a preview launch skips the avatar).
+        async () => {
+          if (cancelled) {
+            return;
+          }
+          if (!previewLaunch.current) {
+            const result = await welcome().catch(() => null);
+            if (cancelled) {
+              return;
+            }
+            if (result?.hasProfile) {
+              acceptTerms().catch(() => {});
+              dispatch({ type: 'authSucceeded', ...result });
+              return;
+            }
+          }
+          dispatch({ type: 'guestReady' });
+        },
         () => (alreadySignedIn() ? succeeded() : failed()),
       );
     }
@@ -139,6 +136,7 @@ export function EntryFlow({
     setEmailError(null);
     try {
       await sendEmailCode(email);
+      setResendAt(Date.now() + RESEND_WAIT_MS);
       dispatch({ type: 'emailSent', email });
     } catch {
       setEmailError(t('FLOW_EMAIL_SEND_FAILED'));
@@ -147,34 +145,100 @@ export function EntryFlow({
     }
   }, []);
 
+  const resend = useCallback(async () => {
+    setResending(true);
+    try {
+      await submitEmail(flow.email);
+    } finally {
+      setResending(false);
+    }
+  }, [submitEmail, flow.email]);
+
   const submitCode = useCallback(
     async (code: string) => {
       setBusy(true);
       setEmailError(null);
       try {
         await verifyEmailCode(flow.email, code);
-        dispatch({ type: 'authSucceeded', ...(await welcome()) });
       } catch (e) {
         setEmailError(
           authCode(e) === 'invalid_code'
             ? t('FLOW_CODE_INVALID')
             : t('FLOW_SIGN_IN_FAILED'),
         );
-      } finally {
         setBusy(false);
+        return;
+      }
+      setBusy(false);
+      // The code was right: "Confirming login..." until the profile is read.
+      dispatch({ type: 'codeAccepted' });
+      acceptTerms().catch(() => {});
+      try {
+        dispatch({ type: 'authSucceeded', ...(await welcome()) });
+      } catch {
+        dispatch({ type: 'authFailed', message: t('FLOW_SIGN_IN_FAILED') });
       }
     },
     [flow.email],
   );
 
   const back = useCallback(() => {
-    cancelSignIn();
+    // These return to the avatar, where the session must stay. The others leave a sign-in:
+    // cancelled while it runs, signed out once it is done (a guest, or an account to name).
+    if (step !== 'avatar_customize' && step !== 'avatar_naming') {
+      if (alreadySignedIn()) {
+        signOut();
+      } else {
+        cancelSignIn();
+      }
+    }
     setEmailError(null);
+    // Backing out of the avatar ends the session: the next one starts on the first look again.
+    if (step === 'avatar_create') {
+      setPreset(0);
+    }
     dispatch({ type: 'back' });
-  }, []);
+  }, [step]);
 
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => {
+        if (step === 'dcl_splash' || step === 'account_home') {
+          return false;
+        }
+        // A required update has nowhere to go back to.
+        if (step === 'update_available') {
+          return true;
+        }
+        // The customize step asks before discarding; its own listener runs next.
+        if (step === 'avatar_customize') {
+          return false;
+        }
+        back();
+        return true;
+      },
+    );
+    return () => subscription.remove();
+  }, [step, back]);
+
+  const gateChecked = useRef(false);
   const booted = useCallback(async () => {
     await whenInitialLinkRouted();
+    // The version gate asks once per launch, before the account screens; LATER comes back here.
+    if (!gateChecked.current) {
+      gateChecked.current = true;
+      const gate = await core()
+        .versionGate()
+        .catch(() => null);
+      if (gate && gate.decision !== UpdateDecision.Proceed) {
+        dispatch({
+          type: 'updateGate',
+          required: gate.decision === UpdateDecision.Required,
+        });
+        return;
+      }
+    }
     const preview = takePreviewLaunch();
     if (core().state().tag === 'SignedIn') {
       try {
@@ -188,36 +252,48 @@ export function EntryFlow({
       dispatch({ type: 'previewGuest' });
       return;
     }
-    dispatch({ type: 'booted', next: termsAccepted() ? 'account' : 'terms' });
+    dispatch({ type: 'booted' });
   }, []);
   const confirmAvatar = useCallback(
     () => dispatch({ type: 'avatarConfirmed' }),
     [],
   );
+  // The Account Home taps are the commit point: the terms are accepted and the OS asks for
+  // notifications over the next screen, as the 1.x lobby did (Figma NOTIF_PROMPT).
+  const commit = useCallback(() => {
+    acceptTerms().catch(() => {});
+    askNotificationPermission().catch(() => {});
+  }, []);
 
   switch (step) {
-    case 'splash':
-      return <SplashScreen onDone={booted} />;
-    case 'terms':
+    case 'dcl_splash':
+      return <DclSplash onDone={booted} />;
+    case 'update_available':
       return (
-        <TermsScreen
-          onAccept={() => {
-            acceptTerms().catch(() => {});
-            dispatch({ type: 'acceptTerms' });
+        <UpdateAvailable
+          required={flow.updateRequired}
+          onLater={() => {
+            core().snoozeVersionGate();
+            dispatch({ type: 'updateLater' });
           }}
         />
       );
-    case 'account':
+    case 'account_home':
       return (
-        <AccountScreen
-          onGuest={() => dispatch({ type: 'playAsGuest' })}
-          onSignIn={() => dispatch({ type: 'chooseSignIn' })}
-          onBack={back}
+        <AccountHome
+          onGuest={() => {
+            commit();
+            dispatch({ type: 'playAsGuest' });
+          }}
+          onSignIn={() => {
+            commit();
+            dispatch({ type: 'chooseSignIn' });
+          }}
         />
       );
-    case 'sign_in':
+    case 'auth_home':
       return (
-        <SignInScreen
+        <AuthHome
           error={flow.error}
           onProvider={next =>
             dispatch({ type: 'chooseProvider', provider: next })
@@ -225,105 +301,77 @@ export function EntryFlow({
           onBack={back}
         />
       );
-    case 'email_entry':
+    case 'auth_otp_start':
+    case 'auth_otp_entercode': {
+      // The code is asked in a modal over the email screen, which stays where it is.
+      const coding = step === 'auth_otp_entercode';
       return (
-        <EmailScreen
-          initial={flow.email}
-          error={emailError}
-          busy={busy}
-          onSubmit={submitEmail}
-          onBack={back}
-        />
+        <>
+          <AuthOtpStart
+            initial={flow.email}
+            error={coding ? null : emailError}
+            busy={busy && !coding}
+            onSubmit={submitEmail}
+            onBack={back}
+          />
+          <AuthOtpEntercode
+            visible={coding}
+            email={flow.email}
+            error={coding ? emailError : null}
+            busy={busy && !resending}
+            onSubmit={submitCode}
+            resendAt={resendAt}
+            onResend={resend}
+            onClose={back}
+          />
+        </>
       );
-    case 'email_code':
+    }
+    case 'auth_browser_open':
+      return <AuthBrowserOpen loading={returned} onCancel={back} />;
+    case 'auth_verify':
+      return <AuthVerify />;
+    case 'account_guest_create':
+      return <AccountGuestCreate />;
+    case 'comeback':
       return (
-        <CodeScreen
-          email={flow.email}
-          error={emailError}
-          busy={busy}
-          onSubmit={submitCode}
-          onBack={back}
-        />
-      );
-    case 'auth_wait':
-      return (
-        <WaitScreen
-          title={t('FLOW_AUTH_WAIT_TITLE')}
-          body={t('FLOW_AUTH_WAIT_BODY')}
-          onCancel={back}
-        />
-      );
-    case 'guest_wait':
-      return (
-        <WaitScreen
-          title={t('FLOW_GUEST_WAIT_TITLE')}
-          body={t('FLOW_GUEST_WAIT_BODY')}
-          onCancel={back}
-        />
-      );
-    case 'welcome_back':
-      return (
-        <WelcomeBackScreen
+        <Comeback
           name={flow.name}
           onContinue={() => dispatch({ type: 'finish' })}
+          onUseAnother={back}
         />
       );
     case 'avatar_create':
       return (
-        <AvatarCreateScreen
+        <AvatarCreate
+          selected={preset}
+          onSelect={setPreset}
           onCustomize={() => dispatch({ type: 'customizeAvatar' })}
           onContinue={confirmAvatar}
           onBack={back}
         />
       );
     case 'avatar_customize':
-      return (
-        <BackpackScreen
-          onBack={back}
-          footer={
-            <View style={styles.footer}>
-              <Button
-                label={t('FLOW_CONTINUE')}
-                onPress={confirmAvatar}
-              />
-            </View>
-          }
-        />
-      );
+      return <AvatarCustomize onDone={confirmAvatar} onDiscard={back} />;
     case 'avatar_naming':
       return (
-        <NamingScreen
-          initial={flow.name}
-          preview={<PreviewFill />}
+        <AvatarNaming
+          tag={nameTag()}
+          preview={<PreviewArea stage="naming" />}
           onBack={back}
           onSubmit={name => {
             setAvatarName(name);
+            // Only an account without a profile names an avatar here: it is a new player.
+            try {
+              core().ftueMarkNewPlayer();
+            } catch {
+              // Signed out meanwhile: there is no account to remember.
+            }
             dispatch({ type: 'named', name });
           }}
-        />
-      );
-    case 'ftue':
-      return (
-        <FtueStep
-          username={flow.name || t('FLOW_GUEST_NAME')}
-          onJumpIn={onJumpIn}
-          onFinish={() => dispatch({ type: 'finish' })}
         />
       );
     default:
       return null;
   }
 }
-
-function PreviewFill() {
-  return (
-    <View style={styles.previewFill}>
-      <PreviewArea inset={false} />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  footer: { padding: u(24), paddingBottom: u(32), backgroundColor: '#161518' },
-  previewFill: { flex: 1, marginVertical: u(8) },
-});

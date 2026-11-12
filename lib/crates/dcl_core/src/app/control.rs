@@ -62,6 +62,11 @@ pub enum Control {
     FocusCamera {
         focus: CameraFocus,
     },
+    /// The avatar window is drawn only above this screen row, in device pixels: a card that slides
+    /// over it covers the avatar instead of the avatar showing over the card. Negative: no limit.
+    PreviewClip {
+        bottom: i32,
+    },
     Equip {
         urn: String,
     },
@@ -70,6 +75,14 @@ pub enum Control {
     },
     SetBodyShape {
         urn: String,
+    },
+    /// The whole look in one edit, so a preset lands without the avatars in between.
+    SetLook {
+        body_shape: String,
+        wearables: Vec<String>,
+        skin: String,
+        hair: String,
+        eyes: String,
     },
     /// `color` is `#rrggbb`.
     SetColor {

@@ -12,8 +12,14 @@ export function authCode(error: unknown): string | undefined {
   return undefined;
 }
 
-/** The core refuses to begin a sign-in once one is done; callers move on instead of failing. */
-export const alreadySignedIn = () => core().state().tag === 'SignedIn';
+/**
+ * The core refuses to begin a sign-in once one is done; callers move on instead of failing. Any
+ * state past signing in counts: the avatar screens hold the preview, not plain `SignedIn`.
+ */
+export const alreadySignedIn = () => {
+  const { tag } = core().state();
+  return tag !== 'Booting' && tag !== 'SignedOut' && tag !== 'SigningIn';
+};
 
 export const startGuest = () => core().signInGuest();
 
@@ -30,6 +36,7 @@ export const startBrowserSignIn = (provider?: 'google' | 'apple') =>
   core().signInBrowser(provider);
 
 export const cancelSignIn = () => core().cancelSignIn();
+export const signOut = () => core().signOut();
 
 /** Resolves once the app state says the user is signed in, rejects when a step fails. */
 export function whenSignedIn(): Promise<void> {
@@ -55,15 +62,15 @@ export async function welcome(): Promise<AuthResult> {
   return { hasProfile: name.length > 0, name };
 }
 
-/** Terms the player already accepted in this version (or an older run of the same one). */
-export const termsAccepted = () =>
-  core().termsAcceptedVersion() >= core().termsVersion();
-
-/** Records the acceptance and lets analytics start (nothing is sent before this). */
+/** Records the acceptance and lets analytics start (nothing is sent before this). Idempotent on
+ * the core side, so it is safe to call from every commit point (guest, sign-in). */
 export async function acceptTerms(): Promise<void> {
   core().acceptTerms(core().termsVersion());
   await core().setAnalyticsConsent(true);
 }
+
+/** The `#1234` after a name: the last four characters of the address. */
+export const nameTag = () => (core().address() ?? '').slice(-4);
 
 export const setAvatarName = (name: string) =>
   core().control(new Control.SetName({ name }));

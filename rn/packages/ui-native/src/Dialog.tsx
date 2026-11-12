@@ -220,6 +220,8 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: fonts.bold,
     fontSize: u(19),
+    // The font's own line: a line as short as the size clips the descenders on Android.
+    lineHeight: u(23),
     color: colors.snow,
     textAlign: 'center',
   },
@@ -238,6 +240,7 @@ const styles = StyleSheet.create({
   },
   buttons: { flexDirection: 'row', alignItems: 'center', gap: u(16) },
   buttonsLandscape: { gap: u(20) },
+  /** The buttons share the row in equal parts. */
   grow: { flex: 1 },
   icon: {
     position: 'absolute',

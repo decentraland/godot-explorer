@@ -18,13 +18,11 @@ const fake = () => ({
   getToken: jest.fn().mockResolvedValue('tok'),
   hasPermission: jest.fn().mockResolvedValue(false),
   requestPermission: jest.fn().mockResolvedValue(true),
-  deviceInfo: jest
-    .fn()
-    .mockResolvedValue({
-      appVersion: '2.0.0',
-      locale: 'es_AR',
-      timezone: 'UTC',
-    }),
+  deviceInfo: jest.fn().mockResolvedValue({
+    appVersion: '2.0.0',
+    locale: 'es_AR',
+    timezone: 'UTC',
+  }),
   schedule: jest.fn().mockResolvedValue(true),
   cancel: jest.fn().mockResolvedValue(true),
 });

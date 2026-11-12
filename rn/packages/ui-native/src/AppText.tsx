@@ -40,16 +40,20 @@ export function AppText({
   style,
   children,
   numberOfLines,
+  textBreakStrategy,
 }: {
   variant?: TextVariant;
   style?: StyleProp<TextStyle>;
   children: ReactNode;
   numberOfLines?: number;
+  /** `simple` breaks greedily, as Figma does; Android's default balances the lines. */
+  textBreakStrategy?: 'simple' | 'highQuality' | 'balanced';
 }) {
   return (
     <Text
       allowFontScaling={false}
       numberOfLines={numberOfLines}
+      textBreakStrategy={textBreakStrategy}
       style={[variants[variant], style]}
     >
       {children}

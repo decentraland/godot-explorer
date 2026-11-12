@@ -22,6 +22,8 @@ export const colors = {
   purple450: '#460F6F',
   purple500: '#350854',
   purple550: '#24033B',
+  /** `background/brand`, the plain `Background` of the entry flow frames. */
+  brand: '#470071',
   cardLight: '#B48CD7',
   glass: 'rgba(105,31,169,0.4)',
   glassPressed: 'rgba(105,31,169,0.6)',
@@ -59,8 +61,6 @@ export const colors = {
   green: '#30CD00',
   modal: '#4C147C',
   menu: '#1B002D',
-  /** Figma `background/brand` (the `Background` component). */
-  brand: '#470071',
   /** `Card-Profile` Type=Name tile: base fill and its violet / peach glows. */
   nameCard: '#604CB0',
   nameCardViolet: '#BC93FF',

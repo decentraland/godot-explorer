@@ -12,7 +12,7 @@ export { AppText } from './AppText';
 export { Badge } from './Badge';
 export { BottomNav } from './BottomNav';
 export type { NavKey } from './BottomNav';
-export { BottomSheet, SHEET_HANDLE_HEIGHT } from './BottomSheet';
+export { BottomSheet, SHEET_HANDLE_HEIGHT, useSheetDrag } from './BottomSheet';
 export { Button } from './Button';
 export { Checkbox } from './Checkbox';
 export { Chip } from './Chip';
@@ -25,7 +25,7 @@ export { ClaimDialog } from './ClaimDialog';
 export type { ClaimState } from './ClaimDialog';
 export { OtpDialog } from './OtpDialog';
 export type { OtpState } from './OtpDialog';
-export { Dialog } from './Dialog';
+export { Dialog, GLOW_BOTTOM, GLOW_TOP } from './Dialog';
 export type { DialogButton, DialogIcon } from './Dialog';
 export { Dropdown } from './Dropdown';
 export type { DropdownOption } from './Dropdown';
@@ -74,13 +74,13 @@ export {
   fonts,
   iconSize,
   layout,
+  lightRainbow,
   minTouchTarget,
   notificationTitle,
   radii,
   radius,
   space,
   rarityColors,
-  lightRainbow,
   motion,
 } from './tokens';
 export type { Rarity } from './tokens';

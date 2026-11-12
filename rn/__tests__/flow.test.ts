@@ -10,15 +10,20 @@ const run = (actions: FlowAction[], from: FlowState = initialFlow) =>
   actions.reduce(reduceFlow, from);
 
 describe('entry flow', () => {
-  it('goes splash → terms → account', () => {
-    expect(run([{ type: 'booted' }]).step).toBe('terms');
-    expect(run([{ type: 'booted' }, { type: 'acceptTerms' }]).step).toBe(
-      'account',
+  it('the version gate shows Update available; LATER resumes the boot, a required one has no LATER', () => {
+    const soft = run([{ type: 'updateGate', required: false }]);
+    expect(soft.step).toBe('update_available');
+    expect(reduceFlow(soft, { type: 'updateLater' }).step).toBe('dcl_splash');
+    const hard = run([{ type: 'updateGate', required: true }]);
+    expect(reduceFlow(hard, { type: 'updateLater' })).toBe(hard);
+    const account = run([{ type: 'booted' }]);
+    expect(reduceFlow(account, { type: 'updateGate', required: true })).toBe(
+      account,
     );
   });
 
-  it('skips the terms the player already accepted', () => {
-    expect(run([{ type: 'booted', next: 'account' }]).step).toBe('account');
+  it('goes splash → account', () => {
+    expect(run([{ type: 'booted' }]).step).toBe('account_home');
   });
 
   it('a restored account with a name goes straight in, one without builds an avatar', () => {
@@ -34,27 +39,26 @@ describe('entry flow', () => {
         hasProfile: true,
         name: 'x',
       }).step,
-    ).toBe('terms');
+    ).toBe('account_home');
   });
 
-  it('guest path skips naming and ends in the ftue', () => {
+  it('guest path names the avatar and ends in the app', () => {
     const state = run([
       { type: 'booted' },
-      { type: 'acceptTerms' },
       { type: 'playAsGuest' },
       { type: 'guestReady' },
       { type: 'customizeAvatar' },
       { type: 'avatarConfirmed' },
     ]);
-    expect(state.step).toBe('ftue');
+    expect(state.step).toBe('avatar_naming');
     expect(state.guest).toBe(true);
-    expect(run([{ type: 'finish' }], state).step).toBe('done');
+    const named = run([{ type: 'named', name: 'Zara Skyforge' }], state);
+    expect(named.step).toBe('done');
   });
 
   it('new account goes through avatar and naming', () => {
     const state = run([
       { type: 'booted' },
-      { type: 'acceptTerms' },
       { type: 'chooseSignIn' },
       { type: 'chooseProvider', provider: 'google' },
       { type: 'authSucceeded', hasProfile: false, name: '' },
@@ -64,14 +68,14 @@ describe('entry flow', () => {
       [{ type: 'avatarConfirmed' }, { type: 'named', name: 'Mateo' }],
       state,
     );
-    expect(named.step).toBe('ftue');
+    expect(named.step).toBe('done');
     expect(named.name).toBe('Mateo');
   });
 
   it('a preview launch with no account signs in as a guest and skips the avatar', () => {
     const waiting = run([{ type: 'previewGuest' }]);
     expect(waiting).toMatchObject({
-      step: 'guest_wait',
+      step: 'account_guest_create',
       guest: true,
       preview: true,
     });
@@ -82,7 +86,7 @@ describe('entry flow', () => {
     const waiting = run([{ type: 'previewGuest' }]);
     const failed = run([{ type: 'authFailed', message: 'x' }], waiting);
     expect(failed).toMatchObject({
-      step: 'account',
+      step: 'account_home',
       guest: false,
       preview: false,
     });
@@ -92,7 +96,7 @@ describe('entry flow', () => {
   });
 
   it('previewGuest only applies from the splash', () => {
-    const state = run([{ type: 'booted', next: 'account' }]);
+    const state = run([{ type: 'booted' }]);
     expect(reduceFlow(state, { type: 'previewGuest' })).toBe(state);
   });
 
@@ -102,8 +106,34 @@ describe('entry flow', () => {
       { type: 'chooseProvider', provider: 'wallet' },
       { type: 'authSucceeded', hasProfile: true, name: 'Ana' },
     ]);
-    expect(state.step).toBe('welcome_back');
+    expect(state.step).toBe('comeback');
     expect(state.name).toBe('Ana');
+  });
+
+  it('a guest tap on a session the core still holds goes on like a sign-in', () => {
+    const waiting = run([{ type: 'playAsGuest' }]);
+    expect(
+      reduceFlow(waiting, {
+        type: 'authSucceeded',
+        hasProfile: false,
+        name: '',
+      }).step,
+    ).toBe('avatar_create');
+    expect(
+      reduceFlow(waiting, {
+        type: 'authSucceeded',
+        hasProfile: true,
+        name: 'Ana',
+      }).step,
+    ).toBe('comeback');
+  });
+
+  it('returns to Account Home when the guest sign-in fails', () => {
+    const waiting = run([{ type: 'playAsGuest' }]);
+    expect(waiting.step).toBe('account_guest_create');
+    expect(reduceFlow(waiting, { type: 'authFailed', message: 'x' }).step).toBe(
+      'account_home',
+    );
   });
 
   it('returns to sign-in with a message when auth fails, and ignores stale auth results', () => {
@@ -112,17 +142,17 @@ describe('entry flow', () => {
       { type: 'chooseProvider', provider: 'apple' },
     ]);
     const failed = reduceFlow(waiting, { type: 'authFailed', message: 'nope' });
-    expect(failed.step).toBe('sign_in');
+    expect(failed.step).toBe('auth_home');
     expect(failed.error).toBe('nope');
     const cancelled = reduceFlow(waiting, { type: 'back' });
-    expect(cancelled.step).toBe('sign_in');
+    expect(cancelled.step).toBe('auth_home');
     expect(
       reduceFlow(cancelled, {
         type: 'authSucceeded',
         hasProfile: true,
         name: 'x',
       }).step,
-    ).toBe('sign_in');
+    ).toBe('auth_home');
   });
 
   it('email goes through the address, then the code, then succeeds', () => {
@@ -130,16 +160,51 @@ describe('entry flow', () => {
       { type: 'chooseSignIn' },
       { type: 'chooseProvider', provider: 'email' },
     ]);
-    expect(entry.step).toBe('email_entry');
+    expect(entry.step).toBe('auth_otp_start');
     const code = reduceFlow(entry, { type: 'emailSent', email: 'a@b.co' });
-    expect(code.step).toBe('email_code');
+    expect(code.step).toBe('auth_otp_entercode');
     expect(code.email).toBe('a@b.co');
-    const done = reduceFlow(code, {
+    // An accepted code shows "Confirming login..." until the profile is read.
+    const confirming = reduceFlow(code, { type: 'codeAccepted' });
+    expect(confirming.step).toBe('auth_verify');
+    const done = reduceFlow(confirming, {
       type: 'authSucceeded',
       hasProfile: true,
       name: 'Ana',
     });
-    expect(done.step).toBe('welcome_back');
+    expect(done.step).toBe('comeback');
+    expect(
+      reduceFlow(confirming, { type: 'authFailed', message: 'x' }).step,
+    ).toBe('auth_home');
+    expect(reduceFlow(confirming, { type: 'back' }).step).toBe(
+      'auth_otp_start',
+    );
+    expect(reduceFlow(entry, { type: 'codeAccepted' }).step).toBe(
+      'auth_otp_start',
+    );
+  });
+
+  it('a new account goes from Confirming login to the avatar, and Comeback goes back to the providers', () => {
+    const confirming = run([
+      { type: 'chooseSignIn' },
+      { type: 'chooseProvider', provider: 'email' },
+      { type: 'emailSent', email: 'a@b.co' },
+      { type: 'codeAccepted' },
+    ]);
+    expect(
+      reduceFlow(confirming, {
+        type: 'authSucceeded',
+        hasProfile: false,
+        name: '',
+      }).step,
+    ).toBe('avatar_create');
+    const back = run([
+      { type: 'chooseSignIn' },
+      { type: 'chooseProvider', provider: 'google' },
+      { type: 'authSucceeded', hasProfile: true, name: 'Ana' },
+    ]);
+    expect(back.step).toBe('comeback');
+    expect(reduceFlow(back, { type: 'back' }).step).toBe('auth_home');
   });
 
   it('back from the code returns to the address, and a late code result is ignored', () => {
@@ -149,31 +214,33 @@ describe('entry flow', () => {
       { type: 'emailSent', email: 'a@b.co' },
     ]);
     const entry = reduceFlow(code, { type: 'back' });
-    expect(entry.step).toBe('email_entry');
-    expect(reduceFlow(entry, { type: 'back' }).step).toBe('sign_in');
+    expect(entry.step).toBe('auth_otp_start');
+    expect(reduceFlow(entry, { type: 'back' }).step).toBe('auth_home');
     expect(
       reduceFlow(entry, { type: 'authSucceeded', hasProfile: false, name: '' })
         .step,
-    ).toBe('email_entry');
+    ).toBe('auth_otp_start');
     expect(
       reduceFlow(initialFlow, { type: 'emailSent', email: 'x@y.zz' }).step,
-    ).toBe('splash');
+    ).toBe('dcl_splash');
   });
 
   it('back walks up the tree and never mutates', () => {
     const state = run([{ type: 'chooseSignIn' }]);
-    expect(reduceFlow(state, { type: 'back' }).step).toBe('account');
-    expect(state.step).toBe('sign_in');
+    expect(reduceFlow(state, { type: 'back' }).step).toBe('account_home');
+    expect(state.step).toBe('auth_home');
     expect(reduceFlow(initialFlow, { type: 'back' })).toBe(initialFlow);
   });
 });
 
 describe('isValidName', () => {
-  it('accepts 3–15 alphanumerics only', () => {
+  it('accepts up to 15 letters, digits and inner spaces', () => {
     expect(isValidName('Mateo')).toBe(true);
-    expect(isValidName('  Ana3 ')).toBe(true);
-    expect(isValidName('ab')).toBe(false);
-    expect(isValidName('has space')).toBe(false);
+    expect(isValidName('Zara Skyforge')).toBe(true);
+    expect(isValidName('a')).toBe(true);
+    expect(isValidName('')).toBe(false);
+    expect(isValidName('  Ana3 ')).toBe(false);
+    expect(isValidName('Ana!')).toBe(false);
     expect(isValidName('a'.repeat(16))).toBe(false);
   });
 });

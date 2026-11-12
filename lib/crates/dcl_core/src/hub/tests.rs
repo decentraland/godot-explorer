@@ -841,3 +841,13 @@ fn a_burst_of_report_tags_reaches_the_listeners_as_the_first_and_the_latest() {
     assert_eq!(heard.len(), 2, "one trailing delivery: {heard:?}");
     assert_eq!(heard[1].1.as_deref(), Some("res://last"));
 }
+
+#[tokio::test]
+async fn guest_again_after_signing_out() {
+    let s = setup();
+    signed_out(&s);
+    s.hub.sign_in_guest().await.unwrap();
+    s.hub.sign_out().unwrap();
+    s.hub.sign_in_guest().await.unwrap();
+    assert_eq!(state(&s), State::SignedIn);
+}

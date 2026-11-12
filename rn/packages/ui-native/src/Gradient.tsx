@@ -30,13 +30,45 @@ function Measured({
 
 export type GradientStop = { offset: number; color: string; opacity?: number };
 
-/** Absolute-fill linear gradient; `angle` 0 = top→bottom, 90 = left→right. */
+export type GradientHandle = { x: number; y: number };
+
+/** Figma's gradient handles are fractions of the box and its colour bands run straight in that
+ * stretched space; react-native-svg keeps bands perpendicular to the line between its two
+ * points, so the line is rebuilt in dp for the box's real aspect ratio. */
+function handleLine(
+  start: GradientHandle,
+  end: GradientHandle,
+  width: number,
+  height: number,
+) {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const unit = dx * dx + dy * dy;
+  const gx = dx / width / unit;
+  const gy = dy / height / unit;
+  const length = gx * gx + gy * gy;
+  const x1 = start.x * width;
+  const y1 = start.y * height;
+  return { x1, y1, x2: x1 + gx / length, y2: y1 + gy / length };
+}
+
+/** Absolute-fill linear gradient; `angle` 0 = top→bottom, 90 = left→right, or Figma's `start`
+ * and `end` handles. With `stroke`, only a rounded ring of that width (in dp, `radius` the box's
+ * own corner radius) is painted: a Figma gradient stroke, leaving the box's fill untouched. */
 export function LinearFill({
   stops,
   angle = 0,
+  start,
+  end,
+  stroke,
+  radius = 0,
 }: {
   stops: GradientStop[];
   angle?: number;
+  start?: GradientHandle;
+  end?: GradientHandle;
+  stroke?: number;
+  radius?: number;
 }) {
   const id = useId();
   const rad = (angle * Math.PI) / 180;
@@ -49,10 +81,17 @@ export function LinearFill({
           <Defs>
             <LinearGradient
               id={id}
-              x1={0.5 - dx}
-              y1={0.5 - dy}
-              x2={0.5 + dx}
-              y2={0.5 + dy}
+              {...(start && end
+                ? {
+                    gradientUnits: 'userSpaceOnUse',
+                    ...handleLine(start, end, width, height),
+                  }
+                : {
+                    x1: 0.5 - dx,
+                    y1: 0.5 - dy,
+                    x2: 0.5 + dx,
+                    y2: 0.5 + dy,
+                  })}
             >
               {stops.map(stop => (
                 <Stop
@@ -64,7 +103,20 @@ export function LinearFill({
               ))}
             </LinearGradient>
           </Defs>
-          <Rect width={width} height={height} fill={`url(#${id})`} />
+          {stroke ? (
+            <Rect
+              x={stroke / 2}
+              y={stroke / 2}
+              width={width - stroke}
+              height={height - stroke}
+              rx={Math.max(radius - stroke / 2, 0)}
+              fill="none"
+              stroke={`url(#${id})`}
+              strokeWidth={stroke}
+            />
+          ) : (
+            <Rect width={width} height={height} fill={`url(#${id})`} />
+          )}
         </Svg>
       )}
     </Measured>

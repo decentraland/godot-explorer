@@ -94,7 +94,13 @@ export function SheetFooter({
 }
 
 const styles = StyleSheet.create({
-  sheet: { width: '100%', ...elevation.up },
+  // The shadow follows the body's rounded top corners.
+  sheet: {
+    width: '100%',
+    borderTopLeftRadius: radius['2xl'],
+    borderTopRightRadius: radius['2xl'],
+    ...elevation.up,
+  },
   fill: { flex: 1 },
   body: {
     alignItems: 'center',

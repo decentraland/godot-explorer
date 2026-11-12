@@ -880,6 +880,36 @@
     "orientation": "portrait"
   },
   {
+    "id": "extra/flow-create",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-naming",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-customize",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-customize-finish",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-customize-discard",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-guest-create",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
     "id": "settings-portrait__account-home__738-8278",
     "source": "settings-portrait",
     "orientation": "portrait"
@@ -887,6 +917,81 @@
   {
     "id": "settings-portrait__account-home__738-8261",
     "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-ftue",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-signin",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-email",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-code",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-code-verifying",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-code-error",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-code-resend-wait",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-email-filled",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-email-invalid",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-comeback",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-auth-browser-open",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-auth-browser-loading",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-auth-verify",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-update",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-update-forced",
+    "source": "extra",
     "orientation": "portrait"
   },
   {
@@ -1656,11 +1761,6 @@
   },
   {
     "id": "extra/ds-otp-resent",
-    "source": "extra",
-    "orientation": "portrait"
-  },
-  {
-    "id": "extra/flow-terms",
     "source": "extra",
     "orientation": "portrait"
   },

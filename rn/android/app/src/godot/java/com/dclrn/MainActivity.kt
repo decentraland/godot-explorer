@@ -33,7 +33,14 @@ class MainActivity : ReactActivity(), GodotHost {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(null)
     instance = this
+    hideSystemBars()
     if (CoreHost.engineWanted) startEngine()
+  }
+
+  // The bars come back with the keyboard, a dialog or a swipe: hide them again on every focus.
+  override fun onWindowFocusChanged(hasFocus: Boolean) {
+    super.onWindowFocusChanged(hasFocus)
+    if (hasFocus) hideSystemBars()
   }
 
   override fun onDestroy() {

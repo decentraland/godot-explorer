@@ -5,8 +5,8 @@ import { colors } from './tokens';
 import { u } from './scale';
 
 /** Figma `Loader/Spinner` (150×150): a Black 40% ring with a Ruby arc that rotates 360° every
- * second, linear and infinite; slower when the OS asks for reduced motion. `size` is in dp,
- * the stroke keeps the Figma ratio (16/150). */
+ * second, linear and infinite; slower when the OS asks for reduced motion. `size` is in dp; the
+ * ring (radius 53, stroke 16) and the 159° arc keep the drawn node's ratios inside the box. */
 export function Spinner({
   size = 75,
   accessibilityLabel,

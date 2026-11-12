@@ -154,6 +154,8 @@ pub enum EngineCommand {
     SetRendering(bool),
     /// The avatar the core computed from an edit; the engine renders it.
     ApplyAvatar(super::AvatarState),
+    /// A whole look from a preset: the engine shows the loading state, not the avatar it replaces.
+    ApplyLook(super::AvatarState),
     Control(super::Control),
 }
 

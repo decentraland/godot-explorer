@@ -93,12 +93,17 @@ impl App {
     /// Runs a shell command: avatar edits are computed here and the result goes to the engine to
     /// render; the rest is forwarded, starting the engine if it is not up yet.
     pub fn control(&mut self, control: Control) {
+        let whole_look = matches!(control, Control::SetLook { .. });
         if let Some(edit) = self.edit_avatar(&control) {
             match edit {
                 Ok(next) if self.avatar.as_ref() != Some(&next) => {
                     self.events.avatar_changed(&next);
                     self.avatar = Some(next.clone());
-                    self.send(EngineCommand::ApplyAvatar(next));
+                    self.send(if whole_look {
+                        EngineCommand::ApplyLook(next)
+                    } else {
+                        EngineCommand::ApplyAvatar(next)
+                    });
                 }
                 Ok(_) => {}
                 Err(error) => tracing::warn!("avatar edit ignored: {error}"),
@@ -119,6 +124,7 @@ impl App {
             Control::Equip { .. }
                 | Control::Unequip { .. }
                 | Control::SetBodyShape { .. }
+                | Control::SetLook { .. }
                 | Control::SetColor { .. }
                 | Control::SetEmoteSlot { .. }
                 | Control::RandomizeAvatar
@@ -133,6 +139,21 @@ impl App {
             Control::Equip { urn } => avatar::equip(&current, &self.catalog, urn),
             Control::Unequip { urn } => Ok(avatar::unequip(&current, &self.catalog, urn)),
             Control::SetBodyShape { urn } => avatar::set_body_shape(&current, &self.catalog, urn),
+            Control::SetLook {
+                body_shape,
+                wearables,
+                skin,
+                hair,
+                eyes,
+            } => avatar::set_look(
+                &current,
+                &self.catalog,
+                body_shape,
+                wearables,
+                skin,
+                hair,
+                eyes,
+            ),
             Control::SetColor { target, color } => avatar::set_color(&current, *target, color),
             Control::SetEmoteSlot { slot, urn } => avatar::set_emote_slot(&current, *slot, urn),
             _ => avatar::randomize(&current, &self.catalog, &mut self.rng),

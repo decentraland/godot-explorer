@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F0A7C0DE0000000000000020 /* Inter-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F0A7C0DE0000000000000010 /* Inter-Regular.ttf */; };
+		F0A7C0DE0000000000000021 /* Inter-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F0A7C0DE0000000000000011 /* Inter-Medium.ttf */; };
+		F0A7C0DE0000000000000022 /* Inter-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F0A7C0DE0000000000000012 /* Inter-SemiBold.ttf */; };
+		F0A7C0DE0000000000000023 /* Inter-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F0A7C0DE0000000000000013 /* Inter-Bold.ttf */; };
 		0C80B921A6F3F58F76C31292 /* libPods-DclRn.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DCACB8F33CDC322A6C60F78 /* libPods-DclRn.a */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		2E7EB2BB4B701E7E5D47CEAA /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
@@ -18,6 +22,10 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		F0A7C0DE0000000000000010 /* Inter-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = Inter-Regular.ttf; path = DclRn/Fonts/Inter-Regular.ttf; sourceTree = "<group>"; };
+		F0A7C0DE0000000000000011 /* Inter-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = Inter-Medium.ttf; path = DclRn/Fonts/Inter-Medium.ttf; sourceTree = "<group>"; };
+		F0A7C0DE0000000000000012 /* Inter-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = Inter-SemiBold.ttf; path = DclRn/Fonts/Inter-SemiBold.ttf; sourceTree = "<group>"; };
+		F0A7C0DE0000000000000013 /* Inter-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = Inter-Bold.ttf; path = DclRn/Fonts/Inter-Bold.ttf; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* DclRn.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DclRn.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = DclRn/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = DclRn/Info.plist; sourceTree = "<group>"; };
@@ -58,6 +66,10 @@
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
+				F0A7C0DE0000000000000010 /* Inter-Regular.ttf */,
+				F0A7C0DE0000000000000011 /* Inter-Medium.ttf */,
+				F0A7C0DE0000000000000012 /* Inter-SemiBold.ttf */,
+				F0A7C0DE0000000000000013 /* Inter-Bold.ttf */,
 				EB034757B9B4089C67208C23 /* GodotHost.mm */,
 				B130CF31BC32915856EA596D /* GodotPlugins.cpp */,
 				D9F324566D06728E0D0EC335 /* GodotHost.h */,
@@ -179,6 +191,10 @@
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				2E7EB2BB4B701E7E5D47CEAA /* PrivacyInfo.xcprivacy in Resources */,
+				F0A7C0DE0000000000000020 /* Inter-Regular.ttf in Resources */,
+				F0A7C0DE0000000000000021 /* Inter-Medium.ttf in Resources */,
+				F0A7C0DE0000000000000022 /* Inter-SemiBold.ttf in Resources */,
+				F0A7C0DE0000000000000023 /* Inter-Bold.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

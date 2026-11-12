@@ -16,14 +16,19 @@ export type LayoutProps = {
   /** Portrait only: the app's bottom navigation, or the entry flow's Continue button. */
   footer?: ReactNode;
   onBack?: () => void;
+  /** The Wearables / Emotes switch and the filter; off while the entry flow edits a look. */
+  tools?: boolean;
 };
 
 export function BackButton({
   onPress,
   style,
+  size = 22,
 }: {
   onPress: () => void;
   style: object;
+  /** The arrow's size in dp, centred in the 32 dp box. */
+  size?: number;
 }) {
   return (
     <Pressable
@@ -33,7 +38,7 @@ export function BackButton({
       hitSlop={12}
       style={[styles.back, style]}
     >
-      <Icon name="back" size={22} />
+      <Icon name="back" size={size} />
     </Pressable>
   );
 }

@@ -16,6 +16,9 @@ measure, fix, re-measure — and only hand control back once position/size/color
 within ~1-2px. Report a compact table of what was checked and the before/after numbers, not a
 running narration of each step.
 
+**For a whole flow (several screens, states, a drawn order) read §8 first and follow it to the letter:
+the user does not review against Figma, this process does.**
+
 **This skill is young and is expected to keep improving — that's the point, not a gap to apologize
 for.** Several rounds of back-and-forth on one screen are fine; what matters is that each round
 teaches the skill something so the *next* screen needs fewer rounds. Every constant here (the
@@ -48,6 +51,15 @@ a technique that only lives in one session's transcript doesn't compound.
   whatever was already fetched is close enough — don't guess which page is "more right," ask or let
   a linked node settle it.
 - Figma MCP: `create_session` once per file, reuse the `sessionId` for every subsequent call.
+- **Fetch the whole screen frame once (`get_design_context` with `forceCode: true`), not only the
+  block you are fixing.** The frame-level export is where the container rules live (the `Content`
+  frame's `pt/pb/px`, `justify-between`, each group's `gap`) and where text colour, weight and copy
+  are stated per span. Account Home's second review found nothing wrong in the containers and three
+  misses in exactly that layer: the tagline is `white` (the `body` variant is pearl), the legal
+  paragraph is snow with **Regular** periwinkle links (the code had Medium links and an inline hex),
+  and the copy was "Decentraland's …, Privacy Policy and Content Policy." where Figma says
+  "Decentraland’s …, Privacy Policy, and Content Policy." (curly apostrophe, Oxford comma — the
+  wrap differed because of it). Copy goes into i18n verbatim from the frame, punctuation included.
 - `get_metadata` on a node for its resolved tree (ids, names, `x/y/width/height` — **absolute
   ground truth for position and size**, unlike CSS classes which can be ambiguous).
 - `get_design_context` on a node for the CSS-ish spec (colors, font, radius, border) — **convert
@@ -64,9 +76,19 @@ a technique that only lives in one session's transcript doesn't compound.
 ## 1. The scale convention — get this right first, it invalidates everything else if wrong
 
 `rn/packages/ui-native/src/scale.ts`'s `u(x)` expects **Figma px ÷ 2** — confirmed by the file's own doc comment.
-`SCALE = min(width,height)/360`, so `u(size) = size * SCALE`. A Figma `gap-[46px]` is `u(23)`, a
-`text-[72px]` is `u(36)`. Never pass a raw Figma number into `u()`, never eyeball-map to "whichever
-existing token looks about right."
+`SCALE = min(min(w,h)/360, max(w,h)/800)` — the Figma frame (360×800dp) is *contained* in the
+phone: by width on most phones, by height on one that is proportionally shorter than the frame
+(Galaxy S25, 415×900dp: 1.125 by height, not 1.154 by width). `u(size) = size * SCALE`. A Figma
+`gap-[46px]` is `u(23)`, a `text-[72px]` is `u(36)`. Never pass a raw Figma number into `u()`,
+never eyeball-map to "whichever existing token looks about right."
+
+Why contain and not width: the reviewer lays the Figma frame next to the device **aligned by
+height**, and every vertical number is judged that way. With width scaling, on the S25 every
+padding, gap and line box came out 2.5% taller than the frame's proportions, which read as "the
+top block sits too low and the bottom block too high" even though each value was the exact Figma
+px. Scaling by height for margins only (`v()`) fixed the edges and left the stacked buttons ~6dp
+off; the DS-wide contain scale closed everything to ≤1.5dp. On a 360×800 viewport (the web
+capture) both definitions are 1.0, so CI snapshots do not move.
 
 ## 2. Per text node — fontSize, lineHeight, letterSpacing
 
@@ -131,6 +153,20 @@ a resolution matching its native Figma size, download it as a PNG, and use it as
 — same technique as this file's existing photo backgrounds. This gets the exact rendered colors
 including the blur, at the cost of one more bundled asset.
 
+**A baked background that only exists composed inside screen frames** (the avatar stage: brand
+solid + `Background/Avatar`, whose glows use `mix-blend-multiply`/`plus-lighter` and SVG blur
+filters) cannot be exported from Figma by MCP: `get_screenshot` of the instance flattens it over
+the canvas grey (`#1E1E1E` corners), the DS master has no brand base, and every screen frame has
+the avatar on top. Rebuild it instead: take the `get_design_context` markup of the background
+layers verbatim (Tailwind classes, inline gradient data URIs, the blurred SVG assets), put it in
+an HTML file with the Tailwind play CDN, screenshot it with the repo's `playwright-core` through
+Chrome (`chromium.launch({ channel: 'chrome' })`, viewport 720×1600) and compare pixel colours
+with the frame screenshot at avatar-free spots. Two traps: the generated code keeps the
+component's native box (1372×1475) inside the scaled instance box (1604×1724), so wrap it in a CSS
+`scale()`; and a `get_metadata` `y` outside the frame (1811 for a 1724-tall instance in a 1600
+frame) means the instance is flipped — add `scale(s, -s)`. The stage matched within 2–5 RGB units
+everywhere; the ATLAS page's "Background" export is an older, flatter design, not the HIFI one.
+
 ## 2d. Icons and other assets — use the design's asset, found in the design system first
 
 Never redraw a glyph the design already provides, even when a look-alike is one path away. For
@@ -163,7 +199,9 @@ button whose fill, border, and radius all trace back to existing tokens (`colors
 ## 4. Layout — spacing, gaps, padding
 
 **Prefer `get_metadata`'s resolved positions over a Tailwind `gap-[Npx]`/`pb-[Npx]` class when they
-disagree.** A real contradiction surfaced this session: one screen's exported `pb-[350px]` didn't
+disagree.** A fixed-height footer (`Footer-Buttons` h 200, `pt 18`, `pb 40`) puts its button at
+`y + 18` and leaves 86 below it, not the 40 the class says: measure from the child's `y` and
+`height` to the frame edge.** A real contradiction surfaced this session: one screen's exported `pb-[350px]` didn't
 match what the metadata's actual child positions implied. Compute gaps directly:
 `gap = nextChild.y - (prevChild.y + prevChild.height)`, `padding = frame.height -
 (lastChild.y + lastChild.height)`. Metadata is ground truth; the CSS class is a convenience that
@@ -246,6 +284,49 @@ Run this on both the Figma reference screenshot and the device screenshot, repor
 the delta, apply **one** targeted fix, rebuild, re-measure. Do not guess a magnitude and move on —
 confirm convergence with the same script before calling a gap "fixed."
 
+**Text landmarks: compare line centroids, not band edges.** `scripts/text_rows.sh` (next to this
+file, ImageMagick only, no Pillow) masks the light text colours, projects the image to one column
+and prints every row band with its **centroid**. Band *edges* move by ±8px between a crisp device
+render and a blurry 461px-wide Figma export, and thin ascenders/descenders drop in and out of the
+mask; the centroid of a line stays put to ~1px, and the centroid-to-centroid distance between two
+lines is the line pitch (`lineHeight`). The method that converged Account Home in one pass:
+```bash
+# Figma shot scaled to the DEVICE height, device shot as captured: one shared y axis
+scripts/text_rows.sh figma.png  --height 2340 --crop 853x2340+100+0
+scripts/text_rows.sh device.png                --crop 880x2340+100+0
+```
+Crop ~100px off each side so the photo background's highlights do not join the mask. For a solid
+landmark (a ruby button) `magick img -crop <region> +repage -fuzz 8% -fill black +opaque '#FF2D55'
+-fill white -opaque '#FF2D55' -trim -format '%wx%h+%X+%Y' info:` gives its box. Do the reference
+scaling **by height** (the reviewer's alignment); scaling by width only agrees when the phone has
+the frame's aspect ratio.
+
+**Measuring glyph-only landmarks.** A crisp device render keeps descenders inside the mask while a
+blurry Figma export drops them, so a text row's band is taller on the device and its centroid sits
+2-3px lower for the same real position: compare the *band top* too, or use a row without
+descenders. For an icon-only button (the naming dice), size the `Icon` from the glyph's extent
+inside its viewBox against Figma's bounding box (44 of 54 → `size = box / 0.81`) and confirm with
+the band height of the glyph on both images, not the button's box.
+
+**Emulator at the Figma frame size (the project standard).** `npm run emulator:figma` pins the
+emulator to 720×1600 at 320 dpi, a 360×800dp @2x display: `SCALE` is 1, a screenshot is the same
+size as the frame PNG and every number compares 1:1 with no scaling or aspect-ratio argument
+(`npm run emulator:reset` restores the phone). Verify there first, then on the real aspect ratio.
+
+**Device loop (no rebuild).** The emulator carries the no-godot mock build (`[CoreSelfTest] no
+native core`), hot-reloaded by Metro on 8081; a registered preview opens with
+`adb shell am start -a android.intent.action.VIEW -d "dclrn://preview/<id>"` (the normal boot may
+land elsewhere, e.g. a recovered mock session skips Account Home) and `adb exec-out screencap -p >
+shot.png` captures it. Force-stop the app before reopening a preview whose code changed. The
+react-native-web capture (`tools/ui-spec/ci_capture.sh … --ids <id>`) is the CI view of the same
+screen; its `?preview=` needs the gallery host to mount `preview-ready`, which a careless merge once
+dropped — if every capture times out, diff `rn/src/gallery/GalleryHost.tsx` against `main` first.
+The whole flow runs on the mock too: `adb shell am start -n
+org.decentraland.godotexplorer/com.godot.game.GodotAppLauncher` and `adb shell input tap x y`
+through the steps (a recovered mock session boots into Avatar Create). Entry-flow previews
+register as `extra/<name>` ids: `docs/rn-ui-spec/manifest.json` does not know
+the Mobile-Entry-Flow file, and the gallery test rejects other prefixes.
+
 ## 6. Iteration discipline
 
 - **One change per measured gap.** Don't bundle three guessed adjustments into one edit; each
@@ -263,14 +344,139 @@ confirm convergence with the same script before calling a gap "fixed."
 
 ## 7. Don't re-derive what's already a shared component
 
-Before building a "new" button/card/radius from scratch, check `rn/packages/ui-native/src/` — `PrimaryButton`
-already has `square` (16dp corners, full label, for entry-flow CTAs) and `outline` (translucent +
-2px snow border) tones; `AppText` variants carry the type scale (`heading` u28, `body` u15,
+Before building a "new" button/card/radius from scratch, check `rn/packages/ui-native/src/` — `Button`
+already has `big` (96px / 16px radius, the entry-flow CTA) and the `outline` tone (black 40% + 2px
+snow border; a frame that draws it at 60% is an instance override to flag, not a DS change), and
+`Spinner` is Figma's `Loader/Spinner`; `AppText` variants carry the type scale (`heading` u28, `body` u15,
 `button` u15, `caption` u12 — check these against a node's `text-[Npx]` before assuming a screen
 needs a bespoke font size). Extend an existing DS component additively (a new tone/variant) rather
 than hand-rolling a one-off style when the shape already exists elsewhere in the app.
 
-## Worked reference (Account Home, ATLAS page `H1Alvbe7sh0e0IyLckewMI`)
+## 8. Flow audit protocol — "the Figma, not the person watching, finds the differences"
+
+The user's standing rule (2026-11-10): **no step of Figma → implementation may depend on them noticing.**
+A flow is done only when every frame of it, in every state, was compared against the *current* Figma
+and the differences are either fixed or listed as decisions. Everything below comes from mistakes made
+on `feat/entry-flow-parity`; each one cost a round trip the user should never have paid.
+
+### 8.1 Source of truth
+- The **current Figma** is the spec. Not the existing code, not the first RN port (it was a vague
+  approximation of the old Godot lobby), not another screen. Code that exists is *unaudited* until a
+  measured comparison says otherwise: never write "implemented" about a screen you did not measure
+  (an inventory that says "exists" was read by the user as "matches the design").
+- Inherited screens get the same audit as new ones. Opening the app on a device and finding a screen that is
+  not the Figma (Welcome Back was the old Godot one) is an audit failure, not a surprise.
+- **Name code 1:1 with the document.** Step ids and screen components carry the frame names
+  (`auth_otp_start` ↔ `AuthOtpStart` ↔ frame `AUTH_OTP_START`; states of one frame are props, not new
+  steps). A reviewer must be able to check a screen against its frame by name alone.
+
+### 8.2 Read the flow before the pixels
+1. List the frames of the flow in drawing order (`scripts/figma-reads.md` §1): the page repeats the flow once per
+   path (guest, Google, email, returning user), left to right, with `Line N` arrows and decision groups
+   ("Correct code", "New user"). The drawn order **is** the flow; do not reuse an older flow from the code.
+2. Read every `TEXT` note on the page near the frames: they are behaviour specs ("keyboard pushes the text field
+   and button up", "show the numeric keyboard, allow native paste", "background no gradient", "resend timeout 2 min",
+   "hide credits here"). Each one is a requirement with a test on a device.
+3. Make a checklist: one line per frame **and per state** (empty, focused with keyboard, valid, invalid, loading,
+   error, disabled, pressed) and per variant ("Loading..." vs "Opening browser..."). A frame that only differs by
+   an OS screenshot of the keyboard is still a state to implement (focus ring, caret, lift).
+4. Several copies of a frame exist. Diff them node by node (`figma-reads.md` §2) to find the live one; copies that
+   are equal prove nothing about the code. Re-read after the designer "cleans up": ids disappear, frames move,
+   sizes change (the splash logo went 145 → 142 → 130/140 between readings). Re-read at the start of each
+   session and again before saying done.
+5. Anything ambiguous or that looks like a design slip (a copy of another modal used as a frame, sample text
+   like "Text / 0/15", a double space, a link missing its underline) is implemented as drawn **or** the nearest
+   sensible reading, and goes in the report under **Decisions**. Never drop it silently, never ask the user to
+   discover it.
+
+### 8.3 Compare against the real renderer, every state
+- Export the frame at full resolution (`download_assets`, scale 1, png: 720×1600). The 461-px screenshot is only for
+  looking.
+- Capture the implementation on **Android native** (emulator or phone, debug build + Metro, preview deep link
+  `dclrn://preview/<gallery id>`; release builds have no gallery) and on web (`tools/ui-spec/ci_capture.sh`,
+  what CI snapshots). Web alone hid 4–5 px native offsets and the device-only behaviours (keyboard, line breaking).
+  When web and native disagree, find the cause (usually a text without an explicit `lineHeight`) instead of tuning
+  for one of them.
+- Measure with `scripts/measure.py` (bounding boxes and deltas per region) and sample colours with
+  `magick img -format '%[pixel:p{x,y}]' info:`. Target ≤ 2 px and exact colours. Expected non-bugs: the status bar
+  pushes safe-area-aware elements (back arrow) ~10 px down on a device; text that Figma fills with sample words.
+- Drive the **real flow** on the device too, not only previews: a state only reachable by interaction
+  (keyboard lift, blur validation, the screen after a back, a session the app remembers) is exactly where
+  previews lie.
+- Per-range text styling matters: `getRange*` for colour, weight and decoration of each run. One frame underlines links,
+  its sibling does not.
+
+### 8.4 Per-screen checklist (do all of it, unprompted)
+Text: size, weight, line height, colour, case, decoration per run, line breaks · fills, strokes (weight and colour
+per state), radii, shadows · every icon/logo at its drawn box, from the design's SVG (a PNG with padding looked 22 %
+smaller) · spacing and positions · background kind (glow / plain / photo / image: the notes say) · safe areas ·
+keyboard behaviour · copy in en/es/pt_BR · gallery entry per state, with the Figma node id in `notes` · tall and short viewport.
+
+### 8.5 Report shape (what the user reads)
+Per screen: frame id → what was compared (states) → measured deltas → fixes → **Decisions** (ambiguities, slips, behaviours
+chosen). Lead with what does not match. Do not write "coincide" without numbers behind it.
+
+### 8.6 Pitfalls found (each cost time)
+- Release APKs have no gallery/deep link; use `npx react-native run-android --main-activity com.godot.game.GodotAppLauncher
+  --extra-params -PdclNoGodot=true` + Metro + `adb reverse tcp:8081 tcp:8081` (uninstall a differently signed build first).
+- A `--no-godot` Android build that crashes on `libdclgodot.so`: delete `rn/android/build/generated/autolinking`.
+- `download_assets` rejects ids inside instances (`I123:4;5:6`): use the component's `mainComponent.id`.
+- Android's line breaker treats `a@b.com.` as an address and may drop the full stop alone on the next line; detect
+  with `onTextLayout` and move the address down instead (the frame wraps them together).
+- `AppText` does not forward arbitrary props (`onTextLayout`): use `Text` when you need them.
+- `prettier --write <dir>` reformats files you did not touch; `git add <dir>` takes stray untracked dirs along. Stage files
+  by name and look at `git diff --cached --stat`.
+- Renaming files/ids: do it with a script restricted to the flow files (`'account'` is also a settings section).
+- **A `lineHeight` at or below the font size clips descenders on Android** (the "y" of "your" lost its tail in two
+  titles and the dialog title; Figma draws such titles overflowing their 34 px box). Crop and zoom every title
+  with descenders on the device. Fix: the font's own line (~1.2 × size) and take the added height back with
+  negative margins so the frame's positions hold; check web and native both.
+- **Text without a `lineHeight` sits ~4 px lower on Android than on web** (font padding). Set the line height the frame
+  draws (Figma label 36 px → `u(18)`) on shared components (`TextField` label, `Tabs`): that fixes every screen that
+  uses them, instead of one screen's margin.
+- `exportAsync({ format: 'SVG_STRING' })` on a component inside `use_figma` returns the whole vector in one string
+  (`download_assets` returns one file per layer): use it for logos and illustrations. Check `iconSvgs.ts` first;
+  the DS already had `nameLogo` (same mark) and `walletConnect`.
+- Before redrawing a tile, card or button, look for the DS variant: the editor's category tiles are
+  `Cards-Wearables EmoteWheel=On` = `ItemCard state="selected" | empty` at 62 dp, not `SlotTile`.
+- A frame may place a shared component differently from the code (the finish-look dialog sits 47 px above the screen
+  centre and its card is 514 px wide): report it under Decisions; do not bend the shared component for one frame.
+- Release-style captures hide gallery-only states; screens fed by mock data differ from Figma samples (`{Username}`,
+  "Text / 0/15", jackets as thumbnails): compare structure and geometry, not sample content.
+- **Follow the flow's arrows before mapping frames to steps.** They are often plain `VECTOR`/`LINE` nodes, not
+  `CONNECTOR`s, so a connector query returns nothing: list the row's top-level nodes sorted by x and read what lies
+  between two frames. Two frames with the same name (AUTH_BROWSER_OPEN "Opening browser..." and "Loading...") are two
+  steps until proven otherwise, and frames between them (AUTH_WEB_MAGIC, GoogleScreen) are the browser's, not ours.
+  Never invent the trigger for a state change (app foreground, a timer): derive it from what the frames show happening.
+- **Android balances the lines of a paragraph; Figma fills each line greedily.** A copy that wraps one word earlier
+  than the frame needs `textBreakStrategy="simple"` (`AppText` forwards it).
+- **A shadow on a wrapper follows the wrapper's corners, not its child's.** A rounded `Sheet` under a square
+  wrapper drew a straight shadow band over the corners; give the wrapper the same radii and zoom the corner 600 %.
+- **A state the frame draws but the text query misses** (a disabled link, a countdown "(2:00)") lives in a component
+  variant: read the component set (`Button/Link` Default / Pressed / Disabled) for the exact fill, opacity and
+  decoration, and check the frame's own copy of it for flips (the waiting frames mirror it).
+- A frame's text that differs from i18n changes the key (all three languages), not the call site.
+
+## Worked reference (Account Home, HIFI frame `1738:9473` in `H1Alvbe7sh0e0IyLckewMI`)
+
+Final values after the second review (2026-11-03, contain scale, measured on the Galaxy S25 with
+`scripts/text_rows.sh` against the frame scaled to the device height — every landmark within
+1.5dp). **The frame's box math was right all along**: every "corrected by eye" value in the earlier
+table below was compensating for width scaling on a phone that is shorter than the frame, plus
+band-edge measurements that drifted. Take the frame's numbers, scale them with `u()`, and verify
+with centroids before touching anything.
+
+| Node | Figma | RN (`u()`) |
+|---|---|---|
+| Content `pt` / `pb` / `px` | 220 / 165 / 64 | `paddingTop: u(110)`, `paddingBottom: u(82.5)`, `FlowFrame` `u(32)` |
+| Logo, Top gap | 110, 36 | `u(55)`, title `marginTop: u(18)` |
+| Title | Inter Bold 72, 2 lines = 174 → 87/line, snow | `heading`, `fontSize: u(36)`, `lineHeight: u(43.5)` |
+| Text gap, tagline | 20; Inter Regular 40, 96 → 48/line, **white**, width 534 | `marginTop: u(10)`, `u(20)`/`u(24)`, `color: colors.white`, `maxWidth: u(267)` |
+| Bottom gap, Buttons gap | 48, 48 | `accountActions.gap: u(24)`, `accountButtons.gap: u(24)` |
+| Buttons | 96 high, radius 16, px 24, Bold 30 uppercase | `<Button big fullWidth>` (`controlHeight.lg`, `radius.xl`) |
+| Legal | Inter Regular 30 snow, 3 lines = 36/line, links Regular periwinkle underlined | `body` + `lineHeight: u(18)`, `color: colors.snow`; links `colors.link` |
+
+The earlier table, kept as the record of what went wrong:
 
 | Node | Figma | RN (`u()`) | How it was found |
 |---|---|---|---|

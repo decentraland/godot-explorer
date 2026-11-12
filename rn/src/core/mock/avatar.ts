@@ -109,6 +109,10 @@ export function reduceAvatar(
       };
     case Control_Tags.SetBodyShape:
       return { ...avatar, bodyShape: control.inner.urn };
+    case Control_Tags.SetLook: {
+      const { bodyShape, wearables: worn, skin, hair, eyes } = control.inner;
+      return { ...avatar, bodyShape, wearables: worn, skin, hair, eyes };
+    }
     case Control_Tags.SetColor: {
       const { target, color } = control.inner;
       return { ...avatar, [COLOR_KEYS[target]]: color };

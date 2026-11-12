@@ -1,11 +1,14 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
 import {
+  AppText,
+  colors,
   ItemCard,
   PillButton,
   SlotTile,
   Tabs,
   layout,
   u,
+  useSheetDrag,
 } from '@dcl/ui-native';
 import type { AvatarState } from '../core/native';
 import { t } from '../i18n';
@@ -54,6 +57,8 @@ export type WearablesPanelProps = {
   busy?: string | null;
   copy: EmptyCopy;
   subRow?: SubRow;
+  /** The entry flow's editor: 62 dp category tiles and no colour row, as Figma AVATAR_CUSTOMIZE draws it. */
+  entry?: boolean;
   onTab: (tab: TabKey) => void;
   onSlot: (slot: Slot) => void;
   onToggle: (item: Wearable, equipped: boolean) => void;
@@ -66,6 +71,7 @@ export type WearablesPanelProps = {
 export function WearablesPanel(props: WearablesPanelProps) {
   const { catalog, avatar, tab, slot, filter, columns, bottomInset, busy } =
     props;
+  const drag = useSheetDrag();
   const items = catalog ? gridItems(tab, slot, catalog, avatar, filter) : [];
   const pills = props.subRow === 'pills';
   // The pill generation also colours the body shape, and drops the row when the list is empty.
@@ -102,13 +108,32 @@ export function WearablesPanel(props: WearablesPanelProps) {
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.slotsScroll}
-          contentContainerStyle={styles.slots}
+          contentContainerStyle={props.entry ? styles.entrySlots : styles.slots}
         >
           {SLOTS[tab].map(entry => {
             const worn = catalog
               ? equippedItem(entry, catalog, avatar)
               : undefined;
-            return (
+            return props.entry ? (
+              <View key={entry.key} style={styles.entrySlot}>
+                <ItemCard
+                  style={styles.entryCard}
+                  label={t(entry.label)}
+                  thumbnail={worn?.thumbnail}
+                  art={
+                    worn ? (
+                      <ItemArt category={worn.category} name={worn.name} />
+                    ) : undefined
+                  }
+                  empty={!worn}
+                  state={slot?.key === entry.key ? 'selected' : 'default'}
+                  onPress={() => props.onSlot(entry)}
+                />
+                <AppText variant="body" style={styles.entryLabel}>
+                  {t(entry.label)}
+                </AppText>
+              </View>
+            ) : (
               <SlotTile
                 key={entry.key}
                 label={t(entry.label)}
@@ -126,7 +151,7 @@ export function WearablesPanel(props: WearablesPanelProps) {
           })}
         </ScrollView>
       )}
-      {color && avatar && showSwatches ? (
+      {color && avatar && showSwatches && !props.entry ? (
         <View style={styles.swatches}>
           <SwatchStrip
             palette={palette}
@@ -143,7 +168,7 @@ export function WearablesPanel(props: WearablesPanelProps) {
 
   return (
     <View style={styles.fill}>
-      <View style={styles.tabs}>
+      <View style={styles.tabs} {...drag}>
         <Tabs
           items={TABS.map(entry => ({ key: entry.key, label: t(entry.label) }))}
           active={tab}
@@ -194,8 +219,10 @@ export function WearablesPanel(props: WearablesPanelProps) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  /** Figma `Tabs`: the row is 64 px, its labels start 22 px in. */
   tabs: {
     paddingHorizontal: layout.gutter,
+    paddingTop: u(2.5),
     paddingBottom: u(12),
   },
   slotsScroll: { flexGrow: 0 },
@@ -204,6 +231,17 @@ const styles = StyleSheet.create({
     gap: u(16),
     paddingBottom: u(12),
   },
+  /** Figma AVATAR_CUSTOMIZE `Categories`: 124 px `Cards-Wearables` (emote wheel) tiles 32 px apart, the
+   * 24 px label 4 px under each, 40 px above the cards. */
+  entrySlots: {
+    paddingHorizontal: layout.gutter,
+    paddingTop: u(4),
+    gap: u(16),
+    paddingBottom: u(20),
+  },
+  entrySlot: { width: u(62), alignItems: 'center', gap: u(2) },
+  entryCard: { width: u(62), height: u(62) },
+  entryLabel: { fontSize: u(12), lineHeight: u(14.5), color: colors.snow },
   swatches: { paddingBottom: u(12) },
   busy: { opacity: 0.55 },
   pills: {
