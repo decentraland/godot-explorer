@@ -1,0 +1,60 @@
+12:33:28  Acquired tunnel connection to device.
+12:33:28  Enabling developer disk image services.
+12:33:28  Acquired usage assertion.
+Launched application with org.decentraland.godotexplorer bundle identifier.
+Waiting for the application to terminate…
+2026-11-03 12:33:29.032 DclRn[25655:961396] [DEEPLINK] +[DeeplinkServiceLoader load] fired (image load)
+2026-11-03 12:33:29.032 DclRn[25655:961396] [DEEPLINK] scene:openURLContexts: already present on GDTApplicationDelegate, skipping injection
+2026-11-03 12:33:29.032 DclRn[25655:961396] [DEEPLINK] scene:willConnectToSession:options: already present on GDTApplicationDelegate, skipping injection
+2026-11-03 12:33:29.032 DclRn[25655:961396] [DEEPLINK] scene:continueUserActivity: already present on GDTApplicationDelegate, skipping injection
+2026-11-03 12:33:29.040 DclRn[25655:961396] [NOTIFICATION] NotificationService initialized!
+2026-11-03 12:33:29.045 DclRn[25655:961396] [NOTIFICATION] NotificationService initialized and set as delegate
+2026-11-03 12:33:29.100 DclRn[25655:961396] _setUpFeatureFlags called with release level 2
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+W1103 12:33:29.105795 1853927424 ReactInstance.cpp:267] ReactInstance: evaluateJavaScript() with JS bundle
+2026-11-03 12:33:29.130 DclRn[25655:961396] Session replay disabled via configuration
+Initialize godot-rust (API v4.6.2.stable.gh-29, runtime v4.6.2.stable.gh-29, safeguards balanced)
+2026-11-03 12:33:29.360 DclRn[25655:961396] [DEEPLINK] force_deeplink_service_initialization() called (Godot module init)
+2026-11-03 12:33:29.360 DclRn[25655:961396] [DEEPLINK] force_init: scene methods already injected by +load
+2026-11-03 12:33:29.360 DclRn[25655:961396] [DEEPLINK] force_init: registering DeeplinkService with GDTApplicationDelegate
+2026-11-03 12:33:29.360 DclRn[25655:961396] [DEEPLINK] DeeplinkService initialized!
+Notification database initialized
+AVPlayer API initialized
+2026-11-03 12:33:29.361 DclRn[25655:961396] Notification database opened successfully at: /var/mobile/Containers/Data/Application/37801FCB-2EBC-4670-BFA1-560292A04EC7/Documents/dcl_notifications.db
+2026-11-03 12:33:29.361 DclRn[25655:961396] Database current version: 1, target version: 1
+2026-11-03 12:33:29.361 DclRn[25655:961396] Database already at current version 1
+2026-11-03 12:33:29.370 DclRn[25655:961396] [PUSH] registerForRemoteNotifications
+[MemMonitor] total_ram=7718MB -> phys_footprint CRITICAL ceiling=3859MB
+[MemMonitor] total_ram=7718MB -> phys_footprint CRITICAL ceiling=3859MB
+[MemMonitor] background memory monitor started
+[MemMonitor] available=6020MB footprint=123MB level=0
+[MemMonitor] background memory monitor started
+[MemMonitor] available=6020MB footprint=123MB level=0
+2026-11-03 12:33:29.455 DclRn[25655:961396] [DclSwiftLib] ping() called
+2026-11-03 12:33:29.455 DclRn[25655:961396] [DclSwiftLib] version() called
+2026-11-03 12:33:29.457 DclRn[25655:961396] [PUSH] APNs device token ready (len=64)
+[MemMonitor] available=5761MB footprint=382MB level=0
+[MemMonitor] available=5761MB footprint=382MB level=0
+[MemMonitor] available=5828MB footprint=315MB level=0
+[MemMonitor] available=5828MB footprint=315MB level=0
+[MemMonitor] available=5846MB footprint=297MB level=0
+[MemMonitor] available=5846MB footprint=297MB level=0
+[MemMonitor] available=5853MB footprint=290MB level=0
+[MemMonitor] available=5853MB footprint=290MB level=0
+[MemMonitor] available=5856MB footprint=287MB level=0
+[MemMonitor] available=5856MB footprint=287MB level=0
+[MemMonitor] available=5858MB footprint=285MB level=0
+[MemMonitor] available=5858MB footprint=285MB level=0
+[MemMonitor] available=5862MB footprint=281MB level=0
+[MemMonitor] available=5862MB footprint=281MB level=0
+[MemMonitor] available=5866MB footprint=277MB level=0
+[MemMonitor] available=5866MB footprint=277MB level=0
+[MemMonitor] available=5866MB footprint=277MB level=0
+[MemMonitor] available=5866MB footprint=277MB level=0
+[MemMonitor] available=5866MB footprint=277MB level=0
+[MemMonitor] available=5866MB footprint=277MB level=0
+[MemMonitor] available=5866MB footprint=277MB level=0
+[MemMonitor] available=5866MB footprint=277MB level=0
+[MemMonitor] available=5866MB footprint=277MB level=0
+[MemMonitor] available=5866MB footprint=277MB level=0
+App terminated due to signal 15.

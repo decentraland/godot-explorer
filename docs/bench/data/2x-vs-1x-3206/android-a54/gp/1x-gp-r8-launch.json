@@ -1,0 +1,7 @@
+{
+  "build": "1x",
+  "label": "1x-gp-r8",
+  "am_total_time_ms": 310,
+  "cold_launch_to_render_ready_ms": 27422,
+  "settle_seconds": 25
+}

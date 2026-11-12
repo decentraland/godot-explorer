@@ -1,0 +1,6 @@
+{
+  "build": "1x",
+  "label": "1x-mid-r2",
+  "am_total_time_ms": 278,
+  "cold_launch_to_render_ready_ms": 11227
+}

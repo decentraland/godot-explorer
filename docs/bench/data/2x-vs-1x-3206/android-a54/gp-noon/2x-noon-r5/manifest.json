@@ -1,0 +1,92 @@
+{
+  "label": "2x-noon-r5",
+  "build": "2x",
+  "scenario": "gp-noon",
+  "version_name": "2.0.0(2723)",
+  "apk_sha256": "missing",
+  "profile": {
+    "source": "launch.log",
+    "profile": 3,
+    "lines": 1
+  },
+  "frames": {
+    "frames": "756",
+    "fps_avg": "25.050000",
+    "span_s": "29.910000",
+    "interval_p50_ms": "41.640000",
+    "interval_p95_ms": "50.100000",
+    "interval_p99_ms": "66.770000",
+    "interval_max_ms": "116.620000",
+    "fps_p1_low": "14.980000",
+    "fps_p5_low": "19.960000",
+    "fps_median": "24.010000",
+    "pct_missed_deadline": "26.980000",
+    "jank_any": "755"
+  },
+  "cpu_mean_pct": 203.2,
+  "rss_steady_kb": 2105659,
+  "thermal_end_c": 47.3,
+  "condition": {
+    "luma_mean": 118.2,
+    "thermal_start_c": 46.5,
+    "thermal_skin_start_c": 39.0,
+    "note": ""
+  },
+  "gate": null,
+  "cadence": {
+    "file": "docs/bench/data/2x-vs-1x-3206/android-a54/gp-noon/2x-noon-r5/frames.csv",
+    "vsync_hz": 120.0,
+    "vsync_ms": 8.333,
+    "frames": 756,
+    "intervals": 755,
+    "span_s": 29.906,
+    "jank_type_counts": {
+      "Display HAL": 551,
+      "SurfaceFlinger CPU Deadline Missed": 158,
+      "Dropped Frame": 19,
+      "SurfaceFlinger Stuffing": 27,
+      "None": 1
+    },
+    "fps_avg": 25.25,
+    "interval_p50_ms": 41.64,
+    "interval_p95_ms": 50.1,
+    "interval_p99_ms": 66.77,
+    "interval_max_ms": 116.62,
+    "fps_median": 24.01,
+    "fps_p5_low": 19.96,
+    "fps_p1_low": 14.98,
+    "modal_periods": 5,
+    "modal_interval_ms": 41.67,
+    "pct_frames_on_modal": 0.53,
+    "hiccups_ge1": 56,
+    "hiccups_ge1_per_min": 112.35,
+    "stalls_ge2": 18,
+    "stalls_ge2_per_min": 36.11,
+    "pct_window_in_stalls": 0.0438,
+    "stall_window_s": 1.309
+  },
+  "luma": {
+    "image": "docs/bench/data/2x-vs-1x-3206/android-a54/gp-noon/2x-noon-r5/screen.png",
+    "width": 2340,
+    "height": 1080,
+    "luma_full": 118.21,
+    "luma_crop": 120.44,
+    "crop_box": [
+      351,
+      162,
+      1989,
+      918
+    ],
+    "method": "rec601"
+  },
+  "artefacts": {
+    "meta.json": true,
+    "frames.csv": true,
+    "cpu.csv": true,
+    "mem.csv": true,
+    "thermal.csv": true,
+    "screen.png": true,
+    "state.json": true,
+    "trace.perfetto-trace": true
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "condition": {
+    "world": "monsterrecon.dcl.eth (same scene both builds)",
+    "graphic_profile": "High, verified by effect (Medium hits its 30 fps cap at 29.96, High exceeds it)",
+    "dynamic_graphics": "off",
+    "dynamic_skybox": "off",
+    "custom_skybox": "Midday",
+    "windows": "6 x 30 s per build",
+    "light_check": "1.x 97.6-99.9, 2.x 96.9-99.8 central-crop luma",
+    "thermal": "platform Thermal Status 0 in both arms, AP 38-46 C, no throttle"
+  },
+  "metric": "fps_avg",
+  "1x": {
+    "median": 40.22,
+    "runs": [
+      37.96,
+      38.11,
+      41.77,
+      40.37,
+      41.09,
+      40.08
+    ]
+  },
+  "2x": {
+    "median": 38.62,
+    "runs": [
+      36.15,
+      40.24,
+      37.46,
+      36.55,
+      39.79,
+      41.31
+    ]
+  },
+  "diff_fps": -1.6,
+  "diff_pct": -4.0,
+  "ci95_diff_fps": [
+    -4.18,
+    1.83
+  ],
+  "mwu_p_exact": 0.2403,
+  "verdict": "no difference beyond noise at n=6",
+  "retracted": {
+    "value_pct": -50.9,
+    "why": "the 2.x arm of that block ran profile Very Low (limit_fps=Fps18, 18 fps) because the shell pushed settings after the first frame; Medium measured 29.96 (its 30 fps cap) and High 38.62 in the same session proved the profile had never been applied"
+  },
+  "preset_step": {
+    "2x_medium_fps": 29.96,
+    "2x_medium_runs": [
+      29.96,
+      30.37,
+      29.92
+    ],
+    "note": "Medium's own limit_fps=30 caps it, so 29.96 proves the preset is applied"
+  },
+  "caveat": "2.x arm is the local skybox_time patch (one settings read, no render code)"
+}

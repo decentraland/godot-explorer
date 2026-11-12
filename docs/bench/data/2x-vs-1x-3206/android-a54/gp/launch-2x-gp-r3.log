@@ -1,0 +1,18 @@
+11-03 11:04:12.632 I/godot   ( 1370): [MemMonitor] total_ram=7436MB app_budget=4089MB WARNING<=500MB CRITICAL<=300MB swap_total=8191MB
+11-03 11:04:12.632 I/godot   ( 1370): [MemMonitor] background memory monitor started
+11-03 11:04:12.633 I/godot   ( 1370): [MemMonitor] available=3658MB footprint=422MB swap=11MB level=0
+11-03 11:04:12.708 I/godot   ( 1370): [Startup] global._ready start: 0ms
+11-03 11:04:12.711 I/godot   ( 1370): [Startup] global._ready end: 3ms
+11-03 11:04:12.711 I/godot   ( 1370): [Startup] root._ready: 4ms
+11-03 11:04:12.908 I/godot   ( 1370): [Startup] root.start: 201ms
+11-03 11:04:12.909 I/godot   ( 1370): [Startup] root.start_mode: 202ms
+11-03 11:04:14.636 I/godot   ( 1370): [MemMonitor] available=3024MB footprint=1054MB swap=11MB level=0
+11-03 11:04:16.639 I/godot   ( 1370): [MemMonitor] available=2799MB footprint=1279MB swap=11MB level=0
+11-03 11:04:18.643 I/godot   ( 1370): [MemMonitor] available=2618MB footprint=1454MB swap=11MB level=0
+11-03 11:04:20.647 I/godot   ( 1370): [MemMonitor] available=2495MB footprint=1583MB swap=11MB level=0
+11-03 11:04:22.652 I/godot   ( 1370): [MemMonitor] available=2372MB footprint=1706MB swap=11MB level=0
+11-03 11:04:22.653 I/godot   ( 1370): [RenderReady] {"reason":"loading","profile":0,"from_profile":0,"anti_aliasing":0,"shadow_quality":0,"bloom_quality":0,"async_shaders":true,"samples":64,"in_view":53,"not_drawn":0,"ready_at_start_pct":87,"t50_ms":211,"t90_ms":1397,"t100_ms":1397,"menu_ms":0,"frames":23,"max_frame_ms":110,"launch_count":2,"scene_id":"bafkreig5z6onyvwk4hrklg7einxgspq3nqr54a5zpbnfp53vpkigyatu2a","position":"0,-2","pipelines_mesh":6,"pipelines_surface":7,"pipelines_draw":0,"pipelines_specialization":12}
+11-03 11:04:24.656 I/godot   ( 1370): [MemMonitor] available=2090MB footprint=1988MB swap=11MB level=0
+11-03 11:04:26.660 I/godot   ( 1370): [MemMonitor] available=1999MB footprint=2079MB swap=11MB level=0
+11-03 11:04:28.665 I/godot   ( 1370): [MemMonitor] available=2028MB footprint=2050MB swap=11MB level=0
+11-03 11:04:30.669 I/godot   ( 1370): [MemMonitor] available=1995MB footprint=2083MB swap=11MB level=0

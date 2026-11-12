@@ -1,0 +1,16 @@
+11-03 10:58:36.399 I/godot   (28857): [MemMonitor] total_ram=7436MB app_budget=4089MB WARNING<=500MB CRITICAL<=300MB swap_total=8191MB
+11-03 10:58:36.400 I/godot   (28857): [MemMonitor] background memory monitor started
+11-03 10:58:36.400 I/godot   (28857): [MemMonitor] available=3643MB footprint=435MB swap=11MB level=0
+11-03 10:58:36.473 I/godot   (28857): [Startup] global._ready start: 0ms
+11-03 10:58:36.475 I/godot   (28857): [Startup] global._ready end: 2ms
+11-03 10:58:36.475 I/godot   (28857): [Startup] root._ready: 3ms
+11-03 10:58:36.672 I/godot   (28857): [Startup] root.start: 199ms
+11-03 10:58:36.673 I/godot   (28857): [Startup] root.start_mode: 200ms
+11-03 10:58:38.403 I/godot   (28857): [MemMonitor] available=3018MB footprint=1060MB swap=11MB level=0
+11-03 10:58:40.406 I/godot   (28857): [MemMonitor] available=2774MB footprint=1304MB swap=11MB level=0
+11-03 10:58:42.410 I/godot   (28857): [MemMonitor] available=2600MB footprint=1478MB swap=11MB level=0
+11-03 10:58:44.414 I/godot   (28857): [MemMonitor] available=2468MB footprint=1610MB swap=11MB level=0
+11-03 10:58:46.318 I/godot   (28857): [RenderReady] {"reason":"loading","profile":0,"from_profile":0,"anti_aliasing":0,"shadow_quality":0,"bloom_quality":0,"async_shaders":true,"samples":64,"in_view":51,"not_drawn":0,"ready_at_start_pct":86,"t50_ms":222,"t90_ms":1164,"t100_ms":1164,"menu_ms":0,"frames":19,"max_frame_ms":97,"launch_count":2,"scene_id":"bafkreig5z6onyvwk4hrklg7einxgspq3nqr54a5zpbnfp53vpkigyatu2a","position":"0,-2","pipelines_mesh":6,"pipelines_surface":7,"pipelines_draw":0,"pipelines_specialization":11}
+11-03 10:58:46.424 I/godot   (28857): [MemMonitor] available=2342MB footprint=1736MB swap=11MB level=0
+11-03 10:58:48.434 I/godot   (28857): [MemMonitor] available=2099MB footprint=1979MB swap=11MB level=0
+11-03 10:58:50.438 I/godot   (28857): [MemMonitor] available=2023MB footprint=2055MB swap=11MB level=0

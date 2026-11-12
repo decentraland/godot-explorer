@@ -1,0 +1,15 @@
+{
+  "frames": "813",
+  "fps_avg": "26.870000",
+  "span_s": "29.920000",
+  "interval_p50_ms": "33.420000",
+  "interval_p95_ms": "49.990000",
+  "interval_p99_ms": "58.380000",
+  "interval_max_ms": "66.720000",
+  "fps_p1_low": "17.130000",
+  "fps_p5_low": "20.000000",
+  "fps_median": "29.920000",
+  "pct_missed_deadline": "13.780000",
+  "jank_any": "813"
+}
+wrote docs/bench/data/2x-vs-1x-3206/android-a54/gp-hi-v3/1x-v3-r1

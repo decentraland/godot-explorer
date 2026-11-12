@@ -1,0 +1,23 @@
+{
+  "scenario": "sky-fixed-midday",
+  "posed_to_both_builds": "parcel 100,100 (no scene, so no PBSkyboxTime can take the clock), dynamic graphics OFF, graphics profile High, Dynamic Skybox OFF, Custom Skybox = Midday",
+  "result": "the pinned sky is real in 1.x and absent in 2.x",
+  "1x": {
+    "windows": 3,
+    "labels": ["1x-skyfix-r1", "1x-skyfix-r2", "1x-skyfix-r3"],
+    "luma_mean": [110.6, 111.5, 111.9],
+    "fps_avg": [33.96, 40.29, 36.7],
+    "p99_ms": [42.25, 34.15, 42.07],
+    "profile": 3,
+    "note": "the selection is applied live and does not survive a relaunch (it reverts to the stored value), so the three windows belong to one session started once"
+  },
+  "2x": {
+    "windows": 0,
+    "settings_persisted": "Dynamic Skybox off, Custom Skybox = Midday, dynamic graphics off, profile High (all four read back from the panel after a relaunch)",
+    "luma_mean": [33.1],
+    "world": "night",
+    "ui_preview": "daytime",
+    "cause": "lib/crates/dcl_engine/src/sky/skybox_time.rs reads setting(\"skybox_time\") with .try_to::<f64>().unwrap_or(0.0); the fallback is 0.0 = midnight, so a value that does not arrive as a number renders midnight while the shell shows the chosen preset",
+    "note": "no window was measured on 2.x for this scenario because the condition could not be established; publishing one would be comparing a midnight render against a midday render"
+  }
+}

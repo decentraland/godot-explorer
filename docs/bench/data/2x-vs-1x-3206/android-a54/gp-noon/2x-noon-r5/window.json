@@ -1,0 +1,15 @@
+{
+  "frames": "756",
+  "fps_avg": "25.050000",
+  "span_s": "29.910000",
+  "interval_p50_ms": "41.640000",
+  "interval_p95_ms": "50.100000",
+  "interval_p99_ms": "66.770000",
+  "interval_max_ms": "116.620000",
+  "fps_p1_low": "14.980000",
+  "fps_p5_low": "19.960000",
+  "fps_median": "24.010000",
+  "pct_missed_deadline": "26.980000",
+  "jank_any": "755"
+}
+wrote docs/bench/data/2x-vs-1x-3206/android-a54/gp-noon/2x-noon-r5
