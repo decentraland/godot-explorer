@@ -334,7 +334,8 @@ Snow + `Button/Link` Medium periwinkle underline, a nested `Text` so it wraps as
 Verifying (all slots Filled; a row 6 below the slots: `loading 2` 48 + "Verifying..." Semi Bold 24, 7 apart — code
 `Spinner size={24}`, whose ring is a bit thicker than the 4 px one drawn) / Error (slots Error + message).
 `CodeSlots` marks only the next empty slot as Typing, so a full code shows every slot Filled.
-No Landscape variant: the 405 dp card does not fit a landscape phone, so `OtpDialog` scrolls inside the scrim.
+No Landscape variant on purpose: the app is locked to portrait while the OTP shows (the flow's job), so `OtpDialog`
+is portrait only and lifts above the keyboard like `Dialog`.
 Not wired into the entry flow here (that screen is `feat/entry-flow-parity`'s job).
 
 ### Panel frame (Modals page) — `Sheet`, `SheetFooter`, `BottomSheet`, added 2026-11-10
