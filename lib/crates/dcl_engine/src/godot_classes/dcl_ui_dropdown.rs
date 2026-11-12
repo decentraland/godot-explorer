@@ -1,4 +1,4 @@
-use std::{cell::RefCell, cmp::Ordering, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use godot::{
     classes::{IOptionButton, OptionButton, StyleBoxEmpty},
@@ -30,6 +30,9 @@ pub struct DclUiDropdown {
     dcl_entity_id: SceneEntityId,
 
     ui_result: Option<Rc<RefCell<UiResults>>>,
+
+    /// The index the scene last selected: a player's pick stays until the scene selects another.
+    scene_index: Option<i32>,
 }
 
 #[godot_api]
@@ -40,6 +43,7 @@ impl IOptionButton for DclUiDropdown {
             scene_font: SceneFont::default(),
             ui_result: None,
             dcl_entity_id: SceneEntityId::ROOT,
+            scene_index: None,
         }
     }
 
@@ -96,40 +100,36 @@ impl DclUiDropdown {
         new_value: &PbUiDropdown,
         content_mapping: &ContentMappingAndUrlRef,
     ) {
-        let current_item_count = self.base().get_item_count();
-        match current_item_count.cmp(&(new_value.options.len() as i32)) {
-            Ordering::Greater => {
-                for i in new_value.options.len() as i32..current_item_count {
-                    self.base_mut().remove_item(i);
-                }
-            }
-            Ordering::Less => {
-                for _ in current_item_count..new_value.options.len() as i32 {
-                    self.base_mut().add_item("");
-                }
-            }
-            _ => {}
-        }
-        let current_item_count = new_value.options.len();
-        for i in 0..current_item_count {
-            self.base_mut()
-                .set_item_text(i as i32, &new_value.options[i].to_godot());
+        let options = &new_value.options;
+        let option_count = options.len() as i32;
+        // A shrink moves a cut-off selection to the last option without a signal.
+        let cut_off = self.base().get_selected() >= option_count;
+        // Not `remove_item` in a loop: each removal shifts the rest down. No auto-select either,
+        // unlike `add_item`, so `accept_empty` can leave nothing selected.
+        self.base_mut().set_item_count(option_count);
+        for (i, option) in options.iter().enumerate() {
+            self.base_mut().set_item_text(i as i32, &option.to_godot());
         }
 
-        let current_selected_index = if current_item_count > 0 {
-            self.base().get_selected()
-        } else {
-            -1
+        let scene_index = match new_value.selected_index {
+            Some(index) if index >= 0 => index,
+            _ if new_value.accept_empty => -1,
+            _ => 0,
         };
-        if current_selected_index == -1 {
-            if !new_value.accept_empty && current_item_count > 0 {
-                self.base_mut().select(new_value.selected_index());
-            }
-            if let Some(label) = new_value.empty_label.as_ref() {
-                self.base_mut().set_text(&label.to_godot());
-            }
-        } else if let Some(new_selected_index) = new_value.selected_index.as_ref() {
-            self.base_mut().select(*new_selected_index);
+        // Also when the scene's option has only now arrived.
+        let waiting = scene_index >= 0 && self.base().get_selected() == -1;
+        if self.scene_index != Some(scene_index) || waiting || cut_off {
+            self.scene_index = Some(scene_index);
+            let index = if scene_index < option_count {
+                scene_index
+            } else {
+                -1
+            };
+            self.base_mut().select(index);
+        }
+        if self.base().get_selected() == -1 {
+            let label = new_value.empty_label.clone().unwrap_or_default();
+            self.base_mut().set_text(&label.to_godot());
         }
 
         let font_color = new_value
