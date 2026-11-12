@@ -229,6 +229,91 @@ Garden con los ajustes que se entregan). Además los ajustes de iOS son scriptab
 del contenedor de la app se lee y se escribe con `xcrun devicectl device copy from|to`, con las claves
 `dynamic_graphics_enabled`, `dynamic_skybox`, `skybox_time` y `graphic_profile`.
 
+## 1.2 Genesis Plaza, segunda pasada: perfil verificado y el sol como variable medida
+
+Se rehizo el bloque `HIGH` con las dos condiciones que faltaban: el perfil se lee del `[RenderReady]`
+**del pid de esa corrida** (las 15 ventanas nuevas arrancaron en `"profile":3`, sin una sola línea
+`Profile (downgrade|upgrade)` dentro de la ventana) y la compuerta térmica cierra antes de cada ventana
+(AP ≤ 38 °C, piso de 480 s entre ventanas). Dispositivo: A54, pantalla pinchada a 120 Hz, perfil HIGH,
+dynamic graphics OFF, ventana de 30 s, métrica primaria `fps_avg` (media de los intervalos entre frames).
+
+### El hallazgo que ordena todo: la hora del juego mueve el resultado más que la versión
+
+Genesis Plaza **no fija el sol**. La escena no publica una hora fija, así que el cielo sigue el reloj
+del mundo y el costo de la escena cambia con él. Nueve ventanas de 1.x y seis de 2.x, ordenadas por
+hora del juego (que se calcula del reloj UTC, `(utc × 12) mod 86400`):
+
+| hora del juego | build | fps_avg | p50 (ms) |
+|---|---|---:|---:|
+| 10:13 | 1.x | 27.64 | 33.4 |
+| 10:35 | 1.x | 26.46 | 33.5 |
+| 10:54 | 1.x | 24.55 | 41.7 |
+| 11:16 | 1.x | 25.15 | 41.6 |
+| 11:38 | 1.x | 26.13 | 41.5 |
+| 12:01 | 1.x | 25.81 | 41.6 |
+| 14:59 | 2.x | 25.62 | 41.6 |
+| 15:26 | 2.x | 26.52 | 41.6 |
+| 15:52 | 2.x | 26.38 | 41.6 |
+| 16:19 | 2.x | 25.75 | 41.6 |
+| 16:50 | 2.x | 26.49 | 41.6 |
+| 17:17 | 2.x | 25.25 | 41.6 |
+| 18:42 | 1.x | 22.61 | 41.5 |
+| 19:12 | 1.x | **18.26** | 50.0 |
+| 19:39 | 1.x | 19.06 | 50.0 |
+
+Del mediodía al atardecer la **misma build pierde 34 % de fps** (27.64 → 18.26) y el `p50` salta de
+4 períodos de vsync (33.4 ms) a 6 (50.0 ms). Ese salto no es ruido térmico: las tres corridas de las
+18:42–19:39 pasaron por la misma compuerta que las del mediodía, con AP ≤ 38.7 °C al abrir la ventana.
+
+**Consecuencia para el reporte:** las primeras seis ventanas de cada build no estaban pareadas (1.x de
+10:13 a 12:01, 2.x de 14:59 a 17:17), así que su igualdad de medianas (25.78 contra 25.88) es una
+coincidencia, no un resultado. Esa tabla no se usa para publicar un Δ %.
+
+### Cómo se parean ahora
+
+Cada build corre la **misma lista de horas del juego**, y las ventanas se emparejan por esa hora. El
+reloj del mundo es función pura de UTC con período 7200 s, así que la hora del juego se puede esperar:
+`utc_phase.py --wait-until <fase>` duerme hasta que la fase cae en la ventana de ±2 s de juego
+(±0.17 s reales) y recién ahí abre la ventana de medición. La comparación se hace por pares
+(`matched.py`: diferencia por par, mediana de las diferencias, IC bootstrap y test de signos exacto),
+que es la prueba correcta para datos pareados y no exige normalidad.
+
+### El cielo no es el mismo entre builds, aunque la hora sí
+
+Mismo escenario, mismos ajustes, misma hora: la región del cielo (25 % superior de la captura) sale
+más brillante en 2.x.
+
+| build | luma del cielo (25 % superior), 6 ventanas | luma del cielo (15 % central superior) |
+|---|---:|---:|
+| 1.x | 117.0–124.9 | 90.6–107.7 |
+| 2.x | 134.7–139.5 | 118.8–131.5 |
+
+Son ~15–20 puntos de diferencia sostenida. La luma del recuadro central **no** sirve como control de
+luz en esta escena (los avatares de la plaza entran y salen del recuadro: la misma sesión dio 91.8 y
+88.4 en dos minutos), por eso el pareo se hace por hora del juego y no por luminancia. Queda declarado
+como diferencia de render entre builds, no como diferencia de hora.
+
+### iOS (iPhone 16e): 2.x medido, 1.x bloqueado por firma
+
+Siete sesiones de 20 muestras a 1 Hz del contador del HUD, en Genesis Plaza, con el build
+`2.0.0.2723-e3b7aa1-staging`:
+
+| sesión | mediana | mín | máx |
+|---|---:|---:|---:|
+| r1–r7 | 40.0 / 35.5 / 37.5 / 39.0 / 36.0 / 36.0 / 36.0 | 29 | 47 |
+
+Mediana de las medianas **36.0 fps** sobre 140 muestras. iOS no expone frame timeline por frame a
+terceros (Android sí, vía SurfaceFlinger/Perfetto), así que la métrica es un promedio del HUD y **no
+hay p99** en iOS; se probó `xctrace` con las plantillas `Game Performance` y `Animation Hitches` sobre
+el proceso `DclRn` y no producen tabla de present por frame.
+
+El 1.x de iOS **no se pudo medir todavía**: el ipa local (`Decentraland.ipa`, versión 1.1 build 27) está
+firmado con un perfil de aprovisionamiento **vencido**, y el perfil válido que existe para ese bundle id
+pertenece al team `8T73XM973P`, cuyo certificado no está en este Mac. El error exacto está en
+`docs/bench/data/2x-vs-1x-3206/ios-16e/IOS-TRACK.md`. La salida es re-firmar ese ipa con un team
+propio y otro bundle id, o compilar `release-1.16.2` para iOS; ambas están en curso y este párrafo se
+actualiza con el resultado.
+
 ## 2. Carga y arranque
 
 | métrica | 1.x | 2.x | Δ |
