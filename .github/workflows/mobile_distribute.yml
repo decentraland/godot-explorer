@@ -534,7 +534,7 @@ jobs:
       always() && needs.prepare.outputs.should_build == 'true' &&
       (needs.ios-build.result == 'success' || needs.ios-dispatch.result == 'success')
     runs-on: ubuntu-latest
-    timeout-minutes: 130
+    timeout-minutes: 200
     environment: mobile-release
     permissions:
       contents: read
@@ -563,10 +563,10 @@ jobs:
           # Must match `run-name` in godot-asc-deploy/.github/workflows/deploy_testflight.yml.
           export TITLE="🍏 ${R2_SEGMENT} @ ${SHA}"
           echo "Watching ${DEPLOY_REPO} for a deploy_testflight.yml run titled '${TITLE}' created after ${SINCE}"
-          # asc-deploy's own timeout is 45 min, and its gate job can wait up to 120 min for lower
-          # build numbers to reach TestFlight first; the run can also sit queued for a macOS runner.
-          DEADLINE=$(( $(date +%s) + 125 * 60 ))
-          SEEN=0; UPLOADED=0; CONCLUSION=""; URL=""; PHASE=upload
+          # asc-deploy's gate can wait up to 120 min for lower build numbers, signing takes up to
+          # 45 min and Apple processing up to 60; the run can also sit queued for a macOS runner.
+          DEADLINE=$(( $(date +%s) + 195 * 60 ))
+          SEEN=0; CONCLUSION=""; URL=""; PHASE=upload
           while true; do
             # TITLE/SINCE are read by jq from the environment (env.*) — no shell interpolation
             # inside the filter. Newest first, so `first` is the latest matching run.
@@ -581,18 +581,15 @@ jobs:
                 IOS_LINE="🔏 signing & uploading to TestFlight…" python3 .github/scripts/report-build-event.py
               fi
               # An accepted upload can still be rejected or stall in Apple's processing, so after
-              # `Sign & upload` succeeds wait for asc-deploy's `Apple processing result` job.
+              # `Sign & upload` succeeds wait for asc-deploy's `Apple processing result` job (up to
+              # 60 min), which also sets "What to Test" and reports the ⏳ / ✅ lines itself.
               RUN_ID=$(echo "$RUN" | jq -r .databaseId)
               JOBS=$(gh run view "$RUN_ID" --repo "$DEPLOY_REPO" --json jobs 2>/dev/null || true)
               SHIP=$(echo "$JOBS" | jq -r '.jobs[]? | select(.name == "Sign & upload to TestFlight") | "\(.status) \(.conclusion)"')
               PROC=$(echo "$JOBS" | jq -r '.jobs[]? | select(.name == "Apple processing result") | "\(.status) \(.conclusion)"')
               case "$SHIP" in
                 "completed success")
-                  if [ "$UPLOADED" = "0" ]; then
-                    UPLOADED=1; PHASE=processing
-                    IOS_LINE="⏳ build ${BUILD_NUMBER:-?} uploaded — waiting for Apple processing…" \
-                      python3 .github/scripts/report-build-event.py
-                  fi
+                  PHASE=processing
                   case "$PROC" in
                     "completed "*) CONCLUSION="${PROC#completed }"; break ;;
                   esac ;;
