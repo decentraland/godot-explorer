@@ -155,7 +155,12 @@ async fn drive(channels: &mut PulseDriverChannels, address: SocketAddr, stop: &A
     // Send failures repeat at frame rate while the peer is wedged — warn once, then debug.
     let mut warned_send_failed = false;
 
+    let connect_deadline = tokio::time::Instant::now() + Duration::from_secs(10);
+    let mut connected = false;
     while !stop.load(Ordering::Relaxed) {
+        if !connected && tokio::time::Instant::now() >= connect_deadline {
+            return fail(channels, "enet connect timed out".to_owned());
+        }
         // Block until there's work: an outbound frame to send, an inbound datagram to read, or the
         // maintenance deadline so ENet's timers keep ticking.
         let outbound = tokio::select! {
@@ -179,6 +184,7 @@ async fn drive(channels: &mut PulseDriverChannels, address: SocketAddr, stop: &A
         loop {
             match host.service() {
                 Ok(Some(enet::Event::Connect { .. })) => {
+                    connected = true;
                     let _ = channels.status.try_send(PulseStatus::Connected);
                 }
                 Ok(Some(enet::Event::Disconnect { data, .. })) => {
@@ -238,4 +244,35 @@ fn queue_frame(
 fn fail(channels: &mut PulseDriverChannels, message: String) {
     tracing::warn!("pulse: {message}");
     let _ = channels.status.try_send(PulseStatus::Failed(message));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::comms::pulse::transport::{pulse_channels, spawn_pulse_driver};
+
+    #[tokio::test]
+    async fn unresponsive_endpoint_fails_within_connect_deadline() {
+        let socket = std::net::UdpSocket::bind("127.0.0.1:0").unwrap();
+        let (mut link, channels) = pulse_channels(16);
+        let driver = spawn_pulse_driver(
+            PulseTransportConfig {
+                host: "127.0.0.1".to_owned(),
+                port: socket.local_addr().unwrap().port(),
+            },
+            channels,
+        );
+        let failed = tokio::time::timeout(Duration::from_secs(12), async {
+            while let Some(status) = link.status.recv().await {
+                if let PulseStatus::Failed(error) = status {
+                    return error;
+                }
+            }
+            panic!("driver exited without reporting failure");
+        })
+        .await
+        .expect("connection remained silently stuck");
+        assert!(failed.contains("timed out"));
+        drop(driver);
+    }
 }

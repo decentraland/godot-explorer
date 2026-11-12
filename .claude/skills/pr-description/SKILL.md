@@ -157,12 +157,17 @@ Follow `REVIEW.md` §4 exactly. In short:
 3. Decide whether the change can affect another team/service/SDK/workflow. If yes, draft the
    Slack heads-up message for the author alongside the PR body and add the Heads-up line.
 4. Write the body to the scratchpad and print it in full in your reply.
-5. Open it only when asked, always against `origin` (`decentraland/godot-explorer`), never `fork`:
+5. Open it only when asked, always against `origin` (`decentraland/godot-explorer`), never `fork`,
+   and **always as a draft** unless the author explicitly says the PR is ready for review. A draft
+   keeps the PR out of the review queue and the PR-state Slack channel (the board only tracks
+   open, non-draft PRs) until the author has read the description and decided it is ready:
    ```bash
    git push -u origin <branch>
-   gh pr create -R decentraland/godot-explorer --base main \
+   gh pr create -R decentraland/godot-explorer --base main --draft \
      --title "<type>: <summary>" --body-file <scratchpad>/pr-body.md
    ```
+   Drop `--draft` only on an explicit "ready for review" / "not a draft" from the author; to flip
+   an existing draft later: `gh pr ready <N> -R decentraland/godot-explorer`.
    To rewrite an existing PR's body: `gh pr edit <N> -R decentraland/godot-explorer --body-file …`.
 6. Before handing over, run the checklist below on your own draft.
 
@@ -176,6 +181,7 @@ Follow `REVIEW.md` §4 exactly. In short:
 - [ ] Every Expected/Regression line in the Test plan is a `- [ ] **Expected:** …` box — no bare `- [ ]`, no tables, no prose-only cases.
 - [ ] Affected teams are named and were (or will be) told before merge.
 - [ ] Visible text outside `<details>` fits on one screen.
+- [ ] Opened as a draft, unless the author explicitly said it is ready for review.
 
 ## 3. Release Candidate PR (base `release`)
 
@@ -256,7 +262,7 @@ paragraph under it instead of a single line — see #2797. Keep that for one or 
    previous RC and list only the additions, both in *What's included* and in the Test plan.
 6. Write the body to the scratchpad, print it in full, then when asked:
    ```bash
-   gh pr create -R decentraland/godot-explorer --base release --head release-X.Y.Z \
+   gh pr create -R decentraland/godot-explorer --base release --head release-X.Y.Z --draft \
      --title "Release Candidate X.Y.Z" --body-file <scratchpad>/rc-body.md
    ```
 

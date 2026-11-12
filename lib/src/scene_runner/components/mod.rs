@@ -20,6 +20,7 @@ pub mod mesh_renderer;
 pub mod nft_shape;
 pub mod particle_system;
 pub mod physics_combined;
+pub mod physics_layers;
 pub mod pointer_events;
 pub mod raycast;
 pub mod realm_info;

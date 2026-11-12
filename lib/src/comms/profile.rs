@@ -294,17 +294,27 @@ impl Default for UserProfile {
     }
 }
 
+#[derive(Debug, thiserror::Error)]
+#[error("profile not found")]
+pub(crate) struct ProfileNotFound;
+
 impl UserProfile {
     // Not sure if it's the best place to add this here
     pub fn from_lambda_response(
         response: &RequestResponse,
         base_url: &str,
     ) -> Result<Self, anyhow::Error> {
+        if response.status_code == http::StatusCode::NOT_FOUND {
+            return Err(ProfileNotFound.into());
+        }
+        if !response.status_code.is_success() {
+            return Err(anyhow::anyhow!("profile HTTP {}", response.status_code));
+        }
         match &response.response_data {
             Ok(ResponseEnum::String(json)) => {
                 if let Ok(response) = serde_json::from_str::<LambdaProfiles>(json.as_str()) {
                     let Some(mut content) = response.avatars.into_iter().next() else {
-                        return Err(anyhow::anyhow!("profile not found"));
+                        return Err(ProfileNotFound.into());
                     };
 
                     // clean up the lambda result

@@ -79,7 +79,9 @@ func submit_message(message: String) -> void:
 				"system", tr("CHAT_SYSTEM_UNKNOWN_COMMAND"), Time.get_unix_time_from_system()
 			)
 	else:
-		Global.comms.send_chat(message)
+		# Null with telemetry off. The other hooks call Global.metrics first; this path doesn't.
+		if Global.comms.send_chat(message) and Global.analytics_controller != null:
+			Global.analytics_controller.track_first_social_action("chat")
 		Global.on_chat_message.emit(
 			Global.player_identity.get_address_str(), message, Time.get_unix_time_from_system()
 		)

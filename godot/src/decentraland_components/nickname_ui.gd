@@ -67,7 +67,15 @@ var send_message_action = func(): async_show_message.bind(send_message).call()
 		room_debug_label.visible = !room_debug.is_empty()
 		room_debug_label.text = room_debug
 
+var profile_status: String = "":
+	set(value):
+		profile_status = value
+		if is_instance_valid(_profile_status_label):
+			_profile_status_label.text = value
+			_profile_status_label.visible = not value.is_empty()
+
 var message_tween: Tween
+var _profile_status_label: Label
 
 @onready var mic_enabled_icon = %MicEnabled
 @onready var tag_label = %Tag
@@ -133,3 +141,12 @@ func async_show_message(message: String):
 	var vp_after := get_viewport()
 	if vp_after is SubViewport:
 		(vp_after as SubViewport).render_target_update_mode = SubViewport.UPDATE_DISABLED
+
+
+func _ready() -> void:
+	_profile_status_label = Label.new()
+	_profile_status_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_ALWAYS
+	_profile_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_profile_status_label.add_theme_font_size_override("font_size", 30)
+	version_label.get_parent().add_child(_profile_status_label)
+	profile_status = profile_status

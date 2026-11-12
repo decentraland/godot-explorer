@@ -236,19 +236,6 @@ pub mod pulse {
     include!(concat!(env!("OUT_DIR"), "/pulse_quant.rs"));
 }
 
-pub mod social_service {
-    // Include the error types from the social_service package
-    include!(concat!(env!("OUT_DIR"), "/decentraland.social_service.rs"));
-
-    #[allow(clippy::all)]
-    pub mod v2 {
-        include!(concat!(
-            env!("OUT_DIR"),
-            "/decentraland.social_service.v2.rs"
-        ));
-    }
-}
-
 /// Deserialize a component's binary data to JSON. Used by the runtime scene
 /// logger when a debugged scene receives a CRDT message.
 ///

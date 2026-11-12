@@ -18,11 +18,9 @@ use crate::{
             MESSAGE_CHANNEL_SIZE, OUTGOING_CHANNEL_SIZE, PROFILE_REQUEST_INTERVAL_SECS,
             PROFILE_UPDATE_CHANNEL_SIZE, PULSE_ROOM_ID,
         },
-        profile::{SerializedProfile, UserProfile},
+        profile::{ProfileNotFound, SerializedProfile, UserProfile},
     },
-    content::profile::{
-        prepare_request_requirements, request_lambda_profile, request_registry_profile,
-    },
+    content::profile::prepare_request_requirements,
     dcl::components::proto_components::kernel::comms::rfc4,
     godot_classes::{dcl_global::DclGlobal, dcl_social_blacklist::DclSocialBlacklist},
     scene_runner::tokio_runtime::TokioRuntime,
@@ -43,6 +41,8 @@ pub struct IncomingMessage {
 pub enum DisconnectReason {
     /// Another participant with the same identity has joined the room
     DuplicateIdentity,
+    /// Gatekeeper revoked this island session; Pulse supplies the authoritative reason.
+    IslandRemoved,
     /// The room was closed
     RoomClosed,
     /// Participant was removed/kicked from the server
@@ -142,6 +142,7 @@ pub struct OutgoingMessage {
 struct Peer {
     alias: u32,
     profile: Option<UserProfile>,
+    cross_environment_profile: bool,
     announced_version: Option<u32>,
     protocol_version: u32,
     last_activity: Instant,
@@ -166,10 +167,14 @@ struct ProfileUpdate {
     address: H160,
     peer_alias: u32,
     profile: UserProfile,
+    cross_environment: bool,
+    announced_version: u32,
 }
 
 struct ProfileFetchFailure {
     address: H160,
+    peer_alias: u32,
+    missing: bool,
     announced_version: u32,
 }
 
@@ -328,7 +333,7 @@ pub struct MessageProcessor {
     video_switched_at: Instant,
 
     // Disconnect reason if disconnected from the server, along with the room_id
-    disconnect_reason: Option<(DisconnectReason, String)>,
+    disconnects: Vec<(DisconnectReason, String)>,
 
     // Set to true when room metadata indicates the local player is banned
     room_metadata_banned: bool,
@@ -395,7 +400,7 @@ impl MessageProcessor {
             selected_video_sid: None,
             active_speakers: Vec::new(),
             video_switched_at: Instant::now(),
-            disconnect_reason: None,
+            disconnects: Vec::new(),
             room_metadata_banned: false,
         }
     }
@@ -442,29 +447,32 @@ impl MessageProcessor {
         false
     }
 
-    /// Compares two lambdas endpoints ignoring trailing-slash style — Godot
-    /// publishes `…/lambdas/` in its LiveKit metadata while Unity publishes
-    /// `…/lambdas`, and the slash-only mismatch must not make the realm's own
-    /// endpoint look like a different catalyst.
-    fn is_same_lambda_endpoint(a: &str, b: &str) -> bool {
-        a.trim_end_matches('/') == b.trim_end_matches('/')
-    }
+    // Mirrors `DECENTRALAND_DOMAINS` in godot/src/utils/url_host.gd.
+    const DECENTRALAND_DOMAINS: [&'static str; 4] = [
+        "decentraland.org",
+        "decentraland.zone",
+        "decentraland.today",
+        "dclregenesislabs.xyz",
+    ];
 
-    /// Validates a peer-advertised `lambdasEndpoint` (untrusted LiveKit
-    /// metadata). Anything that isn't a plausible http(s) URL is discarded so
-    /// the profile fetch keeps using the realm's own lambda endpoint instead.
+    /// Validates a peer-advertised `lambdasEndpoint` (LiveKit participant
+    /// metadata). The client GETs it on the peer's behalf, so only an https URL
+    /// on a Decentraland domain is accepted; anything else is discarded and the
+    /// profile fetch keeps using the realm's own lambda endpoint instead.
     fn sanitize_lambdas_endpoint(endpoint: &str) -> Option<&str> {
         let trimmed = endpoint.trim();
-        let host_and_path = trimmed
-            .strip_prefix("https://")
-            .or_else(|| trimmed.strip_prefix("http://"))?;
-        if host_and_path.is_empty()
-            || host_and_path.starts_with('/')
-            || trimmed.chars().any(char::is_whitespace)
-        {
+        if trimmed.chars().any(char::is_whitespace) {
             return None;
         }
-        Some(trimmed)
+        let url = url::Url::parse(trimmed).ok()?;
+        if url.scheme() != "https" || !url.username().is_empty() || url.password().is_some() {
+            return None;
+        }
+        let host = url.host_str()?;
+        Self::DECENTRALAND_DOMAINS
+            .iter()
+            .any(|domain| host == *domain || host.ends_with(&format!(".{domain}")))
+            .then_some(trimmed)
     }
 
     /// Returns true if the address looks like a real player (non-synthetic Ethereum address).
@@ -594,8 +602,8 @@ impl MessageProcessor {
     /// Clears the reason after returning it
     ///
     /// CommunicationManager should call this regularly to check for disconnection
-    pub fn consume_disconnect_reason(&mut self) -> Option<(DisconnectReason, String)> {
-        self.disconnect_reason.take()
+    pub fn consume_disconnects(&mut self) -> Vec<(DisconnectReason, String)> {
+        std::mem::take(&mut self.disconnects)
     }
 
     /// Returns true (and resets) if room metadata indicated the local player was banned.
@@ -616,6 +624,21 @@ impl MessageProcessor {
     pub fn poll(&mut self) -> bool {
         // Handle profile updates from async tasks
         while let Ok(update) = self.profile_update_receiver.try_recv() {
+            let Some(peer) = self.peer_identities.get(&update.address) else {
+                continue;
+            };
+            if peer.alias != update.peer_alias
+                || peer.announced_version != Some(update.announced_version)
+                || (peer.profile.is_some()
+                    && !peer.cross_environment_profile
+                    && (update.cross_environment
+                        || peer
+                            .profile
+                            .as_ref()
+                            .is_some_and(|p| p.version > update.profile.version)))
+            {
+                continue;
+            }
             tracing::debug!(
                 "Received profile update for {:#x}: version {}",
                 update.address,
@@ -627,9 +650,18 @@ impl MessageProcessor {
                 let mut avatar_scene_ref = self.avatars.clone();
                 let mut avatar_scene = avatar_scene_ref.bind_mut();
                 avatar_scene.update_avatar_by_alias(update.peer_alias, &update.profile);
+                avatar_scene.set_avatar_profile_status(
+                    update.peer_alias,
+                    if update.cross_environment {
+                        "NAMEPLATE_PROFILE_CROSS_ENVIRONMENT"
+                    } else {
+                        ""
+                    },
+                );
             }
 
             if let Some(peer) = self.peer_identities.get_mut(&update.address) {
+                peer.cross_environment_profile = update.cross_environment;
                 peer.profile = Some(update.profile);
                 peer.profile_fetch_attempted = false; // Reset so we can fetch again if needed
                 peer.profile_fetch_failures = 0; // Reset failure count on success
@@ -639,8 +671,14 @@ impl MessageProcessor {
 
         // Handle profile fetch failures
         while let Ok(failure) = self.profile_failure_receiver.try_recv() {
-            let mut fetch_state: Option<(u32, i32, bool)> = None;
+            let mut fetch_state = None;
             if let Some(peer) = self.peer_identities.get_mut(&failure.address) {
+                if peer.alias != failure.peer_alias
+                    || peer.announced_version != Some(failure.announced_version)
+                    || peer.profile.is_some()
+                {
+                    continue;
+                }
                 peer.profile_fetch_failures += 1;
                 peer.profile_fetch_attempted = false; // Allow retry
 
@@ -655,17 +693,17 @@ impl MessageProcessor {
                         failure.announced_version
                     );
                 }
-                fetch_state = Some((
-                    peer.alias,
-                    peer.profile_fetch_failures as i32,
-                    peer.profile_fetch_banned_until.is_some(),
-                ));
+                fetch_state = Some(peer.alias);
             }
-            // Surface the state to the avatar's nameplate (dev shows "Loading"/"Failed").
-            if let Some((alias, failures, banned)) = fetch_state {
-                let mut avatar_scene_ref = self.avatars.clone();
-                let mut avatar_scene = avatar_scene_ref.bind_mut();
-                avatar_scene.set_avatar_profile_fetch_state(alias, failures, banned);
+            if let Some(alias) = fetch_state {
+                self.avatars.bind_mut().set_avatar_profile_status(
+                    alias,
+                    if failure.missing {
+                        "NAMEPLATE_NO_PROFILE"
+                    } else {
+                        "NAMEPLATE_PROFILE_UNAVAILABLE"
+                    },
+                );
             }
         }
 
@@ -959,11 +997,14 @@ impl MessageProcessor {
             return;
         }
         if let MessageType::Disconnected(reason) = &message.message {
-            // Set disconnect_reason if not already set (first disconnect wins).
-            // Routed here because room-level events use H160::zero() and would
-            // otherwise be filtered out by the is_player_address check below.
-            if self.disconnect_reason.is_none() {
-                self.disconnect_reason = Some((*reason, message.room_id));
+            // Preserve distinct reasons (especially a later terminal eviction), but
+            // repeated events from one room must not consume the UI retry budget.
+            if !self
+                .disconnects
+                .iter()
+                .any(|(queued_reason, room)| queued_reason == reason && room == &message.room_id)
+            {
+                self.disconnects.push((*reason, message.room_id));
             }
             return;
         }
@@ -1042,6 +1083,7 @@ impl MessageProcessor {
                 Peer {
                     alias: new_alias,
                     profile: None,
+                    cross_environment_profile: false,
                     announced_version: None,
                     protocol_version: if let MessageType::Rfc4(rfc4_msg) = &message.message {
                         rfc4_msg.protocol_version
@@ -1542,11 +1584,12 @@ impl MessageProcessor {
                 }
 
                 // Get current version and update peer
-                let (current_version, peer_alias_for_async) = if let Some(peer) =
+                let (current_version, peer_alias_for_async, version_changed) = if let Some(peer) =
                     self.peer_identities.get_mut(&address)
                 {
                     let current_version = peer.profile.as_ref().map(|p| p.version).unwrap_or(0);
 
+                    let version_changed = peer.announced_version != Some(announced_version);
                     // If announcing a different version than before, reset failure tracking
                     if peer.announced_version != Some(announced_version) {
                         peer.profile_fetch_failures = 0;
@@ -1561,9 +1604,9 @@ impl MessageProcessor {
                     }
 
                     peer.announced_version = Some(announced_version);
-                    (current_version, peer_alias)
+                    (current_version, peer_alias, version_changed)
                 } else {
-                    (0, peer_alias)
+                    (0, peer_alias, true)
                 };
 
                 // Check if profile fetch is banned
@@ -1586,8 +1629,13 @@ impl MessageProcessor {
                     false
                 };
 
-                // If the announced version is newer than what we have AND we haven't tried to fetch it yet AND not banned
-                if announced_version > current_version
+                // Environment versions are independent; a new zone announcement can replace an org fallback.
+                if (version_changed
+                    || self.peer_identities.get(&address).is_some_and(|peer| {
+                        peer.profile.is_none()
+                            || (!peer.cross_environment_profile
+                                && announced_version > current_version)
+                    }))
                     && !self
                         .peer_identities
                         .get(&address)
@@ -1604,6 +1652,17 @@ impl MessageProcessor {
                     // Mark that we're attempting to fetch this profile
                     if let Some(peer) = self.peer_identities.get_mut(&address) {
                         peer.profile_fetch_attempted = true;
+                    }
+
+                    if self
+                        .peer_identities
+                        .get(&address)
+                        .is_some_and(|peer| peer.profile.is_none())
+                    {
+                        self.avatars.bind_mut().set_avatar_profile_status(
+                            peer_alias_for_async,
+                            "NAMEPLATE_PROFILE_LOADING",
+                        );
                     }
 
                     // First, try to fetch from lambda server
@@ -1625,150 +1684,30 @@ impl MessageProcessor {
                         .and_then(|p| p.lambdas_endpoint.clone());
 
                     TokioRuntime::spawn(async move {
-                        // Unity CatalystRetryPolicy: 6 retries, base 2s, multiplier 2x, capped at 60s
-                        // Retry if profile is None OR fetched version < announced version (version mismatch)
-                        const MAX_RETRIES: u32 = 6;
-                        const BASE_DELAY_MS: u64 = 2000;
-                        const BACKOFF_MULTIPLIER: u64 = 2;
-                        const MAX_DELAY_MS: u64 = 60_000;
-
-                        let version_ok = |r: &Result<UserProfile, _>| matches!(r, Ok(p) if p.version >= announced_version_for_retry);
-
-                        // Determine fetch endpoint: peer's lambdas endpoint if available, else realm lambda
-                        let mut fetch_endpoint = match peer_lambdas_endpoint.as_deref() {
-                            Some(endpoint)
-                                if !Self::is_same_lambda_endpoint(
-                                    endpoint,
-                                    &lamda_server_base_url,
-                                ) =>
-                            {
-                                endpoint.to_string()
-                            }
-                            _ => lamda_server_base_url.clone(),
-                        };
-
-                        // Step 1: fetch with Unity-matching retry policy (exponential backoff)
-                        let mut result = Err(anyhow::anyhow!("not started"));
-                        for attempt in 0..=MAX_RETRIES {
-                            if attempt > 0 {
-                                let delay = (BASE_DELAY_MS * BACKOFF_MULTIPLIER.pow(attempt - 1))
-                                    .min(MAX_DELAY_MS);
-                                tracing::debug!(
-                                    "profile fetch retry {}/{} for {:#x} in {}ms",
-                                    attempt,
-                                    MAX_RETRIES,
-                                    address,
-                                    delay
-                                );
-                                tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
-                            }
-                            result = request_lambda_profile(
-                                address,
-                                fetch_endpoint.as_str(),
-                                profile_base_url.as_str(),
-                                http_requester.clone(),
-                            )
-                            .await;
-                            if version_ok(&result) {
-                                break;
-                            }
-                            // A hard error from the peer-advertised endpoint (bad metadata,
-                            // unreachable catalyst) must not burn the whole retry chain:
-                            // switch to the realm endpoint for the remaining attempts and
-                            // try it right away. An Ok-but-stale response keeps retrying
-                            // the same endpoint — that's catalyst propagation lag, not a
-                            // broken URL.
-                            if result.is_err()
-                                && !Self::is_same_lambda_endpoint(
-                                    &fetch_endpoint,
-                                    &lamda_server_base_url,
-                                )
-                            {
-                                tracing::debug!(
-                                    "peer lambdas endpoint {} failed for {:#x}, falling back to realm endpoint {}",
-                                    fetch_endpoint,
-                                    address,
-                                    lamda_server_base_url
-                                );
-                                fetch_endpoint = lamda_server_base_url.clone();
-                                result = request_lambda_profile(
-                                    address,
-                                    fetch_endpoint.as_str(),
-                                    profile_base_url.as_str(),
-                                    http_requester.clone(),
-                                )
-                                .await;
-                                if version_ok(&result) {
-                                    break;
-                                }
-                            }
-                        }
-
-                        // Step 2: asset-bundle-registry fallback (for legacy clients without lambdasEndpoint)
-                        let result = if version_ok(&result) {
-                            result
-                        } else {
-                            tracing::debug!("Trying asset-bundle-registry for {:#x}", address);
-                            request_registry_profile(
-                                address,
-                                profile_base_url.as_str(),
-                                http_requester.clone(),
-                            )
-                            .await
-                        };
-
-                        // Step 3: realm lambda fallback (if peer endpoint != realm and registry also failed)
-                        let result = if version_ok(&result) {
-                            result
-                        } else if !Self::is_same_lambda_endpoint(
-                            &fetch_endpoint,
+                        let result = super::profile_fetch::fetch_profile(
+                            address,
                             &lamda_server_base_url,
-                        ) {
-                            tracing::debug!(
-                                "Falling back to realm lambda for {:#x}: {}",
-                                address,
-                                lamda_server_base_url
-                            );
-                            request_lambda_profile(
-                                address,
-                                lamda_server_base_url.as_str(),
-                                profile_base_url.as_str(),
-                                http_requester,
-                            )
-                            .await
-                        } else {
-                            result
-                        };
+                            &profile_base_url,
+                            peer_lambdas_endpoint.as_deref(),
+                            announced_version_for_retry,
+                            http_requester,
+                        )
+                        .await;
 
-                        if let Ok(profile) = result {
+                        if let Ok(fetched) = result {
+                            let profile = fetched.profile;
                             tracing::debug!(
                                 "Fetched profile from lambda for {:#x}: version {}",
                                 address,
                                 profile.version
                             );
-                            // Check if the fetched version matches what was announced
-                            let version_mismatch = profile.version < announced_version_for_retry;
-                            if version_mismatch {
-                                tracing::debug!(
-                                    "Profile version mismatch for {:#x}: announced={}, fetched={}",
-                                    address,
-                                    announced_version_for_retry,
-                                    profile.version
-                                );
-                                // Send failure notification
-                                let _ = profile_failure_sender
-                                    .send(ProfileFetchFailure {
-                                        address,
-                                        announced_version: announced_version_for_retry,
-                                    })
-                                    .await;
-                            }
-
                             if let Err(e) = profile_sender
                                 .send(ProfileUpdate {
                                     address,
                                     peer_alias: peer_alias_for_async,
                                     profile,
+                                    cross_environment: fetched.cross_environment,
+                                    announced_version: announced_version_for_retry,
                                 })
                                 .await
                             {
@@ -1820,6 +1759,10 @@ impl MessageProcessor {
                             let _ = profile_failure_sender
                                 .send(ProfileFetchFailure {
                                     address,
+                                    peer_alias: peer_alias_for_async,
+                                    missing: result
+                                        .as_ref()
+                                        .is_err_and(|error| error.is::<ProfileNotFound>()),
                                     announced_version: announced_version_for_retry,
                                 })
                                 .await;
@@ -1906,18 +1849,24 @@ impl MessageProcessor {
                     }
                 };
 
-                tracing::debug!(
-                    "ProfileResponse from {:#x} contains profile for {:#x} (version {})",
-                    address,
-                    profile_address,
-                    incoming_version
-                );
+                // The profile applies to the sender the transport identified; a payload
+                // naming a different address is ignored.
+                if profile_address != address {
+                    tracing::warn!(
+                        "comms > dropping ProfileResponse from {:#x} claiming {:#x}",
+                        address,
+                        profile_address
+                    );
+                    return;
+                }
 
-                // Update the profile for the address specified IN the profile, not the sender
-                if let Some(peer) = self.peer_identities.get_mut(&profile_address) {
+                if let Some(peer) = self.peer_identities.get_mut(&address) {
                     let current_version = peer.profile.as_ref().map(|p| p.version).unwrap_or(0);
 
-                    if incoming_version <= current_version {
+                    if peer.profile.is_some()
+                        && !peer.cross_environment_profile
+                        && incoming_version <= current_version
+                    {
                         tracing::debug!(
                             "Ignoring ProfileResponse for {:#x}: version {} <= current {}",
                             profile_address,
@@ -1937,6 +1886,8 @@ impl MessageProcessor {
                     let mut avatar_scene = avatar_scene_ref.bind_mut();
                     // Use the peer's alias for the address in the profile
                     avatar_scene.update_avatar_by_alias(peer.alias, &profile);
+                    avatar_scene.set_avatar_profile_status(peer.alias, "");
+                    peer.cross_environment_profile = false;
                     peer.profile = Some(profile);
                     peer.profile_fetch_attempted = false; // Reset so we can fetch again if needed
 
@@ -2263,33 +2214,51 @@ mod tests {
     }
 
     #[test]
-    fn lambda_endpoint_comparison_ignores_trailing_slash_style() {
-        // Godot metadata carries `…/lambdas/`, Unity metadata carries `…/lambdas` —
-        // same catalyst, must compare equal so the realm endpoint isn't treated
-        // as a different fetch target.
-        assert!(MessageProcessor::is_same_lambda_endpoint(
-            "https://peer.decentraland.org/lambdas",
-            "https://peer.decentraland.org/lambdas/"
-        ));
-        assert!(MessageProcessor::is_same_lambda_endpoint(
-            "https://peer.decentraland.org/lambdas/",
-            "https://peer.decentraland.org/lambdas/"
-        ));
-        assert!(!MessageProcessor::is_same_lambda_endpoint(
-            "https://peer.decentraland.org/lambdas",
-            "https://peer-ec2.decentraland.org/lambdas/"
-        ));
-    }
-
-    #[test]
-    fn sanitize_lambdas_endpoint_accepts_only_plausible_http_urls() {
+    fn sanitize_lambdas_endpoint_accepts_only_decentraland_https_urls() {
         assert_eq!(
             MessageProcessor::sanitize_lambdas_endpoint(" https://peer.decentraland.org/lambdas "),
             Some("https://peer.decentraland.org/lambdas")
         );
         assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint(
+                "https://peer-ec2.decentraland.org/lambdas"
+            ),
+            Some("https://peer-ec2.decentraland.org/lambdas")
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint(
+                "https://worlds-content-server.decentraland.zone/lambdas/"
+            ),
+            Some("https://worlds-content-server.decentraland.zone/lambdas/")
+        );
+        // Any peer in the room could point every other client at these.
+        assert_eq!(
             MessageProcessor::sanitize_lambdas_endpoint("http://localhost:7070/lambdas/"),
-            Some("http://localhost:7070/lambdas/")
+            None
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("https://169.254.169.254/lambdas"),
+            None
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("https://other.example/lambdas"),
+            None
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint(
+                "https://decentraland.org.example.com/lambdas"
+            ),
+            None
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("http://peer.decentraland.org/lambdas"),
+            None
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint(
+                "https://user@peer.decentraland.org/lambdas"
+            ),
+            None
         );
         assert_eq!(MessageProcessor::sanitize_lambdas_endpoint(""), None);
         assert_eq!(
