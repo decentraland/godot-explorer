@@ -16,23 +16,25 @@ importa.
    (`monsterrecon.dcl.eth`), `Midday` fijo, perfil `High`, misma térmica:
    **1.x 40.22 fps vs 2.x 38.62 fps (−4.0 %)**, IC95 [−4.18, +1.83], MWU exacto p = 0.24 → **sin
    diferencia demostrada** con 6 ventanas por brazo (§1.3 del reporte). Lo que sí separa: **p99 +11.9 %**,
-   **fps p1 −10.6 %**, con 10.3 % menos CPU. El trabajo periódico dentro del frame (J1/B1) sigue siendo
-   el primer workstream; el throughput no.
-   *Retractado*: un bloque anterior publicó −50.9 % en esta misma condición. Era el perfil `Very Low`
-   (cap 18 fps) sin aplicar por el shell 2.x, no coste de render; se detectó midiendo el escalón
-   Medium (29.96 = su cap de 30) contra High (38.62) en la misma sesión.
-2. **El sol mueve el resultado más que el build.** Mismo build y misma temperatura de arranque: 31.3 fps con el sol alto contra 14.4 con el sol bajo, **2.2×**, más que la
-   diferencia entre builds. La iluminación pasó a ser el primer workstream técnico (C), y el sol dejó de
-   tratarse como un ajuste (punto siguiente, ítem A1).
-3. **El sol no se puede fijar desde el cliente.** Con `Dynamic Skybox` OFF y `Custom Skybox = Midday`
-   en las dos builds, el mismo cliente siguió midiendo ventanas de luminancia media 53 y 140 en la misma
-   sesión: en Genesis Plaza el reloj lo maneja la escena (`SkyboxTime`), no el ajuste. Además el mismo
-   preset renderiza distinto en cada build (luma ~75 en 2.x, ~105–112 en 1.x). Consecuencia: el sol pasa
-   a tratarse como **covariable medida**, no como variable controlada, y la comparación se hace
-   muestreando cada build a lo largo del ciclo y comparando a **luminancia pareja** (`run_drift.sh`).
-4. **Antes de tocar nada hay que poder medir barato.** Hoy medir una cosa cuesta ~10 h de teléfono,
-   taps a ciegas y cooldown manual; el instrumento (Perfetto) no existe en iOS y no aguanta un soak
-   largo. Los ítems del workstream A no optimizan nada: hacen que los demás sean evaluables.
+   **fps p1 −10.6 %**, con 10.3 % menos CPU. Todo el roadmap apunta a la cola; el frame medio ya no es
+   un objetivo.
+2. **La luz de la escena se hornea, no se paga por fragmento.** El perfil `High` enciende
+   `dcl_light_shadows` y 8 luces de escena, y cada luz activa cuesta por fragmento en móvil; la mayoría
+   de esas luces no se mueve nunca. El pipeline para hornear ya existe (bake de escena con
+   `scene_bake_key`, impostores de avatar con `Texture2DArray`), así que el workstream C — lightmap
+   estático, impostores de prop horneados en el import y captura de avatar cacheada — es lo primero que
+   puede devolver milisegundos sin tocar la cara del mundo.
+3. **Los perfiles gráficos vienen de una versión anterior y hoy no describen al motor.** `Very Low`
+   fija `Fps18`, `Low`/`Medium` `Fps30`, `High` `Fps60`, y elegir perfil **escribe** ese `limit_fps`: un
+   preset de calidad decide el techo de fps. Medido en una sesión y una escena: `Medium` clavado en
+   **29.96** (su cap) contra `High` en **38.62**. El ítem J3 rehace los presets contra el renderer
+   actual y separa calidad de cap.
+4. **Medir ya cuesta minutos, no días.** El instrumento está montado: Perfetto 51.2 en el device, ventanas
+   de 30 s (~35 s por ventana incluido el pull), `trace_processor` para el frame timeline, y
+   `fingerprint.py` cierra cada ventana verificando **perfil del motor**, **dos fuentes de fps**
+   (frame timeline contra el contador del engine, con alarma si difieren >15 %), estado térmico y luz,
+   escribiendo `state.json` y `INVALID.md` cuando la ventana no sirve. Lo que sigue caro es cambiar de
+   build (~5 min, porque Android rechaza downgrade y hay que reinstalar) y el enfriamiento térmico.
 
 Lo que **no** priorizaría todavía: frame medio, memoria y bajar calidad por defecto (ver §4).
 
