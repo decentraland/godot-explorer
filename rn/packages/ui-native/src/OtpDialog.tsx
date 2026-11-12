@@ -45,6 +45,8 @@ export function OtpDialog({
   verifyingLabel: string;
   /** "Didn’t get an email?" — the plain part before the link. */
   resendPrompt: string;
+  /** "Resend Code", or the countdown ("00:30") while `resendDisabled`: `Message-CodeResent` Disable
+   * keeps the link style. */
   resendLabel: string;
   onResend: () => void;
   resendDisabled?: boolean;
@@ -121,17 +123,17 @@ export function OtpDialog({
                   </View>
                 )}
               </View>
-              <AppText style={styles.resend}>
-                {resendPrompt}{' '}
+              <View style={styles.resendRow}>
+                <AppText style={styles.resend}>{resendPrompt} </AppText>
                 <Text
                   accessibilityRole="link"
                   disabled={resendDisabled}
                   onPress={onResend}
-                  style={[styles.link, resendDisabled && styles.linkDisabled]}
+                  style={[styles.resend, styles.link]}
                 >
                   {resendLabel}
                 </Text>
-              </AppText>
+              </View>
             </View>
           </View>
         </View>
@@ -193,11 +195,11 @@ const styles = StyleSheet.create({
     fontSize: u(12),
     color: colors.snow,
   },
-  resend: { fontSize: u(12), color: colors.snow, textAlign: 'center' },
+  resendRow: { flexDirection: 'row', alignItems: 'center', gap: u(5) },
+  resend: { fontSize: u(12), color: colors.snow },
   link: {
     fontFamily: fonts.medium,
     color: colors.link,
     textDecorationLine: 'underline',
   },
-  linkDisabled: { color: colors.textDisabled },
 });
