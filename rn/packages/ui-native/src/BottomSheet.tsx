@@ -220,7 +220,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius['2xl'],
     borderTopRightRadius: radius['2xl'],
     overflow: 'hidden',
-    ...elevation.up,
   },
   handleArea: {
     alignItems: 'center',
