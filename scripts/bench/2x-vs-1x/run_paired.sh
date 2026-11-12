@@ -228,6 +228,12 @@ cool_down
 # The buffer carries every earlier launch of this session, so it is cleared here and the evidence is
 # then filtered by the pid of the process this launch created: reading it unfiltered once made a
 # run's "verified settings" come from a launch that had already finished.
+# A locked screen leaves Godot's window at viewVisibility=8 and no RenderReady is ever printed, which
+# reads downstream as "did not start on profile 3". Five runs were lost to that before the lock screen was
+# found, so the keyguard is dismissed here and its state recorded with the run.
+sh_ input keyevent KEYCODE_WAKEUP >/dev/null 2>&1 || true
+sh_ wm dismiss-keyguard >/dev/null 2>&1 || true
+unlocked=$(sh_ dumpsys window 2>/dev/null | grep -cE 'mDreamingLockscreen=true|isKeyguardShowing=true' || true)
 sh_ logcat -c
 t0=$(python3 -c 'import time;print(int(time.time()*1000))')
 total=$(sh_ am start -W -a android.intent.action.VIEW -d "'decentraland://open?position=$POSITION'" "$PKG" 2>&1 |
@@ -245,8 +251,15 @@ sh_ logcat -d 2>/dev/null | grep -E "\[RenderReady\]|\[DynamicGraphics\] initial
 # `initialized: enabled=…` line is not usable as the guard — it is emitted by the 1.x engine path and
 # a run of 2.x never prints it, so grepping for it in an unfiltered buffer once "verified" a run with
 # a line from a different launch.
-grep -q '"profile":3' "$OUT/launch.log" ||
-  { echo "[FAIL] $BUILD did not start on profile 3 (pid ${pid:-?}):"; cat "$OUT/launch.log"; exit 1; }
+if ! grep -q '"profile":3' "$OUT/launch.log"; then
+  echo -n "[FAIL] $BUILD did not start on profile 3 (pid ${pid:-?}, log bytes $(wc -c < "$OUT/launch.log"), keyguard-blocked-lines ${unlocked:-0}): "
+  if [ ! -s "$OUT/launch.log" ]; then
+    echo "no engine output at all — the screen was locked or the process died at launch"
+  else
+    echo; cat "$OUT/launch.log"
+  fi
+  exit 1
+fi
 profile_changes() { sh_ logcat -d 2>/dev/null | grep " ${pid:-none} " | grep -cE "Profile (downgrade|upgrade)" || true; }
 python3 - "$BUILD" "$LABEL" "$t0" "$t1" "${total:-0}" <<'PY' > "$OUT/launch.json"
 import json, sys

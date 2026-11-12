@@ -49,12 +49,27 @@ def run_value(run_dir, metric):
     return None
 
 
-def collect(directory, metric):
+def collect(directory, metric, build=None):
+    """Runs of one scenario directory, optionally only those whose manifest says they belong to `build`.
+
+    Two arms of the same scenario live in the same directory, so the build filter is what keeps an arm
+    from swallowing its counterpart: without it this tool once reported n=12 per arm and a difference of
+    exactly 0.0, which is what comparing a set with itself looks like.
+    """
     values, labels = [], []
     for name in sorted(os.listdir(directory)):
         run = os.path.join(directory, name)
         if not os.path.isdir(run):
             continue
+        if build is not None:
+            manifest = os.path.join(run, "manifest.json")
+            if not os.path.exists(manifest):
+                continue
+            try:
+                if json.load(open(manifest)).get("build") != build:
+                    continue
+            except (ValueError, json.JSONDecodeError):
+                continue
         value = run_value(run, metric)
         if value is not None:
             values.append(float(value))
@@ -115,7 +130,7 @@ def main():
         label, _, directory = spec.partition("=")
         if not os.path.isdir(directory):
             sys.exit(f"not a directory: {directory}")
-        values, labels = collect(directory, args.metric)
+        values, labels = collect(directory, args.metric, build=label)
         if not values:
             sys.exit(f"no {args.metric} values in {directory}")
         arms[label] = (values, labels)

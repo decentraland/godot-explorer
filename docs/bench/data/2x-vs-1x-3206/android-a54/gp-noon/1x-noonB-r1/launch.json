@@ -1,0 +1,6 @@
+{
+  "build": "1x",
+  "label": "1x-noonB-r1",
+  "am_total_time_ms": 309,
+  "cold_launch_to_render_ready_ms": 9205
+}

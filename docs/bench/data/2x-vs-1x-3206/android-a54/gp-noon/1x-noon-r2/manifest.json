@@ -1,0 +1,89 @@
+{
+  "label": "1x-noon-r2",
+  "build": "1x",
+  "scenario": "gp-noon",
+  "version_name": "1.16.1(2688)",
+  "apk_sha256": "missing",
+  "profile": {
+    "source": "launch.log",
+    "profile": 3,
+    "lines": 1
+  },
+  "frames": {
+    "frames": "736",
+    "fps_avg": "24.390000",
+    "span_s": "29.940000",
+    "interval_p50_ms": "41.650000",
+    "interval_p95_ms": "50.050000",
+    "interval_p99_ms": "58.360000",
+    "interval_max_ms": "74.970000",
+    "fps_p1_low": "17.140000",
+    "fps_p5_low": "19.980000",
+    "fps_median": "24.010000",
+    "pct_missed_deadline": "29.620000",
+    "jank_any": "736"
+  },
+  "cpu_mean_pct": 183.5,
+  "rss_steady_kb": 2076019,
+  "thermal_end_c": 46.0,
+  "condition": {
+    "luma_mean": 122.8,
+    "thermal_start_c": 45.4,
+    "thermal_skin_start_c": 37.7,
+    "note": ""
+  },
+  "gate": null,
+  "cadence": {
+    "file": "docs/bench/data/2x-vs-1x-3206/android-a54/gp-noon/1x-noon-r2/frames.csv",
+    "vsync_hz": 120.0,
+    "vsync_ms": 8.333,
+    "frames": 736,
+    "intervals": 735,
+    "span_s": 29.94,
+    "jank_type_counts": {
+      "Display HAL": 518,
+      "SurfaceFlinger CPU Deadline Missed": 218
+    },
+    "fps_avg": 24.55,
+    "interval_p50_ms": 41.65,
+    "interval_p95_ms": 50.05,
+    "interval_p99_ms": 58.36,
+    "interval_max_ms": 74.97,
+    "fps_median": 24.01,
+    "fps_p5_low": 19.98,
+    "fps_p1_low": 17.14,
+    "modal_periods": 5,
+    "modal_interval_ms": 41.67,
+    "pct_frames_on_modal": 0.532,
+    "hiccups_ge1": 50,
+    "hiccups_ge1_per_min": 100.2,
+    "stalls_ge2": 10,
+    "stalls_ge2_per_min": 20.04,
+    "pct_window_in_stalls": 0.0201,
+    "stall_window_s": 0.601
+  },
+  "luma": {
+    "image": "docs/bench/data/2x-vs-1x-3206/android-a54/gp-noon/1x-noon-r2/screen.png",
+    "width": 2340,
+    "height": 1080,
+    "luma_full": 122.82,
+    "luma_crop": 122.63,
+    "crop_box": [
+      351,
+      162,
+      1989,
+      918
+    ],
+    "method": "rec601"
+  },
+  "artefacts": {
+    "meta.json": true,
+    "frames.csv": true,
+    "cpu.csv": true,
+    "mem.csv": true,
+    "thermal.csv": true,
+    "screen.png": true,
+    "state.json": true,
+    "trace.perfetto-trace": true
+  }
+}
