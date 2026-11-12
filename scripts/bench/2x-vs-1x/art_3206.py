@@ -323,6 +323,17 @@ CSS_AND_HTML = f"""<!doctype html>
   .note {{ border-left:3px solid var(--accent); background:var(--panel); padding:14px 18px;
            border-radius:0 8px 8px 0; margin:18px 0; }}
   .note b {{ color:var(--ink); }}
+  .tldr {{ display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; margin:26px 0 0; }}
+  @media (max-width: 780px) {{ .tldr {{ grid-template-columns:1fr; }} }}
+  .tldr .card {{ border:1px solid var(--line); border-radius:10px; background:var(--panel); padding:16px 18px; }}
+  .tldr h3 {{ margin:0 0 10px; font-size:12px; letter-spacing:.12em; text-transform:uppercase; }}
+  .tldr.win h3 {{ color:var(--ok); }}
+  .tldr.loss h3 {{ color:var(--accent); }}
+  .tldr.tie h3 {{ color:var(--warn); }}
+  .tldr ul {{ margin:0; padding-left:18px; font-size:14px; line-height:1.55; }}
+  .tldr li {{ margin-bottom:7px; }}
+  .tldr li:last-child {{ margin-bottom:0; }}
+  .tldr b {{ font-variant-numeric: tabular-nums; }}
   footer {{ margin-top:64px; padding-top:22px; border-top:1px solid var(--line); color:var(--dim); font-size:14px; }}
 </style>
 </head>
@@ -337,6 +348,7 @@ CSS_AND_HTML = f"""<!doctype html>
       (−4.0 %, p = 0.24 at 6 windows per build). <b>The tail does not</b>: 2.x is 11.9 % worse at p99,
       while spending 10.3 % less CPU, using 3.2 % less memory and reaching a fully drawn scene 5.5× sooner.</p>
       <div class="toc">
+        <a href="#tldr">TL;DR</a>
         <a href="#final">Headline result</a>
         <a href="#verdict">Verdict per block</a>
         <a href="#results">Shipped config</a>
@@ -347,6 +359,36 @@ CSS_AND_HTML = f"""<!doctype html>
       </div>
     </div>
     <button class="toggle" type="button" id="t">◐ theme</button>
+  </div>
+
+  <h2 id="tldr" style="margin-top:40px">TL;DR — what the move to 2.x wins, loses and ties</h2>
+  <div class="tldr win">
+    <h3>Wins</h3>
+    <ul>
+      <li>Fully drawn scene <b>7.71 s → 1.41 s</b></li>
+      <li>Cold start <b>27.8 s → 19.4 s</b> (−30 %)</li>
+      <li>Enter a place <b>9.8 s → 8.5 s</b> (−13 %)</li>
+      <li>Memory in world <b>2031 → 1967 MB</b> (−3.2 %)</li>
+      <li>CPU <b>133 % → 119 %</b> (−10.3 %)</li>
+      <li>Skin temperature <b>43.7 → 42.6 °C</b></li>
+    </ul>
+  </div>
+  <div class="tldr loss">
+    <h3>Losses</h3>
+    <ul>
+      <li>Frame tail <b>p99 66.9 → 74.9 ms</b> (+11.9 %)</li>
+      <li>Slowest 1 % of frames <b>14.9 → 13.4 fps</b> (−10.6 %)</li>
+      <li>20 enter/exit cycles: <b>237 MB less</b> held, but the tail does not shrink</li>
+    </ul>
+  </div>
+  <div class="tldr tie">
+    <h3>Ties</h3>
+    <ul>
+      <li>Average fps, shipped config <b>17.9 vs 18.1</b></li>
+      <li>Average fps, fixed noon + High <b>40.22 vs 38.62</b> (−4.0 %, p = 0.24 → noise)</li>
+      <li>p50 frame time <b>58.3 vs 58.2 ms</b>, p95 identical</li>
+      <li>Startup to process ready: <b>335 vs 316 ms</b></li>
+    </ul>
   </div>
 
   <h2 id="final">The controlled result: fixed noon, same scene</h2>
