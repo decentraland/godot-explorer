@@ -157,27 +157,46 @@ Es el workstream que no optimiza pero habilita todo lo demás.
 - **V.** Los frames que exceden el presupuesto total se pueden atribuir a una fase concreta.
 - **Costo** S/M · **Riesgo** bajo. **Depende de** B1.
 
-### C. Iluminación y ciclo día-noche
+### C. Luz horneada e impostores horneados
 
-**C1 · Entender por qué el sol bajo cuesta 2.2×.**
-- **E.** Mismo build, mismo perfil, misma temperatura: 31.3 fps con luma 117 vs 14.4 fps con luma 78
-  (en 1.x el mismo patrón: 24.5 fps con luma 129 vs 15.5 con luma 78). La diferencia entre builds es
-  de decenas de %, la del sol es de más del doble. El ciclo lo maneja la escena: con `Midday` fijado y
-  el dynamic skybox apagado, la misma sesión midió luma 53.5 y 140.4, y el ciclo se mueve en minutos.
-- **A.** Con A4: comparar a mediodía y de noche `draw_calls`, `objects_in_frame`, luces activas,
-  overdraw y tiempo de GPU. Hipótesis: muchas luces/emisiones encendidas + IBL distinta + más
-  materiales con blend.
-- **V.** Se identifica la métrica que se dobla de día a noche; después, un cambio que acerque el
-  costo nocturno al diurno sin que la captura cambie de forma evidente.
-- **Costo** M · **Riesgo** medio (tocar iluminación cambia la cara del mundo).
+El perfil `High` enciende `dcl_lights` y **sombras de luces de escena** (`dcl_max_lights: 8`,
+`dcl_light_shadows: true`), y cada luz activa es coste por fragmento en móvil. La mayor parte de esas
+luces no se mueve nunca: se puede hornear. Buena parte del pipeline ya existe — el ``bake´´ de escena
+(`OptimizedKind::Scene`, `scene_bake_key`, `asset_server/static_models.rs`) ya empaqueta un
+`{entity}-static.zip` con los GLB y sus texturas externas, así que hay dónde colgar el resultado — y los
+avatares remotos ya usan impostores (`MultiMeshInstance3D` + `Texture2DArray`), pero se capturan en
+caliente.
 
-**C2 · Presupuesto de luces y emisión por perfil.**
-- **E.** Consecuencia de C1: si las luces son la causa, el perfil `HIGH` en móvil está pagando luces
-  de escena que a 6" no se distinguen.
-- **A.** Límite de luces dinámicas por perfil, emisión por material (barata) en vez de luces reales, y
-  un pase de "luces cercanas al jugador" en vez de todas.
-- **V.** Noche acotada a ≤10 % de costo sobre día, con capturas lado a lado aprobadas.
-- **Costo** M · **Riesgo** alto (visual). **Depende de** C1.
+**C1 · Lightmap estático para escenas cuya luz no se anima.**
+- **E.** `PROFILES[3]` de 2.x activa `dcl_light_shadows` y 8 luces; `graphic_settings.gd` de 1.x hace lo
+  mismo, así que el coste es del renderer y no del preset. En una escena con luces quietas el resultado
+  es idéntico píxel a píxel, pero pagado por fragmento en vez de una vez.
+- **A.** Detectar en el `scene_bake_key` las `LightSource` cuya transform y parámetros no cambian (sin
+  `Tween`, sin `Animator`, sin `Transform` por tick), hornear su contribución a `LightmapGI` +
+  `LightmapProbe` en el mismo bake del servidor, y servir un `scn` con lightmap. Si una luz se anima en
+  runtime, la escena entera cae al camino dinámico actual (una escena, no una luz, elige el modo).
+- **V.** Misma escena, mediodía fijo, perfil `High`: p99 y fps con lightmap contra el camino dinámico;
+  diff visual por captura (SSIM ≥ 0.98) y revisión de arte antes de encender el modo por defecto.
+- **Costo** L · **Riesgo** medio (el bake suma tiempo de import; el modo debe ser por escena, no global).
+
+**C2 · Impostores de prop horneados en el import, no en runtime.**
+- **E.** Con `view_distance: 300` la escena dibuja props lejanos que ocupan pocos píxeles; los avatares
+  ya resuelven eso con impostores, los props no.
+- **A.** Generar en el import (dentro del mismo `.zip` de bake) un atlas de 8–16 vistas por prop y un
+  nivel de LOD que lo use por debajo de un umbral de tamaño en pantalla, reusando el `Texture2DArray` que
+  ya usa el impostor de avatares.
+- **V.** `objects_in_frame`/draw calls y p99 en la misma escena; ninguna captura con el impostor visible
+  a distancia de lectura.
+- **Costo** M · **Riesgo** bajo (cae dentro del LOD que ya existe).
+
+**C3 · Captura de impostores de avatar cacheada, no repetida por sesión.**
+- **E.** El impostor se captura con un render off-screen (`AvatarPreview`) por avatar y variante, y ese
+  coste se paga otra vez en cada sesión aunque el conjunto de wearables sea el mismo.
+- **A.** Guardar el atlas capturado en el caché de contenido indexado por hash de (wearables, bucket de
+  distancia, resolución) y reconstruirlo sólo si cambia; el render de captura queda como fallback.
+- **V.** Coste de entrada a una plaza concurrida (ms hasta `[RenderReady]` y hitch máximo) con caché fría
+  contra caliente, y RSS del caché en disco.
+- **Costo** S · **Riesgo** bajo.
 
 ### D. Avatares
 
@@ -322,6 +341,25 @@ Es el workstream que no optimiza pero habilita todo lo demás.
   en vez de por modelo.
 - **V.** Misma tabla en tres devices.
 - **Costo** M · **Riesgo** bajo.
+
+**J3 · Rehacer los perfiles gráficos contra el renderer actual.**
+- **E.** Los presets vienen de una versión anterior del renderer y hoy no describen lo que el motor
+  cuesta: `PROFILES` en `lib/crates/dcl_engine/src/app/graphics.rs` pone `Fps18` en `Very Low`, `Fps30`
+  en `Low`/`Medium` y `Fps60` en `High`, y `rules.rs` **escribe ese `limit_fps` al elegir perfil**, o sea
+  que un preset de calidad también decide el techo de fps. En la misma escena y la misma sesión, `Medium`
+  quedó clavado en **29.96 fps** (su propio cap de 30) mientras `High` llegó a **38.62**: el escalón de
+  en medio tira capacidad que el teléfono sí tiene. `Very Low` con cap **18** es peor todavía: hace que
+  el perfil más barato rinda menos que el más caro, y convierte cualquier medición en un número de cap
+  disfrazado.
+- **A.** Separar las dos decisiones: el perfil fija calidad (escala de render, LOD, luces, sombras,
+  partículas) y el límite de fps pasa a ser un ajuste propio con cap aparte. Re-derivar `scale`,
+  `view_distance`, `mesh_lod_threshold` y el presupuesto de luces midiendo coste real por perfil en el
+  renderer actual, y elegir los caps como escalones por encima del coste medido (60 / 45 / 30, sin 18).
+  Usar `benchmark_gpu_score`, que el hardware benchmark ya guarda, para asignar tier en vez de modelo.
+- **V.** En un mismo device y escena, ningún perfil queda limitado por su cap cuando el coste medido es
+  menor (Medium ≥ 30 fps sólo si puede), el orden de fps entre perfiles es monótono, y el benchmark da el
+  mismo número con `dynamic graphics` ON u OFF cuando el cap no está actuando.
+- **Costo** S · **Riesgo** bajo técnico, medio de producto (cambia el techo de fps que ve el usuario).
 
 ### K. Paridad y plataforma
 
