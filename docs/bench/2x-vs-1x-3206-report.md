@@ -314,6 +314,40 @@ pertenece al team `8T73XM973P`, cuyo certificado no está en este Mac. El error 
 propio y otro bundle id, o compilar `release-1.16.2` para iOS; ambas están en curso y este párrafo se
 actualiza con el resultado.
 
+### Mediodía fijo: el arreglo que hace medible la condición pedida
+
+La condición original de este benchmark —skybox y horario fijos— **no se puede cumplir en 2.x sin tocar
+el código**, porque el preset nunca llega al mundo. Se arregló con una línea real en
+`lib/crates/dcl_engine/src/sky/skybox_time.rs`: `skybox_time` es `SettingKind::Int`, el store devuelve
+`Variant::Int` y el lector pedía `try_to::<f64>()` estricto; ahora acepta los dos tipos numéricos, igual
+que ya hacía `world::explorer::setting_f32`. Con el build de ese commit, misma parcela (`100,100`) y
+mismo ajuste (`Dynamic Skybox` OFF + `Custom Skybox: Midday`):
+
+| build | luma del mundo | qué se ve |
+|---|---:|---|
+| 2.x sin parche | 33.1 | medianoche |
+| 2.x **con parche** | **100.2** | mediodía |
+
+Es un build parcheado, no el release, y el diff completo es una función de lectura de ajuste (nada de
+render). Se declara como tal en cada tabla que lo use.
+
+### Lo que se puede afirmar hoy, con la luz como estaba
+
+| bloque | build | ventanas | fps mediana | rango | luz |
+|---|---|---:|---:|---|---|
+| GP, perfil 3, dynamic OFF | 1.x | 6 | 25.78 | 24.39–27.42 | 10:13–12:01 del juego |
+| GP, perfil 3, dynamic OFF | 2.x | 6 | 25.88 | 25.05–26.28 | 14:59–17:17 del juego |
+| GP, perfil 3, dynamic OFF | 1.x | 3 | 19.06 | 18.26–22.61 | 18:42–19:39 del juego |
+| parcela `100,100`, Midday fijo, perfil 3 | 1.x | 3 | **36.70** | 33.96–40.29 | fija (luma 110.6) |
+
+El bloque pareado de mediodía (3 ventanas por build en la misma hora del juego) está en curso; el
+número final de la comparación sale de ahí y reemplaza a esta tabla cuando cierre.
+
+**iOS (iPhone 16e), 2.x:** siete sesiones de 20 muestras a 1 Hz, medianas 40.0 / 35.5 / 37.5 / 39.0 /
+36.0 / 36.0 / 36.0; mediana de medianas **36.0 fps**. Sin p99: iOS no expone un registro de present por
+frame (ver §1.2). El 1.x de iOS no instaló: perfil de aprovisionamiento vencido y sin certificado del
+team dueño del bundle id; error textual en `docs/bench/data/2x-vs-1x-3206/ios-16e/IOS-TRACK.md`.
+
 ## 2. Carga y arranque
 
 | métrica | 1.x | 2.x | Δ |
