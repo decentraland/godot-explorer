@@ -282,6 +282,63 @@ static func about_is_usable(about: Dictionary) -> bool:
 	return content is Dictionary and content.get("publicUrl") is String
 
 
+## /about as `Realm._async_commit_realm` consumes it: every key it reads is either absent
+## or of the type the read assumes. `Dictionary.get(key, default)` only defaults when the
+## key is ABSENT, so a realm serving `"configurations": null` or `"lambdas": "x"` used to
+## abort the commit half-way; dropping the wrong-typed keys makes those defaults apply.
+static func normalize_about(about: Dictionary) -> Dictionary:
+	var out: Dictionary = about.duplicate(true)
+	for key in ["content", "lambdas", "comms", "configurations"]:
+		_keep_dict(out, key)
+	if out.has("content"):
+		_keep_string(out["content"], "publicUrl")
+	if out.has("lambdas"):
+		_keep_string(out["lambdas"], "publicUrl")
+	if not out.has("configurations"):
+		return out
+	var conf: Dictionary = out["configurations"]
+	_keep_string(conf, "realmName")
+	_keep_string(conf, "cityLoaderContentServer")
+	_keep_number(conf, "networkId")
+	_keep_array(conf, "scenesUrn", TYPE_STRING)
+	_keep_array(conf, "globalScenesUrn", TYPE_STRING)
+	_keep_array(conf, "localSceneParcels", TYPE_NIL)
+	_keep_dict(conf, "map")
+	if conf.has("map"):
+		_keep_array(conf["map"], "sizes", TYPE_DICTIONARY)
+		for size_dict in conf["map"].get("sizes", []):
+			for side in ["left", "top", "right", "bottom"]:
+				_keep_number(size_dict, side)
+	return out
+
+
+static func _keep_dict(d: Dictionary, key: String) -> void:
+	if d.has(key) and not d[key] is Dictionary:
+		d.erase(key)
+
+
+static func _keep_string(d: Dictionary, key: String) -> void:
+	if d.has(key) and not d[key] is String:
+		d.erase(key)
+
+
+static func _keep_number(d: Dictionary, key: String) -> void:
+	if d.has(key) and not (d[key] is int or d[key] is float):
+		d.erase(key)
+
+
+## Keeps `key` only as an Array, dropping items that are not of `item_type`
+## (TYPE_NIL keeps every item).
+static func _keep_array(d: Dictionary, key: String, item_type: int) -> void:
+	if not d.has(key):
+		return
+	if not d[key] is Array:
+		d.erase(key)
+		return
+	if item_type != TYPE_NIL:
+		d[key] = d[key].filter(func(item): return typeof(item) == item_type)
+
+
 ## [min, max] parcel bounds advertised by /about, with the genesis fallback.
 static func parse_bounds(about: Dictionary) -> Array:
 	var sizes = about.get("configurations", {}).get("map", {}).get("sizes", [])
@@ -379,13 +436,15 @@ static func _async_resolve_world(dest: Destination) -> Destination:
 
 static func _async_resolve_preview(dest: Destination) -> Destination:
 	var about = await _async_about(dest)
-	if about == null:
+	# Anything with an IPv4 host classifies as a preview, so this gate is what keeps a
+	# `preview=` deep link to a server without a usable /about away from the commit.
+	if about == null or not about_is_usable(about):
 		return dest.resolved_failed(Destination.Failure.PREVIEW_UNREACHABLE)
 
 	# A local preview serves its own content, so the pointer lookup works on it like any
 	# catalyst. Its /about lists `localSceneParcels` and leaves `scenesUrn` empty, which
 	# is why the urn read below is the fallback and not the other way round.
-	if has_target(dest) and about_is_usable(about):
+	if has_target(dest):
 		var content_url := Realm.ensure_ends_with_slash(about.get("content").get("publicUrl"))
 		var found := await _async_scene_at(content_url, dest.target_parcel)
 		if not found.is_empty():
@@ -439,7 +498,7 @@ static func _async_about(dest: Destination):
 	var json = res.get_string_response_as_json()
 	if not json is Dictionary:
 		return null
-	return json
+	return normalize_about(json)
 
 
 ## The scene at `parcel`, or {} when it holds none; `id` doubles as the existence answer.
