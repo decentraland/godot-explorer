@@ -31,9 +31,11 @@ importa.
    actual y separa calidad de cap.
 4. **Medir ya cuesta minutos, no días.** El instrumento está montado: Perfetto 51.2 en el device, ventanas
    de 30 s (~35 s por ventana incluido el pull), `trace_processor` para el frame timeline, y
-   `fingerprint.py` cierra cada ventana verificando **perfil del motor**, **dos fuentes de fps**
-   (frame timeline contra el contador del engine, con alarma si difieren >15 %), estado térmico y luz,
-   escribiendo `state.json` y `INVALID.md` cuando la ventana no sirve. Lo que sigue caro es cambiar de
+   `fingerprint.py` cierra cada ventana verificando **perfil del motor**, **escena y posición de spawn**
+   (del `[RenderReady]` del propio engine), **dos fuentes de fps** (frame timeline contra el contador del
+   engine, con alarma si difieren >15 %) y estado térmico,
+   escribiendo `state.json` y `INVALID.md` cuando la ventana no sirve. La luminancia de pantalla **no** es
+   un control: depende del ángulo de cámara y de dónde está parado el avatar. Lo que sigue caro es cambiar de
    build (~5 min, porque Android rechaza downgrade y hay que reinstalar) y el enfriamiento térmico.
 
 Lo que **no** priorizaría todavía: frame medio, memoria y bajar calidad por defecto (ver §4).

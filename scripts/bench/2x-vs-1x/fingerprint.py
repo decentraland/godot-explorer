@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """Writes the state a run was measured in, and says whether that state is the one that was asked for.
 
-A window is only usable if the engine was on the profile the run claims, the light was where the run
-claims, and the phone was not being throttled. Those three are read back from the device after the
-window and written next to the frames, so a table cannot be built from a run that silently drifted.
-The engine's own frame counter is recorded too: it is a second, independent fps source, and when the
+A window is only usable if the engine was on the profile the run claims, in the scene and position the
+run claims, and the phone was not being throttled. Those are read back from the engine's own
+[RenderReady] line and from the platform, after the window, and written next to the frames, so a table
+cannot be built from a run that silently drifted. Screen brightness is deliberately not a check: it
+follows the camera angle and where the avatar stands, so an identical scene reads 95 or 144 depending on
+where the player looks.
+
+The engine's own frame counter is recorded as well: it is a second, independent fps source, and when the
 two disagree the window is flagged instead of averaged in.
 
-    fingerprint.py --dir DIR --label L --build 2x [--expect-profile 3] [--luma 90 110]
-                   [--max-thermal-status 0]
+    fingerprint.py --dir DIR --label L --build 2x [--expect-profile 3]
+                   [--expect-scene bafkrei…] [--expect-position 0,-1] [--max-thermal-status 0]
 
 Writes DIR/state.json always, and DIR/INVALID.md with the reasons when the window is not usable.
 Exit code 0 for a usable window, 2 for an unusable one, so a shell runner can stop on it.
@@ -26,8 +30,6 @@ from datetime import datetime, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-
-import luma as luma_mod  # noqa: E402
 
 
 def sh(args: list[str]) -> str:
@@ -54,8 +56,21 @@ def engine_state(s: str, pid: str) -> dict:
     log = sh(["adb", "-s", s, "logcat", "-d", "-t", "20000"])
     lines = [ln for ln in log.splitlines() if pid and f" {pid} " in ln and "godot" in ln]
     state = {"profile": None, "profile_changes": 0, "engine_fps": None,
-             "rt_p95_us": None, "frames_missed": None, "blocked": None, "scenes": None}
+             "rt_p95_us": None, "frames_missed": None, "blocked": None, "scenes": None,
+             "scene_id": None, "position": None, "shadow_quality": None, "bloom_quality": None}
     for ln in lines:
+        if "[RenderReady]" in ln and "scene_id" in ln:
+            try:
+                payload = json.loads(ln[ln.index("[RenderReady]") + len("[RenderReady]"):])
+            except ValueError:
+                payload = None
+            if payload:
+                state["scene_id"] = payload.get("scene_id")
+                state["position"] = payload.get("position")
+                state["shadow_quality"] = payload.get("shadow_quality")
+                state["bloom_quality"] = payload.get("bloom_quality")
+                if payload.get("profile") is not None:
+                    state["profile"] = int(payload["profile"])
         for m in re.finditer(r'"profile":(\d+)', ln):
             state["profile"] = int(m.group(1))
         if "Profile changed" in ln:
@@ -84,7 +99,8 @@ def main() -> int:
     ap.add_argument("--label", required=True)
     ap.add_argument("--build", required=True)
     ap.add_argument("--expect-profile", type=int, default=None)
-    ap.add_argument("--luma", type=float, nargs=2, default=None, metavar=("LOW", "HIGH"))
+    ap.add_argument("--expect-scene", default=None)
+    ap.add_argument("--expect-position", default=None)
     ap.add_argument("--max-thermal-status", type=int, default=None)
     args = ap.parse_args()
 
@@ -120,10 +136,6 @@ def main() -> int:
     else:
         state["window_fps"] = None
 
-    shot = os.path.join(args.dir, "screen.png")
-    if os.path.exists(shot):
-        state["luma"] = luma_mod.luma(shot)["luma_crop"]
-
     reasons = []
     if args.expect_profile is not None:
         if state["profile"] is None:
@@ -135,10 +147,10 @@ def main() -> int:
     if args.max_thermal_status is not None and state["thermal_status"] is not None:
         if state["thermal_status"] > args.max_thermal_status:
             reasons.append(f"thermal status {state['thermal_status']} > {args.max_thermal_status}")
-    if args.luma and state.get("luma") is not None:
-        low, high = args.luma
-        if not (low <= state["luma"] <= high):
-            reasons.append(f"luma {state['luma']:.1f} outside [{low}, {high}]")
+    if args.expect_scene and state.get("scene_id") != args.expect_scene:
+        reasons.append(f"scene {state.get('scene_id')} != expected {args.expect_scene}")
+    if args.expect_position and state.get("position") != args.expect_position:
+        reasons.append(f"position {state.get('position')} != expected {args.expect_position}")
     if state.get("window_fps") and state.get("engine_fps"):
         drift = abs(state["window_fps"] - state["engine_fps"]) / state["window_fps"]
         state["fps_source_delta_pct"] = round(100 * drift, 1)
@@ -164,7 +176,8 @@ def main() -> int:
         os.remove(invalid)
     fps = state.get("window_fps")
     engine = state.get("engine_fps")
-    print(f"[fingerprint] ok profile={state['profile']} fps={fps} engine_fps={engine} "
+    print(f"[fingerprint] ok profile={state['profile']} scene={state['scene_id']} "
+          f"pos={state['position']} fps={fps} engine_fps={engine} "
           f"thermal={state['thermal_status']} ap={state['ap_c']}")
     return 0
 

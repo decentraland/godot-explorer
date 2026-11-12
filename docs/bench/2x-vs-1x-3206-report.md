@@ -377,8 +377,10 @@ Lo que lo destapó fue medir el escalón de preset en la misma sesión y la mism
 confirma en su propio log: `frame sync: frames=14400 fps=41 … "Monster Recon"`.
 
 Consecuencia para el método: **verificar el preset por su efecto medible (cap de fps o tiempo de frame),
-nunca por el panel ni por una línea de log de arranque**. La luma sigue sirviendo para la luz y sólo para
-la luz.
+nunca por el panel ni por una línea de log de arranque**. Y la identidad de la ventana se verifica por
+`scene_id` y `position` del `[RenderReady]` del propio engine, no por brillo de pantalla: la luminancia
+depende del ángulo de cámara y de dónde está parado el avatar, así que la misma escena lee 95 o 144 según
+hacia dónde mira el jugador.
 
 Un confusor declarado sigue en pie: el brazo 2.x es un **build parcheado** (una función de lectura de
 setting, cero código de render). El preset es equivalente entre ramas: `graphic_settings.gd` de

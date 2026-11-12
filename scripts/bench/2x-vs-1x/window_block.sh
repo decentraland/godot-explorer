@@ -20,7 +20,7 @@ OUT="$ROOT/docs/bench/data/2x-vs-1x-3206/android-a54/$SC"
 PY="$ROOT/scripts/bench/2x-vs-1x"
 
 mkdir -p "$OUT"
-[ -f "$OUT/phases.csv" ] || echo "label,build,utc_iso,battery_pct,ap_c,luma" > "$OUT/phases.csv"
+[ -f "$OUT/phases.csv" ] || echo "label,build,utc_iso,battery_pct,ap_c" > "$OUT/phases.csv"
 
 for i in $(seq 0 $((N - 1))); do
   label=$(printf '%s-r%d' "$PREFIX" "$i")
@@ -33,11 +33,12 @@ for i in $(seq 0 $((N - 1))); do
   python3 "$PY/bench_android.py" window --label "$label" --build "$BUILD" --scenario "$SC" \
     --seconds "$WINDOW" --out "$OUT/$label"
   adb -s "$SERIAL" exec-out screencap -p > "$OUT/$label/screen.png"
-  luma=$(python3 "$PY/luma.py" "$OUT/$label/screen.png" --json | python3 -c 'import json,sys;print(json.load(sys.stdin)["luma_crop"])')
   python3 "$PY/fingerprint.py" --dir "$OUT/$label" --label "$label" --build "$BUILD" \
-    --expect-profile "${EXPECT_PROFILE:-}" --max-thermal-status "${MAX_THERMAL_STATUS:-1}" \
-    $( [ -n "${LUMA_BAND:-}" ] && echo --luma $LUMA_BAND ) || echo "[warn] $label flagged"
-  echo "$label,$BUILD,$(date -u +%Y-%m-%dT%H:%M:%SZ),$bat,$ap,$luma" >> "$OUT/phases.csv"
-  echo "[done] $label luma=$luma"
+    ${EXPECT_PROFILE:+--expect-profile "$EXPECT_PROFILE"} \
+    ${EXPECT_SCENE:+--expect-scene "$EXPECT_SCENE"} \
+    ${EXPECT_POSITION:+--expect-position "$EXPECT_POSITION"} \
+    --max-thermal-status "${MAX_THERMAL_STATUS:-1}" || echo "[warn] $label flagged"
+  echo "$label,$BUILD,$(date -u +%Y-%m-%dT%H:%M:%SZ),$bat,$ap" >> "$OUT/phases.csv"
+  echo "[done] $label"
 done
 echo "=== arm done"
