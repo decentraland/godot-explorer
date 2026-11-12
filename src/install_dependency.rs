@@ -199,6 +199,19 @@ pub fn download_and_extract_zip(
     destination_path: &str,
     persistent_cache: Option<String>,
 ) -> Result<(), anyhow::Error> {
+    download_and_extract_zip_filtered(url, destination_path, persistent_cache, |path| {
+        Some(path.to_path_buf())
+    })
+}
+
+/// Like `download_and_extract_zip`, but `destination_of` maps each archive path to where it is
+/// written under `destination_path`, or `None` to skip the entry.
+fn download_and_extract_zip_filtered(
+    url: &str,
+    destination_path: &str,
+    persistent_cache: Option<String>,
+    destination_of: impl Fn(&Path) -> Option<PathBuf>,
+) -> Result<(), anyhow::Error> {
     if Path::new("./tmp-file.zip").exists() {
         fs::remove_file("./tmp-file.zip")?;
     }
@@ -226,8 +239,10 @@ pub fn download_and_extract_zip(
 
     for i in 0..zip_archive.len() {
         let mut file = zip_archive.by_index(i)?;
-        let file_path = file.mangled_name();
-        let dest_path = Path::new(destination_path).join(file_path);
+        let Some(relative_path) = destination_of(&file.mangled_name()) else {
+            continue;
+        };
+        let dest_path = Path::new(destination_path).join(relative_path);
         create_directory_all(&dest_path)?;
         if file.is_file() {
             let mut extracted_file = File::create(&dest_path)?;
@@ -237,6 +252,70 @@ pub fn download_and_extract_zip(
 
     fs::remove_file("./tmp-file.zip")?;
 
+    Ok(())
+}
+
+/// Whether the Firebase iOS SDK pinned by `FIREBASE_IOS_VERSION` is already in the project.
+pub fn firebase_ios_installed() -> bool {
+    fs::read_to_string(Path::new(FIREBASE_IOS_FOLDER).join(".version"))
+        .map(|v| v.trim() == FIREBASE_IOS_VERSION)
+        .unwrap_or(false)
+}
+
+/// Where an entry of `Firebase.zip` lands under `FIREBASE_IOS_FOLDER`: only the frameworks the
+/// plugin links, and of those only the iOS device / simulator slices plus the xcframework's
+/// own `Info.plist`.
+fn firebase_ios_destination(path: &Path) -> Option<PathBuf> {
+    let relative = path.strip_prefix("Firebase/FirebaseAnalytics").ok()?;
+    let framework = relative.iter().next()?.to_str()?;
+    let name = framework.strip_suffix(".xcframework")?;
+    if !FIREBASE_IOS_FRAMEWORKS.contains(&name) {
+        return None;
+    }
+    let inside = relative.strip_prefix(framework).ok()?;
+    let top = inside.iter().next()?.to_str()?;
+    matches!(
+        top,
+        "Info.plist" | "ios-arm64" | "ios-arm64_x86_64-simulator"
+    )
+    .then(|| relative.to_path_buf())
+}
+
+/// Downloads the Firebase Analytics xcframeworks the iOS plugin links (see
+/// `dcl_godot_ios.gdip`). Only the iOS slices are kept, and `GoogleAppMeasurementIdentitySupport`
+/// is left out on purpose: it is what collects the IDFA and would force the ATT prompt.
+pub fn install_firebase_ios(use_cache: bool) -> Result<(), anyhow::Error> {
+    if firebase_ios_installed() {
+        print_message(
+            MessageType::Success,
+            &format!("Firebase iOS SDK {FIREBASE_IOS_VERSION} already installed"),
+        );
+        return Ok(());
+    }
+
+    print_section("Installing Firebase iOS SDK");
+
+    let folder = Path::new(FIREBASE_IOS_FOLDER);
+    if folder.exists() {
+        fs::remove_dir_all(folder)?;
+    }
+
+    let url = format!(
+        "https://github.com/firebase/firebase-ios-sdk/releases/download/{FIREBASE_IOS_VERSION}/Firebase.zip"
+    );
+    let cache_key = use_cache.then(|| format!("firebase-ios-{FIREBASE_IOS_VERSION}.zip"));
+    download_and_extract_zip_filtered(
+        &url,
+        FIREBASE_IOS_FOLDER,
+        cache_key,
+        firebase_ios_destination,
+    )?;
+
+    fs::write(folder.join(".version"), FIREBASE_IOS_VERSION)?;
+    print_message(
+        MessageType::Success,
+        &format!("Firebase iOS SDK {FIREBASE_IOS_VERSION} installed"),
+    );
     Ok(())
 }
 
@@ -747,6 +826,10 @@ pub fn install(
         _ => (),
     };
 
+    if platforms.iter().any(|p| p == "ios") {
+        install_firebase_ios(use_cache)?;
+    }
+
     if !skip_download_templates {
         prepare_templates(platforms, use_cache, strip_ios, branch)?;
     }
@@ -792,5 +875,48 @@ mod godot_version_tests {
         assert_eq!(parse_godot_version("4.6.2.stable.custom_build"), None);
         assert_eq!(parse_godot_version("4.6.2.stable"), None);
         assert_eq!(parse_godot_version(""), None);
+    }
+}
+
+#[cfg(test)]
+mod firebase_ios_tests {
+    use super::firebase_ios_destination;
+    use std::path::{Path, PathBuf};
+
+    fn dest(path: &str) -> Option<PathBuf> {
+        firebase_ios_destination(Path::new(path))
+    }
+
+    #[test]
+    fn keeps_only_linked_ios_slices() {
+        let base = "Firebase/FirebaseAnalytics/FirebaseCore.xcframework";
+        assert_eq!(
+            dest(&format!(
+                "{base}/ios-arm64/FirebaseCore.framework/FirebaseCore"
+            )),
+            Some(PathBuf::from(
+                "FirebaseCore.xcframework/ios-arm64/FirebaseCore.framework/FirebaseCore"
+            ))
+        );
+        assert!(dest(&format!(
+            "{base}/ios-arm64_x86_64-simulator/FirebaseCore.framework/x"
+        ))
+        .is_some());
+        assert!(dest(&format!("{base}/Info.plist")).is_some());
+        assert!(dest(&format!(
+            "{base}/ios-arm64_x86_64-maccatalyst/FirebaseCore.framework/x"
+        ))
+        .is_none());
+        assert!(dest(&format!(
+            "{base}/macos-arm64_x86_64/FirebaseCore.framework/x"
+        ))
+        .is_none());
+    }
+
+    #[test]
+    fn skips_idfa_support_and_other_sdks() {
+        let idfa = "Firebase/FirebaseAnalytics/GoogleAppMeasurementIdentitySupport.xcframework/ios-arm64/x";
+        assert!(dest(idfa).is_none());
+        assert!(dest("Firebase/FirebaseAuth/FirebaseAuth.xcframework/ios-arm64/x").is_none());
     }
 }

@@ -112,7 +112,7 @@ func track_first_social_action(action: String) -> void:
 		identity.is_guest
 		or (identity.is_thirdweb_guest() and not identity.is_thirdweb_guest_upgraded())
 	)
-	# Burn the one-shot only when the event was logged (Android + EULA accepted).
+	# Burn the one-shot only when the event was logged (Firebase in the build + EULA accepted).
 	if Global.metrics.track_first_social_action(action, is_guest):
 		config.first_social_action_sent = true
 		config.save_to_settings_file()
@@ -166,9 +166,9 @@ func _on_first_move_poll_tick() -> void:
 		return
 	if player_body.actual_velocity_xz < _MOVE_IN_WORLD_VELOCITY_THRESHOLD:
 		return
-	# Persist the one-shot flag ONLY when the Firebase event was actually logged (Android + EULA
-	# accepted). On other platforms or pre-EULA we still stop polling for this session, but the
-	# flag stays false so a future session retries.
+	# Persist the one-shot flag ONLY when the Firebase event was actually logged (Firebase in the
+	# build + EULA accepted). On desktop or pre-EULA we still stop polling for this session, but
+	# the flag stays false so a future session retries.
 	var fired := false
 	if Global.metrics != null:
 		fired = Global.metrics.track_first_move_in_world()

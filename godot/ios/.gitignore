@@ -1,2 +1,4 @@
 # Swift GDExtension build outputs - rebuild with plugins/build_swift_lib.sh
 dcl-swift-lib/
+# Firebase Analytics xcframeworks - fetched by `cargo run -- install --targets ios`
+plugins/dcl_godot_ios/firebase/

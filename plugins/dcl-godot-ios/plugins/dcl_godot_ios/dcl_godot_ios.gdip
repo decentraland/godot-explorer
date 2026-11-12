@@ -7,13 +7,29 @@ deinitialization="unregister_dcl_godot_ios_types"
 
 [dependencies]
 linked=[]
-embedded=[]
+embedded=[
+    "firebase/FBLPromises.xcframework",
+    "firebase/FirebaseAnalytics.xcframework",
+    "firebase/FirebaseCore.xcframework",
+    "firebase/FirebaseCoreInternal.xcframework",
+    "firebase/FirebaseInstallations.xcframework",
+    "firebase/GoogleAdsOnDeviceConversion.xcframework",
+    "firebase/GoogleAppMeasurement.xcframework",
+    "firebase/GoogleUtilities.xcframework",
+    "firebase/nanopb.xcframework"
+]
 system=["SafariServices", "AuthenticationServices", "Network", "EventKit", "EventKitUI", "DeviceCheck", "Photos", "PhotosUI"]
 
 capabilities=[]
+
+; Firebase is only reached through the Obj-C runtime: -ObjC keeps the linker from dropping its classes.
+linker_flags=["-ObjC"]
 
 files=[]
 
 [plist]
 NSCalendarsUsageDescription="This app needs to add events to your calendar for events and places"
 NSPhotoLibraryUsageDescription="Decentraland needs access to your photos so you can attach screenshots to a bug report."
+
+; Google Ads SKAdNetwork id: lets Google Ads installs be attributed without the ATT prompt.
+SKAdNetworkItems:raw="<array><dict><key>SKAdNetworkIdentifier</key><string>cstr6suwn9.skadnetwork</string></dict></array>"
