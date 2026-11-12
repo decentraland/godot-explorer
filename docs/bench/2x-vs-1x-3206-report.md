@@ -361,9 +361,16 @@ No es un techo de fps disfrazado: en 2.x el p10 de intervalo es 25.5 ms (39 fps)
 el build a veces corre al doble y la mediana se queda en la mitad. En 1.x p50 = 25.0 ms con 0.2 % de
 frames ≥ 49 ms; en 2.x el 80 % de los frames está por encima de 49 ms.
 
-Dos confusores que se declaran y no se pueden quitar desde afuera: el brazo 2.x es un **build parcheado**
-(una función de lectura de setting, cero código de render) y `High` es **el preset de cada build**, no un
-conjunto de ajustes probado equivalente entre versiones.
+Un confusor declarado: el brazo 2.x es un **build parcheado** (una función de lectura de setting, cero
+código de render). El preset, en cambio, **sí es equivalente**: `graphic_settings.gd` de
+`release-1.16.2` y `PROFILES[3]` de 2.x tienen los mismos valores (shadow 1, bloom 2, scale 1.0,
+view_distance 300, dcl_lights true, dcl_light_shadows true, dcl_max_lights 8, aa 0) y `project.godot`
+coincide en SSAO/glow/sombras, así que el frame no se explica por un preset más caro.
+
+**Dónde se va el frame**: el CPU por frame es parecido (1.x 37.5 núcleo·ms a 40.2 fps; 2.x 43 a 19.8),
+pero 2.x usa sólo 85 % de un núcleo contra 150 % de 1.x: el frame de 2.x dura 51 ms con la CPU media
+ociosa, o sea espera en GPU o en el present, no en cálculo. Ambos builds están cuantizados por el panel de
+120 Hz (1.x vive en 2–4 vsync = 60/40/30 fps, 2.x en 6–8 vsync = 20/17/15 fps).
 
 Los bloques anteriores de Genesis Plaza con la hora del juego sin fijar (25.78 vs 25.88 fps) quedan como
 medición **descriptiva** del estado en que estaban los builds antes del parche: en GP ningún build puede
