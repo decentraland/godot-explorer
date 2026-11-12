@@ -10,10 +10,11 @@ Versión navegable de todos estos datos, con las tablas generadas desde los CSV 
 descargables: <https://artifacts.dclregenesislabs.xyz/af8787b0-ec0c-49c0-bc58-3e7728a3b180>
 (pide login con email de trabajo la primera vez).
 
-- **fps**: empatados por diseño. Ambos builds corren con dynamic graphics ON y quedan clavados en
-  ~18 fps (objetivo 55.6 ms/frame) en Genesis Plaza. 1.x **17.9**, 2.x **18.1** (mediana de 5
-  corridas de 60 s cada una, alternadas). El cap esconde la diferencia: el número no distingue los
-  builds, lo que distingue es la **cola**.
+- **fps, condición controlada (mundo fijo + Midday fijo + High + dynamic OFF)**: 1.x **40.22**,
+  2.x **19.77** → **−50.9 %** (IC95 [−21.66, −18.26] fps, MWU exacto p = 0.0022). Es el número que
+  responde al pedido del issue; el brazo 2.x es el build parcheado en `skybox_time` (sin tocar render).
+  En Genesis Plaza, donde ningún build puede fijar el cielo, el par medido dio **25.78 vs 25.88 fps** y
+  queda como descriptivo, no como delta.
 - **Cola de frame times**: 2.x es peor en los peores frames — **p99 66.9 → 74.9 ms (+11.9 %)**,
   **fps p1 (1 % low) 14.9 → 13.4 (−10.6 %)**. La mediana y el p95 son idénticos (±0.1 %). Es decir:
   misma fluidez media, hitches más profundos en 2.x.
@@ -30,7 +31,9 @@ descargables: <https://artifacts.dclregenesislabs.xyz/af8787b0-ec0c-49c0-bc58-3e
   (Discover 2.27 s, Backpack 1.85 s, Profile 1.16 s, Settings ≤ 0.5 s), sin fuga en 20 navegaciones
   (−56 MB) y sin crash con 20 taps en ráfaga. Y volver al shell desde el mundo **sí** es scriptable:
   `BACK` → `LEAVE`, o el chevron del HUD (§6).
-- **Presupuesto** del issue: fps ≥ 1.x → **PASS**; RSS ≤ 1.x + 100 MB → **PASS** (2.x usa menos).
+- **Presupuesto** del issue: fps ≥ 1.x → **FAIL** con la luz y el contenido controlados
+  (19.77 vs 40.22, −50.9 %); medido en Genesis Plaza con la hora libre → PASS (18.1 vs 17.9), que es
+  el caso en que la escena domina el frame. RSS ≤ 1.x + 100 MB → **PASS** (2.x usa menos).
 
 ## Qué se comparó
 
@@ -331,17 +334,40 @@ mismo ajuste (`Dynamic Skybox` OFF + `Custom Skybox: Midday`):
 Es un build parcheado, no el release, y el diff completo es una función de lectura de ajuste (nada de
 render). Se declara como tal en cada tabla que lo use.
 
-### Lo que se puede afirmar hoy, con la luz como estaba
+### El número final: mediodía fijo, mismo contenido, mismo preset
 
-| bloque | build | ventanas | fps mediana | rango | luz |
-|---|---|---:|---:|---|---|
-| GP, perfil 3, dynamic OFF | 1.x | 6 | 25.78 | 24.39–27.42 | 10:13–12:01 del juego |
-| GP, perfil 3, dynamic OFF | 2.x | 6 | 25.88 | 25.05–26.28 | 14:59–17:17 del juego |
-| GP, perfil 3, dynamic OFF | 1.x | 3 | 19.06 | 18.26–22.61 | 18:42–19:39 del juego |
-| parcela `100,100`, Midday fijo, perfil 3 | 1.x | 3 | **36.70** | 33.96–40.29 | fija (luma 110.6) |
+Condición medida, idéntica en los dos brazos:
 
-El bloque pareado de mediodía (3 ventanas por build en la misma hora del juego) está en curso; el
-número final de la comparación sale de ahí y reemplaza a esta tabla cuando cierre.
+- **mismo mundo**: `monsterrecon.dcl.eth`, entrado desde la place card de Discover en ambos builds. No se
+  usó la parcela `100,100` como coordenada porque los dos builds resuelven contenido distinto ahí (1.x
+  renderiza terreno vacío, 2.x carga el world).
+- **misma luz**: `Dynamic Skybox` OFF + `Custom Skybox: Midday`, verificado en cada ventana por la luma
+  del recuadro central (1.x 97.6–99.9, 2.x 104.4–105.0). La luma no es el control, es la prueba de que el
+  control se aplicó: en 2.x sólo llega con el parche de `skybox_time`.
+- **mismo preset**: `High` en los dos builds (2.x `"profile":3` en el log de arranque), `Dynamic
+  Graphics` OFF.
+- **misma térmica**: compuerta por `Thermal Status` de la plataforma (0/1 en los dos brazos, AP 38–46 °C
+  sin throttling), 6 ventanas de 30 s por brazo contra la misma instancia viva.
+
+| build | ventanas | fps mediana | rango | luz por ventana |
+|---|---:|---:|---|---|
+| 1.x release | 6 | **40.22** | 37.96–41.77 | 97.6–99.9 |
+| 2.x parcheado | 6 | **19.77** | 19.64–20.04 | 104.4–105.0 |
+
+**Δ = −20.45 fps (−50.9 %)**. IC95 bootstrap de la diferencia de medianas **[−21.66, −18.26] fps**;
+Mann-Whitney exacto **p = 0.0022**, que es el piso alcanzable con 6 vs 6 (no es “p = 0”).
+
+No es un techo de fps disfrazado: en 2.x el p10 de intervalo es 25.5 ms (39 fps) y el p50 51.0 ms, o sea
+el build a veces corre al doble y la mediana se queda en la mitad. En 1.x p50 = 25.0 ms con 0.2 % de
+frames ≥ 49 ms; en 2.x el 80 % de los frames está por encima de 49 ms.
+
+Dos confusores que se declaran y no se pueden quitar desde afuera: el brazo 2.x es un **build parcheado**
+(una función de lectura de setting, cero código de render) y `High` es **el preset de cada build**, no un
+conjunto de ajustes probado equivalente entre versiones.
+
+Los bloques anteriores de Genesis Plaza con la hora del juego sin fijar (25.78 vs 25.88 fps) quedan como
+medición **descriptiva** del estado en que estaban los builds antes del parche: en GP ningún build puede
+fijar el cielo, así que ese par no aísla la versión.
 
 **iOS (iPhone 16e), 2.x:** siete sesiones de 20 muestras a 1 Hz, medianas 40.0 / 35.5 / 37.5 / 39.0 /
 36.0 / 36.0 / 36.0; mediana de medianas **36.0 fps**. Sin p99: iOS no expone un registro de present por

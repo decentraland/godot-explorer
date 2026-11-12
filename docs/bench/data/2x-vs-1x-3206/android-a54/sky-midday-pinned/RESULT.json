@@ -1,0 +1,43 @@
+{
+  "condition": {
+    "world": "monsterrecon.dcl.eth (same scene in both builds, entered from the Discover place card)",
+    "graphic_profile": "High (2.x profile=3)",
+    "dynamic_graphics": "off",
+    "dynamic_skybox": "off",
+    "custom_skybox": "Midday",
+    "windows": "6 x 30 s per arm, same running instance per arm",
+    "light_check": "central-crop luma per window: 1x 97.6-99.9, 2x 104.4-105.0",
+    "thermal": "gated on platform Thermal Status (0/1 both arms); AP 38-46 C, no throttle"
+  },
+  "metric": "fps_avg (frames.csv mean interval over the 30 s window)",
+  "1x": {
+    "median": 40.22,
+    "runs": [
+      37.96,
+      38.11,
+      41.77,
+      40.37,
+      41.09,
+      40.08
+    ]
+  },
+  "2x": {
+    "median": 19.77,
+    "runs": [
+      19.77,
+      19.89,
+      20.04,
+      19.77,
+      19.64,
+      19.65
+    ]
+  },
+  "diff_fps": -20.45,
+  "diff_pct": -50.9,
+  "ci95_diff_fps": [
+    -21.66,
+    -18.26
+  ],
+  "mwu_p_exact": 0.002165,
+  "caveat": "the 2.x arm is a locally patched build (skybox_time reads int or float); the patch touches no render code. High is each build's own preset, not a proven equal settings set."
+}

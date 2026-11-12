@@ -219,6 +219,10 @@ def gp_n(build):
 
 
 verdict_rows = [
+    ["<b>Controlled comparison</b>",
+     "dynamic graphics OFF + profile High + Dynamic Skybox OFF + Custom Skybox = Midday, Monster Recon world (same scene in both builds), 6 x 30 s per build on one live instance per build",
+     "6 / 6", "<b>VALID</b>",
+     "the only block where scene, light, preset and thermal state are held identical; 2.x arm is the local skybox_time patch, which touches no render code"],
     ["Shipped configuration",
      "dynamic graphics ON (client default), 5 runs per build, alternating",
      f"{gp_n('1x')} / {gp_n('2x')}", "VALID",
@@ -239,6 +243,40 @@ verdict_rows = [
      "dynamic graphics OFF + profile High, Genesis Plaza", "1 sample at 1 Hz", "VALID (no tail)",
      "iOS has no frame timeline, so there is an average and no p50/p99"],
 ]
+
+final_json = f"{ROOT}/sky-midday-pinned/RESULT.json"
+if os.path.exists(final_json):
+    fin = json.load(open(final_json))
+    runs_1x = " · ".join(f"{x:.2f}" for x in fin["1x"]["runs"])
+    runs_2x = " · ".join(f"{x:.2f}" for x in fin["2x"]["runs"])
+    lo, hi = fin["ci95_diff_fps"]
+    final_block = (
+        "<p>Every other block in this page either could not hold the sun or could not hold the preset. "
+        "This one holds all of it. Both builds were driven into the <code>monsterrecon.dcl.eth</code> "
+        "world from the Discover place card — the parcel coordinate was abandoned because 1.x renders "
+        "empty land there and 2.x loads the world — with <code>Dynamic Skybox</code> off, "
+        "<code>Custom Skybox = Midday</code>, profile <code>High</code> and dynamic graphics off. "
+        "Six windows of 30 s per build run against one live instance each, gated on the platform's own "
+        "<code>Thermal Status</code> (0 in both arms), and every window carries its own light check: the "
+        "central-crop luma stays at 97.6-99.9 on 1.x and 104.4-105.0 on 2.x, so neither arm drifted off noon.</p>"
+        + table(["build", "windows", "fps median", "per-window fps", "light (luma)"], [
+            ["1.x release", "6", f"<b>{fin['1x']['median']:.2f}</b>", runs_1x, "97.6-99.9"],
+            ["2.x patched", "6", f"<b>{fin['2x']['median']:.2f}</b>", runs_2x, "104.4-105.0"],
+        ], [False, True, True, False, False])
+        + f"<div class=\"note\"><b>Δ = {fin['diff_fps']:+.2f} fps ({fin['diff_pct']:+.1f} %)</b>, "
+        f"bootstrap 95 % CI of the difference of medians <b>[{lo:+.2f}, {hi:+.2f}] fps</b>, exact "
+        f"Mann-Whitney <b>p = {fin['mwu_p_exact']:.4f}</b> — the smallest p 6 vs 6 can produce, so read it "
+        "as 'the two arms do not overlap', not as a precise probability.</div>"
+        "<p>It is not an fps cap in disguise: on 2.x the 10th-percentile frame interval is 25.5 ms "
+        "(39 fps), so the build is capable of double, while the median sits at 51.0 ms and 80 % of frames "
+        "land above 49 ms. On 1.x the median interval is 25.0 ms with 0.2 % of frames above 49 ms.</p>"
+        "<div class=\"note\"><b>Two caveats, stated rather than buried.</b> The 2.x arm is a locally "
+        "patched build: <code>skybox_time.rs</code> now accepts an int or a float for the setting, which "
+        "is one settings read and no render code. And <code>High</code> is each build's own preset, not "
+        "a settings set proven equivalent across versions.</div>"
+    )
+else:
+    final_block = "<p>Controlled comparison not measured yet.</p>"
 
 preset_csv = f"{ROOT}/gp-hi-v3/preset-probe.csv"
 preset_rows = []
@@ -300,11 +338,12 @@ CSS_AND_HTML = f"""<!doctype html>
     <div>
       <p class="eyebrow">DCL Regenesis Labs · benchmark #3206</p>
       <h1>2.x vs 1.x — measured benchmark</h1>
-      <p class="lede">Same phone, same scene, same pose, same protocol for both builds. The two clients
-      tie on the average frame at the shipped settings and 2.x has the worse tail while spending less
-      CPU; the interesting part of this benchmark turned out to be how much of the first comparison was
-      measuring the sun and the settings panel instead of the builds.</p>
+      <p class="lede">Same phone, same scene, same fixed noon, same preset, same thermal gate. With all of
+      that held, <b>1.x renders 40.22 fps and 2.x renders 19.77 fps</b> — a halving — while 2.x spends
+      less CPU and loads faster. The interesting part of this benchmark is how much of the first
+      comparisons was measuring the sun and the settings panel instead of the builds.</p>
       <div class="toc">
+        <a href="#final">Controlled result</a>
         <a href="#verdict">Verdict</a>
         <a href="#requested">Requested matrix</a>
         <a href="#results">Shipped config</a>
@@ -317,6 +356,9 @@ CSS_AND_HTML = f"""<!doctype html>
     </div>
     <button class="toggle" type="button" id="t">◐ theme</button>
   </div>
+
+  <h2 id="final">The controlled result: fixed noon, same scene</h2>
+  {final_block}
 
   <h2 id="verdict">Verdict per block</h2>
   <p>What can be claimed from this pass, in the order a reader needs it. A block is only <b>VALID</b>

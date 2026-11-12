@@ -12,9 +12,12 @@ importa.
 
 ## 0. Resumen ejecutivo
 
-1. **El problema demostrado no es el frame medio.** A igualdad de configuración, 2.x ya hace más fps
-   que 1.x; lo que empeora es la **cola** (p99 +11.9 %, fps p1 −10.6 %) *gastando 10.3 % menos CPU*.
-   Eso es trabajo periódico dentro del frame, no falta de throughput.
+1. **Con la condición controlada, el frame medio sí es el problema: 2.x rinde la mitad.** Mundo fijo
+   (`monsterrecon.dcl.eth`), `Midday` fijo, perfil `High`, dynamic graphics OFF, misma térmica:
+   **1.x 40.22 fps vs 2.x 19.77 fps (−50.9 %)**, IC95 [−21.66, −18.26], MWU exacto p = 0.0022 (§1.3 del
+   reporte). No es un techo: en 2.x el p10 de intervalo es 25.5 ms (39 fps) y la mediana 51.0 ms. La
+   cola (p99 +11.9 %, fps p1 −10.6 %) sigue siendo cierta pero es el segundo orden del problema, no el
+   primero, y lo anterior (“empatan / 2.x va adelante”) era el sol y el preset, no el build.
 2. **La medición estaba dominada por una variable que nadie estaba fijando: el sol.** Mismo build y misma
    temperatura de arranque: 31.3 fps con el sol alto contra 14.4 con el sol bajo, **2.2×**, más que la
    diferencia entre builds. La iluminación pasó a ser el primer workstream técnico (C), y el sol dejó de
