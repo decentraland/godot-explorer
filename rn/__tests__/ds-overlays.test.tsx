@@ -6,6 +6,8 @@ import {
   ClaimDialog,
   ClaimState,
   Dialog,
+  OtpDialog,
+  OtpState,
   ToastProvider,
   nearestSnap,
   snapHeights,
@@ -68,6 +70,55 @@ describe('ClaimDialog', () => {
     const tree = claim('claimed', jest.fn(), onClose);
     expect(text(tree)).toContain('Tap to continue');
     act(() => pressable(tree, 'Tap to continue').props.onPress());
+    expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe('OtpDialog', () => {
+  const otp = (state: OtpState, onResend = jest.fn(), onClose = jest.fn()) =>
+    render(
+      <OtpDialog
+        visible
+        state={state}
+        title="Enter verification code"
+        body="One time password sent to you."
+        code="12"
+        onChangeCode={jest.fn()}
+        codeLabel="Verification code"
+        errorMessage="The code is invalid"
+        verifyingLabel="Verifying..."
+        resendPrompt="Didn’t get an email?"
+        resendLabel="Resend Code"
+        onResend={onResend}
+        onRequestClose={onClose}
+      />,
+    );
+
+  it('shows the error message only in the error state', () => {
+    expect(text(otp('default'))).not.toContain('The code is invalid');
+    expect(text(otp('error'))).toContain('The code is invalid');
+  });
+
+  it('shows the spinner row while verifying', () => {
+    expect(text(otp('default'))).not.toContain('Verifying...');
+    const tree = otp('verifying');
+    expect(text(tree)).toContain('Verifying...');
+    expect(text(tree)).toContain('progressbar');
+  });
+
+  it('resends and closes', () => {
+    const onResend = jest.fn();
+    const onClose = jest.fn();
+    const tree = otp('default', onResend, onClose);
+    act(() =>
+      tree.root
+        .findAll(
+          n => n.props.accessibilityRole === 'link' && n.props.onPress,
+        )[0]
+        .props.onPress(),
+    );
+    expect(onResend).toHaveBeenCalled();
+    act(() => pressable(tree, 'Close').props.onPress());
     expect(onClose).toHaveBeenCalled();
   });
 });

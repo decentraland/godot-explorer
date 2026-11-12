@@ -4,14 +4,16 @@ import { AppText } from './AppText';
 import { colors, fonts } from './tokens';
 import { u } from './scale';
 
-/** Figma `Input/CodeSlots`: one 84×130 slot per digit of a verification code. The slot being
- * typed gets the Lavender Light border, filled slots a Pearl one, every slot `status/danger`
- * when `error`. A hidden input carries the real text so the OS keyboard and autofill work. */
+/** Figma `Input/CodeSlots` laid out as `OTP-Input`: one 84×130 slot per digit, 10 apart. The slot
+ * being typed gets the Lavender Light border, filled slots a Pearl one, every slot `status/danger`
+ * when `error`. `errorMessage` reserves its line under the slots and shows it while `error`. A
+ * hidden input carries the real text so the OS keyboard and autofill work. */
 export function CodeSlots({
   value,
   length,
   onChangeText,
   error = false,
+  errorMessage,
   autoFocus = false,
   accessibilityLabel,
 }: {
@@ -19,14 +21,14 @@ export function CodeSlots({
   length: number;
   onChangeText: (text: string) => void;
   error?: boolean;
+  errorMessage?: string;
   autoFocus?: boolean;
   accessibilityLabel: string;
 }) {
   const input = useRef<TextInput>(null);
   const [focused, setFocused] = useState(autoFocus);
   const digits = value.slice(0, length).split('');
-  const current = Math.min(digits.length, length - 1);
-  return (
+  const slots = (
     <Pressable
       accessibilityRole="none"
       onPress={() => input.current?.focus()}
@@ -34,7 +36,7 @@ export function CodeSlots({
     >
       {Array.from({ length }, (_, i) => {
         const digit = digits[i];
-        const typing = focused && i === current && !error;
+        const typing = focused && i === digits.length && !error;
         return (
           <View
             key={i}
@@ -77,10 +79,28 @@ export function CodeSlots({
       />
     </Pressable>
   );
+  if (errorMessage === undefined) {
+    return slots;
+  }
+  return (
+    <View style={styles.withMessage}>
+      {slots}
+      <AppText style={styles.message}>{error ? errorMessage : ''}</AppText>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: u(8), justifyContent: 'center' },
+  row: { flexDirection: 'row', gap: u(5), justifyContent: 'center' },
+  withMessage: { gap: u(4) },
+  /** `OTP-Input`'s message is Ruby and Title Case on the node, not the States page's `status/danger`. */
+  message: {
+    minHeight: u(12),
+    fontSize: u(10),
+    color: colors.ruby,
+    textAlign: 'center',
+    textTransform: 'capitalize',
+  },
   slot: {
     width: u(42),
     height: u(65),

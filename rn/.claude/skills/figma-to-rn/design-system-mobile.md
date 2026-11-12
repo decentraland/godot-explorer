@@ -6,6 +6,10 @@ Loader, Skeleton, EmptyState, Backgrounds, Spacing & Sizes, Elevation, Motion, S
 text fields) ultimately trace back to — check here **before** re-deriving a spec from a specific
 screen's node, and before assuming a value is screen-specific when it might be a shared token.
 Last full pass (every component set read through `get_design_context` metadata, no screenshots):
+**2026-11-11** (every set fingerprinted and diffed against the 11-10 pass: the new `OTP-Input` 891:15294 and
+`MOdal-OTP` 891:15421, `Modal/Dialog` Portrait card 520 → **600**; `Input/Field`, `Modal/Scrim`,
+`Modal-Background` and the States page only moved or regained a hidden error row; text styles unchanged;
+new spacers `space/26|30|54|60`, still untokenised) after
 **2026-11-10, third round** (every set on every page re-read value by value: `Modal/Claim`, `Button/Primary`
 `Type=Claim` and the 60×60 Dice square, redrawn Share / Like / Dislike / Emote / NavBar Social, Discover Pressed
 and Filter Disable icon colours, OptionsList gap, `RarityLabel` Exotic tint, EmptyState icon 80, `Image Not Found`)
@@ -181,7 +185,7 @@ Audited 2026-11-03 against `Input/Field` 562:4820, `Input/Labeled` 562:4890, `In
 | Labeled | `Input` Medium 30 **Snow** label, gap 20 to the field; Disabled label White 30%; `Button=True` adds a `Button/Secondary` Outline Medium (radius 12) after the field, gap 16 | `label` Medium Snow, `marginBottom u(10)`; no `button` prop yet |
 | Label/Description | label + `Caption2` Regular 22 Pearl, gap 10, pb 8 | `helperAbove` `u(11)` Pearl, `marginBottom u(5)`, `paddingBottom u(4)` |
 | Search 562:5083 | 540×68, **px 10**, radius 12, Black 40%; `Icon/Base` search **56** Snow, gap 8; text Medium 30 Snow, placeholder Snow 50%; Typing/Focus = 1px Lavender Light border + `Icon/Base` close 40 Snow | `SearchField`: one look for every call site (the old `glass` pill and the always-bordered `framed` box are gone; `framed` only widens the gap after the back chevron) |
-| CodeSlots 562:5058 | 84×130 per digit, radius 16, Black 40%, 1px Shadow border; Typing = Lavender Light border + Black 70% + a White caret 50 tall drawn with a 3.33 stroke (`u(1.66)` wide since 11-10); Filled = Pearl border + `Input/Code` Semi Bold 48 Snow; Error = `#FB3B3B` border and digit | `CodeSlots` (hidden `TextInput`, `oneTimeCode`); the gap between slots is not specified in Figma — `u(8)` |
+| CodeSlots 562:5058 | 84×130 per digit, radius 16, Black 40%, 1px Shadow border; Typing = Lavender Light border + Black 70% + a White caret 50 tall drawn with a 3.33 stroke (`u(1.66)` wide since 11-10); Filled = Pearl border + `Input/Code` Semi Bold 48 Snow; Error = `#FB3B3B` border and digit | `CodeSlots` (hidden `TextInput`, `oneTimeCode`); slots 10 apart (`u(5)`) as `OTP-Input` 891:15294 draws them; `errorMessage` adds its message row |
 | UniqueName 562:4908 | Dropdown field with `Icon/NameVerified` 32 after the name; Blocked = Gray text, no badge, no chevron; Focus = 1px Lavender Light border; Disabled Black 30% (`surface/overlayDisabled`) + White 20% | `UsernameField` → `Dropdown` with `icon: 'nameVerified'` (the hand-drawn `ClaimedSeal` is gone since 11-10); Blocked still to add when that screen is next touched |
 | Counter 562:5035 | `B3` Regular 20 Pearl, "0/300"; Max = `ruby[200]` `#FF5F77` | `counterLabel` + `counter`/`counterMax` |
 | Label/ExternalLink | label + `Icn/NewChat` 32, gap 16, h 40 | not built (no consumer) |
@@ -264,7 +268,7 @@ The old `variant="settings"` (tighter paddings) is gone: the Figma field already
 
 ## Modals page — `Dialog`
 
-`Modal/Dialog` 562:7666 + `Modal/Scrim` 591:118. Portrait card 520 wide (pt 64, pb 60, px 56, content
+`Modal/Dialog` 562:7666 + `Modal/Scrim` 591:118. Portrait card **600** wide since 11-11 (was 520; pt 64, pb 60, px 56, content
 gap 54), Landscape 720 (pt 54, pb 48, px 54, gap 48); `surface/modal` #4C147C (`colors.modal`) with
 the two glows (`surface/modal-glow`, `RadialFill` with dp radii); radius 16 → `u(8)`; title
 `Modal/Title` Bold 38 → `u(19)` Snow centred; body `Modal/Body` Regular 26 / lh 36 → `u(13)`/`u(18)`
@@ -276,7 +280,8 @@ Black 60% (`colors.black60`) fallback — a code-only decision to re-check with 
 Orientation comes from `useWindowDimensions`; the old `rounded`/`width` props are gone.
 Re-read 2026-11-06: the glows are no longer blurred ellipses but **two radial gradients in the card
 fill**, Mythic `#FF4BED`: top-right centred on the corner, rx 210 / ry 190, 60% → 0; bottom centred
-20px below the bottom edge, rx 343 (Portrait) / 475 (Landscape) / ry 140, 62% → 0; both with the same
+20px below the bottom edge, rx 343 (Portrait) / 475 (Landscape) / ry 140, 62% → 0 (11-11: the Portrait card
+grew to 600 and the gradients scale with the box, so Portrait is now top 242 / 173 and bottom 395 / 127); both with the same
 six-stop falloff (×1, .669, .399, .192, .055, 0) — `glow()`/`FALLOFF` in `Dialog.tsx`, radii passed as
 `rxDp`/`ryDp`. `Link=True` = `B3` Regular 20 underline **`text/link` `#A0ABFF`** (`colors.link`; was
 `#32CEFF`, the `sky` token is gone), two lines max, gap 10 under the body (the body and the link share a group: `bodyGroup` gap `u(5)`,
@@ -292,7 +297,8 @@ field as `children`. "Cancel" there is a standard `Button/Secondary` Black 40% a
 **Buttons re-read 11-10**: every variant now has both CTAs `Fill` (`flex-1`, `Btn/Medium` 74 / radius
 12), so `Dialog` gives each button an equal share — the old hug + fill made the row change with the
 labels.
-`Modal-Background` 671:4363 (Portrait 520×466 with the 458 card inset / Landscape 720×404) is the
+`Modal-Background` 671:4363 (Portrait 520×466 with the 458 card inset / Landscape 720×404; still 520 after the
+Dialog Portrait went to 600 on 11-11 — open with the designer) is the
 same card with the same glows and no content — not built as its own component; its description names
 custom modals such as the claim one, and `ClaimDialog` reuses `Dialog`'s `GLOW_TOP` / `GLOW_BOTTOM`.
 
@@ -312,6 +318,24 @@ the node's SVG (`assets/claim-rays.webp`) because RN has no overlay blend and An
 overlay ovals are drawn as the purple they produce on `surface/modal`. Open with the designer: Loading's button
 reads "Claimed" in the modal but "Claiming..." on the Buttons page (gallery uses the latter), and the entry
 motion loops in the prototype (code plays it once, rotation loops).
+
+### `MOdal-OTP` 891:15421 + `OTP-Input` 891:15294 — `OtpDialog`, added 2026-11-11
+
+E-mail verification code modal. Card 620×810 (`u(310)`, hugs its content in code), `surface/modal`, radius 16,
+p 32, gap 32; glows are the old blurred ellipses (Top 154×132 blur 133 past the top-right corner; Bottom 520×77 +
+463×31 at 50%, 26 px below the edge), drawn with Dialog's `GLOW_TOP` / `GLOW_BOTTOM` at the 520-card radii.
+Close = the bare `close` glyph 31.7 Snow at 90% at the top-right (`Icon close` 26.75 with −5.45 margins). Content
+gap 48: header gap 36 = a 156 Black 40% circle with `Icon/Base` Email 78, then text gap 22 = `Header/Title
+Landscape` Bold 44 + Regular 26 lh 130% with the address Semi Bold (`body` takes nodes). `OTP-Input` = six
+`Input/CodeSlots` 10 apart (the first spacing Figma draws; `CodeSlots` gap `u(5)`, was `u(8)`) and a message row
+8 below, Regular 20 **Ruby** `#FF2D55` Title Case — the node, not the States page's `status/danger`; the row keeps
+its height while hidden (`CodeSlots errorMessage`). Then 78 to "Didn’t get an email? **Resend Code**" (Regular 24
+Snow + `Button/Link` Medium periwinkle underline, a nested `Text` so it wraps as one line). `State`: Default /
+Verifying (all slots Filled; a row 6 below the slots: `loading 2` 48 + "Verifying..." Semi Bold 24, 7 apart — code
+`Spinner size={24}`, whose ring is a bit thicker than the 4 px one drawn) / Error (slots Error + message).
+`CodeSlots` marks only the next empty slot as Typing, so a full code shows every slot Filled.
+No Landscape variant: the 405 dp card does not fit a landscape phone, so `OtpDialog` scrolls inside the scrim.
+Not wired into the entry flow here (that screen is `feat/entry-flow-parity`'s job).
 
 ### Panel frame (Modals page) — `Sheet`, `SheetFooter`, `BottomSheet`, added 2026-11-10
 
