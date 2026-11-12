@@ -1,0 +1,69 @@
+appId: org.decentraland.godotexplorer
+name: World HUD, chat and menu
+---
+# The world is a placeholder, so only the React Native layer on top of it is checked: HUD buttons, the chat
+# and the menu drawer with its panels. Profile and Backpack from the drawer are left out: in this build they
+# crash the app because the mock rejects the call (see Known limits in the README).
+- runFlow: ../flows/01-entry.yaml
+
+# Chat: the mock lists a fixed conversation and accepts a message.
+- tapOn: "Chat"
+- assertVisible: "NEARBY"
+- assertVisible: "Welcome to Decentraland! Respect others and have fun."
+- assertVisible: "hey! anyone going to the theatre at 12,45?"
+- assertVisible: "@Mateo welcome to Genesis Plaza"
+- tapOn: "Write a message"
+- inputText: "hello from maestro"
+- pressKey: Enter
+- assertVisible: ".*hello from maestro.*"
+- tapOn: "Close chat"
+
+# Drawer: Discover panel for the current place.
+- tapOn: "Menu"
+- assertVisible: "Genesis Plaza"
+- assertVisible: "by Decentraland"
+- assertVisible: "Featured"
+- assertVisible: "Old McTiger's Farm"
+- assertVisible: "Events"
+
+# Social: three tabs and the fixed people.
+- tapOn: "Social"
+- assertVisible: "FRIENDS"
+- assertVisible: "REQUESTS"
+- assertVisible: "NEARBY"
+- assertVisible: "ONLINE (2)"
+- assertVisible: "OFFLINE (2)"
+- assertVisible: "Jump to PlayerName"
+- tapOn: "REQUESTS"
+- tapOn: "NEARBY"
+
+# Notifications: four fixed items and the mark-all action.
+- tapOn: "Notifications"
+- assertVisible: "READ ALL"
+- assertVisible: "Ana. Accepted your friend request"
+- assertVisible: "Bo. Want to be your friend!"
+- assertVisible: "New Item Received. Space Jacket"
+- assertVisible: "Event Name. Event started!"
+- tapOn: "READ ALL"
+
+# Settings from the drawer opens the landscape page; the system Back returns to the world.
+- tapOn: "Settings"
+- assertVisible: "Graphics"
+- assertVisible: "Version 1.14.0-mock"
+- back
+- extendedWaitUntil:
+    visible: ".*mock.*FPS.*"
+    timeout: 10000
+
+# Leave the world like a player: Back asks for confirmation.
+- back
+- extendedWaitUntil:
+    visible: "Leave this world?"
+    timeout: 10000
+- tapOn: "CANCEL"
+- assertNotVisible: "Leave this world?"
+- back
+- tapOn: "LEAVE"
+- extendedWaitUntil:
+    visible: "Popular"
+    timeout: 15000

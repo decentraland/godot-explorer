@@ -1,0 +1,97 @@
+appId: org.decentraland.godotexplorer
+name: Place sheet
+---
+# The first Popular card is live data, so it is found by position and the sheet is checked by its fixed
+# controls. Favorites and votes live in memory in this build, so nothing outlives the run.
+- runFlow: ../subflows/ensure-home.yaml
+- tapOn:
+    text: ".+"
+    below: "Popular"
+    above: "Friends.*"
+    index: 0
+- tapOn: "Expand sheet"
+- assertVisible: "Collapse sheet"
+- assertVisible: "Favorite"
+- assertVisible: "Share"
+- assertVisible: "Like"
+- assertVisible: "Dislike"
+- assertVisible: "JUMP IN"
+
+# Favorite, Like and Dislike: set each, check it took, then clear.
+- runFlow:
+    when:
+      notVisible:
+        text: "Favorite"
+        selected: true
+    commands:
+      - tapOn: "Favorite"
+- assertVisible:
+    text: "Favorite"
+    selected: true
+- runFlow:
+    when:
+      notVisible:
+        text: "Like"
+        selected: true
+    commands:
+      - tapOn: "Like"
+- assertVisible:
+    text: "Like"
+    selected: true
+- runFlow:
+    when:
+      notVisible:
+        text: "Dislike"
+        selected: true
+    commands:
+      - tapOn: "Dislike"
+- assertVisible:
+    text: "Dislike"
+    selected: true
+- assertNotVisible:
+    text: "Like"
+    selected: true
+- runFlow:
+    when:
+      visible:
+        text: "Dislike"
+        selected: true
+    commands:
+      - tapOn: "Dislike"
+- assertNotVisible:
+    text: "Dislike"
+    selected: true
+- runFlow:
+    when:
+      visible:
+        text: "Favorite"
+        selected: true
+    commands:
+      - tapOn: "Favorite"
+- assertNotVisible:
+    text: "Favorite"
+    selected: true
+
+# Share opens the system sheet with the place link; nothing is sent.
+- tapOn: "Share"
+- extendedWaitUntil:
+    visible: ".*decentraland.org/jump.*"
+    timeout: 15000
+- back
+- assertVisible: "Collapse sheet"
+
+# Close the sheet.
+- tapOn: "Close"
+- assertNotVisible: "Collapse sheet"
+
+# Reopen and jump in: the mock world shows its version label.
+- tapOn:
+    text: ".+"
+    below: "Popular"
+    above: "Friends.*"
+    index: 0
+- tapOn: "Expand sheet"
+- tapOn: "JUMP IN"
+- extendedWaitUntil:
+    visible: ".*mock.*FPS.*"
+    timeout: 20000

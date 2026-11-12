@@ -1,0 +1,35 @@
+appId: org.decentraland.godotexplorer
+name: Event sheet
+---
+# The first event is live data, so it is found by position and the sheet is checked by its fixed controls.
+- runFlow: ../subflows/ensure-home.yaml
+- swipe:
+    direction: UP
+- swipe:
+    direction: UP
+- tapOn:
+    text: ".+"
+    below: "Events"
+    above: "explore"
+    index: 0
+- assertVisible: "Expand sheet"
+- assertVisible: "Share"
+- assertVisible: "Add to calendar"
+- assertVisible: "JUMP IN"
+
+# Expanded: the schedule block appears.
+- tapOn: "Expand sheet"
+- assertVisible: "Collapse sheet"
+- assertVisible: "Daily|Weekly|Monthly|Once"
+
+# Share opens the system sheet with a link; nothing is sent.
+- tapOn: "Share"
+- extendedWaitUntil:
+    visible: ".*decentraland.*"
+    timeout: 15000
+- back
+- assertVisible: "Collapse sheet"
+
+# Close returns to the home.
+- tapOn: "Close"
+- assertNotVisible: "Collapse sheet"

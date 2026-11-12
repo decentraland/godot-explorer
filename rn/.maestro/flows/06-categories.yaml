@@ -1,0 +1,136 @@
+appId: org.decentraland.godotexplorer
+name: Categories
+---
+# Each chip opens a screen titled with the category and a grid of places (live data, so only "some content
+# below the header" is checked). The home and its chips are gone while the category shows.
+- runFlow: ../subflows/ensure-home.yaml
+
+# Social
+- swipe:
+    direction: UP
+- swipe:
+    direction: UP
+- tapOn: "SOCIAL"
+- extendedWaitUntil:
+    visible: "Social"
+    timeout: 30000
+- assertNotVisible: "Popular"
+- assertVisible:
+    text: ".+"
+    below: "Search"
+    above: "explore"
+- tapOn:
+    text: "Back"
+    index: 0
+- extendedWaitUntil:
+    visible: "Popular"
+    timeout: 30000
+
+# Music
+- swipe:
+    direction: UP
+- swipe:
+    direction: UP
+- tapOn: "MUSIC"
+- extendedWaitUntil:
+    visible: "Music"
+    timeout: 30000
+- assertNotVisible: "Popular"
+- assertVisible:
+    text: ".+"
+    below: "Search"
+    above: "explore"
+- tapOn:
+    text: "Back"
+    index: 0
+- extendedWaitUntil:
+    visible: "Popular"
+    timeout: 30000
+
+# Game
+- swipe:
+    direction: UP
+- swipe:
+    direction: UP
+- tapOn: "GAME"
+- extendedWaitUntil:
+    visible: "Game"
+    timeout: 30000
+- assertNotVisible: "Popular"
+- assertVisible:
+    text: ".+"
+    below: "Search"
+    above: "explore"
+- tapOn:
+    text: "Back"
+    index: 0
+- extendedWaitUntil:
+    visible: "Popular"
+    timeout: 30000
+
+# Art
+- swipe:
+    direction: UP
+- swipe:
+    direction: UP
+- tapOn: "ART"
+- extendedWaitUntil:
+    visible: "Art"
+    timeout: 30000
+- assertNotVisible: "Popular"
+- assertVisible:
+    text: ".+"
+    below: "Search"
+    above: "explore"
+- tapOn:
+    text: "Back"
+    index: 0
+- extendedWaitUntil:
+    visible: "Popular"
+    timeout: 30000
+
+# Fashion
+- swipe:
+    direction: UP
+- swipe:
+    direction: UP
+- tapOn: "FASHION"
+- extendedWaitUntil:
+    visible: "Fashion"
+    timeout: 30000
+- assertNotVisible: "Popular"
+- assertVisible:
+    text: ".+"
+    below: "Search"
+    above: "explore"
+- tapOn:
+    text: "Back"
+    index: 0
+- extendedWaitUntil:
+    visible: "Popular"
+    timeout: 30000
+
+# Business
+- swipe:
+    direction: UP
+- swipe:
+    direction: UP
+# The chip row scrolls sideways and this chip starts off screen.
+- swipe:
+    from: "ART"
+    direction: LEFT
+- tapOn: "BUSINESS"
+- extendedWaitUntil:
+    visible: "Business"
+    timeout: 30000
+- assertNotVisible: "Popular"
+- assertVisible:
+    text: ".+"
+    below: "Search"
+    above: "explore"
+- tapOn:
+    text: "Back"
+    index: 0
+- extendedWaitUntil:
+    visible: "Popular"
+    timeout: 30000
