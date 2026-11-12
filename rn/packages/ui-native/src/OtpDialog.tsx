@@ -110,7 +110,9 @@ export function OtpDialog({
                 </View>
                 <View style={styles.text}>
                   <AppText style={styles.title}>{title}</AppText>
-                  <AppText style={styles.body}>{body}</AppText>
+                  <AppText style={styles.body} textBreakStrategy="simple">
+                    {body}
+                  </AppText>
                 </View>
               </View>
               <View style={styles.code}>
@@ -159,6 +161,8 @@ const styles = StyleSheet.create({
   card: {
     width: u(310),
     padding: u(16),
+    // Figma: the resend line ends 14 dp above the card's bottom edge.
+    paddingBottom: u(14),
     gap: u(16),
     borderRadius: u(8),
     backgroundColor: colors.modal,
@@ -184,10 +188,14 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: fonts.bold,
     fontSize: u(22),
+    // The frame's 53 px title box; without a line height Android adds 2.5 dp.
+    lineHeight: u(26.5),
     color: colors.snow,
     textAlign: 'center',
   },
+  // 8 px wider than the frame's 556 px box: Android measures the first sentence a hair longer.
   body: {
+    marginHorizontal: -u(4),
     fontSize: u(13),
     lineHeight: u(16.9),
     color: colors.snow,
@@ -202,7 +210,12 @@ const styles = StyleSheet.create({
     fontSize: u(12),
     color: colors.snow,
   },
-  resend: { fontSize: u(12), color: colors.snow, textAlign: 'center' },
+  resend: {
+    fontSize: u(12),
+    lineHeight: u(14.5),
+    color: colors.snow,
+    textAlign: 'center',
+  },
   link: {
     fontFamily: fonts.medium,
     color: colors.link,
