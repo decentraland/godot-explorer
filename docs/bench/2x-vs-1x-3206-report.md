@@ -11,10 +11,11 @@ descargables: <https://artifacts.dclregenesislabs.xyz/af8787b0-ec0c-49c0-bc58-3e
 (pide login con email de trabajo la primera vez).
 
 - **fps, condición controlada (mundo fijo + Midday fijo + High + dynamic OFF)**: 1.x **40.22**,
-  2.x **19.77** → **−50.9 %** (IC95 [−21.66, −18.26] fps, MWU exacto p = 0.0022). Es el número que
-  responde al pedido del issue; el brazo 2.x es el build parcheado en `skybox_time` (sin tocar render).
-  En Genesis Plaza, donde ningún build puede fijar el cielo, el par medido dio **25.78 vs 25.88 fps** y
-  queda como descriptivo, no como delta.
+  2.x **38.62** → **−4.0 %**, IC95 [−4.18, +1.83] fps, MWU exacto p = 0.24. Con 6 vs 6 eso es
+  **empate dentro del ruido**, no una diferencia demostrada. Un bloque anterior publicó −50.9 % con esta
+  misma condición: era un artefacto — el brazo 2.x corría el perfil `Very Low` (cap 18 fps) porque el
+  shell no llegó a empujar los ajustes antes del primer frame (§1.3). En Genesis Plaza, donde ningún
+  build puede fijar el cielo, el par medido dio **25.78 vs 25.88 fps** y queda como descriptivo.
 - **Cola de frame times**: 2.x es peor en los peores frames — **p99 66.9 → 74.9 ms (+11.9 %)**,
   **fps p1 (1 % low) 14.9 → 13.4 (−10.6 %)**. La mediana y el p95 son idénticos (±0.1 %). Es decir:
   misma fluidez media, hitches más profundos en 2.x.
@@ -31,9 +32,9 @@ descargables: <https://artifacts.dclregenesislabs.xyz/af8787b0-ec0c-49c0-bc58-3e
   (Discover 2.27 s, Backpack 1.85 s, Profile 1.16 s, Settings ≤ 0.5 s), sin fuga en 20 navegaciones
   (−56 MB) y sin crash con 20 taps en ráfaga. Y volver al shell desde el mundo **sí** es scriptable:
   `BACK` → `LEAVE`, o el chevron del HUD (§6).
-- **Presupuesto** del issue: fps ≥ 1.x → **FAIL** con la luz y el contenido controlados
-  (19.77 vs 40.22, −50.9 %); medido en Genesis Plaza con la hora libre → PASS (18.1 vs 17.9), que es
-  el caso en que la escena domina el frame. RSS ≤ 1.x + 100 MB → **PASS** (2.x usa menos).
+- **Presupuesto** del issue: fps ≥ 1.x → **PASS dentro del ruido** con la luz y el contenido
+  controlados (38.62 vs 40.22, −4.0 %, p = 0.24); la cola sigue peor en 2.x. RSS ≤ 1.x + 100 MB →
+  **PASS** (2.x usa menos).
 
 ## Qué se comparó
 
@@ -342,35 +343,49 @@ Condición medida, idéntica en los dos brazos:
   usó la parcela `100,100` como coordenada porque los dos builds resuelven contenido distinto ahí (1.x
   renderiza terreno vacío, 2.x carga el world).
 - **misma luz**: `Dynamic Skybox` OFF + `Custom Skybox: Midday`, verificado en cada ventana por la luma
-  del recuadro central (1.x 97.6–99.9, 2.x 104.4–105.0). La luma no es el control, es la prueba de que el
-  control se aplicó: en 2.x sólo llega con el parche de `skybox_time`.
-- **mismo preset**: `High` en los dos builds (2.x `"profile":3` en el log de arranque), `Dynamic
-  Graphics` OFF.
-- **misma térmica**: compuerta por `Thermal Status` de la plataforma (0/1 en los dos brazos, AP 38–46 °C
+  del recuadro central (1.x 97.6–99.9, 2.x High 96.9–99.8). La luma no es el control, es la prueba de que
+  el control se aplicó: en 2.x sólo llega con el parche de `skybox_time`.
+- **mismo preset**: `High` en los dos builds, `Dynamic Graphics` OFF, y **el preset verificado por su
+  efecto**, no por el panel: en 2.x Medium pega el cap de 30 fps del preset (29.96 medido) y High lo
+  supera, así que el perfil está aplicado de verdad.
+- **misma térmica**: compuerta por `Thermal Status` de la plataforma (0 en los dos brazos, AP 38–46 °C
   sin throttling), 6 ventanas de 30 s por brazo contra la misma instancia viva.
 
 | build | ventanas | fps mediana | rango | luz por ventana |
 |---|---:|---:|---|---|
-| 1.x release | 6 | **40.22** | 37.96–41.77 | 97.6–99.9 |
-| 2.x parcheado | 6 | **19.77** | 19.64–20.04 | 104.4–105.0 |
+| 1.x release, High | 6 | **40.22** | 37.96–41.77 | 97.6–99.9 |
+| 2.x parcheado, High | 6 | **38.62** | 36.15–41.31 | 96.9–99.8 |
 
-**Δ = −20.45 fps (−50.9 %)**. IC95 bootstrap de la diferencia de medianas **[−21.66, −18.26] fps**;
-Mann-Whitney exacto **p = 0.0022**, que es el piso alcanzable con 6 vs 6 (no es “p = 0”).
+**Δ = −1.60 fps (−4.0 %)**. IC95 bootstrap de la diferencia de medianas **[−4.18, +1.83] fps**;
+Mann-Whitney exacto **p = 0.2403**. Con 6 vs 6 esto **no es una diferencia demostrada**: el intervalo
+cruza cero y el p está lejos del piso de 0.0022 que este diseño puede alcanzar. Lo que sí queda del lado
+de 2.x es la cola (§1): p99 +11.9 %, fps p1 −10.6 %, gastando 10.3 % menos CPU.
 
-No es un techo de fps disfrazado: en 2.x el p10 de intervalo es 25.5 ms (39 fps) y el p50 51.0 ms, o sea
-el build a veces corre al doble y la mediana se queda en la mitad. En 1.x p50 = 25.0 ms con 0.2 % de
-frames ≥ 49 ms; en 2.x el 80 % de los frames está por encima de 49 ms.
+#### El −50.9 % anterior era un artefacto, y cómo se detectó
 
-Un confusor declarado: el brazo 2.x es un **build parcheado** (una función de lectura de setting, cero
-código de render). El preset, en cambio, **sí es equivalente**: `graphic_settings.gd` de
+El primer bloque de esta misma condición dio 19.77 fps en 2.x y se publicó como −50.9 %. Era falso: esas
+ventanas corrían con el perfil **`Very Low`, cuyo preset fija `limit_fps = Fps18`** (18 fps). La cadena:
+
+- el shell 2.x lanza el engine **antes** de empujar los ajustes guardados, así que el primer
+  `[RenderReady]` trae `"profile":0` (Very Low, built-in) y el motor se queda ahí;
+- el panel mostraba `High` y `Midday`, y la luma (104.4–105.0) sí probaba el `Midday` —el parche de
+  `skybox_time` está en el engine y se aplica cuando el setting llega—, pero **no probaba el preset**;
+- 19.77 fps es, aritméticamente, el cap de 18 del `Very Low` + frames sueltos que se cuelan, no un coste
+  de render.
+
+Lo que lo destapó fue medir el escalón de preset en la misma sesión y la misma cámara: **Medium = 29.96 fps
+(cap de 30 del preset, aplicado)** y **High = 38.62**, contra 19.77 del bloque anterior. El engine lo
+confirma en su propio log: `frame sync: frames=14400 fps=41 … "Monster Recon"`.
+
+Consecuencia para el método: **verificar el preset por su efecto medible (cap de fps o tiempo de frame),
+nunca por el panel ni por una línea de log de arranque**. La luma sigue sirviendo para la luz y sólo para
+la luz.
+
+Un confusor declarado sigue en pie: el brazo 2.x es un **build parcheado** (una función de lectura de
+setting, cero código de render). El preset es equivalente entre ramas: `graphic_settings.gd` de
 `release-1.16.2` y `PROFILES[3]` de 2.x tienen los mismos valores (shadow 1, bloom 2, scale 1.0,
 view_distance 300, dcl_lights true, dcl_light_shadows true, dcl_max_lights 8, aa 0) y `project.godot`
-coincide en SSAO/glow/sombras, así que el frame no se explica por un preset más caro.
-
-**Dónde se va el frame**: el CPU por frame es parecido (1.x 37.5 núcleo·ms a 40.2 fps; 2.x 43 a 19.8),
-pero 2.x usa sólo 85 % de un núcleo contra 150 % de 1.x: el frame de 2.x dura 51 ms con la CPU media
-ociosa, o sea espera en GPU o en el present, no en cálculo. Ambos builds están cuantizados por el panel de
-120 Hz (1.x vive en 2–4 vsync = 60/40/30 fps, 2.x en 6–8 vsync = 20/17/15 fps).
+coincide en SSAO/glow/sombras.
 
 Los bloques anteriores de Genesis Plaza con la hora del juego sin fijar (25.78 vs 25.88 fps) quedan como
 medición **descriptiva** del estado en que estaban los builds antes del parche: en GP ningún build puede

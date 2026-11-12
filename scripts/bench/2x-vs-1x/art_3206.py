@@ -222,7 +222,7 @@ verdict_rows = [
     ["<b>Controlled comparison</b>",
      "dynamic graphics OFF + profile High + Dynamic Skybox OFF + Custom Skybox = Midday, Monster Recon world (same scene in both builds), 6 x 30 s per build on one live instance per build",
      "6 / 6", "<b>VALID</b>",
-     "the only block where scene, light, preset and thermal state are held identical; 2.x arm is the local skybox_time patch, which touches no render code"],
+     "the only block where scene, light, preset (verified by its fps cap) and thermal state are held identical; 2.x arm is the local skybox_time patch, which touches no render code"],
     ["Shipped configuration",
      "dynamic graphics ON (client default), 5 runs per build, alternating",
      f"{gp_n('1x')} / {gp_n('2x')}", "VALID",
@@ -250,30 +250,38 @@ if os.path.exists(final_json):
     runs_1x = " · ".join(f"{x:.2f}" for x in fin["1x"]["runs"])
     runs_2x = " · ".join(f"{x:.2f}" for x in fin["2x"]["runs"])
     lo, hi = fin["ci95_diff_fps"]
+    step = fin["preset_step"]
     final_block = (
         "<p>Every other block in this page either could not hold the sun or could not hold the preset. "
-        "This one holds all of it. Both builds were driven into the <code>monsterrecon.dcl.eth</code> "
-        "world from the Discover place card — the parcel coordinate was abandoned because 1.x renders "
-        "empty land there and 2.x loads the world — with <code>Dynamic Skybox</code> off, "
-        "<code>Custom Skybox = Midday</code>, profile <code>High</code> and dynamic graphics off. "
-        "Six windows of 30 s per build run against one live instance each, gated on the platform's own "
-        "<code>Thermal Status</code> (0 in both arms), and every window carries its own light check: the "
-        "central-crop luma stays at 97.6-99.9 on 1.x and 104.4-105.0 on 2.x, so neither arm drifted off noon.</p>"
+        "This one holds both. Both builds were driven into the <code>monsterrecon.dcl.eth</code> world from "
+        "the Discover place card — the parcel coordinate was abandoned because 1.x renders empty land there "
+        "and 2.x loads the world — with <code>Dynamic Skybox</code> off, <code>Custom Skybox = Midday</code>, "
+        "profile <code>High</code> and dynamic graphics off. Six windows of 30 s per build run against one "
+        "live instance each, gated on the platform's own <code>Thermal Status</code> (0 in both arms), and "
+        "every window carries its own light check: central-crop luma 97.6-99.9 on 1.x and 96.9-99.8 on 2.x.</p>"
         + table(["build", "windows", "fps median", "per-window fps", "light (luma)"], [
-            ["1.x release", "6", f"<b>{fin['1x']['median']:.2f}</b>", runs_1x, "97.6-99.9"],
-            ["2.x patched", "6", f"<b>{fin['2x']['median']:.2f}</b>", runs_2x, "104.4-105.0"],
+            ["1.x release, High", "6", f"<b>{fin['1x']['median']:.2f}</b>", runs_1x, "97.6-99.9"],
+            ["2.x patched, High", "6", f"<b>{fin['2x']['median']:.2f}</b>", runs_2x, "96.9-99.8"],
         ], [False, True, True, False, False])
-        + f"<div class=\"note\"><b>Δ = {fin['diff_fps']:+.2f} fps ({fin['diff_pct']:+.1f} %)</b>, "
-        f"bootstrap 95 % CI of the difference of medians <b>[{lo:+.2f}, {hi:+.2f}] fps</b>, exact "
-        f"Mann-Whitney <b>p = {fin['mwu_p_exact']:.4f}</b> — the smallest p 6 vs 6 can produce, so read it "
-        "as 'the two arms do not overlap', not as a precise probability.</div>"
-        "<p>It is not an fps cap in disguise: on 2.x the 10th-percentile frame interval is 25.5 ms "
-        "(39 fps), so the build is capable of double, while the median sits at 51.0 ms and 80 % of frames "
-        "land above 49 ms. On 1.x the median interval is 25.0 ms with 0.2 % of frames above 49 ms.</p>"
-        "<div class=\"note\"><b>Two caveats, stated rather than buried.</b> The 2.x arm is a locally "
-        "patched build: <code>skybox_time.rs</code> now accepts an int or a float for the setting, which "
-        "is one settings read and no render code. And <code>High</code> is each build's own preset, not "
-        "a settings set proven equivalent across versions.</div>"
+        + f"<div class=\"note\"><b>Δ = {fin['diff_fps']:+.2f} fps ({fin['diff_pct']:+.1f} %)</b>, bootstrap "
+        f"95 % CI of the difference of medians <b>[{lo:+.2f}, {hi:+.2f}] fps</b>, exact Mann-Whitney "
+        f"<b>p = {fin['mwu_p_exact']:.2f}</b>. At 6 vs 6 that is a tie inside the noise, not a demonstrated "
+        "difference: the interval crosses zero and the p is far from the 0.0022 floor this design can "
+        "reach. What still separates the builds is the tail (p99 +11.9 %, fps p1 −10.6 %).</div>"
+        "<div class=\"note\"><b>A −50.9 % block under this same condition was published and is retracted.</b> "
+        f"The 2.x arm of that block was running profile <code>Very Low</code>, whose preset sets "
+        f"<code>limit_fps = Fps18</code>: 19.77 fps is that 18 fps cap plus stragglers, not render cost. The "
+        "2.x shell starts the engine before pushing the stored settings, so the engine kept the built-in "
+        f"<code>profile 0</code> while the panel showed High. What caught it: stepping the preset in one "
+        f"session — <b>2.x Medium = {step['2x_medium_fps']:.2f} fps</b> (its own 30 fps cap, so the preset "
+        f"was applied) against <b>High = {fin['2x']['median']:.2f}</b>. The engine's log agrees: "
+        "<code>frame sync: frames=14400 fps=41 … \"Monster Recon\"</code>.</div>"
+        "<p>Method consequence: verify a preset by its measurable effect — the fps cap or the frame time — "
+        "never by the panel or by a startup log line. Luma stays a light check and only a light check.</p>"
+        "<p>The 2.x arm is still a locally patched build: <code>skybox_time.rs</code> accepts an int or a "
+        "float for the setting, which is one settings read and no render code. The preset itself is "
+        "equivalent between branches: <code>graphic_settings.gd</code> on <code>release-1.16.2</code> and "
+        "<code>PROFILES[3]</code> in 2.x hold the same values.</p>"
     )
 else:
     final_block = "<p>Controlled comparison not measured yet.</p>"
@@ -339,7 +347,7 @@ CSS_AND_HTML = f"""<!doctype html>
       <p class="eyebrow">DCL Regenesis Labs · benchmark #3206</p>
       <h1>2.x vs 1.x — measured benchmark</h1>
       <p class="lede">Same phone, same scene, same fixed noon, same preset, same thermal gate. With all of
-      that held, <b>1.x renders 40.22 fps and 2.x renders 19.77 fps</b> — a halving — while 2.x spends
+      that held, <b>1.x renders 40.22 fps and 2.x 38.62</b> — a tie inside the noise — while 2.x spends
       less CPU and loads faster. The interesting part of this benchmark is how much of the first
       comparisons was measuring the sun and the settings panel instead of the builds.</p>
       <div class="toc">
