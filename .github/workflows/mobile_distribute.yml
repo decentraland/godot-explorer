@@ -566,7 +566,7 @@ jobs:
           # asc-deploy's own timeout is 45 min, and its gate job can wait up to 120 min for lower
           # build numbers to reach TestFlight first; the run can also sit queued for a macOS runner.
           DEADLINE=$(( $(date +%s) + 125 * 60 ))
-          SEEN=0; CONCLUSION=""; URL=""
+          SEEN=0; UPLOADED=0; CONCLUSION=""; URL=""; PHASE=upload
           while true; do
             # TITLE/SINCE are read by jq from the environment (env.*) — no shell interpolation
             # inside the filter. Newest first, so `first` is the latest matching run.
@@ -580,14 +580,22 @@ jobs:
                 echo "▶️  found run ${URL} (${STATUS})"; SEEN=1
                 IOS_LINE="🔏 signing & uploading to TestFlight…" python3 .github/scripts/report-build-event.py
               fi
-              # The upload is what fixes the build number's place in TestFlight: stop at the
-              # `Sign & upload` job, not at the end of the run (asc-deploy's follow-up jobs, e.g.
-              # the "What to Test" notes, wait on Apple's processing and would hold the queue).
+              # An accepted upload can still be rejected or stall in Apple's processing, so after
+              # `Sign & upload` succeeds wait for asc-deploy's `Apple processing result` job.
               RUN_ID=$(echo "$RUN" | jq -r .databaseId)
-              SHIP=$(gh run view "$RUN_ID" --repo "$DEPLOY_REPO" --json jobs \
-                       --jq '.jobs[] | select(.name == "Sign & upload to TestFlight") | "\(.status) \(.conclusion)"' \
-                     2>/dev/null || true)
+              JOBS=$(gh run view "$RUN_ID" --repo "$DEPLOY_REPO" --json jobs 2>/dev/null || true)
+              SHIP=$(echo "$JOBS" | jq -r '.jobs[]? | select(.name == "Sign & upload to TestFlight") | "\(.status) \(.conclusion)"')
+              PROC=$(echo "$JOBS" | jq -r '.jobs[]? | select(.name == "Apple processing result") | "\(.status) \(.conclusion)"')
               case "$SHIP" in
+                "completed success")
+                  if [ "$UPLOADED" = "0" ]; then
+                    UPLOADED=1; PHASE=processing
+                    IOS_LINE="⏳ build ${BUILD_NUMBER:-?} uploaded — waiting for Apple processing…" \
+                      python3 .github/scripts/report-build-event.py
+                  fi
+                  case "$PROC" in
+                    "completed "*) CONCLUSION="${PROC#completed }"; break ;;
+                  esac ;;
                 "completed "*) CONCLUSION="${SHIP#completed }"; break ;;
               esac
               if [ "$STATUS" = "completed" ]; then
@@ -599,9 +607,10 @@ jobs:
             fi
             sleep 30
           done
-          echo "→ conclusion=${CONCLUSION}"
+          echo "→ conclusion=${CONCLUSION} (${PHASE})"
           {
             echo "conclusion=$CONCLUSION"
+            echo "phase=$PHASE"
             echo "url=$URL"
           } >> "$GITHUB_OUTPUT"
 
@@ -615,8 +624,12 @@ jobs:
         if: always()
         env:
           CONCLUSION: ${{ steps.watch.outputs.conclusion }}
+          PHASE: ${{ steps.watch.outputs.phase }}
           URL: ${{ steps.watch.outputs.url }}
         run: |
+          if [ "$PHASE" = "processing" ] && [ "$CONCLUSION" = "failure" ]; then
+            CONCLUSION=processing_failed
+          fi
           case "$CONCLUSION" in
             success)
               export STATUS=success IOS_LINE="✅ TestFlight build ${BUILD_NUMBER:-?}" \
@@ -625,6 +638,9 @@ jobs:
               export STATUS=failed IOS_LINE="❌ sign/upload failed" LOG="❌ iOS deploy timed out — ${URL}" ;;
             failure)
               export STATUS=failed IOS_LINE="❌ sign/upload failed" ;;
+            processing_failed)
+              export STATUS=failed IOS_LINE="❌ Apple rejected or did not process build ${BUILD_NUMBER:-?}" \
+                     LOG="❌ iOS — Apple processing failed — ${URL}" ;;
             cancelled)
               export STATUS=cancelled IOS_LINE="⚠️ signing cancelled" LOG="⚠️ iOS — signing run cancelled — ${URL}" ;;
             *)

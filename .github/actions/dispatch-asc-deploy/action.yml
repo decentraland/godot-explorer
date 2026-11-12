@@ -63,7 +63,7 @@ runs:
         fi
         SAFE_BRANCH=$(echo "$REF" | tr '/' '-')
         gh workflow run deploy_testflight.yml \
-          --repo decentraland/godot-asc-deploy --ref main \
+          --repo decentraland/godot-asc-deploy --ref release-1.x \
           -f branch="$SAFE_BRANCH" -f sha="$SHA" -f whats_new="$WHATS_NEW" \
           -f pr_number="$PR_NUMBER" -f slack_ts="$TS" \
           -f build_version="$BUILD_VERSION" -f build_number="$BUILD_NUMBER" -f triggered_by="$TRIGGERED_BY"
