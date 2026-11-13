@@ -88,6 +88,9 @@ dependencies {
     // Using 'api' to make the dependency transitive so it's included in the final APK
     api("com.android.installreferrer:installreferrer:2.2")
 
+    // Tenjin MMP: install attribution and conversion events.
+    api("com.tenjin:android-sdk:2.0.2")
+
     // Play Integrity — server-side platform attestation for /sign-message.
     // Standard variant (no Play Services dependency required on-device).
     api("com.google.android.play:integrity:1.4.0")

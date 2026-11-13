@@ -73,6 +73,12 @@ public:
     // Remote push (APNs). push_service.mm requests the token on every launch; it lands
     // asynchronously, so connect to apns_token_ready and then read the cached value.
     String get_apns_token();
+
+    // Tenjin MMP (tenjin_service.mm). No-ops until the SDK is in the build; same contract as
+    // the Android plugin. tenjin_get_attribution() returns {status: pending|ok|error, ...}.
+    bool tenjin_start(String sdk_key, String user_id);
+    bool tenjin_event(String name, int value);
+    Dictionary tenjin_get_attribution();
     bool schedule_local_notification(String notification_id, String title, String body, int delay_seconds);
     bool cancel_local_notification(String notification_id);
     bool cancel_all_local_notifications();

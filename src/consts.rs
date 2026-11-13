@@ -4,6 +4,11 @@ pub const BIN_FOLDER: &str = "./.bin/";
 pub const RUST_LIB_PROJECT_FOLDER: &str = "./lib/";
 pub const EXPORTS_FOLDER: &str = "./exports/";
 
+/// Tenjin iOS SDK release whose xcframework `dcl_godot_ios.gdip` embeds. Downloaded, not
+/// committed.
+pub const TENJIN_IOS_VERSION: &str = "1.20.1";
+pub const TENJIN_IOS_FOLDER: &str = "./godot/ios/plugins/dcl_godot_ios/tenjin";
+
 /// sentry-godot addon release. Bump both together: the installer replaces
 /// `godot/addons/sentry` whenever its `.version` marker differs from this.
 pub const SENTRY_ADDON_VERSION: &str = "2.1.1";
