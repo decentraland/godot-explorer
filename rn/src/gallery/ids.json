@@ -1595,6 +1595,71 @@
     "orientation": "landscape"
   },
   {
+    "id": "extra/ds-buttons",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/ds-cards-backpack",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/ds-cards-discover",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/ds-skeleton",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/ds-empty-state",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/ds-sheet",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/ds-claim-default",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/ds-claim-loading",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/ds-claim-claimed",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/ds-otp-default",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/ds-otp-verifying",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/ds-otp-error",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/ds-otp-resent",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
     "id": "extra/flow-terms",
     "source": "extra",
     "orientation": "portrait"
@@ -1608,5 +1673,20 @@
     "id": "extra/flow-wait",
     "source": "extra",
     "orientation": "portrait"
+  },
+  {
+    "id": "extra/nav-bar",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/menu",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/nav-rail",
+    "source": "extra",
+    "orientation": "landscape"
   }
 ]

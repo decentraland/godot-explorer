@@ -1,29 +1,19 @@
-import { Pressable, StyleSheet, View } from 'react-native';
-import { AppText, colors, Icon, LinearFill, u } from '@dcl/ui-native';
+import { StyleSheet, View } from 'react-native';
+import {
+  AppText,
+  colors,
+  DISCOVER_CARD,
+  DiscoverCard,
+  Icon,
+  LinearFill,
+  u,
+} from '@dcl/ui-native';
 import { t } from '../i18n';
 import { DiscoverEvent, Place } from './api';
 import { formatRate, formatUsers, startsIn } from './format';
-import { Thumb } from './Thumb';
+import { mockArt } from './Thumb';
 
-export const PLACE_W = 147;
-export const EVENT_W = 203;
-const PLACE_H = 78;
-const EVENT_H = 120;
-
-export function Stats({ users, rate }: { users: number; rate: number | null }) {
-  return (
-    <View style={styles.stats}>
-      <Icon name="user" size={13} color={colors.gray} strokeWidth={2} />
-      <AppText variant="caption" style={styles.stat}>
-        {formatUsers(users)}
-      </AppText>
-      <Icon name="like" size={13} color={colors.gray} strokeWidth={2} />
-      <AppText variant="caption" style={styles.stat}>
-        {formatRate(rate)}
-      </AppText>
-    </View>
-  );
-}
+const PLACE_W = DISCOVER_CARD.place.width;
 
 export function PlaceCard({
   place,
@@ -35,18 +25,16 @@ export function PlaceCard({
   width?: number;
 }) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={place.title}
+    <DiscoverCard
+      type="place"
+      title={place.title}
+      image={place.image.startsWith('mock:') ? '' : place.image}
+      art={mockArt(place.image)}
+      users={formatUsers(place.users)}
+      likeRate={formatRate(place.likeRate)}
       onPress={onPress}
-      style={({ pressed }) => [{ width: u(width) }, pressed && styles.pressed]}
-    >
-      <Thumb uri={place.image} width={u(width)} height={u(PLACE_H)} />
-      <AppText variant="button" numberOfLines={1} style={styles.title}>
-        {place.title}
-      </AppText>
-      <Stats users={place.users} rate={place.likeRate} />
-    </Pressable>
+      style={{ width: u(width) }}
+    />
   );
 }
 
@@ -55,13 +43,19 @@ export function EventBadges({
   event,
   now,
   showFeatured = false,
+  inline = false,
 }: {
   event: DiscoverEvent;
   now: number;
   showFeatured?: boolean;
+  /** Laid out by the parent (the card's tag row) instead of pinned over the image. */
+  inline?: boolean;
 }) {
   return (
-    <View style={styles.badges} pointerEvents="none">
+    <View
+      style={[styles.badgeRow, !inline && styles.badges]}
+      pointerEvents="none"
+    >
       {event.live ? (
         <View style={styles.row}>
           <View style={[styles.badge, styles.live]}>
@@ -121,51 +115,26 @@ export function EventCard({
   onPress: () => void;
 }) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={event.title}
+    <DiscoverCard
+      type="event"
+      title={event.title}
+      image={event.image.startsWith('mock:') ? '' : event.image}
+      art={mockArt(event.image)}
+      byLabel={t('COMMON_BY')}
+      creator={event.creator}
+      tags={<EventBadges event={event} now={now} inline />}
       onPress={onPress}
-      style={({ pressed }) => [
-        { width: u(EVENT_W) },
-        pressed && styles.pressed,
-      ]}
-    >
-      <Thumb uri={event.image} width={u(EVENT_W)} height={u(EVENT_H)} />
-      <EventBadges event={event} now={now} />
-      <AppText variant="button" numberOfLines={1} style={styles.eventTitle}>
-        {event.title}
-      </AppText>
-      <AppText variant="body" numberOfLines={1} style={styles.by}>
-        {t('COMMON_BY')} {event.creator}
-      </AppText>
-    </Pressable>
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  title: { marginTop: u(5), fontSize: u(13) },
-  eventTitle: { marginTop: u(8), fontSize: u(14) },
-  by: { marginTop: u(2), fontSize: u(13), color: colors.gray },
-  stats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: u(2.5),
-    gap: u(4),
-  },
-  stat: {
-    fontSize: u(13),
-    marginRight: u(8),
-    marginLeft: u(2),
-    color: colors.pearl,
-  },
-  badges: {
-    position: 'absolute',
-    top: u(8),
-    left: u(8),
-    right: u(8),
+  badgeRow: {
+    flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
+  badges: { position: 'absolute', top: u(8), left: u(8), right: u(8) },
   row: { flexDirection: 'row', gap: u(4) },
   badge: {
     height: u(16),
@@ -195,5 +164,4 @@ const styles = StyleSheet.create({
   featured: { backgroundColor: colors.mythic },
   soon: { backgroundColor: colors.snow },
   soonText: { color: '#161518' },
-  pressed: { opacity: 0.85 },
 });

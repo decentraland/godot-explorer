@@ -19,7 +19,6 @@ export function LanguageSection({
 }) {
   return (
     <Dropdown
-      variant="settings"
       label={t('SETTINGS_APP_LANGUAGE')}
       helper={t('SETTINGS_LANGUAGE_HELPER')}
       value={m.values.locale}

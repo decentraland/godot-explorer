@@ -28,6 +28,24 @@ const PALETTE = [
 
 type Size = number | `${number}%`;
 
+/** `mock:N` gradient art of the mock API, or undefined for a real URL (and for `mock:error`). */
+export function mockArt(uri: string) {
+  const mock = uri.startsWith('mock:') ? uri.slice(5) : null;
+  if (!mock || mock === 'error') {
+    return undefined;
+  }
+  const [from, to] = PALETTE[Number(mock) % PALETTE.length];
+  return (
+    <LinearFill
+      angle={135}
+      stops={[
+        { offset: 0, color: from },
+        { offset: 1, color: to },
+      ]}
+    />
+  );
+}
+
 /** Image with a frame; a failed or `mock:error` image becomes the dark tile with the crossed-image icon. */
 export function Thumb({
   uri,
@@ -46,14 +64,20 @@ export function Thumb({
   const colorsFor =
     mock && mock !== 'error' ? PALETTE[Number(mock) % PALETTE.length] : null;
   return (
-    <View style={[styles.frame, { width, height, borderRadius: u(radius) }]}>
+    <View
+      style={[
+        styles.frame,
+        { width, height, borderRadius: u(radius) },
+        broken && styles.broken,
+      ]}
+    >
       {broken ? (
-        <View style={styles.broken}>
+        <View style={styles.centre}>
+          {/* Figma `Image Not Found` 821:3478: the glyph is 24.5% of the frame width. */}
           <Icon
             name="imageOff"
-            size={28}
+            size={typeof width === 'number' ? (width * 0.2448) / u(1) : 36}
             color={colors.lavender70}
-            strokeWidth={1.6}
           />
         </View>
       ) : colorsFor ? (
@@ -85,9 +109,9 @@ const styles = StyleSheet.create({
   },
   fill: { width: '100%', height: '100%' },
   broken: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#3D0F66',
+    borderWidth: u(0.3),
+    borderColor: colors.lavender50,
+    backgroundColor: colors.deepPurple50,
   },
+  centre: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });

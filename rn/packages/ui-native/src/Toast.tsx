@@ -63,7 +63,7 @@ const ToastContext = createContext<Show>(() => {});
 
 export const useToast = (): Show => useContext(ToastContext);
 
-const DEFAULT_DURATION = 2500;
+const DEFAULT_DURATION = 3000;
 
 /** Hosts toasts above `children`; call `useToast()(message)` from anywhere below. */
 export function ToastProvider({ children }: { children: ReactNode }) {

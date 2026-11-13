@@ -3,8 +3,12 @@
  * this contract, not just the catalogue. */
 export type UiNativeKey =
   | 'APP_BACK'
+  | 'APP_CREDITS'
+  | 'APP_SEARCH'
+  | 'APP_TICKET'
   | 'APP_CLEAR'
   | 'APP_CLEAR_SEARCH'
+  | 'APP_CLOSE'
   | 'APP_COLOR_BRIGHTNESS'
   | 'APP_COLOR_HUE'
   | 'APP_COLOR_SATURATION'

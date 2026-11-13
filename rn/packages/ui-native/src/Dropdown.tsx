@@ -1,8 +1,8 @@
-import { ReactNode, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
 import { Icon, IconName } from './Icon';
-import { colors } from './tokens';
+import { colors, elevation, fonts } from './tokens';
 import { u } from './scale';
 
 /** `icon` is drawn after the label (a claimed-name seal). */
@@ -11,13 +11,14 @@ export type DropdownOption = {
   label: string;
   icon?: IconName;
   iconColor?: string;
-  /** Drawn instead of `icon` (a custom badge). */
-  iconNode?: ReactNode;
 };
 
-const ROW_HEIGHT = 38;
+const FIELD_HEIGHT = 34;
+const LIST_GAP = 2;
 
-/** Field plus an overlay list (it does not push content) that opens down or up, with a check on the selected row. */
+/** Figma `Input/DropdownLabeled`: label + `Input/Dropdown` field + an overlay `Input/OptionsList`
+ * (it does not push content) that opens down or up. `readOnly` has no chevron and cannot open;
+ * `error` is the Red border plus the message below. */
 export function Dropdown({
   label,
   value,
@@ -25,12 +26,13 @@ export function Dropdown({
   onChange,
   placeholder = 'Select',
   helper,
+  error,
   disabled = false,
+  readOnly = false,
   direction = 'down',
   maxVisibleRows = 5,
   defaultOpen = false,
   onOpenChange,
-  variant = 'default',
 }: {
   label: string;
   value: string | null;
@@ -38,24 +40,25 @@ export function Dropdown({
   onChange: (value: string) => void;
   placeholder?: string;
   helper?: string;
+  error?: string;
   disabled?: boolean;
+  readOnly?: boolean;
   direction?: 'down' | 'up';
   maxVisibleRows?: number;
   defaultOpen?: boolean;
   /** Lets a parent raise this field above its siblings while the list is open. */
   onOpenChange?: (open: boolean) => void;
-  /** `settings`: tighter field padding, label gap and helper copy. */
-  variant?: 'default' | 'settings';
 }) {
-  const tight = variant === 'settings';
   const [open, setOpenState] = useState(defaultOpen);
   const setOpen = (next: boolean) => {
     setOpenState(next);
     onOpenChange?.(next);
   };
   const selected = options.find(o => o.value === value);
-  const isOpen = open && !disabled;
-  const listHeight = u(ROW_HEIGHT) * Math.min(options.length, maxVisibleRows);
+  const locked = disabled || readOnly;
+  const isOpen = open && !locked;
+  const rows = Math.min(options.length, maxVisibleRows);
+  const listHeight = u(FIELD_HEIGHT) * rows + u(4) * (rows - 1);
 
   const list = isOpen && (
     <View
@@ -65,7 +68,11 @@ export function Dropdown({
         direction === 'up' ? styles.listUp : styles.listDown,
       ]}
     >
-      <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
+      <ScrollView
+        nestedScrollEnabled
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.options}
+      >
         {options.map(option => {
           const isSelected = option.value === value;
           return (
@@ -81,25 +88,19 @@ export function Dropdown({
               style={[styles.row, isSelected && styles.rowSelected]}
             >
               <AppText
-                variant="body"
-                style={[styles.rowText, isSelected && styles.rowTextSelected]}
+                numberOfLines={1}
+                style={[styles.text, isSelected && styles.textSelected]}
               >
                 {option.label}
               </AppText>
-              {(option.iconNode || option.icon) && (
+              {option.icon && (
                 <View style={styles.optionIcon}>
-                  {option.iconNode ?? (
-                    <Icon
-                      name={option.icon!}
-                      size={16}
-                      color={option.iconColor}
-                    />
-                  )}
+                  <Icon name={option.icon} size={16} color={option.iconColor} />
                 </View>
               )}
               <View style={styles.spacer} />
               {isSelected && (
-                <Icon name="check" size={16} color={colors.lavender} />
+                <Icon name="check" size={20} color={colors.lavender} />
               )}
             </Pressable>
           );
@@ -109,18 +110,9 @@ export function Dropdown({
   );
 
   return (
-    <View
-      style={[
-        styles.root,
-        isOpen && styles.rootOpen,
-        disabled && styles.disabled,
-      ]}
-    >
+    <View style={[styles.root, isOpen && styles.rootOpen]}>
       {!!label && (
-        <AppText
-          variant="body"
-          style={[styles.label, tight && styles.labelTight]}
-        >
+        <AppText style={[styles.label, disabled && styles.labelDisabled]}>
           {label}
         </AppText>
       )}
@@ -129,44 +121,50 @@ export function Dropdown({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={label}
-          accessibilityState={{ expanded: isOpen, disabled }}
-          disabled={disabled}
+          accessibilityState={{ expanded: isOpen, disabled: locked }}
+          disabled={locked}
           onPress={() => setOpen(!open)}
           style={[
             styles.field,
-            tight && styles.fieldTight,
             isOpen && styles.fieldOpen,
+            !!error && styles.fieldError,
+            disabled && styles.fieldDisabled,
           ]}
         >
           <AppText
-            variant="body"
             numberOfLines={1}
-            style={[styles.fieldText, !selected && styles.placeholder]}
+            style={[
+              styles.text,
+              !selected && styles.placeholder,
+              readOnly && styles.textReadOnly,
+              disabled && styles.textDisabled,
+            ]}
           >
             {selected ? selected.label : placeholder}
           </AppText>
-          {(selected?.iconNode || selected?.icon) && (
+          {selected?.icon && (
             <View style={styles.optionIcon}>
-              {selected.iconNode ?? (
-                <Icon
-                  name={selected.icon!}
-                  size={16}
-                  color={selected.iconColor}
-                />
-              )}
+              <Icon
+                name={selected.icon}
+                size={16}
+                color={selected.iconColor}
+              />
             </View>
           )}
           <View style={styles.spacer} />
-          <Icon name={isOpen ? 'chevronUp' : 'chevronDown'} size={20} />
+          {!readOnly && (
+            <Icon
+              name={isOpen ? 'chevronUp' : 'chevronDown'}
+              size={20}
+              color={disabled ? colors.white20 : colors.snow}
+            />
+          )}
         </Pressable>
         {direction === 'down' && list}
       </View>
-      {helper && (
-        <AppText
-          variant="caption"
-          style={[styles.helper, tight && styles.helperTight]}
-        >
-          {helper}
+      {(error || helper) && (
+        <AppText style={[styles.helper, !!error && styles.errorText]}>
+          {error ?? helper}
         </AppText>
       )}
     </View>
@@ -176,51 +174,66 @@ export function Dropdown({
 const styles = StyleSheet.create({
   root: { alignSelf: 'stretch' },
   rootOpen: { zIndex: 10, elevation: 10 },
-  disabled: { opacity: 0.35 },
-  label: { fontSize: u(15), marginBottom: u(6) },
+  label: {
+    fontFamily: fonts.medium,
+    fontSize: u(15),
+    color: colors.snow,
+    marginBottom: u(10),
+  },
+  labelDisabled: { color: colors.white30 },
   field: {
-    height: u(34),
-    borderRadius: u(5),
-    paddingHorizontal: u(12),
+    height: u(FIELD_HEIGHT),
+    borderRadius: u(6),
+    paddingHorizontal: u(8),
+    gap: u(5),
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.fieldDark,
+    backgroundColor: colors.black40,
     borderWidth: 1,
     borderColor: 'transparent',
   },
-  labelTight: { marginBottom: u(9) },
-  fieldTight: { paddingHorizontal: u(8) },
-  helperTight: { marginTop: u(3), fontSize: u(10) },
   fieldOpen: { borderColor: colors.lavender },
-  fieldText: { fontSize: u(15), flexShrink: 1 },
-  optionIcon: { marginLeft: u(6) },
+  fieldError: { borderColor: colors.danger },
+  fieldDisabled: { backgroundColor: colors.black30 },
+  text: {
+    fontFamily: fonts.medium,
+    fontSize: u(15),
+    color: colors.snow,
+    flexShrink: 1,
+  },
+  placeholder: { color: colors.white50 },
+  textReadOnly: { color: colors.gray },
+  textDisabled: { color: colors.white20 },
+  textSelected: { color: colors.lavender },
+  optionIcon: { marginLeft: u(4) },
   spacer: { flex: 1 },
-  placeholder: { opacity: 0.5 },
-  helper: { marginTop: u(6), color: colors.lavender70, fontSize: u(11) },
+  helper: {
+    marginTop: u(5),
+    paddingBottom: u(4),
+    fontSize: u(11),
+    color: colors.pearl,
+  },
+  errorText: { color: colors.danger },
   list: {
     position: 'absolute',
     left: 0,
     right: 0,
     zIndex: 20,
-    elevation: 20,
-    borderRadius: u(5),
+    borderRadius: u(6),
     borderWidth: 1,
-    borderColor: colors.purple350,
-    backgroundColor: colors.panelDark,
+    borderColor: colors.lavender70,
+    backgroundColor: colors.menu,
     padding: u(4),
   },
-  listDown: { top: u(38) },
-  listUp: { bottom: u(38) },
+  options: { gap: u(4) },
+  listDown: { top: u(FIELD_HEIGHT + LIST_GAP), ...elevation.down },
+  listUp: { bottom: u(FIELD_HEIGHT + LIST_GAP), ...elevation.up },
   row: {
-    height: u(ROW_HEIGHT),
-    borderRadius: u(5),
-    paddingHorizontal: u(12),
+    height: u(FIELD_HEIGHT),
+    borderRadius: u(6),
+    paddingHorizontal: u(8),
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
   },
-  rowSelected: { backgroundColor: colors.purple550 },
-  rowText: { fontSize: u(15) },
-  rowTextSelected: { color: colors.lavender },
+  rowSelected: { backgroundColor: colors.black40 },
 });

@@ -1,10 +1,17 @@
 import { ReactNode, useEffect, useState } from 'react';
-import { Keyboard, Modal, Pressable, StyleSheet, View } from 'react-native';
+import {
+  Keyboard,
+  Modal,
+  Pressable,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { AppText } from './AppText';
-import { LinearFill, RadialFill } from './Gradient';
-import { Icon, IconName } from './Icon';
-import { PrimaryButton, ButtonTone } from './PrimaryButton';
-import { colors } from './tokens';
+import { RadialFill } from './Gradient';
+import { Icon } from './Icon';
+import { Button, ButtonTone } from './Button';
+import { colors, fonts } from './tokens';
 import { u } from './scale';
 import { t } from './i18n';
 
@@ -15,18 +22,43 @@ export type DialogButton = {
   disabled?: boolean;
 };
 
-const CARD_STOPS = [
-  { offset: 0, color: '#5A1A93' },
-  { offset: 1, color: '#2E0750' },
-];
+/** The `Icon/Modal` illustration shown on top of the card. */
+export type DialogIcon =
+  | 'alert'
+  | 'banned'
+  | 'block'
+  | 'bug'
+  | 'connection'
+  | 'password'
+  | 'report'
+  | 'success';
 
-const GLOW = [
-  { offset: 0, color: '#B83CE0', opacity: 0.85 },
-  { offset: 1, color: '#B83CE0', opacity: 0 },
-];
+const MODAL_ICON = {
+  alert: 'modalAlert',
+  banned: 'modalBanned',
+  block: 'modalBlock',
+  bug: 'modalBug',
+  connection: 'modalConnection',
+  password: 'modalPassword',
+  report: 'modalReport',
+  success: 'modalSuccess',
+} as const;
+
+/** `surface/modal-glow`: two Mythic radial gradients in the card fill, one on the top-right
+ * corner (242×173 portrait, 210×190 landscape) and one under the bottom edge (395×127 portrait,
+ * 475×140 landscape), with Figma's eased six-stop falloff. */
+const FALLOFF = [1, 0.669, 0.399, 0.192, 0.055, 0];
+const glow = (peak: number) =>
+  FALLOFF.map((factor, i) => ({
+    offset: i / (FALLOFF.length - 1),
+    color: colors.mythic,
+    opacity: peak * factor,
+  }));
+export const GLOW_TOP = glow(0.6);
+export const GLOW_BOTTOM = glow(0.62);
 
 /** Height of the on-screen keyboard while `active`, so the card can stay above it. */
-function useKeyboardLift(active: boolean): number {
+export function useKeyboardLift(active: boolean): number {
   const [height, setHeight] = useState(0);
   useEffect(() => {
     if (!active) {
@@ -45,31 +77,32 @@ function useKeyboardLift(active: boolean): number {
   return height;
 }
 
-/** Centered modal card over a dark scrim (no blur library: the scrim is opaque enough to hide the page). */
+/** Figma `Modal/Dialog` over `Modal/Scrim`: Portrait card 600 wide, Landscape 720, `surface/modal`
+ * with the glow, an optional `Icon/Modal` overlapping the top edge, and a CTA row where every
+ * button fills an equal share. The scrim is Black 60% (the no-blur fallback); tapping it closes. */
 export function Dialog({
   visible,
   title,
   body,
+  link,
   icon,
   buttons,
   onRequestClose,
-  rounded = false,
-  width,
   children,
 }: {
   visible: boolean;
   title: string;
   body?: string;
-  icon?: IconName;
+  /** Figma `Link=True`: an underlined `text/link` line under the body (two lines at most). */
+  link?: { label: string; onPress: () => void };
+  icon?: DialogIcon;
   buttons: DialogButton[];
   onRequestClose: () => void;
-  /** Figma look: 8dp button corners and magenta glows on the card. */
-  rounded?: boolean;
-  /** Card width in dp (default 310). */
-  width?: number;
   children?: ReactNode;
 }) {
   const lift = useKeyboardLift(visible);
+  const { width, height } = useWindowDimensions();
+  const landscape = width > height;
   return (
     <Modal
       visible={visible}
@@ -78,13 +111,7 @@ export function Dialog({
       statusBarTranslucent
       onRequestClose={onRequestClose}
     >
-      <View
-        style={[
-          styles.scrim,
-          rounded && styles.scrimLight,
-          { paddingBottom: lift },
-        ]}
-      >
+      <View style={[styles.scrim, { paddingBottom: lift }]}>
         <Pressable
           accessibilityLabel={t('APP_DISMISS_DIALOG')}
           style={StyleSheet.absoluteFill}
@@ -93,53 +120,64 @@ export function Dialog({
         <View
           style={[
             styles.card,
-            width !== undefined && { maxWidth: u(width) },
-            rounded && icon && styles.cardIcon,
+            landscape ? styles.cardLandscape : styles.cardPortrait,
           ]}
           accessibilityViewIsModal
         >
           <View style={styles.clip}>
-            <LinearFill stops={CARD_STOPS} angle={150} />
-            {rounded && (
-              <>
-                <RadialFill stops={GLOW} cx={1} cy={0} rx={0.7} ry={0.35} />
-                <RadialFill
-                  stops={GLOW}
-                  cx={0.5}
-                  cy={1.05}
-                  rx={0.6}
-                  ry={0.22}
-                />
-              </>
+            <RadialFill
+              stops={GLOW_TOP}
+              cx={1}
+              cy={0}
+              rxDp={u(landscape ? 105 : 121)}
+              ryDp={u(landscape ? 95 : 86.5)}
+            />
+            <RadialFill
+              stops={GLOW_BOTTOM}
+              cx={0.5}
+              cy={1.04}
+              rxDp={u(landscape ? 237.5 : 197.5)}
+              ryDp={u(landscape ? 70 : 63.5)}
+            />
+          </View>
+          <View style={[styles.content, landscape && styles.contentLandscape]}>
+            <View style={styles.text}>
+              <AppText style={styles.title}>{title}</AppText>
+              {(body || link) && (
+                <View style={styles.bodyGroup}>
+                  {body && <AppText style={styles.body}>{body}</AppText>}
+                  {link && (
+                    <Pressable accessibilityRole="link" onPress={link.onPress}>
+                      <AppText numberOfLines={2} style={styles.link}>
+                        {link.label}
+                      </AppText>
+                    </Pressable>
+                  )}
+                </View>
+              )}
+            </View>
+            {children}
+            {buttons.length > 0 && (
+              <View
+                style={[styles.buttons, landscape && styles.buttonsLandscape]}
+              >
+                {buttons.map(button => (
+                  <View key={button.label} style={styles.grow}>
+                    <Button
+                      label={button.label}
+                      tone={button.tone}
+                      disabled={button.disabled}
+                      fullWidth
+                      onPress={button.onPress}
+                    />
+                  </View>
+                ))}
+              </View>
             )}
           </View>
           {icon && (
-            <View style={rounded ? styles.iconRaised : styles.icon}>
-              <Icon name={icon} size={28} color={colors.orange} />
-            </View>
-          )}
-          <AppText variant="title" style={styles.title}>
-            {title}
-          </AppText>
-          {body && (
-            <AppText variant="body" style={styles.body}>
-              {body}
-            </AppText>
-          )}
-          {children}
-          {buttons.length > 0 && (
-            <View style={styles.buttons}>
-              {buttons.map(button => (
-                <View key={button.label} style={styles.button}>
-                  <PrimaryButton
-                    label={button.label}
-                    tone={button.tone}
-                    rounded={rounded}
-                    disabled={button.disabled}
-                    onPress={button.onPress}
-                  />
-                </View>
-              ))}
+            <View style={styles.icon}>
+              <Icon name={MODAL_ICON[icon]} size={45} />
             </View>
           )}
         </View>
@@ -153,41 +191,59 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: u(25),
-    backgroundColor: 'rgba(22,21,24,0.78)',
+    backgroundColor: colors.black60,
   },
-  scrimLight: { backgroundColor: 'rgba(22,21,24,0.6)' },
   card: {
-    alignSelf: 'stretch',
-    maxWidth: u(310),
-    borderRadius: u(12),
-    padding: u(20),
+    borderRadius: u(8),
+    backgroundColor: colors.modal,
   },
-  cardIcon: { paddingTop: u(30) },
+  cardPortrait: {
+    width: u(300),
+    paddingTop: u(32),
+    paddingBottom: u(30),
+    paddingHorizontal: u(28),
+  },
+  cardLandscape: {
+    width: u(360),
+    paddingTop: u(27),
+    paddingBottom: u(24),
+    paddingHorizontal: u(27),
+  },
   clip: {
     ...StyleSheet.absoluteFill,
-    borderRadius: u(12),
+    borderRadius: u(8),
     overflow: 'hidden',
   },
-  iconRaised: {
-    position: 'absolute',
-    top: -u(14),
-    alignSelf: 'center',
-    padding: u(5),
-    borderRadius: u(20),
-    backgroundColor: colors.snow,
-  },
-  icon: {
-    alignSelf: 'center',
-    marginBottom: u(8),
-  },
-  title: { textAlign: 'center', fontSize: u(18), color: colors.snow },
-  body: {
+  content: { gap: u(27) },
+  contentLandscape: { gap: u(24) },
+  text: { gap: u(8) },
+  title: {
+    fontFamily: fonts.bold,
+    fontSize: u(19),
+    color: colors.snow,
     textAlign: 'center',
-    marginTop: u(8),
-    fontSize: u(13),
-    color: colors.pearl,
   },
-  buttons: { flexDirection: 'row', marginTop: u(20), gap: u(8) },
-  button: { flex: 1 },
+  body: {
+    fontSize: u(13),
+    lineHeight: u(18),
+    color: colors.snow,
+    textAlign: 'center',
+  },
+  bodyGroup: { gap: u(5) },
+  link: {
+    fontSize: u(10),
+    color: colors.link,
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+  },
+  buttons: { flexDirection: 'row', alignItems: 'center', gap: u(16) },
+  buttonsLandscape: { gap: u(20) },
+  grow: { flex: 1 },
+  icon: {
+    position: 'absolute',
+    top: -u(22.5),
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
 });

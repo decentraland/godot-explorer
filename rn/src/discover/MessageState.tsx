@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { SvgXml } from 'react-native-svg';
-import { AppText, PrimaryButton, u } from '@dcl/ui-native';
+import { AppText, Button, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 
 const STROKE = '#C9A6DB';
@@ -33,7 +33,7 @@ export function MessageState({
       </AppText>
       {onRetry ? (
         <View style={styles.action}>
-          <PrimaryButton
+          <Button
             label={t('COMMON_TRY_AGAIN')}
             tone="secondary"
             onPress={onRetry}

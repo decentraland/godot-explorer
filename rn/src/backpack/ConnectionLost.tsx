@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { SvgXml } from 'react-native-svg';
-import { AppText, PrimaryButton, u } from '@dcl/ui-native';
+import { AppText, Button, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 
 const WIFI_OFF = `<svg viewBox="0 0 70 70" fill="none"><rect x="1.5" y="1.5" width="67" height="67" rx="10" stroke="#CFCDD4" stroke-width="3"/><path d="M14 27 Q35 10 56 27 M22 35 Q35 25 48 35 M29 42 Q35 38 41 42" stroke="#CFCDD4" stroke-width="3" stroke-linecap="round"/><circle cx="35" cy="48" r="3" fill="#CFCDD4"/><path d="M16 14 L54 44" stroke="#CFCDD4" stroke-width="3" stroke-linecap="round"/><path d="M19 57 H25 M31 57 H51" stroke="#CFCDD4" stroke-width="3" stroke-linecap="round"/></svg>`;
@@ -17,7 +17,7 @@ export function ConnectionLost({ onRetry }: { onRetry: () => void }) {
         {t('BACKPACK_CONNECTION_LOST_BODY')}
       </AppText>
       <View style={styles.action}>
-        <PrimaryButton
+        <Button
           label={t('BACKPACK_TRY_AGAIN')}
           tone="secondary"
           onPress={onRetry}

@@ -20,8 +20,8 @@ import { useSettings } from './useSettings';
 
 const BG_STOPS = [
   { offset: 0, color: '#6B1FA6' },
-  { offset: 0.4, color: '#470071' },
-  { offset: 1, color: '#470071' },
+  { offset: 0.4, color: colors.brand },
+  { offset: 1, color: colors.brand },
 ];
 
 function BackButton({ onPress }: { onPress: () => void }) {

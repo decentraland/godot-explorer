@@ -3,7 +3,11 @@ import { act, create, ReactTestInstance } from 'react-test-renderer';
 import { Pressable } from 'react-native';
 import {
   BottomSheet,
+  ClaimDialog,
+  ClaimState,
   Dialog,
+  OtpDialog,
+  OtpState,
   ToastProvider,
   nearestSnap,
   snapHeights,
@@ -31,6 +35,109 @@ function pressable(tree: ReturnType<typeof create>, label: string) {
   return node;
 }
 
+describe('ClaimDialog', () => {
+  const claim = (state: ClaimState, onClaim = jest.fn(), onClose = jest.fn()) =>
+    render(
+      <ClaimDialog
+        visible
+        state={state}
+        title="You’re all set"
+        body="Enjoy the free wearable!"
+        reward={null}
+        buttonLabel="Claim reward"
+        continueLabel="Tap to continue"
+        onClaim={onClaim}
+        onRequestClose={onClose}
+      />,
+    );
+
+  it('claims from the default state', () => {
+    const onClaim = jest.fn();
+    const tree = claim('default', onClaim);
+    expect(text(tree)).not.toContain('Tap to continue');
+    act(() => pressable(tree, 'Claim reward').props.onPress());
+    expect(onClaim).toHaveBeenCalled();
+  });
+
+  it('locks the button while loading and shows the spinner', () => {
+    const tree = claim('loading');
+    expect(text(tree)).toContain('"disabled":true');
+    expect(text(tree)).toContain('progressbar');
+  });
+
+  it('closes on a tap once claimed', () => {
+    const onClose = jest.fn();
+    const tree = claim('claimed', jest.fn(), onClose);
+    expect(text(tree)).toContain('Tap to continue');
+    act(() => pressable(tree, 'Tap to continue').props.onPress());
+    expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe('OtpDialog', () => {
+  const otp = (
+    state: OtpState,
+    onResend = jest.fn(),
+    onClose = jest.fn(),
+    resendDisabled = false,
+  ) =>
+    render(
+      <OtpDialog
+        visible
+        state={state}
+        title="Enter verification code"
+        body="One time password sent to you."
+        code="12"
+        onChangeCode={jest.fn()}
+        codeLabel="Verification code"
+        errorMessage="The code is invalid"
+        verifyingLabel="Verifying..."
+        resendPrompt="Didn’t get an email?"
+        resendLabel={resendDisabled ? '00:30' : 'Resend Code'}
+        resendDisabled={resendDisabled}
+        onResend={onResend}
+        onRequestClose={onClose}
+      />,
+    );
+
+  it('shows the error message only in the error state', () => {
+    expect(text(otp('default'))).not.toContain('The code is invalid');
+    expect(text(otp('error'))).toContain('The code is invalid');
+  });
+
+  it('shows the spinner row while verifying', () => {
+    expect(text(otp('default'))).not.toContain('Verifying...');
+    const tree = otp('verifying');
+    expect(text(tree)).toContain('Verifying...');
+    expect(text(tree)).toContain('progressbar');
+  });
+
+  it('resends and closes', () => {
+    const onResend = jest.fn();
+    const onClose = jest.fn();
+    const tree = otp('default', onResend, onClose);
+    act(() =>
+      tree.root
+        .findAll(
+          n => n.props.accessibilityRole === 'link' && n.props.onPress,
+        )[0]
+        .props.onPress(),
+    );
+    expect(onResend).toHaveBeenCalled();
+    act(() => pressable(tree, 'Close').props.onPress());
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('shows the countdown as a disabled link', () => {
+    const tree = otp('default', jest.fn(), jest.fn(), true);
+    const link = tree.root.findAll(
+      n => n.props.accessibilityRole === 'link' && n.props.onPress,
+    )[0];
+    expect(link.props.disabled).toBe(true);
+    expect(text(tree)).toContain('00:30');
+  });
+});
+
 describe('Dialog', () => {
   it('renders title, body and fires button callbacks', () => {
     const onLeave = jest.fn();
@@ -38,7 +145,7 @@ describe('Dialog', () => {
     const tree = render(
       <Dialog
         visible
-        icon="warning"
+        icon="alert"
         title="Leave without saving?"
         body="You will lose changes."
         buttons={[
