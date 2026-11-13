@@ -1,0 +1,96 @@
+name: 🧪 Scene tests
+on:
+  workflow_call:
+    inputs:
+      sha:
+        description: Commit to test. The caller builds its Linux library and decides whether the tests run.
+        required: true
+        type: string
+
+jobs:
+  scenes:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Headless
+            key: headless
+            render: false
+          - name: Render (lavapipe)
+            key: render
+            render: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha }}
+
+      # Only the xtask is compiled here (Godot install and asset import); the library is downloaded.
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
+        with:
+          toolchain: "1.94"
+      - name: Set up cache
+        uses: ./.github/actions/set-up-cache
+      # The library links the same system libraries it was built against.
+      - name: Install dependencies
+        uses: ./.github/actions/install-deps
+      - name: Install Godot
+        run: cargo run -- install
+
+      - name: Download Linux library
+        uses: actions/download-artifact@v4
+        with:
+          name: libdclgodot-linux-release
+          path: lib/target/libdclgodot_linux
+
+      - name: Import assets
+        uses: ./.github/actions/import-assets
+        with:
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: tests/scene-tests/package-lock.json
+
+      - name: Install software Vulkan
+        if: matrix.render
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mesa-vulkan-drivers vulkan-tools xvfb
+          # Where the package puts lavapipe's driver file changes between Ubuntu releases.
+          dpkg -L mesa-vulkan-drivers | grep '\.json$'
+          icd="$(dpkg -L mesa-vulkan-drivers | grep -E 'lvp[^/]*\.json$' | head -1)"
+          [ -n "$icd" ] || { echo "::error::no lavapipe driver file in mesa-vulkan-drivers"; exit 1; }
+          echo "VK_ICD_FILENAMES=$icd" >> "$GITHUB_ENV"
+          VK_ICD_FILENAMES="$icd" vulkaninfo --summary
+
+      - name: Run the scene tests
+        if: ${{ !matrix.render }}
+        run: scripts/ci/scene-tests.sh
+
+      - name: Run the scene tests with rendering
+        if: matrix.render
+        run: xvfb-run -a -s "-screen 0 1280x1024x24" scripts/ci/scene-tests.sh --render
+
+      - name: Upload the Godot log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scene-tests-log-${{ matrix.key }}
+          path: tests/scene-tests/scene-tests.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+      # What lavapipe drew, next to the references, to check by eye.
+      - name: Upload the screenshots
+        if: always() && matrix.render
+        uses: actions/upload-artifact@v4
+        with:
+          name: scene-tests-screenshots
+          path: tests/snapshots/scenes/comparison
+          retention-days: 7
+          if-no-files-found: ignore

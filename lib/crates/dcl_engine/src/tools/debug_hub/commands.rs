@@ -5,7 +5,7 @@
 
 use std::cell::RefCell;
 
-use godot::classes::{Control, Engine, Marshalls, Os, ProjectSettings, Time};
+use godot::classes::{Control, DisplayServer, Engine, Marshalls, Os, ProjectSettings, Time};
 use godot::prelude::*;
 use serde_json::{json, Map, Value};
 
@@ -186,6 +186,8 @@ fn state() -> Value {
         "camera_mode": global.bind().current_camera_mode,
         "portrait": global.bind().is_portrait,
         "signed_in": !globals::player_identity().bind().get_address_str().is_empty(),
+        // No renderer: nothing is drawn and screenshots come back empty.
+        "headless": DisplayServer::singleton().get_name() == "headless",
     });
     if let Some(world) = world::state::current() {
         let parcel = world.parcel.get();

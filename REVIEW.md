@@ -119,6 +119,7 @@ Apply this order. Everything below "Correctness" is negotiable; the top tier is 
 18. **Description and test plan quality.** PR descriptions in this repo are `## What`, `## Why`, an optional collapsed `## Details`, and a `## Test plan` (see Section 4 → "PR description shape", including the AG rule on AI-generated text). A description with no What/Why, or whose What/Why read as raw AI output, is a rewrite request before code review. A missing or vague test plan is a legitimate review comment, especially for UI changes. Mobile-visible changes should say *which* platform was tested on. **The QA team runs these by hand on a real phone** (builds auto-distribute via TestFlight / Firebase App Distribution) — a case a tester couldn't reproduce cold (steps that don't start from opening the app, no observable expected result, no `- [ ]` to tick, or non-obvious required state left unsaid) is worth holding on. See Section 4 → "Writing test steps QA can execute" for the required format and a worked example.
 19. **Comments follow `CLAUDE.md` → "Code hygiene".** Flag comments that restate the code, run past three lines, or describe code that is no longer there ("a prior attempt…", "previously…", "used to live in…") — tombstones; the history lives in git, not the source. Praise the ones that explain a non-obvious Godot quirk or cite a matching Unity file/line.
 20. **File growth.** `communication_manager.rs`, `scene_manager.rs` and `content_provider.rs` are past 3000 lines. Net additions to them are a question, not a nit: could this live in its own file?
+21. **Changed screenshot references.** Every `tests/snapshots/scenes/*.png` in the diff needs a line in the description saying why that picture changed, with the old and new images. Open each one: a reference replaced only to make a failing test pass hides a regression. A replacement the change does not explain, or a bulk regeneration mixed into a fix, is a hold. See `docs/scene-tests.md` → "Change a reference image".
 
 ---
 
@@ -363,6 +364,7 @@ A reviewer should `grep` / eyeball the diff for these before reading logic:
 - `# TODO` / `# FIXME` added in this PR (vs already existed) → ask for an issue link.
 - A comment describing code that is not in the file any more ("previously…", "was removed because…", "used to live in…") → tombstone; ask to delete it, git holds the history (Tier 3 #19).
 - Net additions to `communication_manager.rs` / `scene_manager.rs` / `content_provider.rs` → ask whether the code could live in its own file (Tier 3 #20).
+- `tests/snapshots/scenes/*.png` in the diff → each needs a reason in the description; compare old and new before approving (Tier 3 #21).
 - `await …` inside `_ready` / `_process` / `_input` without guards → re-entrancy risk.
 - New `custom_minimum_size = Vector2(…)` on an overlay container → probable mouse-filter bug.
 - `shader_parameter/<name>` in a `.tres` that doesn't exist in the referenced `.gdshader` → orphan.

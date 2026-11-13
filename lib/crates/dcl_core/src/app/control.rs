@@ -2,7 +2,7 @@
 //! The core forwards them; the engine-side code executes and observes (D-3).
 
 /// The physical pixels the HUD keeps clear on each side (notch, gesture bar, joypad).
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, serde::Deserialize)]
 #[cfg_attr(feature = "ffi", derive(uniffi::Record))]
 pub struct HudInsets {
     pub top: f32,
@@ -12,7 +12,8 @@ pub struct HudInsets {
 }
 
 /// What the avatar preview camera frames: the whole body or one wearable category.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "ffi", derive(uniffi::Enum))]
 pub enum CameraFocus {
     Overall,
@@ -23,7 +24,8 @@ pub enum CameraFocus {
     Hands,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "ffi", derive(uniffi::Enum))]
 pub enum ColorTarget {
     Skin,
@@ -32,8 +34,10 @@ pub enum ColorTarget {
 }
 
 /// What the shell asks of the engine once a world or the avatar preview is up. All of them are
-/// ignored by an engine that has nothing to apply them to (no world, no preview).
-#[derive(Clone, Debug, PartialEq)]
+/// ignored by an engine that has nothing to apply them to (no world, no preview). Deserializable as
+/// `{"type": "set_color", ...}` so scene tests can send the same commands.
+#[derive(Clone, Debug, PartialEq, serde::Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
 #[cfg_attr(feature = "ffi", derive(uniffi::Enum))]
 pub enum Control {
     /// Move the player inside the current world.
