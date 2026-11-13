@@ -103,16 +103,7 @@ export function BugReportModal({
           />
         </View>
         <View style={styles.bug} pointerEvents="none">
-          <Icon name="bug" size={34} color={colors.snow} strokeWidth={5} />
-          <View style={styles.bugTop}>
-            <Icon
-              name="bug"
-              size={34}
-              color="#7A2B00"
-              strokeWidth={1.4}
-              fill={colors.orange}
-            />
-          </View>
+          <Icon name="modalBug" size={45} />
         </View>
         {sent ? (
           <View style={styles.sent}>
@@ -270,8 +261,13 @@ const styles = StyleSheet.create({
     borderRadius: u(10),
     overflow: 'hidden',
   },
-  bug: { position: 'absolute', top: -u(17), alignSelf: 'center', zIndex: 2 },
-  bugTop: { position: 'absolute' },
+  /** `Icon/Modal` Bug, placed like `Dialog`'s illustration. */
+  bug: {
+    position: 'absolute',
+    top: -u(22.5),
+    alignSelf: 'center',
+    zIndex: 2,
+  },
   body: { padding: u(24), paddingTop: u(40) },
   title: { fontSize: u(20), textAlign: 'center', marginBottom: u(14) },
   label: { fontSize: u(15), fontFamily: 'Inter-Medium', color: colors.snow },
