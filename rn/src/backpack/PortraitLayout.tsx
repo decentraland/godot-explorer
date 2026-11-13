@@ -105,7 +105,8 @@ export function PortraitLayout({
 
 const styles = StyleSheet.create({
   root: { ...StyleSheet.absoluteFill, backgroundColor: colors.purple500 },
-  area: { flex: 1 },
+  /** Clipped so the sheet stops at the nav bar instead of running under it. */
+  area: { flex: 1, overflow: 'hidden' },
   header: { paddingLeft: u(80), paddingRight: u(24) },
   hole: { flex: 1 },
   slots: { position: 'absolute', left: 0, right: 0 },
