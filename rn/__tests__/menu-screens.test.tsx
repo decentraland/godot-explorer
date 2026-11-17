@@ -18,6 +18,9 @@ import { getScreen } from '../src/app/registry';
 import { NavProvider, useNav } from '../src/app/NavProvider';
 import { shareScene } from '../src/menu/share';
 import { Share } from 'react-native';
+import { ApiProvider as DiscoverApiProvider } from '../src/discover/ApiContext';
+import { CategoryChips } from '../src/discover/CategoryChips';
+import { createMockApi as createDiscoverMockApi } from '../src/discover/mockApi';
 
 const enterWorld = jest.fn();
 
@@ -197,12 +200,20 @@ describe('MenuDrawer', () => {
     expect(json(tree)).not.toContain('Bug Report');
   });
 
-  it('shows the portrait Discover from EXPLORE MORE', async () => {
-    const tree = mount(<MenuDrawer navigate={jest.fn()} />);
+  it('shows the Discover screen, with its categories, from EXPLORE MORE', async () => {
+    const tree = mount(
+      <NavProvider>
+        <DiscoverApiProvider api={createDiscoverMockApi()}>
+          <MenuDrawer navigate={jest.fn()} />
+        </DiscoverApiProvider>
+      </NavProvider>,
+    );
     act(() => openMenu('discover'));
     await settle();
     press(tree, 'Explore more'.toUpperCase());
-    expect(json(tree)).toContain('Last Played');
+    await settle();
+    expect(json(tree)).toContain('Popular');
+    expect(tree.root.findAllByType(CategoryChips)).toHaveLength(1);
   });
 });
 
