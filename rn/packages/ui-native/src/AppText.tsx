@@ -8,8 +8,7 @@ import { u } from './scale';
 const AUTO_LINE_HEIGHT = 1.21;
 
 /** The Figma "Design System Mobile" text styles by name (Fonts page, 138:1290), in Text/primary.
- * An Auto line height is left to `AppText`; a fixed one is given. Not bundled yet: `Modal/Special
- * Title` (Inter Black) and `Input/Suffix` (Inter Light). */
+ * An Auto line height is left to `AppText`; a fixed one is given. */
 const figmaStyles = {
   H1: { fontFamily: fonts.bold, fontSize: u(24) },
   H2: { fontFamily: fonts.semibold, fontSize: u(21) },
@@ -46,6 +45,7 @@ const figmaStyles = {
     textTransform: 'uppercase',
   },
   Input: { fontFamily: fonts.medium, fontSize: u(15) },
+  'Input/Suffix': { fontFamily: fonts.light, fontSize: u(12) },
   'Input/Value': { fontFamily: fonts.regular, fontSize: u(15) },
   'Input/Code': {
     fontFamily: fonts.semibold,
@@ -59,6 +59,11 @@ const figmaStyles = {
     fontFamily: fonts.regular,
     fontSize: u(13),
     lineHeight: u(18),
+  },
+  'Modal/Special Title': {
+    fontFamily: fonts.black,
+    fontSize: u(24),
+    lineHeight: u(29),
   },
   'Modal/Special Body': {
     fontFamily: fonts.regular,

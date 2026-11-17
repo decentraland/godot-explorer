@@ -15,6 +15,16 @@ export { BottomNav } from './BottomNav';
 export type { NavKey } from './BottomNav';
 export { BottomSheet, SHEET_HANDLE_HEIGHT } from './BottomSheet';
 export { Button } from './Button';
+export { ButtonProfileLink } from './ButtonProfileLink';
+export { ButtonSeeMore } from './ButtonSeeMore';
+export { IconProfile } from './IconProfile';
+export type { ProfileIconType } from './IconProfile';
+export { InputUsername } from './InputUsername';
+export type { UsernameTab } from './InputUsername';
+export { MenuNavItem } from './MenuNavItem';
+export { ModalSpecial } from './ModalSpecial';
+export { ProfileAttribute } from './ProfileAttribute';
+export { SettingsRow } from './SettingsRow';
 export { Checkbox } from './Checkbox';
 export { Chip } from './Chip';
 export { CodeSlots } from './CodeSlots';
@@ -68,6 +78,7 @@ export { ToastBubble, ToastProvider, toastReducer, useToast } from './Toast';
 export { WarningBanner } from './WarningBanner';
 export { SCALE, u } from './scale';
 export {
+  alpha,
   border,
   color,
   colors,

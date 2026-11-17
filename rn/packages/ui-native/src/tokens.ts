@@ -50,6 +50,8 @@ export const colors = {
   black60: 'rgba(0,0,0,0.6)',
   black70: 'rgba(0,0,0,0.7)',
   white: '#FFFFFF',
+  /** Figma `color/black`. */
+  black: '#000000',
   white40: 'rgba(255,255,255,0.4)',
   snow10: 'rgba(252,252,252,0.1)',
   snow70: 'rgba(252,252,252,0.7)',
@@ -83,6 +85,46 @@ export const colors = {
   lavender50: 'rgba(232,185,255,0.5)',
 } as const;
 
+/** The Figma `alpha/*` primitives by name: `alpha/white-30` is `alpha['white-30']`. */
+export const alpha = {
+  'black-4': 'rgba(0,0,0,0.04)',
+  'black-8': 'rgba(0,0,0,0.08)',
+  'black-10': 'rgba(0,0,0,0.1)',
+  'black-20': 'rgba(0,0,0,0.2)',
+  'black-30': 'rgba(0,0,0,0.3)',
+  'black-40': 'rgba(0,0,0,0.4)',
+  'black-50': 'rgba(0,0,0,0.5)',
+  'black-60': 'rgba(0,0,0,0.6)',
+  'black-70': 'rgba(0,0,0,0.7)',
+  'white-4': 'rgba(255,255,255,0.04)',
+  'white-8': 'rgba(255,255,255,0.08)',
+  'white-10': 'rgba(255,255,255,0.1)',
+  'white-20': 'rgba(255,255,255,0.2)',
+  'white-30': 'rgba(255,255,255,0.3)',
+  'white-40': 'rgba(255,255,255,0.4)',
+  'white-70': 'rgba(255,255,255,0.7)',
+  'snow-10': 'rgba(252,252,252,0.1)',
+  'snow-30': 'rgba(252,252,252,0.3)',
+  'snow-50': 'rgba(252,252,252,0.5)',
+  'snow-70': 'rgba(252,252,252,0.7)',
+  'silver-50': 'rgba(160,155,168,0.5)',
+  'ruby-50': 'rgba(255,45,85,0.5)',
+  'gray-30': 'rgba(207,205,212,0.3)',
+  'purple-20': 'rgba(105,31,169,0.2)',
+  'purple-40': 'rgba(105,31,169,0.4)',
+  'purple-60': 'rgba(105,31,169,0.6)',
+  'purple-70': 'rgba(105,31,169,0.7)',
+  'deep-purple-40': 'rgba(53,8,84,0.4)',
+  'deep-purple-50': 'rgba(53,8,84,0.5)',
+  'lavender-30': 'rgba(232,185,255,0.3)',
+  'lavender-50': 'rgba(232,185,255,0.5)',
+  'lavender-70': 'rgba(232,185,255,0.7)',
+  'violet-70': 'rgba(161,75,243,0.7)',
+  'shadow-70': 'rgba(22,21,24,0.7)',
+  'shadow-90': 'rgba(22,21,24,0.9)',
+  'midnight-90': 'rgba(26,9,37,0.9)',
+} as const;
+
 /** The Figma "Color" collection (Design System Mobile, Colors page 1:154) by its own names: `text/link`
  * is `color.text.link`. Each points at the palette above. */
 export const color = {
@@ -105,10 +147,10 @@ export const color = {
     'modal-special': '#160338',
     'modal-special-glow': '#AE59FF',
     scrim: colors.scrim,
-    nametag: 'rgba(22,21,24,0.7)',
+    nametag: alpha['shadow-70'],
     navbar: colors.navbar,
     menu: colors.menu,
-    selected: 'rgba(232,185,255,0.3)',
+    selected: alpha['lavender-30'],
   },
   text: {
     primary: colors.snow,
@@ -165,9 +207,9 @@ export const claimGradient = [
 
 /** Figma `Elevation/Down|Up`: one shadow, 0/±4 offset, blur 4, Shadow at 50% — values ÷ 2 for
  * dp. `boxShadow` draws the same on both platforms (Android `elevation` ignores the colour). */
-const shadow = (offsetY: number, blurRadius = u(2), alpha = '80') => ({
+const shadow = (offsetY: number, blurRadius = u(2), opacity = '80') => ({
   boxShadow: [
-    { offsetX: 0, offsetY, blurRadius, color: `${colors.shadow}${alpha}` },
+    { offsetX: 0, offsetY, blurRadius, color: `${colors.shadow}${opacity}` },
   ],
 });
 export const elevation = {
@@ -293,10 +335,12 @@ export const motion = {
 } as const;
 
 export const fonts = {
+  light: 'Inter-Light',
   regular: 'Inter-Regular',
   medium: 'Inter-Medium',
   semibold: 'Inter-SemiBold',
   bold: 'Inter-Bold',
+  black: 'Inter-Black',
 } as const;
 
 /** Item grids are always three columns, 12dp apart, 24dp from the screen edge. */

@@ -12,7 +12,10 @@ export type UiNativeKey =
   | 'APP_COLOR_BRIGHTNESS'
   | 'APP_COLOR_HUE'
   | 'APP_COLOR_SATURATION'
-  | 'APP_DISMISS_DIALOG';
+  | 'APP_DISMISS_DIALOG'
+  | 'APP_REMOVE'
+  | 'APP_SEE_LESS'
+  | 'APP_SEE_MORE';
 
 let translate: (key: UiNativeKey) => string = key => key;
 

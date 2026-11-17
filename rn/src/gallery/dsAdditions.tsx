@@ -1,0 +1,165 @@
+// Design System Mobile components added on 2026-11-17: Button/SeeMore, Button/ProfileLink,
+// Profile/Attribute, Icon/Profile, Menu/NavItem, Settings/Row, Input/Username and Modal/Special.
+import { useState } from 'react';
+import { Image, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  BrandBackground,
+  ButtonProfileLink,
+  ButtonSeeMore,
+  IconProfile,
+  InputUsername,
+  MenuNavItem,
+  ModalSpecial,
+  ProfileAttribute,
+  ProfileIconType,
+  SettingsRow,
+  Slider,
+  space,
+  Switch,
+  u,
+} from '@dcl/ui-native';
+import { registerPreview } from './registry';
+
+const media = require('./assets/modal-special-media.jpg');
+const noop = () => {};
+const PROFILE_TYPES: ProfileIconType[] = [
+  'Gender',
+  'Country',
+  'Birthday',
+  'Pronouns',
+  'Relationship',
+  'SexOrientation',
+  'Language',
+  'Profession',
+  'Hobbies',
+  'RealName',
+  'EmploymentStatus',
+];
+
+function Additions() {
+  const [on, setOn] = useState(true);
+  const [volume, setVolume] = useState(100);
+  return (
+    <ScrollView contentContainerStyle={styles.content}>
+      <View style={styles.row}>
+        <ButtonSeeMore onPress={noop} />
+        <ButtonSeeMore expanded onPress={noop} />
+        <ButtonSeeMore disabled onPress={noop} />
+      </View>
+      <View style={styles.row}>
+        <ButtonProfileLink label="Link" onPress={noop} />
+        <ButtonProfileLink label="Link" onPress={noop} onRemove={noop} />
+      </View>
+      <View style={styles.row}>
+        {PROFILE_TYPES.map(type => (
+          <IconProfile key={type} type={type} />
+        ))}
+      </View>
+      <View style={styles.row}>
+        <ProfileAttribute icon="Country" title="Country" value="Argentina" />
+        <ProfileAttribute icon="Language" title="Language" value="Spanish" />
+      </View>
+      <View>
+        <MenuNavItem label="Label" onPress={noop} />
+        <MenuNavItem label="Label" selected onPress={noop} />
+        <MenuNavItem label="Label" size="Small" onPress={noop} />
+        <MenuNavItem label="Label" size="Small" selected onPress={noop} />
+      </View>
+      <View>
+        <SettingsRow
+          label="Label"
+          control={<Switch label="Label" value={on} onChange={setOn} />}
+        />
+        <SettingsRow
+          type="SwitchDescription"
+          label="Label"
+          description="Adjusts graphics automatically for optimal performance."
+          control={<Switch label="Label" value={on} onChange={setOn} />}
+        />
+        <SettingsRow
+          type="Slider"
+          label="Label"
+          value={`${volume}%`}
+          control={<Slider label="Label" value={volume} onChange={setVolume} />}
+        />
+      </View>
+      <InputUsername
+        label="Username"
+        uniqueName
+        tab="Unique"
+        onTabChange={noop}
+        uniqueTabLabel="Unique name"
+        nameTabLabel="Non-unique username"
+        names={['Name']}
+        picked="Name"
+        onPick={noop}
+        value=""
+        onChangeText={noop}
+      />
+      <InputUsername
+        label="Username"
+        uniqueName={false}
+        tab="Name"
+        onTabChange={noop}
+        uniqueTabLabel="Unique name"
+        nameTabLabel="Non-unique username"
+        names={[]}
+        picked={null}
+        onPick={noop}
+        value="username"
+        onChangeText={noop}
+        suffix="#1234"
+        maxLength={15}
+      />
+    </ScrollView>
+  );
+}
+
+registerPreview('extra/ds-figma-additions', {
+  title: 'DS: components added from Figma',
+  orientation: 'portrait',
+  render: () => (
+    <View style={styles.page}>
+      <BrandBackground />
+      <Additions />
+    </View>
+  ),
+});
+
+registerPreview('extra/ds-modal-special', {
+  title: 'DS: Modal/Special',
+  orientation: 'portrait',
+  render: () => (
+    <View style={styles.page}>
+      <BrandBackground />
+      <ModalSpecial
+        visible
+        media={<Image source={media} style={styles.media} />}
+        title="Unlock the full experience"
+        body="Add email to unlock Decentraland across devices and claim an"
+        highlight="exclusive Wearable."
+        primaryLabel="Add email"
+        onPrimary={noop}
+        secondaryLabel="Maybe later"
+        onSecondary={noop}
+        onRequestClose={noop}
+      />
+    </View>
+  ),
+});
+
+const styles = StyleSheet.create({
+  page: { flex: 1 },
+  content: {
+    paddingHorizontal: space['2xl'],
+    paddingVertical: space.xl,
+    gap: space.xl,
+  },
+  row: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: space.lg,
+  },
+  media: { width: u(344), height: u(274), marginTop: -u(9.5) },
+});
