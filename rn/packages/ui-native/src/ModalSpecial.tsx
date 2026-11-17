@@ -58,12 +58,17 @@ export function ModalSpecial({
                 {
                   offset: 0,
                   color: color.surface['modal-special-glow'],
-                  opacity: 0.9,
+                  opacity: 0.55,
                 },
                 {
-                  offset: 0.5,
+                  offset: 0.35,
                   color: color.surface['modal-special-glow'],
-                  opacity: 0.35,
+                  opacity: 0.3,
+                },
+                {
+                  offset: 0.7,
+                  color: color.surface['modal-special-glow'],
+                  opacity: 0.08,
                 },
                 {
                   offset: 1,
@@ -71,7 +76,6 @@ export function ModalSpecial({
                   opacity: 0,
                 },
               ]}
-              cy={1}
             />
           </View>
           <View style={styles.media}>{media}</View>
@@ -125,12 +129,13 @@ const styles = StyleSheet.create({
     borderColor: colors.purple350,
     backgroundColor: color.surface['modal-special'],
   },
+  // Figma's 333x76 ellipse blurred by ~97dp, centred 5dp under the card's bottom edge.
   glow: {
     position: 'absolute',
-    left: u(-10.5),
-    right: u(-10.5),
-    bottom: u(-43.5),
-    height: u(76.5),
+    left: u(-60),
+    right: u(-60),
+    bottom: u(-125),
+    height: u(240),
   },
   media: { height: u(225), overflow: 'hidden' },
   content: {

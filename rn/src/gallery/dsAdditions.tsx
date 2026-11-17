@@ -80,7 +80,14 @@ function Additions() {
           type="Slider"
           label="Label"
           value={`${volume}%`}
-          control={<Slider label="Label" value={volume} onChange={setVolume} />}
+          control={
+            <Slider
+              label="Label"
+              value={volume}
+              onChange={setVolume}
+              showLabel={false}
+            />
+          }
         />
       </View>
       <InputUsername

@@ -35,6 +35,7 @@ export function Slider({
   max = 100,
   step = 1,
   disabled = false,
+  showLabel = true,
 }: {
   label: string;
   value: number;
@@ -44,6 +45,8 @@ export function Slider({
   max?: number;
   step?: number;
   disabled?: boolean;
+  /** Off inside `SettingsRow`, which draws the label and value itself. */
+  showLabel?: boolean;
 }) {
   const [width, setWidth] = useState(0);
   const latest = useRef({ width, onChange, onChangeEnd, min, max, step });
@@ -83,14 +86,16 @@ export function Slider({
 
   return (
     <View style={styles.root}>
-      <View style={styles.row}>
-        <AppText style={[styles.label, disabled && styles.textDisabled]}>
-          {label}
-        </AppText>
-        <AppText style={[styles.value, disabled && styles.textDisabled]}>
-          {`${value}%`}
-        </AppText>
-      </View>
+      {showLabel && (
+        <View style={styles.row}>
+          <AppText style={[styles.label, disabled && styles.textDisabled]}>
+            {label}
+          </AppText>
+          <AppText style={[styles.value, disabled && styles.textDisabled]}>
+            {`${value}%`}
+          </AppText>
+        </View>
+      )}
       <View
         accessible
         accessibilityRole="adjustable"

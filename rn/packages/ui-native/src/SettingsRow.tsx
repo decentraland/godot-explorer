@@ -5,7 +5,8 @@ import { color, space } from './tokens';
 import { u } from './scale';
 
 /** A settings row: the label (and description) with its control. Switch / SwitchDescription put the
- * `control` on the right; Slider puts `value` beside the label and the control below at full width.
+ * `control` on the right; Slider puts `value` beside the label and the control (a `Slider` with
+ * `showLabel={false}`) below at full width.
  * Disabled dims the text; pass `disabled` to the control as well.
  * Figma Settings/Row: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=924-45
  */
