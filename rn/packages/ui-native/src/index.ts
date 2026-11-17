@@ -82,6 +82,7 @@ export {
   alpha,
   border,
   color,
+  categoryTile,
   colors,
   control,
   controlHeight,
@@ -99,7 +100,7 @@ export {
   lightRainbow,
   motion,
 } from './tokens';
-export type { Rarity } from './tokens';
+export type { CategoryTileKind, Rarity } from './tokens';
 export { hexToHsv, hsvToHex } from './colorMath';
 export type { Hsv } from './colorMath';
 export { iconNames } from './Icon';

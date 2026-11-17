@@ -515,11 +515,6 @@
     "orientation": "portrait"
   },
   {
-    "id": "discover__discover-categories01__2107-25669",
-    "source": "discover",
-    "orientation": "portrait"
-  },
-  {
     "id": "discover__discover-all-carousels__2123-26835",
     "source": "discover",
     "orientation": "portrait"
@@ -571,6 +566,16 @@
   },
   {
     "id": "discover__discover-friends__1693-20759",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-categories01__2244-22785",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-categories01__2107-25669",
     "source": "discover",
     "orientation": "portrait"
   },

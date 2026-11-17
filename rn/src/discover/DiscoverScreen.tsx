@@ -49,6 +49,7 @@ export function DiscoverScreen({
   startCategorySearch = false,
   bannerIndex,
   seasonal,
+  season,
   startScrolled,
 }: {
   footer?: ReactNode;
@@ -61,6 +62,7 @@ export function DiscoverScreen({
   startCategorySearch?: boolean;
   bannerIndex?: number;
   seasonal?: boolean;
+  season?: Parameters<typeof DiscoverHome>[0]['season'];
   startScrolled?: boolean;
 }) {
   const open = useOpeners();
@@ -85,6 +87,7 @@ export function DiscoverScreen({
       played={recent}
       now={clock}
       bannerIndex={bannerIndex}
+      season={season}
       startScrolled={startScrolled}
       onJump={onJumpIn}
       onCategory={setCategory}

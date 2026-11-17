@@ -240,6 +240,43 @@ export const rarityColors = {
 
 export type Rarity = keyof typeof rarityColors;
 
+/** Discover `Categories Carousel` tiles (Discover file 2325:46883, 2107:25684): fill, the blurred
+ * multiply shadow under the art (colour at opacity) and the inner glow. */
+export const categoryTile = {
+  game: {
+    fill: rarityColors.epic.dark,
+    shadow: rarityColors.epic.dark,
+    shadowOpacity: 0.8,
+    glow: 'rgba(161,191,255,0.9)',
+  },
+  social: {
+    fill: rarityColors.legendary.dark,
+    shadow: colors.purple350,
+    shadowOpacity: 0.7,
+    glow: 'rgba(232,185,255,0.9)',
+  },
+  music: {
+    fill: colors.magenta,
+    shadow: '#D400DF',
+    shadowOpacity: 0.8,
+    glow: 'rgba(246,193,255,0.8)',
+  },
+  art: {
+    fill: '#FFC95B',
+    shadow: colors.orange,
+    shadowOpacity: 0.6,
+    glow: 'rgba(255,242,128,0.8)',
+  },
+  seasonal: {
+    fill: colors.purple350,
+    shadow: colors.purple350,
+    shadowOpacity: 0.6,
+    glow: 'rgba(223,156,255,0.6)',
+  },
+} as const;
+
+export type CategoryTileKind = keyof typeof categoryTile;
+
 export const radii = {
   card: u(6),
   pill: 100,

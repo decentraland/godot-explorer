@@ -96,6 +96,30 @@ describe('public api', () => {
     expect((await api.categoryPlaces('game', 0, 'x')).items).toHaveLength(2);
   });
 
+  it('lists a category with the active places first, then the rest once', async () => {
+    const urls: string[] = [];
+    const categoryApi = createPublicApi((async (url: string) => {
+      urls.push(url);
+      const active = url.includes('order_by=most_active');
+      return {
+        ok: true,
+        json: async () => ({
+          data: active ? [place('busy')] : [place('quiet'), place('busy')],
+        }),
+      };
+    }) as unknown as typeof fetch);
+    const first = await categoryApi.categoryPlaces('game', 0);
+    expect(first.items.map(p => p.id)).toEqual(['busy']);
+    const rest = await categoryApi.categoryPlaces('game', 1);
+    expect(rest).toEqual({
+      items: [expect.objectContaining({ id: 'quiet' })],
+      hasMore: false,
+    });
+    expect(urls.every(url => url.includes('categories=game'))).toBe(true);
+    await categoryApi.categoryPlaces('seasonal', 0);
+    expect(urls[urls.length - 1]).toContain('tag=season');
+  });
+
   it('applies user state locally and resolves from the cache', async () => {
     await api.places('popular', 0);
     await api.setFavorite('a', true);

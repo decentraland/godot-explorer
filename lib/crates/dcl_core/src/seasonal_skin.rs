@@ -1,13 +1,17 @@
 //! The seasonal Discover reskin: the `seasonal-skin-key` flag names a folder of assets
-//! (an overlay image and an ambient track); empty means off.
+//! (an overlay image, an ambient track and the Discover category tile); empty means off.
 
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::{flags, urls};
 
 const FLAG: &str = "seasonal-skin-key";
+/// The tile label: plain text, or a JSON object of locale → text (`{"en": "Halloween", "es": …}`).
+const NAME_FLAG: &str = "seasonal-skin-name";
 const OVERLAY_FILE: &str = "discover-overlay.png";
 const AMBIENT_FILE: &str = "discover-ambient.mp3";
+const TILE_FILE: &str = "discover-tile.png";
 /// A corrupt asset fails the same way every time: the cap keeps a transient failure retryable
 /// without refetching a permanently bad file on every Discover open.
 pub const MAX_FETCH_ATTEMPTS: u32 = 3;
@@ -20,6 +24,9 @@ pub struct SeasonalSkin {
     pub key: String,
     pub overlay_url: String,
     pub ambient_url: String,
+    pub tile_url: String,
+    /// Tile label by locale (`en`, `es`, `pt_BR`); a plain-text flag is stored under `en`.
+    pub names: HashMap<String, String>,
 }
 
 /// The key doubles as a path segment: a `/` or `..` would escape the seasons folder.
@@ -30,7 +37,23 @@ fn valid_key(key: &str) -> bool {
             .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
 }
 
-fn skin_for(key: &str) -> Option<SeasonalSkin> {
+fn names_from(text: &str) -> HashMap<String, String> {
+    let text = text.trim();
+    if let Ok(serde_json::Value::Object(map)) = serde_json::from_str(text) {
+        return map
+            .into_iter()
+            .filter_map(|(locale, name)| Some((locale, name.as_str()?.trim().to_string())))
+            .filter(|(_, name)| !name.is_empty())
+            .collect();
+    }
+    if text.is_empty() {
+        HashMap::new()
+    } else {
+        HashMap::from([("en".to_string(), text.to_string())])
+    }
+}
+
+fn skin_for(key: &str, name: &str) -> Option<SeasonalSkin> {
     let key = key.trim();
     if !valid_key(key) {
         if !key.is_empty() {
@@ -43,6 +66,8 @@ fn skin_for(key: &str) -> Option<SeasonalSkin> {
         key: key.to_string(),
         overlay_url: format!("{base}{OVERLAY_FILE}"),
         ambient_url: format!("{base}{AMBIENT_FILE}"),
+        tile_url: format!("{base}{TILE_FILE}"),
+        names: names_from(name),
     })
 }
 
@@ -51,7 +76,7 @@ pub fn active() -> Option<SeasonalSkin> {
     if !flags::is_loaded() {
         return None;
     }
-    skin_for(&flags::get_text(FLAG, ""))
+    skin_for(&flags::get_text(FLAG, ""), &flags::get_text(NAME_FLAG, ""))
 }
 
 /// Spends one asset fetch attempt; `false` once the cap is reached.
@@ -83,7 +108,7 @@ mod tests {
 
     #[test]
     fn urls_follow_the_hosting_convention() {
-        let skin = skin_for(" halloween ").unwrap();
+        let skin = skin_for(" halloween ", "").unwrap();
         assert_eq!(skin.key, "halloween");
         assert_eq!(
             skin.overlay_url,
@@ -93,13 +118,26 @@ mod tests {
             skin.ambient_url,
             "https://mobile-ota.dclregenesislabs.xyz/seasons/halloween/discover-ambient.mp3"
         );
+        assert_eq!(
+            skin.tile_url,
+            "https://mobile-ota.dclregenesislabs.xyz/seasons/halloween/discover-tile.png"
+        );
+    }
+
+    #[test]
+    fn names_are_plain_text_or_per_locale() {
+        assert!(names_from("").is_empty());
+        assert_eq!(names_from(" Halloween ")["en"], "Halloween");
+        let names = names_from(r#"{"en": "Christmas", "es": "Navidad", "pt_BR": " ", "x": 1}"#);
+        assert_eq!(names.len(), 2);
+        assert_eq!(names["es"], "Navidad");
     }
 
     #[test]
     fn empty_or_invalid_key_is_off() {
-        assert_eq!(skin_for(""), None);
-        assert_eq!(skin_for("   "), None);
-        assert_eq!(skin_for("../etc"), None);
+        assert_eq!(skin_for("", "Halloween"), None);
+        assert_eq!(skin_for("   ", ""), None);
+        assert_eq!(skin_for("../etc", ""), None);
     }
 
     #[test]

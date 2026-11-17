@@ -38,4 +38,8 @@ export const discover: Partial<Record<keyof typeof en, string>> = {
   SHARE_EVENT_MESSAGE:
     "📍 Visite o evento '{event}' acessando este link: {link}",
   SHARE_PLACE_MESSAGE: '📍 Venha até {place} comigo por este link: {link}',
+  CATEGORY_GAME: 'Jogos',
+  CATEGORY_SOCIAL: 'Social',
+  CATEGORY_MUSIC: 'Música',
+  CATEGORY_ART: 'Arte',
 };

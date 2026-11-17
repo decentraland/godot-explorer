@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { SearchField, u } from '@dcl/ui-native';
+import { Header, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { Place } from './api';
 import { useApi } from './ApiContext';
 import { PlaceCard } from './Cards';
-import { DiscoverHeader } from './DiscoverHeader';
 import { MessageState } from './MessageState';
 import { PlaceSkeleton } from './MoreCards';
 import { useRail } from './rails';
@@ -49,24 +48,23 @@ export function CategoryScreen({
 
   return (
     <View style={styles.root}>
-      {searching ? (
-        <View style={[styles.search, { paddingTop: insets.top + u(6) }]}>
-          <SearchField
-            framed
-            autoFocus={!startSearching}
-            value={text}
-            onChangeText={setText}
-            onBack={closeSearch}
-            placeholder={t('DISCOVER_SEARCH')}
-          />
-        </View>
-      ) : (
-        <DiscoverHeader
-          title={t(category.title)}
+      <View style={{ paddingTop: insets.top }}>
+        <Header
+          title={category.name}
           onBack={onBack}
           onSearch={() => setSearching(true)}
+          search={
+            searching
+              ? {
+                  value: text,
+                  onChangeText: setText,
+                  onClose: closeSearch,
+                  placeholder: t('DISCOVER_SEARCH'),
+                }
+              : undefined
+          }
         />
-      )}
+      </View>
       {state.status === 'error' ? (
         <MessageState
           glyph="search"
@@ -113,12 +111,11 @@ export function CategoryScreen({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  search: { paddingHorizontal: u(24), paddingBottom: u(10) },
   grid: {
     paddingHorizontal: u(24),
-    paddingTop: u(14),
+    paddingTop: u(12),
     paddingBottom: u(24),
-    gap: u(18),
+    gap: u(16),
   },
   columns: { gap: u(18) },
 });

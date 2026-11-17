@@ -1,4 +1,5 @@
-import type { I18nKey } from '../i18n';
+import type { ImageSourcePropType } from 'react-native';
+import type { CategoryTileKind } from '@dcl/ui-native';
 import type { DiscoverEvent, Place } from './api';
 
 export type Page<T> = { items: T[]; hasMore: boolean };
@@ -26,10 +27,13 @@ export type Banner = {
 };
 
 export type Category = {
+  /** Places category id; `seasonal` lists the places tagged for the active season. */
   id: string;
-  label: I18nKey;
-  title: I18nKey;
-  emoji: string;
+  tile: CategoryTileKind;
+  name: string;
+  art: ImageSourcePropType;
+  /** The season key, on the seasonal tile. */
+  season?: string;
 };
 
 export type VoteState = 'like' | 'dislike' | null;
@@ -66,6 +70,7 @@ export interface DiscoverApi {
   friends(): Promise<Friend[]>;
   events(): Promise<DiscoverEvent[]>;
   places(rail: PlaceRail, offset: number): Promise<Page<Place>>;
+  /** A category's places and worlds, those with players online first; `seasonal` is the season's tag. */
   categoryPlaces(
     category: string,
     offset: number,
