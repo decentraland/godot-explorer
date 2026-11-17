@@ -42,6 +42,7 @@ export type { DialogButton, DialogIcon } from './Dialog';
 export { Dropdown } from './Dropdown';
 export type { DropdownOption } from './Dropdown';
 export { EmptyState } from './EmptyState';
+export { Feature, FEATURE } from './Feature';
 export { GradientView, LinearFill, RadialFill } from './Gradient';
 export { Header } from './Header';
 export { HudCircleButton } from './HudCircleButton';

@@ -1,117 +1,18 @@
 import { useState } from 'react';
-import { Animated, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 import {
-  AppText,
-  colors,
-  fonts,
-  Icon,
-  LinearFill,
+  Feature,
+  FEATURE,
   PageDots,
   Skeleton,
   SnapCarousel,
   u,
 } from '@dcl/ui-native';
-import { t } from '../i18n';
-import { Thumb } from './Thumb';
+import { mockArt } from './Thumb';
 import type { Banner } from './types';
 
-const WIDTH = 312;
-const HEIGHT = 175;
-/** Figma `Feature` 819:3463 (Selected): Shadow 0 → 90% over the bottom 84.5 dp. */
-const SCRIM = [
-  { offset: 0, color: colors.shadow, opacity: 0 },
-  { offset: 1, color: colors.shadow, opacity: 0.9 },
-];
-
-/** `State=Default` (the cards beside the settled one): 530×300 px of the 624×350 Selected, no text. */
-const SIDE_SCALE = 0.85;
 /** Pulls a side card in so its visible edge sits 8 dp from the settled one, as in Discover-FeatureBanners. */
-const SIDE_SHIFT = (WIDTH * (1 - SIDE_SCALE)) / 2;
-
-function BannerCard({
-  banner,
-  position,
-  active,
-  onOpen,
-  onJump,
-}: {
-  banner: Banner;
-  position: Animated.AnimatedInterpolation<number>;
-  active: boolean;
-  onOpen: () => void;
-  onJump: () => void;
-}) {
-  const overlay = position.interpolate({
-    inputRange: [-1, 0, 1],
-    outputRange: [0, 1, 0],
-  });
-  return (
-    <Animated.View
-      style={{
-        transform: [
-          {
-            translateX: position.interpolate({
-              inputRange: [-1, 0, 1],
-              outputRange: [u(SIDE_SHIFT), 0, -u(SIDE_SHIFT)],
-            }),
-          },
-          {
-            scale: position.interpolate({
-              inputRange: [-1, 0, 1],
-              outputRange: [SIDE_SCALE, 1, SIDE_SCALE],
-            }),
-          },
-        ],
-      }}
-    >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={banner.title || banner.place.title}
-        onPress={onOpen}
-      >
-        <Thumb
-          uri={banner.image}
-          width={u(WIDTH)}
-          height={u(HEIGHT)}
-          radius={4}
-        />
-        <Animated.View
-          style={[styles.scrim, { opacity: overlay }]}
-          pointerEvents="none"
-        >
-          <LinearFill stops={SCRIM} angle={180} />
-        </Animated.View>
-        <View style={styles.border} pointerEvents="none" />
-        <Animated.View
-          style={[StyleSheet.absoluteFill, { opacity: overlay }]}
-          pointerEvents={active ? 'box-none' : 'none'}
-        >
-          {banner.cta === 'arrow' ? (
-            <View style={styles.row}>
-              <AppText numberOfLines={2} style={styles.title}>
-                {banner.title}
-              </AppText>
-              <View style={styles.arrow}>
-                <Icon name="jump" size={12} />
-              </View>
-            </View>
-          ) : (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('COMMON_JUMP_IN')}
-              onPress={onJump}
-              style={styles.jump}
-            >
-              <AppText variant="button" style={styles.jumpText}>
-                {t('COMMON_JUMP_IN')}
-              </AppText>
-            </Pressable>
-          )}
-        </Animated.View>
-      </Pressable>
-    </Animated.View>
-  );
-}
+const SIDE_SHIFT = u((FEATURE.width * (1 - FEATURE.defaultScaleX)) / 2);
 
 /** Snap carousel of featured places with a dot indicator; the skeleton is one banner-sized block. */
 export function FeatureBanners({
@@ -132,8 +33,8 @@ export function FeatureBanners({
     return (
       <View style={styles.wrap}>
         <Skeleton
-          width={u(WIDTH)}
-          height={HEIGHT}
+          width={u(FEATURE.width)}
+          height={FEATURE.height}
           radius={4}
           style={styles.skeleton}
         />
@@ -147,19 +48,37 @@ export function FeatureBanners({
     <View style={styles.wrap}>
       <SnapCarousel
         data={banners}
-        itemWidth={WIDTH}
+        itemWidth={FEATURE.width}
         gap={8}
         inset={24}
         keyOf={b => b.id}
         onIndexChange={setIndex}
         renderItem={(banner, i, position) => (
-          <BannerCard
-            banner={banner}
-            position={position}
-            active={i === index}
-            onOpen={() => onOpen(banner)}
-            onJump={() => onJump(banner)}
-          />
+          <Animated.View
+            style={{
+              transform: [
+                {
+                  translateX: position.interpolate({
+                    inputRange: [-1, 0, 1],
+                    outputRange: [SIDE_SHIFT, 0, -SIDE_SHIFT],
+                  }),
+                },
+              ],
+            }}
+          >
+            <Feature
+              state={i === index ? 'Selected' : 'Default'}
+              transition={position.interpolate({
+                inputRange: [-1, 0, 1],
+                outputRange: [0, 1, 0],
+              })}
+              title={banner.title || banner.place.title}
+              image={banner.image.startsWith('mock:') ? '' : banner.image}
+              art={mockArt(banner.image)}
+              onPress={() => onOpen(banner)}
+              onJumpIn={() => onJump(banner)}
+            />
+          </Animated.View>
         )}
       />
       <View style={styles.dots}>
@@ -172,56 +91,5 @@ export function FeatureBanners({
 const styles = StyleSheet.create({
   wrap: { marginTop: u(19) },
   skeleton: { marginLeft: u(24) },
-  border: {
-    ...StyleSheet.absoluteFill,
-    borderRadius: u(4),
-    borderWidth: 0.5,
-    borderColor: colors.lavender,
-  },
-  scrim: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: u(84.5),
-    borderBottomLeftRadius: u(4),
-    borderBottomRightRadius: u(4),
-    overflow: 'hidden',
-  },
-  row: {
-    position: 'absolute',
-    left: u(16),
-    right: u(16),
-    bottom: u(15),
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: u(16),
-  },
-  title: {
-    flex: 1,
-    fontFamily: fonts.semibold,
-    fontSize: u(13),
-    color: colors.snow,
-  },
-  arrow: {
-    width: u(27),
-    height: u(27),
-    borderRadius: u(4),
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.ruby,
-  },
-  jump: {
-    position: 'absolute',
-    right: u(16),
-    bottom: u(16),
-    width: u(107),
-    height: u(24),
-    borderRadius: u(4),
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.ruby,
-  },
-  jumpText: { fontFamily: 'Inter-Bold', fontSize: u(10) },
   dots: { marginTop: u(8) },
 });

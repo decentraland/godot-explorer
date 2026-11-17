@@ -98,7 +98,6 @@ export function createPublicApi(
       image: place.image,
       title: place.title,
       place,
-      cta: 'arrow' as const,
     }));
 
   return {

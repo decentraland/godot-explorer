@@ -22,8 +22,6 @@ export type Banner = {
   image: string;
   title: string;
   place: Place;
-  /** `arrow`: square CTA that opens the sheet. `button`: JUMP IN straight from the banner. */
-  cta: 'arrow' | 'button';
 };
 
 export type Category = {
