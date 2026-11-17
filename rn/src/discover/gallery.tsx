@@ -1,5 +1,6 @@
 import '../hud/gallery';
 import { ReactNode } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NavProvider } from '../app/NavProvider';
 import { BottomNav } from '@dcl/ui-native';
 import { registerAlias, registerPreview } from '../gallery/registry';
@@ -25,7 +26,13 @@ import type { Place } from './api';
 const noop = () => {};
 const place = (id: string): Place => placeById(id)!;
 const PLAYED = [place('genesis'), place('wonder'), place('dejay')];
-const nav = <BottomNav active="explore" bottomInset={0} onChange={noop} />;
+function Nav() {
+  const insets = useSafeAreaInsets();
+  return (
+    <BottomNav active="explore" bottomInset={insets.bottom} onChange={noop} />
+  );
+}
+const nav = <Nav />;
 const HALLOWEEN = {
   skin: {
     key: 'halloween',

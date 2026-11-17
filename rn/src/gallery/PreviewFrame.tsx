@@ -17,7 +17,7 @@ signedInMockCoreForPreviews();
 
 // The browser has no status bar or gesture pill: web captures get a phone's, so they repeat. A device
 // keeps its own insets (notch, Dynamic Island, gesture bar), which is what a player sees.
-const PORTRAIT_INSETS = { top: 24, bottom: 16, left: 0, right: 0 };
+const PORTRAIT_INSETS = { top: 24, bottom: 13, left: 0, right: 0 };
 const LANDSCAPE_INSETS = { top: 0, bottom: 0, left: 0, right: 0 };
 
 const SETTLE_MS = 800;
