@@ -185,6 +185,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: fonts.bold,
     fontSize: u(24),
+    lineHeight: u(29),
     color: colors.snow,
     flexShrink: 1,
   },

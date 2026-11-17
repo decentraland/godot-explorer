@@ -220,6 +220,7 @@ const styles = StyleSheet.create({
   placeTitle: {
     fontFamily: fonts.semibold,
     fontSize: u(13),
+    lineHeight: u(15.75),
     color: colors.snow,
   },
   eventTitle: {
@@ -229,7 +230,12 @@ const styles = StyleSheet.create({
   },
   stats: { flexDirection: 'row', alignItems: 'center', gap: u(8) },
   stat: { flexDirection: 'row', alignItems: 'center', gap: u(2) },
-  small: { fontFamily: fonts.regular, fontSize: u(12), color: colors.snow },
+  small: {
+    fontFamily: fonts.regular,
+    fontSize: u(12),
+    lineHeight: u(14.5),
+    color: colors.snow,
+  },
   creator: { flexDirection: 'row', gap: u(2) },
   by: { color: colors.lavender },
   shrink: { flexShrink: 1 },

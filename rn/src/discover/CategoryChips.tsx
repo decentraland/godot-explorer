@@ -134,6 +134,6 @@ const styles = StyleSheet.create({
   },
   art: { width: u(42), height: u(42) },
   artLarge: { width: u(44), height: u(44) },
-  label: { fontFamily: fonts.semibold, fontSize: u(9) },
+  label: { fontFamily: fonts.semibold, fontSize: u(9), lineHeight: u(11) },
   pressed: { opacity: 0.85 },
 });
