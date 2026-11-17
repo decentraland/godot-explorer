@@ -41,17 +41,10 @@ describe('Figma names', () => {
     });
   });
 
-  it("gives Figma's Auto line height unless the style sets one", () => {
+  it('gives the Figma styles their Auto line height, not the legacy variants', () => {
     expect(textStyle(<AppText variant="H1">x</AppText>).lineHeight).toBeCloseTo(
       u(24) * 1.21,
     );
-    expect(
-      textStyle(
-        <AppText variant="H1" style={{ fontSize: 10 }}>
-          x
-        </AppText>,
-      ).lineHeight,
-    ).toBeCloseTo(12.1);
     expect(
       textStyle(
         <AppText variant="H1" style={{ lineHeight: 30 }}>
@@ -59,6 +52,9 @@ describe('Figma names', () => {
         </AppText>,
       ).lineHeight,
     ).toBe(30);
+    expect(
+      textStyle(<AppText variant="body">x</AppText>).lineHeight,
+    ).toBeUndefined();
   });
 
   it('points the Figma tokens at the current values', () => {

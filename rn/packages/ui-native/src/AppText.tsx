@@ -1,14 +1,15 @@
 import { ReactNode } from 'react';
-import { StyleProp, StyleSheet, Text, TextStyle } from 'react-native';
+import { StyleProp, Text, TextStyle } from 'react-native';
 import { colors, fonts } from './tokens';
 import { u } from './scale';
 
-/** Figma's Auto line height for Inter (ascender + descender), applied when a style sets none: Android
- * otherwise adds the font's padding to every line. */
+/** Figma's Auto line height for Inter (ascender + descender). The Figma styles below carry it: without
+ * one Android adds the font's padding to every line. The legacy variants keep the padding, because the
+ * screens built on them were tuned with it. */
 const AUTO_LINE_HEIGHT = 1.21;
 
 /** The Figma "Design System Mobile" text styles by name (Fonts page, 138:1290), in Text/primary.
- * An Auto line height is left to `AppText`; a fixed one is given. */
+ * An Auto line height becomes `fontSize × AUTO_LINE_HEIGHT`. */
 const figmaStyles = {
   H1: { fontFamily: fonts.bold, fontSize: u(24) },
   H2: { fontFamily: fonts.semibold, fontSize: u(21) },
@@ -162,7 +163,11 @@ const variants: Record<TextVariant, TextStyle> = {
   ...(Object.fromEntries(
     Object.entries(figmaStyles).map(([name, style]) => [
       name,
-      { color: colors.snow, ...style },
+      {
+        color: colors.snow,
+        lineHeight: style.fontSize * AUTO_LINE_HEIGHT,
+        ...style,
+      },
     ]),
   ) as Record<FigmaTextStyle, TextStyle>),
 };
@@ -178,22 +183,11 @@ export function AppText({
   children: ReactNode;
   numberOfLines?: number;
 }) {
-  const { fontSize, lineHeight } = StyleSheet.flatten([
-    variants[variant],
-    style,
-  ]);
   return (
     <Text
       allowFontScaling={false}
       numberOfLines={numberOfLines}
-      style={[
-        variants[variant],
-        style,
-        lineHeight === undefined &&
-          fontSize !== undefined && {
-            lineHeight: fontSize * AUTO_LINE_HEIGHT,
-          },
-      ]}
+      style={[variants[variant], style]}
     >
       {children}
     </Text>

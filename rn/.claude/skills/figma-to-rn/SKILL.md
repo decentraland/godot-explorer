@@ -72,10 +72,11 @@ existing token looks about right."
 
 **fontSize**: `text-[Npx]` in the Tailwind export → `u(N / 2)`. Trust it directly, it's literal.
 
-**`AppText` already applies Inter's normal leading** (`fontSize × lineHeightNormal`, 1.21, from
-`tokens.ts`) to every text that does not set `lineHeight`. Without it Android adds the font's own
-padding and each line grows a few px (a Discover card grew 11px). So: write `lineHeight` only when
-the Figma node's line box differs from normal, and use `AppText` rather than a bare `<Text>`.
+**Use the Figma text styles by name** (`<AppText variant="B4">`, `H4`, `Tags`…): they carry Figma's
+Auto line height (`fontSize × 1.21`, Inter's ascender + descender) or the style's fixed one. The legacy
+variants (`title`, `body`, `label`…) carry none, so Android adds the font's padding (a Discover card
+grew 11px); screens built on them were tuned with that padding, which is why it was not changed
+globally (Settings Audio drifted from 2.8 to 7px off Figma when it was).
 
 **lineHeight — the single most common mistake.** `get_design_context` shows `leading-[normal]` for
 most text in this file. That is **not** a literal value — it means "use the font's own default
