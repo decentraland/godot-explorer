@@ -28,6 +28,8 @@ export function InputUsername({
   maxLength,
   error,
   disabled = false,
+  defaultOpen = false,
+  onOpenChange,
 }: {
   label: string;
   uniqueName: boolean;
@@ -46,6 +48,9 @@ export function InputUsername({
   maxLength?: number;
   error?: string;
   disabled?: boolean;
+  /** The unique-name list starts open; `onOpenChange` reports it opening and closing. */
+  defaultOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const showUnique = uniqueName && tab === 'Unique';
   return (
@@ -66,6 +71,7 @@ export function InputUsername({
         {showUnique ? (
           <Dropdown
             label=""
+            accessibilityLabel={label}
             value={picked}
             options={names.map(name => ({
               value: name,
@@ -74,10 +80,13 @@ export function InputUsername({
             }))}
             onChange={onPick}
             disabled={disabled}
+            defaultOpen={defaultOpen}
+            onOpenChange={onOpenChange}
           />
         ) : (
           <TextField
             label=""
+            accessibilityLabel={label}
             value={value}
             onChangeText={onChangeText}
             placeholder={placeholder}

@@ -1,5 +1,4 @@
-import { StyleSheet, View } from 'react-native';
-import { AppText, colors, Dropdown, Tabs, TextField, u } from '@dcl/ui-native';
+import { InputUsername } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { LIMITS, validateText } from './logic';
 import type { UsernameTab } from './types';
@@ -28,7 +27,9 @@ export const usernameError = (value: string) => {
   return error ? t(ERRORS[error]) : undefined;
 };
 
-/** Username input: plain, with the `#tag` and counter, or UNIQUE NAME / NON-UNIQUE USERNAME tabs. */
+const TABS = { unique: 'Unique', nonUnique: 'Name' } as const;
+
+/** Username input (`Input/Username`): plain, with the `#tag`, or UNIQUE NAME / NON-UNIQUE USERNAME tabs. */
 export function UsernameField({
   variant,
   value,
@@ -56,70 +57,26 @@ export function UsernameField({
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
-  const title = t('PROFILE_USERNAME');
-  const tagged = variant !== 'plain';
-  const showInput = variant !== 'tabs' || tab === 'nonUnique';
   return (
-    <View>
-      {variant === 'tabs' && (
-        <>
-          <AppText variant="body" style={styles.title}>
-            {title}
-          </AppText>
-          <View style={styles.tabs}>
-            <Tabs
-              items={[
-                { key: 'unique', label: t('PROFILE_UNIQUE_NAME') },
-                { key: 'nonUnique', label: t('PROFILE_NON_UNIQUE_USERNAME') },
-              ]}
-              active={tab}
-              onChange={onTab}
-              gap={14}
-              labelSize={10}
-            />
-          </View>
-        </>
-      )}
-      {showInput ? (
-        <TextField
-          label={variant === 'tabs' ? '' : title}
-          value={value}
-          onChangeText={onChange}
-          onClear={() => onChange('')}
-          placeholder={t('PROFILE_USERNAME_PLACEHOLDER')}
-          maxLength={LIMITS.username}
-          showCounter={tagged}
-          counterBelow
-          error={usernameError(value)}
-          disabled={disabled}
-          autoCapitalize="none"
-          suffix={
-            tagged ? (
-              <AppText variant="body" style={styles.tag}>{`#${tag}`}</AppText>
-            ) : undefined
-          }
-        />
-      ) : (
-        <Dropdown
-          label=""
-          value={picked}
-          options={names.map(name => ({
-            value: name,
-            label: name,
-            icon: 'nameVerified',
-          }))}
-          onChange={onPick}
-          disabled={disabled}
-          defaultOpen={defaultOpen}
-          onOpenChange={onOpenChange}
-        />
-      )}
-    </View>
+    <InputUsername
+      label={t('PROFILE_USERNAME')}
+      uniqueName={variant === 'tabs'}
+      tab={TABS[tab]}
+      onTabChange={next => onTab(next === 'Unique' ? 'unique' : 'nonUnique')}
+      uniqueTabLabel={t('PROFILE_UNIQUE_NAME')}
+      nameTabLabel={t('PROFILE_NON_UNIQUE_USERNAME')}
+      names={names}
+      picked={picked}
+      onPick={onPick}
+      value={value}
+      onChangeText={onChange}
+      suffix={variant === 'plain' ? undefined : `#${tag}`}
+      placeholder={t('PROFILE_USERNAME_PLACEHOLDER')}
+      maxLength={LIMITS.username}
+      error={usernameError(value)}
+      disabled={disabled}
+      defaultOpen={defaultOpen}
+      onOpenChange={onOpenChange}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  title: { fontSize: u(15), fontFamily: 'Inter-Medium', color: colors.snow },
-  tabs: { alignSelf: 'flex-start', marginTop: u(6), marginBottom: u(8) },
-  tag: { marginHorizontal: u(8), color: colors.silver, fontSize: u(13) },
-});

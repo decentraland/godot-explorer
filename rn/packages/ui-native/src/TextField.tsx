@@ -35,6 +35,7 @@ export function TextField({
   multilineHeight,
   autoFocus = false,
   secureTextEntry = false,
+  accessibilityLabel,
 }: {
   label: string;
   value: string;
@@ -59,6 +60,8 @@ export function TextField({
   multilineHeight?: number;
   autoFocus?: boolean;
   secureTextEntry?: boolean;
+  /** Read by screen readers when the visible label is drawn elsewhere (defaults to `label`). */
+  accessibilityLabel?: string;
 }) {
   const [focused, setFocused] = useState(false);
   const showClear = focused && value.length > 0 && !disabled && !!onClear;
@@ -109,7 +112,7 @@ export function TextField({
         ]}
       >
         <TextInput
-          accessibilityLabel={label}
+          accessibilityLabel={accessibilityLabel ?? label}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}

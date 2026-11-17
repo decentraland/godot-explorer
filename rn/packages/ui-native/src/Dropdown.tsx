@@ -37,6 +37,7 @@ export function Dropdown({
   maxVisibleRows = 5,
   defaultOpen = false,
   onOpenChange,
+  accessibilityLabel,
 }: {
   label: string;
   value: string | null;
@@ -52,6 +53,8 @@ export function Dropdown({
   defaultOpen?: boolean;
   /** Lets a parent raise this field above its siblings while the list is open. */
   onOpenChange?: (open: boolean) => void;
+  /** Read by screen readers when the visible label is drawn elsewhere (defaults to `label`). */
+  accessibilityLabel?: string;
 }) {
   const [open, setOpenState] = useState(defaultOpen);
   const setOpen = (next: boolean) => {
@@ -124,7 +127,7 @@ export function Dropdown({
         {direction === 'up' && list}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={label}
+          accessibilityLabel={accessibilityLabel ?? label}
           accessibilityState={{ expanded: isOpen, disabled: locked }}
           disabled={locked}
           onPress={() => setOpen(!open)}

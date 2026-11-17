@@ -5,7 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { setCoreForTests } from '../src/core';
 import { createMockCore } from '../src/core/mock';
 import type { CoreApi } from '../src/core';
-import { Button, LinkRow } from '@dcl/ui-native';
+import { Button, LinkRow, MenuNavItem } from '@dcl/ui-native';
 import { en } from '../src/i18n/en';
 import { createMockApi, MockSeed } from '../src/settings/mockApi';
 import { SettingsScreen } from '../src/settings/SettingsScreen';
@@ -119,7 +119,7 @@ describe('portrait master-detail', () => {
     }
     expect(out).not.toContain('Dev Tools');
     expect(out).toContain('Version 1.14.0');
-    expect(tree.root.findAllByType(LinkRow)).toHaveLength(7);
+    expect(tree.root.findAllByType(MenuNavItem)).toHaveLength(7);
   });
 
   it('opens a detail, shows its title, and goes back', async () => {
@@ -404,7 +404,7 @@ describe('landscape split', () => {
     expect(out).toContain('PERFORMANCE');
     expect(out).toContain('Version 1.14.0');
     const selected = tree.root
-      .findAllByType(LinkRow)
+      .findAllByType(MenuNavItem)
       .filter(r => r.props.selected);
     expect(selected).toHaveLength(1);
   });
