@@ -24,6 +24,7 @@ export type { UsernameTab } from './InputUsername';
 export { MenuNavItem } from './MenuNavItem';
 export { ModalSpecial } from './ModalSpecial';
 export { ProfileAttribute } from './ProfileAttribute';
+export { ScrollFade } from './ScrollFade';
 export { SettingsRow } from './SettingsRow';
 export { Checkbox } from './Checkbox';
 export { Chip } from './Chip';

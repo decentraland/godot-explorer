@@ -10,6 +10,7 @@ import {
   MenuNavItem,
   ModalSpecial,
   ProfileAttribute,
+  ScrollFade,
   SettingsRow,
   Switch,
 } from '@dcl/ui-native';
@@ -144,6 +145,15 @@ describe('Figma components added to the DS', () => {
     );
     expect(tree.root.findAllByType(TextInput)).toHaveLength(1);
     expect(texts(tree.root)).not.toContain('UNIQUE NAME');
+  });
+
+  it('ScrollFade wraps its content', () => {
+    const tree = render(
+      <ScrollFade edge="Both">
+        <Text>row</Text>
+      </ScrollFade>,
+    );
+    expect(texts(tree.root)).toEqual(['row']);
   });
 
   it('ModalSpecial wires both CTAs', () => {

@@ -12,8 +12,11 @@ import {
   ModalSpecial,
   ProfileAttribute,
   ProfileIconType,
+  ScrollFade,
   SettingsRow,
   Slider,
+  radius,
+  color,
   space,
   Switch,
   u,
@@ -55,6 +58,13 @@ function Additions() {
           <IconProfile key={type} type={type} />
         ))}
       </View>
+      <ScrollFade edge="Both">
+        <ScrollView horizontal contentContainerStyle={styles.fadeRow}>
+          {PROFILE_TYPES.map(type => (
+            <View key={type} style={styles.tile} />
+          ))}
+        </ScrollView>
+      </ScrollFade>
       <View style={styles.row}>
         <ProfileAttribute icon="Country" title="Country" value="Argentina" />
         <ProfileAttribute icon="Language" title="Language" value="Spanish" />
@@ -167,6 +177,13 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: space.lg,
+  },
+  fadeRow: { gap: space.xs },
+  tile: {
+    width: u(40),
+    height: u(40),
+    borderRadius: radius.lg,
+    backgroundColor: color.action.selected,
   },
   media: { width: u(344), height: u(274), marginTop: -u(9.5) },
 });
