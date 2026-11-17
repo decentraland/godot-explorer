@@ -42,7 +42,6 @@ export const discover = {
   DISCOVER_NOTHING_HERE: 'It seems there is nothing to show here...',
   DISCOVER_COORDINATES_PLACE: 'Place in {coords}',
   DISCOVER_LOAD_MORE: 'Load more',
-  DISCOVER_BACK: 'Back',
   DISCOVER_CLOSE: 'Close',
   DISCOVER_EXPAND: 'Expand',
   DISCOVER_CONNECTION_LOST: 'Connection lost',

@@ -12,11 +12,15 @@ import { t } from './i18n';
  * TitleButton, where `action` is a Secondary outline button, and Back (`onBack`: the Back icon alone). Orientation follows the window.
  * Figma Header: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=624-57
  */
+const STATUS_BAR = u(26);
+
 export function Header({
   title,
   onBack,
   onClose,
   onSearch,
+  searchDisabled = false,
+  topInset = 0,
   search,
   credits,
   onTicket,
@@ -28,6 +32,11 @@ export function Header({
   onClose?: () => void;
   /** Shows the Search icon; the screen switches to `search` (SearchOpen) itself. */
   onSearch?: () => void;
+  /** Dims the Search icon and ignores taps (no connection); not a Figma state. */
+  searchDisabled?: boolean;
+  /** The screen's top safe-area inset. The 176px frame already holds a 26dp status bar; a taller
+   * inset (punch-hole camera, notch) pushes the header down by the difference. */
+  topInset?: number;
   /** SearchOpen: back + the search field in place of the title. */
   search?: {
     value: string;
@@ -41,6 +50,11 @@ export function Header({
   action?: { label: string; onPress: () => void };
 }) {
   const { width, height } = useWindowDimensions();
+  const extra = Math.max(0, topInset - STATUS_BAR);
+  const portraitBox = {
+    paddingTop: u(20) + extra,
+    minHeight: u(88) + extra,
+  };
   if (width > height && onBack) {
     return (
       <View style={styles.landscapeBack}>
@@ -71,7 +85,7 @@ export function Header({
   }
   if (onClose) {
     return (
-      <View style={[styles.portrait, styles.closeOnly]}>
+      <View style={[styles.portrait, portraitBox, styles.closeOnly]}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('APP_CLOSE')}
@@ -85,7 +99,7 @@ export function Header({
   }
   if (search) {
     return (
-      <View style={[styles.portrait, styles.searchOpen]}>
+      <View style={[styles.portrait, portraitBox, styles.searchOpen]}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('APP_BACK')}
@@ -107,7 +121,7 @@ export function Header({
     );
   }
   return (
-    <View style={[styles.portrait, onBack && styles.portraitBack]}>
+    <View style={[styles.portrait, portraitBox, onBack && styles.portraitBack]}>
       <View style={styles.titleGroup}>
         {onBack && (
           <Pressable
@@ -128,8 +142,11 @@ export function Header({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t('APP_SEARCH')}
+            accessibilityState={{ disabled: searchDisabled }}
+            disabled={searchDisabled}
             hitSlop={u(8)}
             onPress={onSearch}
+            style={searchDisabled && styles.disabled}
           >
             <Icon name="search" size={30} />
           </Pressable>
@@ -168,7 +185,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    paddingTop: u(20),
     paddingBottom: u(12),
     paddingHorizontal: u(24),
   },
@@ -190,6 +206,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   actions: { flexDirection: 'row', alignItems: 'center', gap: u(16) },
+  disabled: { opacity: 0.4 },
   credits: {
     height: u(30),
     paddingHorizontal: u(9),

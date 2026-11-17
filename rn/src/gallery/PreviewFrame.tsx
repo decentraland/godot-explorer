@@ -1,5 +1,11 @@
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
-import { LayoutChangeEvent, LogBox, StyleSheet, View } from 'react-native';
+import {
+  LayoutChangeEvent,
+  LogBox,
+  Platform,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { signedInMockCoreForPreviews } from '../core';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { colors } from '@dcl/ui-native';
@@ -9,7 +15,8 @@ import { Orientation, setOrientation } from '../platform/orientation';
 LogBox.ignoreAllLogs();
 signedInMockCoreForPreviews();
 
-// A phone's status bar and gesture pill, the same on every device and browser; a scene has neither.
+// The browser has no status bar or gesture pill: web captures get a phone's, so they repeat. A device
+// keeps its own insets (notch, Dynamic Island, gesture bar), which is what a player sees.
 const PORTRAIT_INSETS = { top: 24, bottom: 16, left: 0, right: 0 };
 const LANDSCAPE_INSETS = { top: 0, bottom: 0, left: 0, right: 0 };
 
@@ -73,17 +80,22 @@ export function PreviewFrame({
     timer.current = setTimeout(markReady, settleMs);
   };
 
-  return (
+  const frame = (
+    <View style={styles.root} testID="gallery-host" onLayout={onLayout}>
+      {children}
+      {ready ? (
+        <View accessible testID="preview-ready" style={styles.flag} />
+      ) : null}
+    </View>
+  );
+  return Platform.OS === 'web' ? (
     <SafeAreaInsetsContext.Provider
       value={orientation === 'landscape' ? LANDSCAPE_INSETS : PORTRAIT_INSETS}
     >
-      <View style={styles.root} testID="gallery-host" onLayout={onLayout}>
-        {children}
-        {ready ? (
-          <View accessible testID="preview-ready" style={styles.flag} />
-        ) : null}
-      </View>
+      {frame}
     </SafeAreaInsetsContext.Provider>
+  ) : (
+    frame
   );
 }
 

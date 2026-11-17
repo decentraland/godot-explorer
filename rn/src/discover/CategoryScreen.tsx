@@ -48,23 +48,22 @@ export function CategoryScreen({
 
   return (
     <View style={styles.root}>
-      <View style={{ paddingTop: insets.top }}>
-        <Header
-          title={category.name}
-          onBack={onBack}
-          onSearch={() => setSearching(true)}
-          search={
-            searching
-              ? {
-                  value: text,
-                  onChangeText: setText,
-                  onClose: closeSearch,
-                  placeholder: t('DISCOVER_SEARCH'),
-                }
-              : undefined
-          }
-        />
-      </View>
+      <Header
+        title={category.name}
+        topInset={insets.top}
+        onBack={onBack}
+        onSearch={() => setSearching(true)}
+        search={
+          searching
+            ? {
+                value: text,
+                onChangeText: setText,
+                onClose: closeSearch,
+                placeholder: t('DISCOVER_SEARCH'),
+              }
+            : undefined
+        }
+      />
       {state.status === 'error' ? (
         <MessageState
           glyph="search"

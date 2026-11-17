@@ -1,11 +1,11 @@
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { Keyboard, StyleSheet, View } from 'react-native';
-import { colors } from '@dcl/ui-native';
+import { colors, Header } from '@dcl/ui-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { t } from '../i18n';
 import { Place } from './api';
 import { CategoryScreen } from './CategoryScreen';
 import { DiscoverBackground } from './DiscoverBackground';
-import { DiscoverHeader } from './DiscoverHeader';
 import { DiscoverHome } from './DiscoverHome';
 import { usePlayed } from './history';
 import { MessageState } from './MessageState';
@@ -66,6 +66,7 @@ export function DiscoverScreen({
   startScrolled?: boolean;
 }) {
   const open = useOpeners();
+  const insets = useSafeAreaInsets();
   const history = usePlayed();
   const [searching, setSearching] = useState(startSearch !== undefined);
   const [category, setCategory] = useState<Category | null>(
@@ -122,8 +123,9 @@ export function DiscoverScreen({
     }
     return (
       <>
-        <DiscoverHeader
+        <Header
           title={t('DISCOVER_DISCOVER')}
+          topInset={insets.top}
           onBack={onBack}
           searchDisabled={offline.offline}
           onSearch={() => setSearching(true)}
