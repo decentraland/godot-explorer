@@ -1,6 +1,6 @@
 import { ReactNode, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
-import { colors } from './tokens';
+import { alpha, colors } from './tokens';
 import { u } from './scale';
 
 export function indexFromOffset(
@@ -34,6 +34,7 @@ export function PageDots({
           accessibilityState={{ selected: i === index }}
           style={[
             styles.dot,
+            round && styles.dotRoundIdle,
             i === index && (round ? styles.dotRound : styles.dotActive),
           ]}
         />
@@ -118,6 +119,8 @@ const styles = StyleSheet.create({
     borderRadius: u(3),
     backgroundColor: colors.white30,
   },
+  // Discover's highlights dots: Black 40% idle, Lavender Light selected.
+  dotRoundIdle: { backgroundColor: alpha['black-40'] },
   dotRound: { backgroundColor: colors.lavender },
   dotActive: { width: u(16), backgroundColor: colors.snow },
 });
