@@ -29,6 +29,7 @@ extends Node
 @export var min_sun_elevation_degrees: float = 12.0
 
 var _moon_smooth_dir := Vector3(0.0, 1.0, 0.0)
+var _scene_skybox: SceneSkybox
 
 @onready var world_environment: WorldEnvironment = $WorldEnvironment
 @onready var main_light: DirectionalLight3D = $SkyLights/MainLight
@@ -43,9 +44,21 @@ func _ready():
 	anim_player.play("light_cycle")
 	anim_player.pause()
 
+	_scene_skybox = SceneSkybox.new(self)
+	Global.sdk_skybox_changed.connect(_on_sdk_skybox_changed)
+	_scene_skybox.apply_config(Global.sdk_skybox_config, Global.sdk_skybox_scene_id)
+
 	if Global.is_xr():
 		Global.loading_started.connect(self._on_loading_started)
 		Global.loading_finished.connect(self._on_loading_finished)
+
+
+func _exit_tree() -> void:
+	_scene_skybox.restore()
+
+
+func _on_sdk_skybox_changed(config_json: String, scene_id: int) -> void:
+	_scene_skybox.apply_config(config_json, scene_id)
 
 
 func on_scene_runner_child_entered_tree(node: Node3D):
@@ -195,3 +208,7 @@ func _process(_delta: float) -> void:
 		)
 	if fog_color_gradient:
 		world_environment.environment.fog_light_color = fog_color_gradient.sample(skybox_time)
+
+	# Scene overrides run last: they replace whichever time-of-day value the cycle just
+	# wrote (sun color/position, ambient, fog, sky LUTs) and never touch the light gate.
+	_scene_skybox.apply_frame(skybox_time)
