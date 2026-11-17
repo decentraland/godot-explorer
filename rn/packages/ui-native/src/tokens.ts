@@ -83,6 +83,71 @@ export const colors = {
   lavender50: 'rgba(232,185,255,0.5)',
 } as const;
 
+/** The Figma "Color" collection (Design System Mobile, Colors page 1:154) by its own names: `text/link`
+ * is `color.text.link`. Each points at the palette above. */
+export const color = {
+  background: {
+    canvas: colors.shadow,
+    elevated: colors.paleBlack,
+    brand: colors.brand,
+  },
+  surface: {
+    overlay: colors.black40,
+    'overlay-pressed': colors.black60,
+    'overlay-disabled': colors.black30,
+    subtle: colors.white10,
+    'subtle-strong': colors.white20,
+    inverse: colors.snow,
+    'inverse-pressed': colors.snow70,
+    'inverse-disabled': colors.snow10,
+    modal: colors.modal,
+    'modal-glow': colors.mythic,
+    'modal-special': '#160338',
+    'modal-special-glow': '#AE59FF',
+    scrim: colors.scrim,
+    nametag: 'rgba(22,21,24,0.7)',
+    navbar: colors.navbar,
+    menu: colors.menu,
+    selected: 'rgba(232,185,255,0.3)',
+  },
+  text: {
+    primary: colors.snow,
+    secondary: colors.pearl,
+    placeholder: colors.white50,
+    disabled: colors.textDisabled,
+    inverse: colors.shadow,
+    accent: colors.ruby,
+    username: '#34FEE6',
+    link: colors.link,
+  },
+  border: {
+    default: colors.snow,
+    disabled: colors.textDisabled,
+    accent: colors.ruby,
+    subtle: colors.white30,
+    menu: colors.lavender70,
+  },
+  action: {
+    primary: colors.ruby,
+    'primary-pressed': colors.rubyPressed,
+    'primary-disabled': colors.rubyDisabled,
+    selected: colors.lavender,
+  },
+  status: {
+    success: '#34CE77',
+    online: colors.green,
+    danger: colors.danger,
+    live: colors.ruby,
+    notification: colors.ruby,
+  },
+  icon: {
+    default: colors.snow,
+    secondary: colors.pearl,
+    disabled: colors.textDisabled,
+    danger: colors.danger,
+  },
+} as const;
+
 /** Figma `Gradients/Light Rainbow` (Featured tag, selected avatar card); CSS 147.6° = `LinearFill` 32. */
 export const lightRainbow = [
   { offset: 0, color: '#FFBC5B' },
@@ -152,6 +217,19 @@ export const space = {
   lg: u(12),
   xl: u(16),
   '2xl': u(24),
+  '10': u(5),
+  '14': u(7),
+  '18': u(9),
+  '20': u(10),
+  '26': u(13),
+  '30': u(15),
+  '40': u(20),
+  '44': u(22),
+  '50': u(25),
+  '54': u(27),
+  '56': u(28),
+  '60': u(30),
+  '64': u(32),
 } as const;
 export const radius = {
   xs: u(2),
@@ -162,6 +240,7 @@ export const radius = {
   '2xl': u(12),
   pill: 999,
 } as const;
+/** @deprecated Use `control` (Figma `control/*`). */
 export const controlHeight = {
   lg: u(48),
   md: u(37),
@@ -171,11 +250,30 @@ export const controlHeight = {
   tag: u(21),
   badge: u(16),
 } as const;
+/** @deprecated Use `icon` (Figma `icon/*` sizes). */
 export const iconSize = {
   buttonLg: 16,
   buttonMd: 14,
   buttonSm: 12,
   iconButton: 20,
+  pill: 16,
+  tag: 13,
+} as const;
+/** The Figma "Size" collection: `control/pill-lg` is `control['pill-lg']`. */
+export const control = {
+  lg: u(48),
+  md: u(37),
+  sm: u(27),
+  'pill-lg': u(30),
+  'pill-md': u(28),
+  tag: u(21),
+  badge: u(16),
+} as const;
+export const icon = {
+  'button-lg': 16,
+  'button-md': 14,
+  'button-sm': 12,
+  'icon-button': 20,
   pill: 16,
   tag: 13,
 } as const;

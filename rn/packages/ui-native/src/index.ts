@@ -9,6 +9,7 @@ export {
 export type { DetailType } from './DiscoverCard';
 export { ActionSquareButton } from './ActionSquareButton';
 export { AppText } from './AppText';
+export type { FigmaTextStyle, TextVariant } from './AppText';
 export { Badge } from './Badge';
 export { BottomNav } from './BottomNav';
 export type { NavKey } from './BottomNav';
@@ -68,10 +69,13 @@ export { WarningBanner } from './WarningBanner';
 export { SCALE, u } from './scale';
 export {
   border,
+  color,
   colors,
+  control,
   controlHeight,
   elevation,
   fonts,
+  icon,
   iconSize,
   layout,
   minTouchTarget,
