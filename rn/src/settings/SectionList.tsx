@@ -57,7 +57,8 @@ export function VersionRow({
 }
 
 const styles = StyleSheet.create({
-  listRows: { gap: u(15) },
+  // Figma: 30px between rows and 80px from the title to the first row's text.
+  listRows: { gap: u(15), paddingTop: u(6.5) },
   tightRows: { gap: u(4) },
   version: { flexDirection: 'row', alignItems: 'center', gap: u(8) },
   versionText: { color: colors.lavender, fontSize: u(12) },
