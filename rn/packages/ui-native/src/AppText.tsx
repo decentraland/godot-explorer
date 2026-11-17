@@ -1,7 +1,11 @@
 import { ReactNode } from 'react';
-import { StyleProp, Text, TextStyle } from 'react-native';
+import { StyleProp, StyleSheet, Text, TextStyle } from 'react-native';
 import { colors, fonts } from './tokens';
 import { u } from './scale';
+
+/** Figma's Auto line height for Inter (ascender + descender), applied when a style sets none: Android
+ * otherwise adds the font's padding to every line. */
+const AUTO_LINE_HEIGHT = 1.21;
 
 export type TextVariant =
   | 'title'
@@ -46,11 +50,22 @@ export function AppText({
   children: ReactNode;
   numberOfLines?: number;
 }) {
+  const { fontSize, lineHeight } = StyleSheet.flatten([
+    variants[variant],
+    style,
+  ]);
   return (
     <Text
       allowFontScaling={false}
       numberOfLines={numberOfLines}
-      style={[variants[variant], style]}
+      style={[
+        variants[variant],
+        style,
+        lineHeight === undefined &&
+          fontSize !== undefined && {
+            lineHeight: fontSize * AUTO_LINE_HEIGHT,
+          },
+      ]}
     >
       {children}
     </Text>
