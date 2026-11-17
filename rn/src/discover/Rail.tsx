@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { AppText, colors, u } from '@dcl/ui-native';
+import { AppText, color, colors, space, u } from '@dcl/ui-native';
 import { LoadMoreCard, PlaceSkeleton } from './MoreCards';
 import type { RailState } from './rails';
 
@@ -12,14 +12,16 @@ export function SectionTitle({
   count?: number;
 }) {
   return (
-    <AppText variant="title" style={styles.title}>
-      {title}
-      {count !== undefined ? (
-        <AppText variant="title" style={styles.count}>
-          {` ${count}`}
-        </AppText>
-      ) : null}
-    </AppText>
+    <View style={styles.titleRow}>
+      <AppText variant="H3" style={styles.title}>
+        {title}
+        {count !== undefined ? (
+          <AppText variant="H3" style={styles.count}>
+            {` ${count}`}
+          </AppText>
+        ) : null}
+      </AppText>
+    </View>
   );
 }
 
@@ -98,9 +100,16 @@ export function Rail<T>({
 }
 
 const styles = StyleSheet.create({
-  section: { marginTop: u(18) },
+  // Figma: 40px between sections; the title sits in a 40px row, 20px above the cards.
+  section: { marginTop: space['40'] },
   cards: { paddingBottom: u(8) },
-  title: { fontSize: u(16), paddingHorizontal: u(24), marginBottom: u(8.5) },
-  count: { fontSize: u(16), color: colors.lavender },
+  titleRow: {
+    height: space['40'],
+    justifyContent: 'center',
+    paddingHorizontal: space['2xl'],
+    marginBottom: space['20'],
+  },
+  title: { color: color.text.secondary },
+  count: { color: colors.lavender },
   rail: { paddingHorizontal: u(24), gap: u(16) },
 });
