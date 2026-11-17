@@ -72,6 +72,11 @@ existing token looks about right."
 
 **fontSize**: `text-[Npx]` in the Tailwind export → `u(N / 2)`. Trust it directly, it's literal.
 
+**`AppText` already applies Inter's normal leading** (`fontSize × lineHeightNormal`, 1.21, from
+`tokens.ts`) to every text that does not set `lineHeight`. Without it Android adds the font's own
+padding and each line grows a few px (a Discover card grew 11px). So: write `lineHeight` only when
+the Figma node's line box differs from normal, and use `AppText` rather than a bare `<Text>`.
+
 **lineHeight — the single most common mistake.** `get_design_context` shows `leading-[normal]` for
 most text in this file. That is **not** a literal value — it means "use the font's own default
 metric," which for Inter is ≈1.2× the font size, **not** 1.0×. Reading `leading-[normal]` as
@@ -79,11 +84,11 @@ metric," which for Inter is ≈1.2× the font size, **not** 1.0×. Reading `lead
 
 - **A node references a named Figma text style** (the design-context response appends a line like
   `These styles are contained in the design: ... Btn: Font(family: "Inter", style: Bold, size: 30,
-  weight: 700, lineHeight: 100, letterSpacing: 0)`). That `lineHeight: 100` is **literal and
-  authoritative** — 100% means equal to font size, exactly. Use it as-is, no back-calculation
-  needed. This is how the entry-flow's button labels confirmed `lineHeight == fontSize` really is
-  correct there (unlike the title/tagline/disclaimer, which have no such named style and default
-  to `leading-normal`).
+  weight: 700, lineHeight: 100, letterSpacing: 0)`). Read that `lineHeight: 100` against the
+  node: when the generated code says `leading-[normal]` it is Figma's intrinsic 100% (Auto), i.e.
+  normal leading — the Discover card's `Pill/Large` reads `100` and only ×1.21 lines the grid up
+  within 1px on Android. Only a node whose code carries an explicit `leading-[Npx]`/`leading-none`
+  means a fixed line box (the entry-flow button labels).
 - **No named style, just `leading-[normal]`**: back-calculate the real line-height from
   `get_metadata`'s resolved height, because that's the only place the literal number lives:
   1. Get the node's resolved `height` and figure out how many lines it wraps to (check the

@@ -77,6 +77,8 @@ Full purple scale (50→550): `#F3ECF9 #DCCBEC #C5AADF #AE8AD2 #966AC5 #7F48B7 #
 The scale's own label states the line-height convention directly: **"Font size / Inter: P1.2 o
 1.25"** — i.e. Figma's own spec confirms the ≈1.2× `leading-normal` heuristic from §2 of the main
 skill file, not just something inferred from entry-flow examples.
+Code: `lineHeightNormal` (1.21, Inter's ascender + descender) in `tokens.ts`; `AppText` derives
+`lineHeight` from the resolved `fontSize` whenever the style does not set one.
 
 | Name | Size | Weight |
 |---|---|---|
