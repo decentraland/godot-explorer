@@ -3,6 +3,19 @@ import { AppText, categoryTile, fonts, RadialFill, u } from '@dcl/ui-native';
 import type { Category } from './types';
 
 // A disc of radius 41 blurred by 14 inside its 138px box, sampled along the radius.
+/** Figma blends the shadow with multiply; over the tile's opaque fill that is the per-channel product,
+ * drawn normally so every platform gets it (`mixBlendMode` did not apply on device). */
+function multiply(base: string, over: string): string {
+  const channel = (hex: string, i: number) =>
+    parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16);
+  const out = [0, 1, 2].map(i =>
+    Math.round((channel(base, i) * channel(over, i)) / 255)
+      .toString(16)
+      .padStart(2, '0'),
+  );
+  return `#${out.join('')}`;
+}
+
 const SHADOW_FALLOFF = [
   [0, 0.99],
   [0.3, 0.89],
@@ -52,7 +65,7 @@ function CategoryTile({
             stops={SHADOW_FALLOFF.map(([offset, opacity]) => ({
               offset,
               opacity,
-              color: tone.shadow,
+              color: multiply(tone.fill, tone.shadow),
             }))}
           />
         </View>
@@ -130,7 +143,6 @@ const styles = StyleSheet.create({
     height: SHADOW,
     left: (TILE - SHADOW) / 2,
     top: (TILE - SHADOW) / 2 + u(0.5),
-    mixBlendMode: 'multiply',
   },
   art: { width: u(42), height: u(42) },
   artLarge: { width: u(44), height: u(44) },
