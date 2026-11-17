@@ -5,7 +5,9 @@ import { colors, fonts } from './tokens';
 import { u } from './scale';
 
 /** Figma `Button/Link`: an underlined `text/link` label (Inter Medium 24) for secondary actions
- * such as "Resend code" — 54px tall touch area, width hugs the label, 70% opacity while pressed. */
+ * such as "Resend code" — 54px tall touch area, width hugs the label, 70% opacity while pressed.
+ * Figma Button/Link: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=706-4763
+ */
 export function LinkButton({
   label,
   onPress,

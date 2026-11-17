@@ -10,7 +10,11 @@ export const counterLabel = (length: number, max: number): string =>
   `${length}/${max}`;
 
 /** Figma `Input/Labeled` + `Input/Field`: label, optional counter, clear X while focused, and the
- * Focus (Lavender Light) / Error (`status/danger`) borders. Disabled is a palette state, not a dim. */
+ * Focus (Lavender Light) / Error (`status/danger`) borders. Disabled is a palette state, not a dim.
+ * Figma Input/Field: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=562-4820
+ * Figma Input/Labeled: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=562-4890
+ * Figma Input/Counter: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=562-5035
+ */
 export function TextField({
   label,
   value,

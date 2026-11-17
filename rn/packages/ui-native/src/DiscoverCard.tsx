@@ -36,7 +36,9 @@ const DETAIL_ICON: Record<DetailType, IconName> = {
   duration: 'clock',
 };
 
-/** Figma `Detail`: an `Icon/Base` 32 and an `Input/Value` Regular 30 value; World truncates at 148. */
+/** Figma `Detail`: an `Icon/Base` 32 and an `Input/Value` Regular 30 value; World truncates at 148.
+ * Figma Detail: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=790-3188
+ */
 export function DetailRow({
   type,
   value,
@@ -68,7 +70,9 @@ type Common = {
 };
 
 /** Figma `Cards-Discovery`: Places (image, title, players + likes) and Event (image with the tag
- * row, title, "by" creator). `ImageNotFound` is the deep-purple box with the crossed image. */
+ * row, title, "by" creator). `ImageNotFound` is the deep-purple box with the crossed image.
+ * Figma Cards-Discovery: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=790-3141
+ */
 export function DiscoverCard(
   props: Common &
     (
@@ -159,7 +163,9 @@ export function DiscoverCard(
   );
 }
 
-/** Figma `Card-Discover-Skeleton`: the loaded card's exact size, built from `Skeleton`. */
+/** Figma `Card-Discover-Skeleton`: the loaded card's exact size, built from `Skeleton`.
+ * Figma Card-Discover-Skeleton: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=806-88
+ */
 export function DiscoverCardSkeleton({ type }: { type: 'place' | 'event' }) {
   const size = DISCOVER_CARD[type];
   const event = type === 'event';

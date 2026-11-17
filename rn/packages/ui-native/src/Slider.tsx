@@ -23,7 +23,9 @@ export function sliderValueFromX(
 const THUMB_W = u(16);
 
 /** Figma `Control/Slider` under an `Input/Label` Value row: Black 40% track, Ruby fill, Snow thumb
- * with `Elevation/Down`; disabled swaps both for Pale Black instead of dimming. */
+ * with `Elevation/Down`; disabled swaps both for Pale Black instead of dimming.
+ * Figma Control/Slider: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=562-9048
+ */
 export function Slider({
   label,
   value,

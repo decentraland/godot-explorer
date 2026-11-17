@@ -13,7 +13,9 @@ import { u } from './scale';
 export type SheetHeight = 'hug' | 'fixed' | 'collapsed';
 
 /** Figma `Sheet` 841:1057 laid out in place (no drag; `BottomSheet` is the draggable one).
- * `fixed` fills the height the caller gives it and scrolls the content; `collapsed` is the handle alone. */
+ * `fixed` fills the height the caller gives it and scrolls the content; `collapsed` is the handle alone.
+ * Figma Sheet: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=841-1057
+ */
 export function Sheet({
   handle = true,
   height = 'hug',
@@ -76,7 +78,9 @@ export function SheetGlow() {
 }
 
 /** Figma `Sheet/Footer` 841:1039: 100 dp of Purple 500 with the button row 9 dp from the top; the
- * bottom keeps 20 dp or the safe-area inset, whichever is larger. */
+ * bottom keeps 20 dp or the safe-area inset, whichever is larger.
+ * Figma Sheet/Footer: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=841-1039
+ */
 export function SheetFooter({
   bottomInset = 0,
   children,

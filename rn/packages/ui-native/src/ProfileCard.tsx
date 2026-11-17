@@ -31,7 +31,9 @@ const PEACH = glow(
 );
 
 /** Figma `Card-Profile` 825:7523 (75 dp wide): a wearable or emote `Cards-Wearables` tile, or the
- * NAME tile, over an info plate with the title and the credits price. */
+ * NAME tile, over an info plate with the title and the credits price.
+ * Figma Card-Profile: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=825-7523
+ */
 export function ProfileCard({
   type = 'wearable',
   title,

@@ -7,7 +7,9 @@ const SIZES = { lg: 24, sm: 15 } as const;
 const TOUCH = 44;
 
 /** Figma `Control/Checkbox`: Black 40% box with a Snow border, Ruby border + fill when checked
- * (every size). The whole row is the touch target, never the box alone. */
+ * (every size). The whole row is the touch target, never the box alone.
+ * Figma Control/Checkbox: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=594-126
+ */
 export function Checkbox({
   checked,
   onChange,

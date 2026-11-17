@@ -85,7 +85,10 @@ function SelectedIndicator({ landscape }: { landscape: boolean }) {
 
 /** Figma `NavBar` (`NavBar/Item` × 4): the active destination shows the gradient `Icon/NavBar` plus
  * the "Selected indicator" glow on the bar edge. Portrait is the bottom bar; `landscape` is the
- * 100px left rail. */
+ * 100px left rail.
+ * Figma NavBar: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=635-211
+ * Figma NavBar/Item: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=635-107
+ */
 export function BottomNav({
   active,
   bottomInset = 0,

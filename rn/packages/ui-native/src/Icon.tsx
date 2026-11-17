@@ -180,6 +180,12 @@ export const iconNames = [
   ...Object.keys(aliases),
 ] as IconName[];
 
+/**
+ * Figma Icon/Base: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=48-3563
+ * Figma Icon/Menu: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=42-3274
+ * Figma Icon/Settings: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=606-112
+ * Figma Icon/Modal: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=562-7607
+ */
 export function Icon({
   name: requested,
   size: designSize = 24,

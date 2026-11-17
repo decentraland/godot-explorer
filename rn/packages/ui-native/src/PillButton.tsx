@@ -8,7 +8,9 @@ import { u } from './scale';
 
 /** Figma's `Pill` — a selectable filter chip. `big` is the Large size (60dp tall, used for the
  * main mode switch, e.g. Wearables/Emotes); the default is Medium (56dp, sub-filters). Selected is
- * Lavender Light + Shadow text in every size (the States page rule). */
+ * Lavender Light + Shadow text in every size (the States page rule).
+ * Figma Button/Pill: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=10-293
+ */
 export function PillButton({
   label,
   icon,

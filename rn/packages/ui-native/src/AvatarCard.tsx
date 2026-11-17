@@ -16,7 +16,9 @@ const H = u(180);
 const RING = u(2);
 
 /** Figma `Avatar-Card` (160×360): Default Black 40%, Pressed Black 50% + a 1 px Lavender Light
- * border, Selected Black 70% + a 4 px Light Rainbow border; the avatar fills it with 10% margins. */
+ * border, Selected Black 70% + a 4 px Light Rainbow border; the avatar fills it with 10% margins.
+ * Figma Avatar-Card: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=790-2789
+ */
 export function AvatarCard({
   image,
   art,

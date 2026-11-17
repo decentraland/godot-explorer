@@ -21,7 +21,10 @@ export type MenuItem<K extends string> = {
 };
 
 /** Figma `Menu`: the floating context menu (`surface/menu`, `border/menu`, `Elevation/Menu`) made of
- * `Menu/Item` rows. The caller positions it and dismisses it on an outside tap. */
+ * `Menu/Item` rows. The caller positions it and dismisses it on an outside tap.
+ * Figma Menu: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=736-32
+ * Figma Menu/Item: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=736-31
+ */
 export function Menu<K extends string>({
   items,
   onSelect,

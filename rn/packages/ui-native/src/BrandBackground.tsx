@@ -54,7 +54,9 @@ const LANDSCAPE: Glow[] = [
 ];
 
 /** Figma `Background` (Backgrounds page): `background/brand` alone (`Plain`) or with the radial
- * glows (`Glow`: Legendary top-left, plus Mythic bottom-right in portrait). Fills its parent. */
+ * glows (`Glow`: Legendary top-left, plus Mythic bottom-right in portrait). Fills its parent.
+ * Figma Background: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=676-6
+ */
 export function BrandBackground({ glow = false }: { glow?: boolean }) {
   const window = useWindowDimensions();
   const [size, setSize] = useState({ width: 0, height: 0 });

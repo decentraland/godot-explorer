@@ -9,7 +9,9 @@ import { t } from './i18n';
 
 /** Figma `Header`. Portrait: Title / TitleSearch / Back / BackSearch / SearchOpen / Close, with the
  * optional `Badge/Credits` (and the Ticket action next to it on Back). Landscape: Title /
- * TitleButton, where `action` is a Secondary outline button, and Back (`onBack`: the Back icon alone). Orientation follows the window. */
+ * TitleButton, where `action` is a Secondary outline button, and Back (`onBack`: the Back icon alone). Orientation follows the window.
+ * Figma Header: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=624-57
+ */
 export function Header({
   title,
   onBack,
