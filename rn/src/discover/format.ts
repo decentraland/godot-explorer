@@ -1,3 +1,4 @@
+import type { EventTimeKind } from '@dcl/ui-native';
 import { plural, t } from '../i18n';
 
 const MONTHS = [
@@ -18,6 +19,21 @@ const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 
 /** "IN 5 MINS", "IN 2 HRS", "IN 2 DAYS", or a short date a week or more out. */
+/** Which Figma `Tag/EventTime` variant an upcoming event gets; its StartingSoon sample reads "IN 5 MINS". */
+export function startsInKind(startsAt: number, now: number): EventTimeKind {
+  const delta = startsAt - now;
+  if (delta <= 5 * MINUTE) {
+    return 'startingSoon';
+  }
+  if (delta < HOUR) {
+    return 'inMinutes';
+  }
+  if (delta < 24 * HOUR) {
+    return 'inHours';
+  }
+  return delta < 7 * 24 * HOUR ? 'inDays' : 'date';
+}
+
 export function startsIn(startsAt: number, now: number): string {
   const delta = startsAt - now;
   if (delta < MINUTE) {
