@@ -252,12 +252,21 @@ impl DeviceIdentifiers {
     }
 
     /// Segment's standard `context.device` fields, which its destinations read the ad id from.
+    /// Whatever goes here can reach ad destinations, so the IDFV only rides along once tracking
+    /// is authorized, and the App Set ID never (Google bars it from ads measurement). Both stay
+    /// in the properties and traits for our own warehouse.
     fn segment_context(&self) -> serde_json::Value {
         let (device_type, id, advertising_id) = match self {
-            DeviceIdentifiers::Ios { idfv, idfa, .. } => ("ios", idfv, idfa),
-            DeviceIdentifiers::Android {
-                app_set_id, gaid, ..
-            } => ("android", app_set_id, gaid),
+            DeviceIdentifiers::Ios {
+                idfv,
+                idfa,
+                att_status,
+                ..
+            } => {
+                let idfv = idfv.as_ref().filter(|_| att_status == "authorized");
+                ("ios", idfv, idfa.as_ref())
+            }
+            DeviceIdentifiers::Android { gaid, .. } => ("android", None, gaid.as_ref()),
         };
         let mut device = serde_json::json!({
             "type": device_type,
@@ -1495,6 +1504,7 @@ mod tests {
         let context = body.context.unwrap();
         let device = &context["device"];
         assert!(device.get("advertisingId").is_none());
+        assert!(device.get("id").is_none(), "no IDFV in context without ATT");
         assert_eq!(device["adTrackingEnabled"], false);
     }
 
@@ -1526,6 +1536,13 @@ mod tests {
         for key in ["idfv", "idfa", "att_status"] {
             assert!(!props.contains_key(key), "{key} is iOS only");
         }
+        let context = body.context.unwrap();
+        let device = &context["device"];
+        assert_eq!(device["advertisingId"], "GAID");
+        assert!(
+            device.get("id").is_none(),
+            "App Set ID never goes in context"
+        );
     }
 
     #[test]
