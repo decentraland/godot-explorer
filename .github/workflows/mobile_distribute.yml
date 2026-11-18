@@ -333,6 +333,9 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
       AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+      # R2 signs SigV4 with region `auto`: pinned so the CLI never picks up a region
+      # from the runner's environment (a us-west-2 runner failed with InvalidRegionName).
+      AWS_DEFAULT_REGION: auto
       AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
       BUILD_REPORTER_TOKEN: ${{ secrets.BUILD_REPORTER_TOKEN }}
       BOARD_EVENTS_URL: ${{ vars.BOARD_EVENTS_URL }}
@@ -367,7 +370,7 @@ jobs:
         run: |
           KEY="ios/${R2_SEGMENT}/${SHA}/export.tar.gz"
           echo "Looking for an existing unsigned export at s3://${AWS_S3_BUCKET}/${KEY}"
-          have_export() { aws s3api head-object --bucket "$AWS_S3_BUCKET" --key "$KEY" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null 2>&1; }
+          have_export() { aws s3api head-object --bucket "$AWS_S3_BUCKET" --key "$KEY" --region auto --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null 2>&1; }
 
           have=false
           if have_export; then
@@ -724,6 +727,7 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
       AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+      AWS_DEFAULT_REGION: auto
       AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
       BUILD_REPORTER_TOKEN: ${{ secrets.BUILD_REPORTER_TOKEN }}
       BOARD_EVENTS_URL: ${{ vars.BOARD_EVENTS_URL }}
@@ -762,7 +766,7 @@ jobs:
         run: |
           KEY="android/${R2_SEGMENT}/${SHA}/decentraland.godot.client.apk"
           echo "Looking for s3://${AWS_S3_BUCKET}/${KEY}"
-          have_apk() { aws s3 ls "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null 2>&1; }
+          have_apk() { aws s3 ls "s3://${AWS_S3_BUCKET}/${KEY}" --region auto --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null 2>&1; }
 
           have=false
           if [ -n "$PR_NUMBER" ]; then
@@ -880,6 +884,7 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
       AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+      AWS_DEFAULT_REGION: auto
       AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
       # Public R2 domain mapped to the mobile-artifacts bucket root.
       R2_PUBLIC_BASE_URL: "https://mobile-artifacts.dclregenesislabs.xyz"
@@ -918,7 +923,7 @@ jobs:
           # eventual consistency; fail (→ failure surface below) only if it's genuinely absent.
           DEADLINE=$(( $(date +%s) + 10 * 60 ))
           while true; do
-            if aws s3 ls "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null 2>&1; then
+            if aws s3 ls "s3://${AWS_S3_BUCKET}/${KEY}" --region auto --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null 2>&1; then
               echo "✅ APK is available in R2"
               break
             fi
@@ -984,7 +989,7 @@ jobs:
 
           APK_KEY="android/${R2_SEGMENT}/${SHA}/decentraland.godot.client.apk"
           echo "📥 Downloading APK from R2: ${APK_KEY}"
-          aws s3 cp "s3://${AWS_S3_BUCKET}/${APK_KEY}" ./firebase-dist.apk --endpoint-url "$AWS_ENDPOINT_URL"
+          aws s3 cp "s3://${AWS_S3_BUCKET}/${APK_KEY}" ./firebase-dist.apk --region auto --endpoint-url "$AWS_ENDPOINT_URL"
 
           echo "▶️  Uploading APK to App Distribution…"
           UP=$(curl -sS -X POST \
@@ -1060,7 +1065,7 @@ jobs:
           # present now that the APK wait succeeded — short timeout is enough.
           DEADLINE=$(( $(date +%s) + 15 * 60 ))
           while true; do
-            if aws s3 ls "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null 2>&1; then
+            if aws s3 ls "s3://${AWS_S3_BUCKET}/${KEY}" --region auto --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null 2>&1; then
               echo "✅ AAB is available in R2"
               echo "AAB_READY=true" >> "$GITHUB_ENV"
               break
