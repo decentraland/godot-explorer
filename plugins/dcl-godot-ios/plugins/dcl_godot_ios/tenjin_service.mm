@@ -103,3 +103,16 @@ NSDictionary *tenjin_attribution_if_ready(bool *failed) {
 	}
 	return nil;
 }
+
+NSString *tenjin_analytics_installation_id(void) {
+	if (!tenjin_started) {
+		return nil;
+	}
+	Class cls = tenjin_class();
+	if (![cls respondsToSelector:@selector(getAnalyticsInstallationId)]) {
+		return nil;
+	}
+	id value = [cls performSelector:@selector(getAnalyticsInstallationId)];
+	NSString *analytics_id = [value isKindOfClass:[NSString class]] ? (NSString *)value : nil;
+	return analytics_id.length > 0 ? analytics_id : nil;
+}

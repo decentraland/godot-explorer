@@ -12,4 +12,7 @@ void tenjin_handle_open_url(NSString *url);
 // Attribution info once Tenjin answered, nil while pending. The first call starts the fetch.
 NSDictionary *tenjin_attribution_if_ready(bool *failed);
 
+// Tenjin's random per-install id, or nil before start() or when the SDK lacks it.
+NSString *tenjin_analytics_installation_id(void);
+
 #endif

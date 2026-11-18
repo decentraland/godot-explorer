@@ -634,6 +634,11 @@ pub fn export(
         verify_shader_bake_output(&godot_output)?;
     }
 
+    if target == "ios" {
+        // export_project_only: the Xcode project folder sits next to the would-be .ipa.
+        localize_tracking_usage_description(&Path::new(&output_rel_path).with_extension(""))?;
+    }
+
     if !std::path::Path::new(output_rel_path.as_str()).exists() && target != "ios" {
         print_message(MessageType::Error, "Export failed. Common issues:");
         print_message(
@@ -878,6 +883,83 @@ mod build_number_patch_tests {
     fn no_match_is_identity() {
         let cfg = "a=1\nb=2\n";
         assert_eq!(rewrite_cfg_value(cfg, "c=", "9"), cfg);
+    }
+}
+
+/// ATT prompt body per language (#3183). English ships in the plugin's .gdip as
+/// `NSUserTrackingUsageDescription`; Godot only localizes its own usage descriptions, so these
+/// are appended to the `<lang>.lproj/InfoPlist.strings` it exports for each project locale.
+const TRACKING_USAGE_DESCRIPTIONS: &[(&str, &str)] = &[
+    (
+        "es",
+        "Nos permite saber qué anuncios te trajeron a Decentraland y mostrarte anuncios más relevantes.",
+    ),
+    (
+        "pt_BR",
+        "Permite saber quais anúncios trouxeram você ao Decentraland e mostrar anúncios mais relevantes.",
+    ),
+];
+
+fn localize_tracking_usage_description(project_dir: &Path) -> Result<(), anyhow::Error> {
+    for (lang, text) in TRACKING_USAGE_DESCRIPTIONS {
+        let path = project_dir
+            .join(format!("{lang}.lproj"))
+            .join("InfoPlist.strings");
+        let Ok(content) = fs::read_to_string(&path) else {
+            print_message(
+                MessageType::Warning,
+                &format!(
+                    "{} not found: the ATT prompt shows in English for '{lang}'",
+                    path.display()
+                ),
+            );
+            continue;
+        };
+        if let Some(localized) = with_tracking_usage_description(&content, text) {
+            fs::write(&path, localized)?;
+        }
+    }
+    Ok(())
+}
+
+/// `content` with the ATT purpose string appended, or `None` when it already has one.
+fn with_tracking_usage_description(content: &str, text: &str) -> Option<String> {
+    if content.contains("NSUserTrackingUsageDescription") {
+        return None;
+    }
+    let escaped = text.replace('\\', "\\\\").replace('"', "\\\"");
+    let mut out = content.to_string();
+    if !out.is_empty() && !out.ends_with('\n') {
+        out.push('\n');
+    }
+    out.push_str(&format!(
+        "NSUserTrackingUsageDescription = \"{escaped}\";\n"
+    ));
+    Some(out)
+}
+
+#[cfg(test)]
+mod tracking_usage_description_tests {
+    use super::with_tracking_usage_description;
+
+    #[test]
+    fn appends_the_key_to_godot_strings() {
+        let godot = "/* Localized versions of Info.plist keys */\n\nCFBundleDisplayName = \"Decentraland\";\n";
+        let out = with_tracking_usage_description(godot, "Nos permite saber").unwrap();
+        assert_eq!(
+            out,
+            format!("{godot}NSUserTrackingUsageDescription = \"Nos permite saber\";\n")
+        );
+    }
+
+    #[test]
+    fn escapes_quotes_and_keeps_an_existing_key() {
+        let out = with_tracking_usage_description("", "say \"hi\"").unwrap();
+        assert_eq!(
+            out,
+            "NSUserTrackingUsageDescription = \"say \\\"hi\\\"\";\n"
+        );
+        assert_eq!(with_tracking_usage_description(&out, "other"), None);
     }
 }
 
