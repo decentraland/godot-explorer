@@ -108,7 +108,9 @@ func _apply_static() -> void:
 	if texture_src.is_empty():
 		_apply_procedural_overrides()
 	else:
-		_async_load_texture(texture_src)
+		# Deferred: the config can arrive from inside the scene tick, where resolving the
+		# content mapping would re-enter the scene runner that is already borrowed.
+		call_deferred("_async_load_texture", texture_src)
 	_apply_fog_density()
 
 

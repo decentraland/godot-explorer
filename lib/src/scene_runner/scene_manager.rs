@@ -3357,10 +3357,18 @@ impl SceneManager {
                 global.emit_signal("sdk_skybox_time_active_changed", &[false.to_variant()]);
             }
             if was_scene_skybox_active {
-                global.emit_signal(
-                    "sdk_skybox_changed",
-                    &[GString::new().to_variant(), (-1i32).to_variant()],
-                );
+                // Deferred like the skybox component's own signal: a handler may resolve a
+                // sky texture, which calls back into this SceneManager.
+                let signal_args = [
+                    "sdk_skybox_changed".to_variant(),
+                    GString::new().to_variant(),
+                    (-1i32).to_variant(),
+                ];
+                global
+                    .bind()
+                    .scene_runner
+                    .clone()
+                    .call_deferred("emit_signal", &signal_args);
             }
         }
 

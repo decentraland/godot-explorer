@@ -261,13 +261,19 @@ pub fn update_skybox(
             scene.scene_id.0,
             config_json
         );
-        global.emit_signal(
-            "sdk_skybox_changed",
-            &[
-                GString::from(&config_json).to_variant(),
-                scene.scene_id.0.to_variant(),
-            ],
-        );
+        // Deferred: this runs inside the scene tick, where SceneManager is borrowed mutably.
+        // A handler that resolves a sky texture calls back into it (get_scene_content_mapping)
+        // and would panic on the re-entrant bind.
+        let signal_args = [
+            "sdk_skybox_changed".to_variant(),
+            GString::from(&config_json).to_variant(),
+            scene.scene_id.0.to_variant(),
+        ];
+        global
+            .bind()
+            .scene_runner
+            .clone()
+            .call_deferred("emit_signal", &signal_args);
     }
 }
 
