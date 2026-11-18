@@ -143,6 +143,7 @@ export function DiscoverHome({
       <Rail
         title={t('DISCOVER_FRIENDS')}
         count
+        gap={12}
         state={friends.state}
         keyOf={friend => friend.address}
         renderItem={friend => (

@@ -38,6 +38,7 @@ export function Rail<T>({
   skeleton = 'place',
   loadingMore = false,
   onEnd,
+  gap = 16,
 }: {
   title: string;
   count?: boolean;
@@ -47,6 +48,8 @@ export function Rail<T>({
   skeleton?: 'place' | 'event' | 'compact';
   loadingMore?: boolean;
   onEnd?: () => void;
+  /** Space between cards, in Figma dp. */
+  gap?: number;
 }) {
   if (
     state.status === 'error' ||
@@ -57,7 +60,7 @@ export function Rail<T>({
   const loading = state.status === 'loading';
   const wide = skeleton === 'event';
   return (
-    <View style={[styles.section, skeleton !== 'compact' && styles.cards]}>
+    <View style={styles.section}>
       <SectionTitle
         title={title}
         count={
@@ -68,7 +71,7 @@ export function Rail<T>({
         horizontal
         removeClippedSubviews={false}
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.rail}
+        contentContainerStyle={[styles.rail, { gap: u(gap) }]}
         scrollEventThrottle={64}
         onScroll={e => {
           const { contentOffset, contentSize, layoutMeasurement } =
@@ -102,7 +105,6 @@ export function Rail<T>({
 const styles = StyleSheet.create({
   // Figma: 40px between sections; the title sits in a 40px row, 20px above the cards.
   section: { marginTop: space['40'] },
-  cards: { paddingBottom: u(8) },
   titleRow: {
     height: space['40'],
     justifyContent: 'center',
@@ -111,5 +113,5 @@ const styles = StyleSheet.create({
   },
   title: { color: color.text.secondary },
   count: { color: colors.lavender },
-  rail: { paddingHorizontal: u(24), gap: u(16) },
+  rail: { paddingHorizontal: u(24) },
 });
