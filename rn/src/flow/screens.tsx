@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { core } from '../core';
-import { AppText, colors, PrimaryButton, radii, u } from '@dcl/ui-native';
+import { AppText, colors, Button, radii, u } from '@dcl/ui-native';
 import { FlowFrame } from './FlowFrame';
 import { isValidName, Provider } from './flowMachine';
 import { I18nKey, t } from '../i18n';
@@ -52,7 +52,7 @@ export function TermsScreen({ onAccept }: { onAccept: () => void }) {
           </AppText>
         </Pressable>
       </View>
-      <PrimaryButton label={t('FLOW_TERMS_ACCEPT')} onPress={onAccept} />
+      <Button label={t('FLOW_TERMS_ACCEPT')} onPress={onAccept} />
     </FlowFrame>
   );
 }
@@ -85,13 +85,11 @@ export function AccountScreen({
         {t('FLOW_ACCOUNT_BODY_REST')}
       </AppText>
       <View style={styles.accountActions}>
-        <PrimaryButton
-          rounded
+        <Button
           label={t('FLOW_ACCOUNT_CREATE')}
           onPress={onSignIn}
         />
-        <PrimaryButton
-          rounded
+        <Button
           tone="dark"
           label={t('FLOW_ACCOUNT_SIGN_IN')}
           onPress={onSignIn}
@@ -146,7 +144,7 @@ export function SignInScreen({
       </View>
       <View style={styles.actions}>
         {PROVIDERS.map(provider => (
-          <PrimaryButton
+          <Button
             key={provider.key}
             label={t(provider.label)}
             tone="secondary"
@@ -179,7 +177,7 @@ export function WaitScreen({
         </AppText>
       </View>
       {onCancel ? (
-        <PrimaryButton
+        <Button
           label={t('FLOW_CANCEL')}
           tone="ghost"
           onPress={onCancel}
@@ -229,7 +227,7 @@ export function NamingScreen({
         >
           {t('FLOW_NAME_HINT')}
         </AppText>
-        <PrimaryButton
+        <Button
           label={t('FLOW_LETS_GO')}
           disabled={!valid}
           onPress={() => onSubmit(name.trim())}
@@ -301,7 +299,7 @@ function TextStep({
           editable={!busy}
           style={[styles.input, styles.inputGap]}
         />
-        <PrimaryButton
+        <Button
           label={action}
           disabled={busy || !valid(value)}
           onPress={() => onSubmit(value.trim())}

@@ -1,7 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, colors, fonts, Icon, u } from '@dcl/ui-native';
 import { t } from '../i18n';
-import { ClaimedSeal } from './ClaimedSeal';
 import { shortAddress } from './logic';
 import type { Profile } from './types';
 
@@ -39,7 +38,7 @@ export function ProfileHeader({
         </AppText>
         {profile.hasClaimedName ? (
           <View style={styles.seal}>
-            <ClaimedSeal size={font.tag + 2} />
+            <Icon name="nameVerified" size={font.tag + 2} />
           </View>
         ) : (
           <AppText

@@ -18,6 +18,9 @@ const HUE_STOPS = [0, 60, 120, 180, 240, 300, 360].map((hue, index) => ({
   color: hsvToHex({ h: hue, s: 1, v: 1 }),
 }));
 
+/**
+ * Figma Color-Swatch: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=962-16569
+ */
 export function Swatch({
   color,
   selected,
@@ -124,7 +127,9 @@ function Slider({
 type ReactTrack = ReactElement;
 const THUMB = u(32);
 
-/** Hue / saturation / brightness sliders (Figma "Hair color" panel). */
+/** Hue / saturation / brightness sliders (Figma "Hair color" panel).
+ * Figma Control/ColorSlider: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=964-188
+ */
 export function HsvSliders({
   value,
   onChange,

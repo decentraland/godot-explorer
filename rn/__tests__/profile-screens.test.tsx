@@ -77,7 +77,7 @@ describe('ProfileSheet', () => {
       'Argentina',
       'He / Him',
       'Instagram',
-      'LEGENDARY',
+      'Asset Name',
     ]) {
       expect(out).toContain(s);
     }
