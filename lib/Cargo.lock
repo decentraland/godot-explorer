@@ -1017,7 +1017,7 @@ dependencies = [
  "meshopt",
  "modular-bitfield",
  "multihash-codetable",
- "multipart",
+ "multipart_ng",
  "num-derive",
  "num-traits",
  "once_cell",
@@ -2882,10 +2882,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "defc4c55412d89136f966bbb339008b474350e5e6e78d2714439c386b3137a03"
 
 [[package]]
-name = "multipart"
-version = "0.18.0"
+name = "multipart_ng"
+version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "00dec633863867f29cb39df64a397cdf4a6354708ddd7759f70c7fb51c5f9182"
+checksum = "9be2246eb884185c3a396640492b883f30c30240a943d235df2691bee914f013"
 dependencies = [
  "lazy_static",
  "log",
