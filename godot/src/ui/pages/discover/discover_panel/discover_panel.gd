@@ -36,6 +36,7 @@ var _events_needs_reload: bool = false
 @onready var button_menu: TextureButton = %Button_Menu
 @onready var menu_overlay: MarginContainer = %MenuOverlay
 @onready var menu_dropdown: PanelContainer = %MenuDropdown
+@onready var button_reload: Button = %Button_Reload
 @onready var button_share: Button = %Button_Share
 @onready var button_report_content: Button = %Button_ReportContent
 @onready var button_report_bug: Button = %Button_ReportBug
@@ -52,6 +53,7 @@ func _ready() -> void:
 
 	button_menu.pressed.connect(_toggle_menu)
 	menu_overlay.gui_input.connect(_on_menu_overlay_gui_input)
+	button_reload.pressed.connect(_on_reload_pressed)
 	button_share.pressed.connect(_on_share_pressed)
 	button_report_content.pressed.connect(_on_report_content_pressed)
 	button_report_bug.pressed.connect(_on_report_bug_pressed)
@@ -316,6 +318,14 @@ func _on_menu_overlay_gui_input(event: InputEvent) -> void:
 		_close_menu()
 	elif event is InputEventMouseButton and event.pressed:
 		_close_menu()
+
+
+func _on_reload_pressed() -> void:
+	_close_menu()
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		explorer.navbar.collapse()
+	Global.modal_manager.async_show_reload_scene_modal()
 
 
 func _on_share_pressed() -> void:
