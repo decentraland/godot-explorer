@@ -2,19 +2,20 @@ import { ComponentProps } from 'react';
 import {
   ActionSquareButton,
   BottomSheet,
+  Checkbox,
   Chip,
-  StatusPill,
+  EventBadge,
+  EventTimeTag,
+  Header,
   CollapsibleSection,
   Dialog,
   Dropdown,
   EmptyState,
   HudCircleButton,
   LinkRow,
-  OutlinedButton,
   PageDots,
   SnapCarousel,
   ProgressBar,
-  ReadOnlyField,
   SearchField,
   Skeleton,
   Slider,
@@ -66,7 +67,7 @@ export const demos = {
   } satisfies ComponentProps<typeof SearchField>,
   Dialog: {
     visible: true,
-    icon: 'warning',
+    icon: 'alert',
     title: 'Leave without saving?',
     body: "You'll lose any unsaved changes.",
     buttons: [
@@ -94,9 +95,25 @@ export const demos = {
     actionLabel: 'RETRY',
     onAction: noop,
   } satisfies ComponentProps<typeof EmptyState>,
-  StatusPill: { kind: 'live', label: 'LIVE' } satisfies ComponentProps<
-    typeof StatusPill
-  >,
+  EventTimeTag: {
+    kind: 'live',
+    label: 'Live',
+    players: 12,
+  } satisfies ComponentProps<typeof EventTimeTag>,
+  EventBadge: {
+    type: 'trending',
+    label: 'Trending',
+  } satisfies ComponentProps<typeof EventBadge>,
+  Checkbox: {
+    checked: true,
+    label: 'I have read and accept the Terms of Service.',
+    onChange: noop,
+  } satisfies ComponentProps<typeof Checkbox>,
+  Header: {
+    title: 'Backpack',
+    onSearch: noop,
+    credits: { amount: 0, onPress: noop },
+  } satisfies ComponentProps<typeof Header>,
   Chip: {
     label: 'Instagram',
     icon: 'link',
@@ -107,10 +124,6 @@ export const demos = {
     value: 0.5,
     label: 'Current Cache Size',
   } satisfies ComponentProps<typeof ProgressBar>,
-  OutlinedButton: {
-    label: 'CLEAN CACHE',
-    onPress: noop,
-  } satisfies ComponentProps<typeof OutlinedButton>,
   CollapsibleSection: {
     title: 'LINKS',
     open: false,
@@ -138,10 +151,6 @@ export const demos = {
     badge: 3,
     onPress: noop,
   } satisfies ComponentProps<typeof HudCircleButton>,
-  ReadOnlyField: {
-    label: 'Email',
-    value: 'name@email.com',
-  } satisfies ComponentProps<typeof ReadOnlyField>,
   ActionSquareButton: {
     icon: 'share',
     label: 'Share',

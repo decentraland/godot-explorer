@@ -1,13 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  BottomSheet,
-  colors,
-  LinearFill,
-  snapHeights,
-  u,
-} from '@dcl/ui-native';
+import { BottomSheet, colors, snapHeights, u } from '@dcl/ui-native';
 import type { SnapConfig } from '@dcl/ui-native';
 import { AvatarHole, StageBackground } from './AvatarStage';
 import {
@@ -22,8 +16,9 @@ import { chipName } from './emoteLogic';
 import { SheetContent } from './SheetContent';
 
 /** Sheet heights as fractions of the area above the footer (Figma 720x1600 frames). */
-const WEARABLES_SNAPS: SnapConfig = { peek: 24, half: 0.514, full: 0.863 };
-const EMOTES_SNAPS: SnapConfig = { peek: 24, half: 0.427, full: 0.863 };
+/** `peek` is Figma `Sheet` Height=Collapsed: 54 px, the handle alone. */
+const WEARABLES_SNAPS: SnapConfig = { peek: u(27), half: 0.514, full: 0.863 };
+const EMOTES_SNAPS: SnapConfig = { peek: u(27), half: 0.427, full: 0.863 };
 const SLOTS_GAP = u(12);
 
 export function PortraitLayout({
@@ -90,16 +85,6 @@ export function PortraitLayout({
           onSnapChange={sheet => dispatch({ type: 'sheet', sheet })}
           containerHeight={area || undefined}
           config={config}
-          handleWidth={100}
-          handlePadding={7}
-          background={
-            <LinearFill
-              stops={[
-                { offset: 0, color: colors.purple450 },
-                { offset: 1, color: colors.purple550 },
-              ]}
-            />
-          }
         >
           <SheetContent
             controller={controller}
@@ -120,7 +105,8 @@ export function PortraitLayout({
 
 const styles = StyleSheet.create({
   root: { ...StyleSheet.absoluteFill, backgroundColor: colors.purple500 },
-  area: { flex: 1 },
+  /** Clipped so the sheet stops at the nav bar instead of running under it. */
+  area: { flex: 1, overflow: 'hidden' },
   header: { paddingLeft: u(80), paddingRight: u(24) },
   hole: { flex: 1 },
   slots: { position: 'absolute', left: 0, right: 0 },

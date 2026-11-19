@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   AppText,
+  Button,
   colors,
   Dialog,
+  Dropdown,
   fonts,
-  OutlinedButton,
-  ReadOnlyField,
   u,
 } from '@dcl/ui-native';
 import { t } from '../i18n';
@@ -101,16 +101,22 @@ export function AccountSection({
               }}
             />
           ) : (
-            <ReadOnlyField
+            <Dropdown
+              readOnly
               label={t('SETTINGS_EMAIL')}
               value={account.email ?? ''}
+              options={[
+                { value: account.email ?? '', label: account.email ?? '' },
+              ]}
+              onChange={() => {}}
             />
           )}
         </View>
       </View>
       <View style={styles.bottom}>
-        <OutlinedButton
-          box
+        <Button
+          big
+          tone="secondary"
           icon="logout"
           label={t('CUSTOM_BUTTON_SIGN_OUT')}
           onPress={() => setDialog('signOut')}
@@ -144,7 +150,7 @@ export function AccountSection({
       />
       <Dialog
         visible={dialog === 'delete'}
-        icon="warning"
+        icon="alert"
         title={t('SETTINGS_DELETE_TITLE')}
         body={t('SETTINGS_DELETE_BODY')}
         onRequestClose={() => setDialog(null)}

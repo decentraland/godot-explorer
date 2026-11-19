@@ -4,7 +4,7 @@
 mod cid;
 mod identity;
 mod model;
-mod multipart;
+pub mod multipart;
 mod service;
 #[cfg(test)]
 mod tests;

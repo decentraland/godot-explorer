@@ -1,7 +1,7 @@
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvatarHole, StageBackground } from '../backpack/AvatarStage';
-import { AppText, PrimaryButton, u } from '@dcl/ui-native';
+import { AppText, Button, u } from '@dcl/ui-native';
 import { core } from '../core';
 import { Control } from '../core/native';
 import { useAvatar } from '../backpack/useAvatar';
@@ -55,7 +55,7 @@ export function AvatarCreateScreen({
       <View style={[styles.bottom, { paddingBottom: insets.bottom + 24 }]}>
         <View style={styles.row}>
           <View style={styles.flex}>
-            <PrimaryButton
+            <Button
               label={t('FLOW_AVATAR_RANDOMIZE')}
               tone="secondary"
               disabled={!avatar}
@@ -69,7 +69,7 @@ export function AvatarCreateScreen({
             />
           </View>
           <View style={styles.flex}>
-            <PrimaryButton
+            <Button
               label={t('FLOW_AVATAR_CUSTOMIZE')}
               tone="secondary"
               disabled={!avatar}
@@ -77,12 +77,12 @@ export function AvatarCreateScreen({
             />
           </View>
         </View>
-        <PrimaryButton
+        <Button
           label={t('FLOW_CONTINUE')}
           disabled={!avatar}
           onPress={onContinue}
         />
-        <PrimaryButton label={t('APP_BACK')} tone="ghost" onPress={onBack} />
+        <Button label={t('APP_BACK')} tone="ghost" onPress={onBack} />
       </View>
     </View>
   );
@@ -109,7 +109,7 @@ export function WelcomeBackScreen({
         </AppText>
       </View>
       <View style={[styles.bottom, { paddingBottom: insets.bottom + 24 }]}>
-        <PrimaryButton
+        <Button
           label={t('FLOW_LETS_GO')}
           disabled={!avatar}
           onPress={onContinue}

@@ -49,20 +49,20 @@ export function EmotesGrid({
               rarity={emote.rarity}
               thumbnail={emote.thumbnail}
               art={<EmoteArt id={emote.id} />}
-              equipped={strip === 'unequip'}
-              caption={t('BACKPACK_UNEQUIP')}
-              outline={
-                strip === 'equip'
-                  ? 'orange'
+              state={
+                strip === 'unequip'
+                  ? 'unequip'
+                  : strip === 'equip'
+                  ? 'equip'
                   : strip === 'check'
-                  ? 'lavender'
-                  : undefined
+                  ? 'equipped'
+                  : 'default'
               }
-              strip={
-                strip === 'equip'
-                  ? { label: t('BACKPACK_EQUIP'), tone: 'ruby' }
-                  : strip === 'check'
-                  ? { icon: 'check', tone: 'muted' }
+              actionLabel={
+                strip === 'unequip'
+                  ? t('BACKPACK_UNEQUIP')
+                  : strip === 'equip'
+                  ? t('BACKPACK_EQUIP')
                   : undefined
               }
               onPress={() => onPress(emote)}

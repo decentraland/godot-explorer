@@ -174,7 +174,7 @@ export function LoadingCover({
         visible={phase === 'failed'}
         title={t('LOADING_FAILED_TITLE')}
         body={t('LOADING_FAILED_BODY')}
-        icon="warning"
+        icon="alert"
         onRequestClose={onClose}
         buttons={[
           {

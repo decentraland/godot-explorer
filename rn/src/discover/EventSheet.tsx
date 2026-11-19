@@ -58,7 +58,6 @@ function RemindButton({ on, onPress }: { on: boolean; onPress: () => void }) {
         name={on ? 'check' : 'bell'}
         size={18}
         color={on ? colors.ruby : colors.snow}
-        strokeWidth={2.4}
       />
       <AppText
         variant="button"

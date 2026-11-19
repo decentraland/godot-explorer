@@ -103,7 +103,6 @@ export function GraphicsSection({
           onChange={v => set('dynamic_graphics_enabled', v)}
         />
         <Dropdown
-          variant="settings"
           label={t('SETTINGS_GRAPHIC_PROFILES')}
           helper={t('SETTINGS_SETS_A_GRAPHICS_QUALITY_PRESET_FOR')}
           value={String(values.graphic_profile)}
@@ -123,7 +122,6 @@ export function GraphicsSection({
           onChange={v => set('dynamic_skybox', v)}
         />
         <Dropdown
-          variant="settings"
           label={t('SETTINGS_CUSTOM_SKYBOX')}
           placeholder={t('SETTINGS_SELECT')}
           value={customSky}

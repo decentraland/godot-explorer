@@ -62,9 +62,7 @@ function CtaButton({ cta, onPress }: { cta: Cta; onPress: () => void }) {
       ]}
     >
       {icon === 'check' && <Icon name="check" size={14} color={color} />}
-      {icon === 'bell' && (
-        <Icon name="bell" size={14} color={color} strokeWidth={2} />
-      )}
+      {icon === 'bell' && <Icon name="bell" size={14} color={color} />}
       <AppText variant="button" style={[styles.ctaText, { color }]}>
         {label}
       </AppText>
