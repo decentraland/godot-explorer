@@ -267,11 +267,11 @@ async fn names_stop_on_an_empty_page_and_fail_on_a_page_error() {
 }
 
 fn field<'a>(body: &'a str, name: &str) -> &'a str {
-    let marker = format!("name=\"{name}\"\r\n\r\n");
-    let start = body
+    let marker = format!("name=\"{name}\"\r\n");
+    let headers = body
         .find(&marker)
-        .unwrap_or_else(|| panic!("no part {name}"))
-        + marker.len();
+        .unwrap_or_else(|| panic!("no part {name}"));
+    let start = headers + body[headers..].find("\r\n\r\n").unwrap() + 4;
     &body[start..start + body[start..].find("\r\n--").unwrap()]
 }
 

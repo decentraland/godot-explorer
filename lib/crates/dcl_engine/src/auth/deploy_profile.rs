@@ -1,5 +1,3 @@
-use std::io::Read;
-
 use multihash_codetable::MultihashDigest;
 use serde::Serialize;
 
@@ -67,24 +65,11 @@ pub async fn prepare_deploy_profile(
     let mut entity_authchain = ephemeral_auth_chain.auth_chain().clone();
     entity_authchain.add_signed_entity(cid.clone(), entity_id_signature);
 
-    let mut form_data = multipart::client::lazy::Multipart::new();
-    form_data.add_text("entityId", cid.clone());
-    for (key, data) in entity_authchain.formdata() {
-        form_data.add_text(key, data);
-    }
-    form_data.add_stream(
-        cid,
-        std::io::Cursor::new(deployment.into_bytes()),
-        Option::<&str>::None,
-        None,
-    );
+    let mut fields = vec![("entityId".to_owned(), cid.clone())];
+    fields.extend(entity_authchain.formdata());
+    let form = dcl_core::profile::multipart::build(&fields, &cid, deployment.as_bytes());
 
     // ADR-290: No snapshot images are uploaded anymore
 
-    let mut prepared = form_data.prepare()?;
-    let mut prepared_data = Vec::default();
-    prepared.read_to_end(&mut prepared_data)?;
-
-    let content_type_str = format!("multipart/form-data; boundary={}", prepared.boundary());
-    Ok((content_type_str, prepared_data))
+    Ok((form.content_type, form.body))
 }
