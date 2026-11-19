@@ -8,7 +8,7 @@ deinitialization="unregister_dcl_godot_ios_types"
 [dependencies]
 linked=[]
 embedded=["tenjin/TenjinSDK.xcframework"]
-system=["SafariServices", "AuthenticationServices", "Network", "EventKit", "EventKitUI", "DeviceCheck", "Photos", "PhotosUI"]
+system=["SafariServices", "AuthenticationServices", "Network", "EventKit", "EventKitUI", "DeviceCheck", "Photos", "PhotosUI", "AppTrackingTransparency", "AdSupport"]
 
 capabilities=[]
 
@@ -20,6 +20,8 @@ files=[]
 [plist]
 NSCalendarsUsageDescription="This app needs to add events to your calendar for events and places"
 NSPhotoLibraryUsageDescription="Decentraland needs access to your photos so you can attach screenshots to a bug report."
+; App Tracking Transparency prompt body (#3183). ES / PT-BR are added to the exported InfoPlist.strings by `cargo run -- export`.
+NSUserTrackingUsageDescription="Lets us measure which ads brought you to Decentraland and show you more relevant ones."
 
 ; Tenjin receives the SKAdNetwork postbacks for installs it attributes.
 NSAdvertisingAttributionReportEndpoint="https://tenjin-skan.com"

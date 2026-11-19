@@ -43,6 +43,17 @@ class TenjinBridge {
         }
     }
 
+    /** Tenjin's random per-install id, "" before [start]. */
+    fun analyticsInstallationId(): String {
+        val instance = sdk ?: return ""
+        return try {
+            instance.getAnalyticsInstallationId().orEmpty()
+        } catch (e: Throwable) {
+            Log.w(tag, "analytics installation id failed: ${e.javaClass.simpleName}")
+            ""
+        }
+    }
+
     fun event(name: String, value: Int): Boolean {
         val instance = sdk ?: return false
         return try {

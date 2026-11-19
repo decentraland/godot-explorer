@@ -3,6 +3,7 @@
 #include "AVPlayerWrapper.h"
 #include "image_picker_service.h"
 #include "tenjin_service.h"
+#include "tracking_service.h"
 #include "core/version.h"
 #include "core/os/os.h"
 #include "core/string/print_string.h"
@@ -284,6 +285,13 @@ void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("tenjin_start", "sdk_key", "user_id"), &DclGodotiOS::tenjin_start);
     ClassDB::bind_method(D_METHOD("tenjin_event", "name", "value"), &DclGodotiOS::tenjin_event);
     ClassDB::bind_method(D_METHOD("tenjin_get_attribution"), &DclGodotiOS::tenjin_get_attribution);
+    ClassDB::bind_method(D_METHOD("tenjin_get_analytics_installation_id"), &DclGodotiOS::tenjin_get_analytics_installation_id);
+
+    // App Tracking Transparency
+    ClassDB::bind_method(D_METHOD("get_tracking_authorization_status"), &DclGodotiOS::get_tracking_authorization_status);
+    ClassDB::bind_method(D_METHOD("request_tracking_authorization"), &DclGodotiOS::request_tracking_authorization);
+    ClassDB::bind_method(D_METHOD("get_advertising_id"), &DclGodotiOS::get_advertising_id);
+    ClassDB::bind_method(D_METHOD("get_vendor_id"), &DclGodotiOS::get_vendor_id);
 
     // Signal emitted when a deeplink URL is received
     ADD_SIGNAL(MethodInfo("deeplink_received", PropertyInfo(Variant::STRING, "url")));
@@ -297,6 +305,9 @@ void DclGodotiOS::_bind_methods() {
 
     // Fires once per launch with the APNs device token (hex), or "" when registration failed.
     ADD_SIGNAL(MethodInfo("apns_token_ready", PropertyInfo(Variant::STRING, "token")));
+
+    // Outcome of request_tracking_authorization: the get_tracking_authorization_status values.
+    ADD_SIGNAL(MethodInfo("tracking_authorization_result", PropertyInfo(Variant::STRING, "status")));
 
     // Photo gallery pick result. `error` is empty on success, "cancelled"
     // when the user dismissed the picker, or a failure reason otherwise.
@@ -897,6 +908,13 @@ void DclGodotiOS::emit_notification_permission_result(bool granted) {
     DclGodotiOS *singleton = DclGodotiOS::get_singleton();
     if (singleton) {
         singleton->emit_signal("notification_permission_result", granted ? String("granted") : String("denied"));
+    }
+}
+
+void DclGodotiOS::emit_tracking_authorization_result(String status) {
+    DclGodotiOS *singleton = DclGodotiOS::get_singleton();
+    if (singleton) {
+        singleton->emit_signal("tracking_authorization_result", status);
     }
 }
 
@@ -1841,6 +1859,46 @@ String DclGodotiOS::get_device_anchor_id() {
         NSLog(@"[DeviceAnchor] stored new UUID in keychain");
     }
     return _dcl_string_from_ns(newUuid);
+    #else
+    return String();
+    #endif
+}
+
+String DclGodotiOS::tenjin_get_analytics_installation_id() {
+    #if TARGET_OS_IOS
+    return _dcl_string_from_ns(tenjin_analytics_installation_id());
+    #else
+    return String();
+    #endif
+}
+
+String DclGodotiOS::get_tracking_authorization_status() {
+    #if TARGET_OS_IOS
+    return _dcl_string_from_ns(tracking_authorization_status());
+    #else
+    return String("not_determined");
+    #endif
+}
+
+void DclGodotiOS::request_tracking_authorization() {
+    #if TARGET_OS_IOS
+    tracking_request_authorization(^(NSString *status) {
+        DclGodotiOS::emit_tracking_authorization_result(_dcl_string_from_ns(status));
+    });
+    #endif
+}
+
+String DclGodotiOS::get_advertising_id() {
+    #if TARGET_OS_IOS
+    return _dcl_string_from_ns(tracking_advertising_id());
+    #else
+    return String();
+    #endif
+}
+
+String DclGodotiOS::get_vendor_id() {
+    #if TARGET_OS_IOS
+    return _dcl_string_from_ns(tracking_vendor_id());
     #else
     return String();
     #endif

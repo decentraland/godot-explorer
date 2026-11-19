@@ -264,6 +264,38 @@ impl DclIosPlugin {
             .ok()
     }
 
+    /// Calls a no-argument string getter, `None` when the plugin binary predates it or the
+    /// value is empty.
+    fn call_non_empty_string(method: &str) -> Option<String> {
+        let mut singleton = Self::try_get_singleton()?;
+        if !singleton.has_method(method) {
+            return None;
+        }
+        let value = singleton.call(method, &[]).try_to::<GString>().ok()?;
+        Some(value.to_string()).filter(|v| !v.is_empty())
+    }
+
+    /// Tenjin's per-install analytics id; `None` before Tenjin started.
+    pub(crate) fn tenjin_get_analytics_installation_id() -> Option<String> {
+        Self::call_non_empty_string("tenjin_get_analytics_installation_id")
+    }
+
+    /// App Tracking Transparency status: "authorized" | "denied" | "restricted" |
+    /// "not_determined". `None` when the plugin binary has no ATT support.
+    pub(crate) fn get_tracking_authorization_status() -> Option<String> {
+        Self::call_non_empty_string("get_tracking_authorization_status")
+    }
+
+    /// IDFA; `None` unless ATT is authorized (the plugin also drops an all-zero id).
+    pub(crate) fn get_advertising_id() -> Option<String> {
+        Self::call_non_empty_string("get_advertising_id")
+    }
+
+    /// IDFV.
+    pub(crate) fn get_vendor_id() -> Option<String> {
+        Self::call_non_empty_string("get_vendor_id")
+    }
+
     /// Check if the iOS plugin is available
     #[func]
     pub fn is_available() -> bool {

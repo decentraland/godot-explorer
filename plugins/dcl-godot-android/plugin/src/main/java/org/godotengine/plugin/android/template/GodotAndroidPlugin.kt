@@ -38,6 +38,7 @@ import androidx.browser.customtabs.CustomTabsService
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.exifinterface.media.ExifInterface
+import org.decentraland.godotexplorer.AdvertisingIds
 import org.decentraland.godotexplorer.NotificationReceiver
 import org.decentraland.godotexplorer.TenjinBridge
 import org.godotengine.godot.Dictionary
@@ -151,6 +152,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             // Application-scoped so it survives activity recreation; emitSignal marshals
             // the UI-thread callback onto Godot's render thread.
             it.applicationContext.registerComponentCallbacks(trimMemoryCallbacks)
+            advertisingIds.refresh(it)
         }
         // Kick off Firebase Analytics initialization early so getAppInstanceId() can be ready
         // by the time the first Segment batch is sent.
@@ -435,9 +437,19 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     @UsedByGodot
     fun tenjinGetAttribution(): Dictionary = tenjin.getAttribution()
 
+    @UsedByGodot
+    fun tenjinGetAnalyticsInstallationId(): String = tenjin.analyticsInstallationId()
+
+    private val advertisingIds = AdvertisingIds()
+
+    /** `{status: pending}` until the first read finishes, then `{status: ok, gaid, limit_ad_tracking, app_set_id}`. */
+    @UsedByGodot
+    fun getAdvertisingIds(): Dictionary = advertisingIds.snapshot()
+
     override fun onMainResume() {
         super.onMainResume()
         tenjin.onResume()
+        activity?.let { advertisingIds.refresh(it) }
 
         // Backstop for the image picker guard. `pickImageInFlight` is normally cleared in
         // onMainActivityResult, but that callback never lands if our activity is recreated

@@ -432,6 +432,38 @@ impl DclAndroidPlugin {
         result.try_to::<VarDictionary>().ok()
     }
 
+    /// Whether the plugin binary exposes `method`. `has_method` cannot answer this: the Java
+    /// methods are not registered with ClassDB, so it is false for every one of them.
+    fn has_java_method(singleton: &mut Gd<Object>, method: &str) -> bool {
+        singleton
+            .call("has_java_method", &[StringName::from(method).to_variant()])
+            .booleanize()
+    }
+
+    /// Tenjin's per-install analytics id; `None` before Tenjin started or on an older plugin.
+    pub(crate) fn tenjin_get_analytics_installation_id() -> Option<String> {
+        let mut singleton = Self::try_get_singleton()?;
+        if !Self::has_java_method(&mut singleton, "tenjinGetAnalyticsInstallationId") {
+            return None;
+        }
+        let result = Self::timed_jni_call(&mut singleton, "tenjinGetAnalyticsInstallationId", &[]);
+        let id = result.try_to::<GString>().ok()?.to_string();
+        Some(id).filter(|v| !v.is_empty())
+    }
+
+    /// Google Advertising ID + App Set ID, read off the UI thread by the plugin:
+    /// `{status: "pending"}` until the first read finishes, then
+    /// `{status: "ok", gaid, limit_ad_tracking, app_set_id}` ("" for an unavailable id).
+    /// `None` on an older plugin binary.
+    pub(crate) fn get_advertising_ids_internal() -> Option<VarDictionary> {
+        let mut singleton = Self::try_get_singleton()?;
+        if !Self::has_java_method(&mut singleton, "getAdvertisingIds") {
+            return None;
+        }
+        let result = Self::timed_jni_call(&mut singleton, "getAdvertisingIds", &[]);
+        result.try_to::<VarDictionary>().ok()
+    }
+
     /// Fetch install referrer data from Google Play.
     /// Returns a Dictionary with status, referrer (UTM params), timestamps, etc.
     /// The first call triggers the async fetch and returns {status: "pending"}.

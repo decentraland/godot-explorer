@@ -91,6 +91,10 @@ dependencies {
     // Tenjin MMP: install attribution and conversion events.
     api("com.tenjin:android-sdk:2.0.2")
 
+    // Google Advertising ID + App Set ID: sent to Segment (#3272) and read by Tenjin itself.
+    api("com.google.android.gms:play-services-ads-identifier:18.1.0")
+    api("com.google.android.gms:play-services-appset:16.1.0")
+
     // Play Integrity — server-side platform attestation for /sign-message.
     // Standard variant (no Play Services dependency required on-device).
     api("com.google.android.play:integrity:1.4.0")
