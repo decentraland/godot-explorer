@@ -138,7 +138,7 @@ describe('DiscoverScreen', () => {
   it('opens a category and searches inside it', async () => {
     const tree = await mount(<DiscoverScreen onJumpIn={noop} played={[]} />);
     await act(async () =>
-      tree.root.findByProps({ accessibilityLabel: 'GAME' }).props.onPress(),
+      tree.root.findByProps({ accessibilityLabel: 'Game' }).props.onPress(),
     );
     expect(text(tree)).toContain('Game');
     await act(async () =>

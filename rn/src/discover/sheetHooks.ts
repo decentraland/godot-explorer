@@ -4,7 +4,9 @@ import { useToast } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { syncEventReminder } from '../notifications/push';
 import { maybeAskForReview } from '../notifications/review';
+import { closeMenu } from '../menu/drawerState';
 import { enterPlaceChecked } from '../modals/destination';
+import { setOrientation } from '../platform/orientation';
 import { Place } from './api';
 import { useApi } from './ApiContext';
 import { eventJumpLink } from './eventTime';
@@ -14,15 +16,23 @@ import type { EventDetail, Friend, PlaceDetail, VoteState } from './types';
 /** Enters the world at `place` from a sheet route (the Discover tab gets the same via its onJumpIn
  * prop). Resolves whether the player went. */
 export function useJumpIn(): (place: Place) => Promise<boolean> {
-  const { push } = useNav();
+  const { push, pop, state } = useNav();
   const toast = useToast();
+  // Over the world (Discover opened from the menu) the jump teleports in place: no second world.
+  const inWorld = state.stack.some(route => route.name === 'world');
   return useCallback(
     place =>
       enterPlaceChecked(place)
         .then(entered => {
           if (entered) {
             recordPlayed(place);
-            push({ name: 'world', params: { place } });
+            if (inWorld) {
+              pop();
+              closeMenu();
+              setOrientation('landscape');
+            } else {
+              push({ name: 'world', params: { place } });
+            }
           }
           return entered;
         })
@@ -30,7 +40,7 @@ export function useJumpIn(): (place: Place) => Promise<boolean> {
           toast(t('DISCOVER_ACTION_FAILED'));
           return false;
         }),
-    [push, toast],
+    [inWorld, pop, push, toast],
   );
 }
 

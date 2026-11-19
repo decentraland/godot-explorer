@@ -1,4 +1,7 @@
+import type { ImageSourcePropType } from 'react-native';
 import type { DiscoverEvent, Place } from './api';
+import type { SeasonalSkin } from '../core/native';
+import { getLocale, t } from '../i18n';
 import type { Category, Friend } from './types';
 
 const places = new Map<string, Place>();
@@ -29,41 +32,55 @@ export function forgetAll() {
   friends.clear();
 }
 
-export const CATEGORIES: Category[] = [
+const FIXED = [
+  {
+    id: 'game',
+    name: 'CATEGORY_GAME',
+    art: require('../assets/discover/category-game.png'),
+  },
   {
     id: 'social',
-    label: 'CATEGORY_SOCIAL',
-    title: 'CATEGORY_SOCIAL_TITLE',
-    emoji: '🧑‍🤝‍🧑',
+    name: 'CATEGORY_SOCIAL',
+    art: require('../assets/discover/category-social.png'),
   },
   {
     id: 'music',
-    label: 'CATEGORY_MUSIC',
-    title: 'CATEGORY_MUSIC_TITLE',
-    emoji: '🎵',
-  },
-  {
-    id: 'game',
-    label: 'CATEGORY_GAME',
-    title: 'CATEGORY_GAME_TITLE',
-    emoji: '🎮',
+    name: 'CATEGORY_MUSIC',
+    art: require('../assets/discover/category-music.png'),
   },
   {
     id: 'art',
-    label: 'CATEGORY_ART',
-    title: 'CATEGORY_ART_TITLE',
-    emoji: '🎨',
+    name: 'CATEGORY_ART',
+    art: require('../assets/discover/category-art.png'),
   },
-  {
-    id: 'fashion',
-    label: 'CATEGORY_FASHION',
-    title: 'CATEGORY_FASHION_TITLE',
-    emoji: '👗',
-  },
-  {
-    id: 'business',
-    label: 'CATEGORY_BUSINESS',
-    title: 'CATEGORY_BUSINESS_TITLE',
-    emoji: '🏢',
-  },
-];
+] as const;
+
+export const SEASONAL = 'seasonal';
+
+/** The Discover category row: the season's tile first while one is active, then the fixed four.
+ * `seasonArt` replaces the remote tile image (gallery). */
+export function categories(
+  skin?: SeasonalSkin,
+  seasonArt?: ImageSourcePropType,
+): Category[] {
+  const fixed: Category[] = FIXED.map(c => ({
+    id: c.id,
+    tile: c.id,
+    name: t(c.name),
+    art: c.art,
+  }));
+  if (!skin) {
+    return fixed;
+  }
+  const name = skin.names.get(getLocale()) ?? skin.names.get('en') ?? skin.key;
+  return [
+    {
+      id: SEASONAL,
+      tile: SEASONAL,
+      name,
+      art: seasonArt ?? { uri: skin.tileUrl },
+      season: skin.key,
+    },
+    ...fixed,
+  ];
+}

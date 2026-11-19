@@ -13,6 +13,7 @@ export type UiNativeKey =
   | 'APP_COLOR_HUE'
   | 'APP_COLOR_SATURATION'
   | 'APP_DISMISS_DIALOG'
+  | 'APP_JUMP_IN'
   | 'APP_REMOVE'
   | 'APP_SEE_LESS'
   | 'APP_SEE_MORE';

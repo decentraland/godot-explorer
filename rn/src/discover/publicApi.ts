@@ -12,12 +12,20 @@ import {
   placesApi,
   upcomingEventsUrl,
 } from './api';
-import { recallEvent, recallFriend, recallPlace, remember } from './catalog';
+import {
+  recallEvent,
+  recallFriend,
+  recallPlace,
+  remember,
+  SEASONAL,
+} from './catalog';
 import { normalizeKeyword, parseCoordinates } from './search';
 import type { DiscoverApi, Page, PlaceRail, VoteState } from './types';
 
 const PAGE = 12;
 const SUGGESTIONS = 8;
+/** Pages of places with players online fetched before the rest of a category. */
+const ACTIVE_PAGES = 5;
 
 const pageOf = (places: Place[]): Page<Place> => ({
   items: places,
@@ -45,6 +53,10 @@ export function createPublicApi(
   const favorites = new Set<string>();
   const votes = new Map<string, VoteState>();
   const reminders = new Set<string>();
+  const categoryLists = new Map<
+    string,
+    { active: Place[]; cursors: Map<number, number> }
+  >();
 
   const places = async (url: string) => {
     const found = parsePlaces(await get(url));
@@ -62,15 +74,18 @@ export function createPublicApi(
     new: 'order_by=created_at&order=desc',
   };
 
-  const taggedPlaces = async (tag: string) => {
+  const destinations = async (query: string) => {
     const ios = Platform.OS === 'ios' ? '&tag=allowed_ios' : '';
-    const payload = await get(
-      `${destinationsApi()}/?offset=0&tag=${tag}&sdk=7${ios}`,
-    );
+    const payload = await get(`${destinationsApi()}/?${query}&sdk=7${ios}`);
     const found = parsePlaces(
       Array.isArray(payload) ? { data: payload } : payload,
     );
     remember({ places: found });
+    return found;
+  };
+
+  const taggedPlaces = async (tag: string) => {
+    const found = await destinations(`offset=0&tag=${tag}`);
     for (let i = found.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [found[i], found[j]] = [found[j], found[i]];
@@ -83,7 +98,6 @@ export function createPublicApi(
       image: place.image,
       title: place.title,
       place,
-      cta: 'arrow' as const,
     }));
 
   return {
@@ -117,18 +131,50 @@ export function createPublicApi(
         : { items: [], hasMore: false };
     },
     categoryPlaces: async (category, offset, search) => {
+      const filter =
+        category === SEASONAL
+          ? 'tag=season'
+          : `categories=${encodeURIComponent(category)}`;
       const text = search
         ? `&search=${encodeURIComponent(normalizeKeyword(search))}`
         : '';
-      return pageOf(
-        await places(
-          placesUrl(
-            `categories=${encodeURIComponent(
-              category,
-            )}&offset=${offset}${text}`,
-          ),
-        ),
-      );
+      const key = filter + text;
+      let list = categoryLists.get(key);
+      if (offset === 0 || !list) {
+        list = { active: [], cursors: new Map() };
+        // most_active keeps only the places with players online: they lead, the rest follows.
+        for (let page = 0; page < ACTIVE_PAGES; page++) {
+          const found = await destinations(
+            `${filter}${text}&order_by=most_active&order=desc&offset=${
+              page * PAGE
+            }&limit=${PAGE}`,
+          );
+          list.active.push(...found);
+          if (found.length < PAGE) {
+            break;
+          }
+        }
+        list.cursors.set(list.active.length, 0);
+        categoryLists.set(key, list);
+      }
+      const { active, cursors } = list;
+      if (offset < active.length) {
+        return { items: active.slice(offset, offset + PAGE), hasMore: true };
+      }
+      const seen = new Set(active.map(place => place.id));
+      let raw = cursors.get(offset) ?? offset - active.length;
+      const items: Place[] = [];
+      let hasMore = true;
+      while (items.length === 0 && hasMore) {
+        const found = await destinations(
+          `${filter}${text}&offset=${raw}&limit=${PAGE}`,
+        );
+        raw += found.length;
+        hasMore = found.length >= PAGE;
+        items.push(...found.filter(place => !seen.has(place.id)));
+      }
+      cursors.set(offset + items.length, raw);
+      return { items, hasMore };
     },
     search: async query => {
       const coords = parseCoordinates(query);

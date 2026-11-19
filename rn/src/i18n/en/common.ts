@@ -16,6 +16,7 @@ export const common = {
   APP_COLOR_HUE: 'Color',
   APP_COLOR_SATURATION: 'Saturation',
   APP_COLOR_BRIGHTNESS: 'Brightness',
+  APP_JUMP_IN: 'Jump in',
   APP_REMOVE: 'Remove',
   APP_SEE_LESS: 'See less',
   APP_SEE_MORE: 'See more',

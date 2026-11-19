@@ -3,7 +3,11 @@ import { ReactElement, ReactNode } from 'react';
 import { registerAlias, registerPreview } from '../gallery/registry';
 import { Backdrop } from './Backdrop';
 import { BugReportModal } from './BugReportModal';
-import { DiscoverIngame } from './DiscoverIngame';
+import { NavProvider } from '../app/NavProvider';
+import { ApiProvider } from '../discover/ApiContext';
+import { DiscoverScreen } from '../discover/DiscoverScreen';
+import { createMockApi } from '../discover/mockApi';
+import { MOCK_NOW as DISCOVER_NOW } from '../discover/mockData';
 import { DiscoverPanel, DiscoverPanelProps } from './DiscoverPanel';
 import { MenuDrawerView } from './MenuDrawerView';
 import {
@@ -318,15 +322,16 @@ registerPreview(`${M}discover-ingame__889-4068`, {
   title: 'Discover in game (portrait)',
   orientation: 'portrait',
   render: () => (
-    <DiscoverIngame
-      feed={feed}
-      friends={mockFriends}
-      played={mockFeatured}
-      now={MOCK_NOW}
-      onBack={noop}
-      onPlace={noop}
-      onEvent={noop}
-    />
+    <ApiProvider api={createMockApi()}>
+      <NavProvider>
+        <DiscoverScreen
+          onBack={noop}
+          onJumpIn={noop}
+          played={mockFeatured}
+          now={DISCOVER_NOW}
+        />
+      </NavProvider>
+    </ApiProvider>
   ),
   settleMs: 800,
 });

@@ -26,6 +26,7 @@ import {
   FfiConverterFloat64,
   FfiConverterInt32,
   FfiConverterInt64,
+  FfiConverterMap,
   FfiConverterObject,
   FfiConverterObjectWithCallbacks,
   FfiConverterOptional,
@@ -8493,6 +8494,11 @@ export type SeasonalSkin = {
   key: string;
   overlayUrl: string;
   ambientUrl: string;
+  tileUrl: string;
+  /**
+   * Tile label by locale (`en`, `es`, `pt_BR`); a plain-text flag is stored under `en`.
+   */
+  names: Map<string, string>;
 };
 
 /**
@@ -8520,18 +8526,24 @@ const FfiConverterTypeSeasonalSkin = (() => {
         key: FfiConverterString.readFromCursor(c),
         overlayUrl: FfiConverterString.readFromCursor(c),
         ambientUrl: FfiConverterString.readFromCursor(c),
+        tileUrl: FfiConverterString.readFromCursor(c),
+        names: FfiConverterMapStringString.readFromCursor(c),
       };
     }
     writeIntoCursor(value: TypeName, c: Cursor): void {
       FfiConverterString.writeIntoCursor(value.key, c);
       FfiConverterString.writeIntoCursor(value.overlayUrl, c);
       FfiConverterString.writeIntoCursor(value.ambientUrl, c);
+      FfiConverterString.writeIntoCursor(value.tileUrl, c);
+      FfiConverterMapStringString.writeIntoCursor(value.names, c);
     }
     allocationSize(value: TypeName): number {
       return (
         FfiConverterString.allocationSize(value.key) +
         FfiConverterString.allocationSize(value.overlayUrl) +
-        FfiConverterString.allocationSize(value.ambientUrl)
+        FfiConverterString.allocationSize(value.ambientUrl) +
+        FfiConverterString.allocationSize(value.tileUrl) +
+        FfiConverterMapStringString.allocationSize(value.names)
       );
     }
   }
@@ -13355,6 +13367,12 @@ const FfiConverterSequenceTypeParamPair = new FfiConverterArray(
 // FfiConverter for Array<Effect>
 const FfiConverterSequenceTypeEffect = new FfiConverterArray(
   FfiConverterTypeEffect,
+);
+
+// FfiConverter for Map<string, string>
+const FfiConverterMapStringString = new FfiConverterMap(
+  FfiConverterString,
+  FfiConverterString,
 );
 
 // FfiConverter for Array<ControlsFtueElement>

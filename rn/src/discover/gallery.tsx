@@ -1,12 +1,13 @@
 import '../hud/gallery';
 import { ReactNode } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NavProvider } from '../app/NavProvider';
 import { BottomNav } from '@dcl/ui-native';
 import { registerAlias, registerPreview } from '../gallery/registry';
 import { GodotPlaceholder } from '../godot/GodotPlaceholder';
 import { PlaceDetail } from './types';
 import { ApiProvider } from './ApiContext';
-import { CATEGORIES } from './catalog';
+import { categories } from './catalog';
 import { DiscoverBackground } from './DiscoverBackground';
 import { DiscoverScreen } from './DiscoverScreen';
 import { EventSheet } from './EventSheet';
@@ -25,7 +26,23 @@ import type { Place } from './api';
 const noop = () => {};
 const place = (id: string): Place => placeById(id)!;
 const PLAYED = [place('genesis'), place('wonder'), place('dejay')];
-const nav = <BottomNav active="explore" bottomInset={0} onChange={noop} />;
+function Nav() {
+  const insets = useSafeAreaInsets();
+  return (
+    <BottomNav active="explore" bottomInset={insets.bottom} onChange={noop} />
+  );
+}
+const nav = <Nav />;
+const HALLOWEEN = {
+  skin: {
+    key: 'halloween',
+    overlayUrl: '',
+    ambientUrl: '',
+    tileUrl: '',
+    names: new Map([['en', 'Halloween']]),
+  },
+  tile: require('../gallery/assets/season-tile-halloween.png'),
+};
 
 function Frame({
   options,
@@ -75,7 +92,7 @@ const home = (
   </Frame>
 );
 
-reg([16, 44, 50, 61, 65, 72, 74, 80, 83, 87, 95, 98], 'Discover home', () =>
+reg([16, 44, 50, 61, 65, 72, 74, 80, 83, 87, 98], 'Discover home', () =>
   home(),
 );
 reg([17, 78], 'Discover pushed', () =>
@@ -100,6 +117,13 @@ reg([86], 'Connection lost', () =>
   ),
 );
 reg([92], 'Discover, second banner', () => home({ bannerIndex: 1 }));
+// New player: no Jump back in, no Friends.
+reg([343], 'Discover, new player', () =>
+  home({ played: [] }, { fail: ['friends'] }),
+);
+reg([95], 'Discover, season category first', () =>
+  home({ played: [], season: HALLOWEEN }, { fail: ['friends'] }),
+);
 reg([99], 'Discover seasonal', () => home({ seasonal: true }));
 reg([100], 'Seasonal background', () => <DiscoverBackground seasonal />);
 reg([101], 'Seasonal overlay', () => (
@@ -297,11 +321,11 @@ reg([68], 'Search, results in several rails', () =>
 );
 
 reg([96], 'Category page', () =>
-  home({ startCategory: CATEGORIES[2], footer: nav }),
+  home({ startCategory: categories()[0], footer: nav }),
 );
 reg([97], 'Category search', () =>
   home({
-    startCategory: CATEGORIES[2],
+    startCategory: categories()[0],
     startCategorySearch: true,
     footer: undefined,
   }),

@@ -24,7 +24,8 @@ export function EventTimeTag({
 }: {
   kind: EventTimeKind;
   label: string;
-  players?: number;
+  /** Count to show; a string keeps the caller's formatting (e.g. zero-padded). */
+  players?: number | string;
 }) {
   const live = kind === 'live';
   const soon = kind === 'startingSoon';

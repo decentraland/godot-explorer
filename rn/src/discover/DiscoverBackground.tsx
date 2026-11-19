@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { SvgXml } from 'react-native-svg';
-import { colors, LinearFill, RadialFill, u } from '@dcl/ui-native';
+import { BrandBackground, RadialFill, u } from '@dcl/ui-native';
 import { getFlag } from './flags';
 
 const BATS = [
@@ -12,14 +12,7 @@ const BATS = [
 const BAT = (fill: string) =>
   `<svg viewBox="0 0 34 18"><path d="M2 10 Q8 2 14 8 Q17 3 20 8 Q26 2 32 10 Q26 8 24 14 Q20 11 17 16 Q14 11 10 14 Q8 8 2 10 Z" fill="${fill}"/></svg>`;
 
-const VIOLET = [
-  { offset: 0, color: '#7A22B2' },
-  { offset: 0.3, color: colors.purple450 },
-  { offset: 0.7, color: colors.purple500 },
-  { offset: 1, color: '#7A1AA0' },
-];
-
-/** The Discover violet gradient; with the seasonal flag on, the dark vignette with bats. */
+/** The design system's Background (Glow); with the seasonal flag on, the dark vignette with bats. */
 export function DiscoverBackground({
   seasonal,
   tone = 'violet',
@@ -55,7 +48,7 @@ export function DiscoverBackground({
           ))}
         </>
       ) : (
-        <LinearFill angle={150} stops={VIOLET} />
+        <BrandBackground glow />
       )}
     </View>
   );

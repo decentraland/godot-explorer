@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import type { DiscoverEvent, Place } from '../discover/api';
-import { recordPlayed, usePlayed } from '../discover/history';
+import { recordPlayed } from '../discover/history';
 import { useToast } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { setOrientation } from '../platform/orientation';
@@ -9,7 +9,7 @@ import { enterPlaceChecked } from '../modals/destination';
 import { getMenuApi } from './api';
 import { GuestError } from './coreNotificationsApi';
 import { BugReportModal } from './BugReportModal';
-import { DiscoverIngame } from './DiscoverIngame';
+import { DiscoverScreen } from '../discover/DiscoverScreen';
 import { DiscoverPanel } from './DiscoverPanel';
 import {
   closeMenu,
@@ -52,7 +52,6 @@ function OpenDrawer({ navigate }: { navigate: Navigate }) {
   const toast = useToast();
   const { section, socialTab } = useDrawerState();
   const now = useMemo(() => Date.now(), []);
-  const played = usePlayed();
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [reminders, setReminders] = useState<ReadonlySet<string>>(new Set());
 
@@ -227,21 +226,13 @@ function OpenDrawer({ navigate }: { navigate: Navigate }) {
   };
 
   const renderOverlay = () => {
-    if (overlay?.kind === 'discover' && events) {
+    if (overlay?.kind === 'discover') {
       return (
-        <DiscoverIngame
-          feed={events}
-          friends={social.status === 'ready' ? social.friends : []}
-          played={played}
-          now={now}
+        <DiscoverScreen
           onBack={leavePortrait}
-          onPlace={place => {
+          onJumpIn={place => {
             setOrientation('landscape');
             jumpTo(place);
-          }}
-          onEvent={event => {
-            setOrientation('landscape');
-            jumpTo(event.place);
           }}
         />
       );

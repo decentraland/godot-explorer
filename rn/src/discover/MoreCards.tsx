@@ -1,5 +1,11 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { AppText, colors, DiscoverCardSkeleton, u } from '@dcl/ui-native';
+import {
+  AppText,
+  color,
+  colors,
+  DiscoverCardSkeleton,
+  u,
+} from '@dcl/ui-native';
 import { t } from '../i18n';
 import { Place } from './api';
 import { Thumb } from './Thumb';
@@ -52,14 +58,24 @@ export function FriendCard({
           {friend.name.charAt(0).toUpperCase()}
         </AppText>
       </View>
-      <AppText variant="button" numberOfLines={1} style={styles.friendName}>
-        {friend.name}
-      </AppText>
-      {friend.place ? (
-        <AppText variant="caption" numberOfLines={2} style={styles.friendPlace}>
-          {friend.place.title}
+      <View style={styles.friendText}>
+        <AppText
+          variant="Title/Card"
+          numberOfLines={1}
+          style={styles.friendName}
+        >
+          {friend.name}
         </AppText>
-      ) : null}
+        {friend.place ? (
+          <AppText
+            variant="Caption2"
+            numberOfLines={2}
+            style={styles.friendPlace}
+          >
+            {friend.place.title}
+          </AppText>
+        ) : null}
+      </View>
     </Pressable>
   );
 }
@@ -86,7 +102,8 @@ const styles = StyleSheet.create({
   },
   compactText: { flex: 1 },
   compactTitle: { fontSize: u(12), lineHeight: u(16) },
-  friend: { width: u(124), alignItems: 'center' },
+  // Figma Discover-all carousels › Friend (2123:26929): fixed 138dp card, avatar and text 8dp apart.
+  friend: { width: u(127.5), height: u(138), alignItems: 'center', gap: u(8) },
   avatar: {
     width: u(AVATAR),
     height: u(AVATAR),
@@ -97,13 +114,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   initial: { color: colors.purple450, fontSize: u(28) },
-  friendName: { marginTop: u(6), fontSize: u(14), fontFamily: 'Inter-Bold' },
-  friendPlace: {
-    marginTop: u(2),
-    fontSize: u(12),
-    lineHeight: u(13.5),
-    textAlign: 'center',
-    color: colors.white70,
-  },
+  friendText: { width: u(127), gap: u(2) },
+  friendName: { height: u(16), textAlign: 'center', color: color.text.primary },
+  friendPlace: { textAlign: 'center', color: color.text.primary },
   pressed: { opacity: 0.85 },
 });

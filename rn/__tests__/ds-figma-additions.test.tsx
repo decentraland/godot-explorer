@@ -5,6 +5,7 @@ import {
   ButtonProfileLink,
   ButtonSeeMore,
   color,
+  Feature,
   IconProfile,
   InputUsername,
   MenuNavItem,
@@ -145,6 +146,24 @@ describe('Figma components added to the DS', () => {
     );
     expect(tree.root.findAllByType(TextInput)).toHaveLength(1);
     expect(texts(tree.root)).not.toContain('UNIQUE NAME');
+  });
+
+  it('Feature opens on the card and jumps in on the button', () => {
+    const onPress = jest.fn();
+    const onJumpIn = jest.fn();
+    const tree = render(
+      <Feature title="Genesis Plaza" onPress={onPress} onJumpIn={onJumpIn} />,
+    );
+    act(() =>
+      tree.root.findByProps({ accessibilityLabel: 'Jump in' }).props.onPress(),
+    );
+    act(() =>
+      tree.root
+        .findByProps({ accessibilityLabel: 'Genesis Plaza' })
+        .props.onPress(),
+    );
+    expect(onJumpIn).toHaveBeenCalledTimes(1);
+    expect(onPress).toHaveBeenCalledTimes(1);
   });
 
   it('ScrollFade wraps its content', () => {

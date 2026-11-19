@@ -171,15 +171,13 @@ export const BANNERS: Banner[] = [
     image: 'mock:0',
     title: 'Experience Name 2 lines example elipsis name',
     place: PLACES[0],
-    cta: 'arrow',
   },
-  { id: 'b2', image: 'mock:2', title: '', place: PLACES[2], cta: 'button' },
+  { id: 'b2', image: 'mock:2', title: '', place: PLACES[2] },
   {
     id: 'b3',
     image: 'mock:1',
     title: 'Meta Residence Tower',
     place: PLACES[1],
-    cta: 'arrow',
   },
 ];
 

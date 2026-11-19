@@ -559,7 +559,8 @@ InDays/Date = Snow bg, Shadow text + border (0.68px in Figma; 1dp hairline in co
 `angle` is 0 = top→bottom, so a CSS angle θ becomes `180 − θ` (253 / 32); the old 17 / 148 ran the
 Featured gradient bottom-left→top-right. `Tag/Category` 35:591 (h 42, White 10% pill, 26px MapPins icon + Tags Semi
 Bold 18 uppercase) needs the 12 MapPins icons, which are not an `Icon/*` family — left for the
-Discover pass; `src/discover/CategoryChips.tsx` is the current stand-in.
+Discover pass; the place sheet's `CategoryPill` is the current stand-in. (The Discover category
+tiles in `src/discover/CategoryChips.tsx` are a screen frame, not this component.)
 `RarityLabel` 825:6933 (added 11-10, missed on 11-09) → `RarityLabel rarity label`: SemiBold 16 uppercase
 lh 1.25 in `rarityColors[r].dark` (Base: Gray) on the same colour at 20% (Base: Pearl 20%; Exotic: `#CAFF73`, its
 node's own tint, `colors.exoticTint`), px 8 py 4,

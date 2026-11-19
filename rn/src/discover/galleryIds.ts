@@ -91,4 +91,5 @@ export const ID: Record<number, string> = {
   101: 'discover__discover-overlay__2214-23123',
   102: 'discover__banner-feature__1783-41282',
   103: 'discover__x__2130-27268',
+  343: 'discover__discover-categories01__2244-22785',
 };

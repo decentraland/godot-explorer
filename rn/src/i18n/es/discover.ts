@@ -37,4 +37,8 @@ export const discover: Partial<Record<keyof typeof en, string>> = {
   CALENDAR_EVENT_LOCATION: 'Decentraland en {x},{y}',
   SHARE_EVENT_MESSAGE: "📍 Visita el evento '{event}' con este enlace: {link}",
   SHARE_PLACE_MESSAGE: '📍 Únete a mí en {place} con este enlace: {link}',
+  CATEGORY_GAME: 'Juegos',
+  CATEGORY_SOCIAL: 'Social',
+  CATEGORY_MUSIC: 'Música',
+  CATEGORY_ART: 'Arte',
 };
