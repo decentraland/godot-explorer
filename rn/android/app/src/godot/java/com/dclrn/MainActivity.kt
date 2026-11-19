@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.widget.FrameLayout
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
@@ -15,6 +16,7 @@ import com.th3rdwave.safeareacontext.SafeAreaProvider
 import org.godotengine.godot.Godot
 import org.godotengine.godot.GodotFragment
 import org.godotengine.godot.GodotHost
+import org.godotengine.godot.input.GodotEditText
 
 /**
  * React Native activity that hosts the Godot client as a fragment *under* the React root view,
@@ -40,7 +42,19 @@ class MainActivity : ReactActivity(), GodotHost {
   // The bars come back with the keyboard, a dialog or a swipe: hide them again on every focus.
   override fun onWindowFocusChanged(hasFocus: Boolean) {
     super.onWindowFocusChanged(hasFocus)
-    if (hasFocus) hideSystemBars()
+    if (hasFocus) {
+      hideSystemBars()
+      releaseEngineInputFocus()
+    }
+  }
+
+  // When an RN input unmounts, the engine's hidden EditText is the only editor left: Android would
+  // raise the keyboard for it as the window takes focus. Release it before the IME looks at it.
+  private fun releaseEngineInputFocus() {
+    val editor = currentFocus as? GodotEditText ?: return
+    editor.clearFocus()
+    getSystemService(InputMethodManager::class.java)
+        .hideSoftInputFromWindow(editor.windowToken, 0)
   }
 
   override fun onDestroy() {
