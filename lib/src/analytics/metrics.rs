@@ -541,9 +541,9 @@ impl Metrics {
         }
     }
 
-    /// Start resolving install attribution from both Android mechanisms (issue #2670):
-    /// the GA4F deferred deep link and the Play install referrer.
-    /// GDScript should call this only once per install (gated by a config flag).
+    /// Start resolving install attribution: Tenjin on both platforms, plus the GA4F deferred
+    /// deep link and the Play install referrer on Android (issue #2670). GDScript calls this
+    /// every launch until `campaigns.gd` sees it settle and sets `install_referrer_sent`.
     #[func]
     pub fn track_install_referrer(&mut self) {
         self.attribution.request_attribution();

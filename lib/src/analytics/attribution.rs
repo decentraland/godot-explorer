@@ -89,8 +89,8 @@ impl Attribution {
         }
     }
 
-    /// Asks for the install attribution, once per install. Waits for `start` if the EULA is
-    /// not accepted yet.
+    /// Asks for the install attribution; GDScript asks every launch until it has settled once.
+    /// Waits for `start` if the EULA is not accepted yet.
     pub fn request_attribution(&mut self) {
         if self.attribution_wanted || !Self::enabled() {
             return;

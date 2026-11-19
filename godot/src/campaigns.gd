@@ -114,11 +114,12 @@ func _fallback(token: String, reason: String) -> Dictionary:
 	return {"token": token, "campaign": {}, "fallback_reason": reason}
 
 
-## Persists the token install attribution resolves to, as soon as it resolves.
+## Persists the token install attribution resolves to, as soon as it resolves, and marks the
+## install's attribution as done once every source has settled.
 ##
-## Runs from _ready, not from the FTUE: the resolved token lives only in Rust memory and
-## attribution starts once per install, so a process killed before the FTUE is reached would
-## lose it for good. Residual gap: a kill before attribution settles still loses it.
+## Runs from _ready, not from the FTUE: the resolved token lives only in Rust memory, so a
+## process killed before the FTUE is reached would lose it. global.gd asks for attribution on
+## every launch until the flag is set here, so a kill before it settles is retried.
 ## No deadline of its own: Tenjin only starts once the EULA (and on iOS the tracking prompt) is
 ## answered, which can be well past launch, and Metrics bounds the wait from that point.
 func _async_watch_attribution() -> void:
@@ -126,23 +127,27 @@ func _async_watch_attribution() -> void:
 		_attribution_settled = true
 		return
 
+	var config := Global.get_config()
 	while true:
 		var token := String(Global.metrics.get_resolved_campaign_token()).strip_edges()
-		if not token.is_empty():
-			var config := Global.get_config()
-			# The deeplink path wins if it already captured one: it is the more specific
-			# signal, and _capture_campaign_token never replaces a stored token either.
-			if config.campaign_token.is_empty():
-				config.campaign_token = token
-				config.campaign_token_captured_at = int(Time.get_unix_time_from_system())
-				config.save_to_settings_file()
-				print("[CAMPAIGN] captured token from install attribution: ", token)
-			_attribution_settled = true
-			return
+		# The deeplink path wins if it already captured one: it is the more specific
+		# signal, and _capture_campaign_token never replaces a stored token either.
+		if not token.is_empty() and config.campaign_token.is_empty():
+			config.campaign_token = token
+			config.campaign_token_captured_at = int(Time.get_unix_time_from_system())
+			config.save_to_settings_file()
+			print("[CAMPAIGN] captured token from install attribution: ", token)
 		if not Global.metrics.is_install_attribution_pending():
+			break
+		# A token is what the FTUE waits for, even while the other source is still answering.
+		if not token.is_empty():
 			_attribution_settled = true
-			return
 		await get_tree().create_timer(ATTRIBUTION_POLL_SECONDS).timeout
+
+	_attribution_settled = true
+	if not config.install_referrer_sent:
+		config.install_referrer_sent = true
+		config.save_to_settings_file()
 
 
 ## Bounded wait for the watcher above, for callers that need the answer now.

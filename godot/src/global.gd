@@ -738,11 +738,9 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.testing_tools)
 	if self.metrics != null:
 		get_tree().root.add_child.call_deferred(self.metrics)
-		# Fire install attribution once per install (mobile only).
+		# Install attribution (mobile only), asked every launch until campaigns.gd sees it settle.
 		if (self.is_android() or self.is_ios()) and not self.config.install_referrer_sent:
 			self.metrics.track_install_referrer.call_deferred()
-			self.config.install_referrer_sent = true
-			self.config.save_to_settings_file()
 		# All Firebase/Segment orchestration lives in AnalyticsController — see its docstring.
 		# RefCounted, kept alive by this strong reference. No scene-tree presence by default;
 		# spawns a transient Timer under Global only while polling for first_move_in_world.
