@@ -95,13 +95,12 @@ export function CodeSlots({
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: u(5), justifyContent: 'center' },
   withMessage: { gap: u(4) },
-  /** `status/danger` per the States rule (the `OTP-Input` node draws Ruby); Title Case as drawn. */
+  /** `status/danger` per the States rule (the `OTP-Input` node draws Ruby). */
   message: {
     minHeight: u(12),
     fontSize: u(10),
     color: colors.danger,
     textAlign: 'center',
-    textTransform: 'capitalize',
   },
   slot: {
     width: u(42),

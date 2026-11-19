@@ -7,8 +7,8 @@ import { colors, radii } from './tokens';
 import { u } from './scale';
 
 /** Figma's `Pill` — a selectable filter chip. `big` is the Large size (60dp tall, used for the
- * main mode switch, e.g. Wearables/Emotes); the default is Medium (56dp, sub-filters). Selected is
- * Lavender Light + Shadow text in every size (the States page rule).
+ * main mode switch, e.g. Wearables/Emotes); the default is Medium (56dp, sub-filters). `color` is
+ * the Figma `Color` variant: Lavender (filters) or Ruby (the Backpack header's mode switch).
  * Figma Button/Pill: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=10-293
  */
 export function PillButton({
@@ -16,6 +16,7 @@ export function PillButton({
   icon,
   selected = false,
   big = false,
+  color = 'Lavender',
   badge = false,
   onPress,
 }: {
@@ -24,12 +25,22 @@ export function PillButton({
   selected?: boolean;
   /** The Large size (60dp) — default is Medium (56dp). */
   big?: boolean;
+  color?: 'Lavender' | 'Ruby';
   badge?: boolean;
   onPress: () => void;
 }) {
-  const bg = selected ? colors.lavender : big ? colors.black40 : colors.white20;
+  const ruby = color === 'Ruby';
+  const bg = selected
+    ? ruby
+      ? colors.ruby
+      : colors.lavender
+    : ruby
+    ? colors.black40
+    : colors.white20;
   const textColor = selected
-    ? colors.shadow
+    ? ruby
+      ? colors.snow
+      : colors.shadow
     : big
     ? colors.pearl
     : colors.white70;

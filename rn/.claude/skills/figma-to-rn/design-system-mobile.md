@@ -102,7 +102,7 @@ Code: every Figma text style is an `AppText` variant by its name; an Auto line h
 | Tags | 18p | Semi, uppercase |
 | Input (= H5) | 30p | Medium |
 | Input/Value | 30p | Regular |
-| Input/Suffix | 24p | **Light** (no `Inter-Light` face is bundled; `UsernameField`'s `#1234` suffix stays Regular until it is) |
+| Input/Suffix | 24p | **Light** |
 | Input/Code | 48p | Semi |
 | Link | 24p | Medium, underline |
 | Tab/Label | 28p | Semi, uppercase |

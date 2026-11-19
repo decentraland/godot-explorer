@@ -144,7 +144,10 @@ export function Button({
             </View>
           )}
           {loading && !claim ? (
-            <Spinner size={big ? 16 : small ? 12 : 14} />
+            <Spinner
+              size={big ? 16 : small ? 12 : 14}
+              color={tone === 'primary' ? colors.snow : undefined}
+            />
           ) : (
             <>
               {icon && (

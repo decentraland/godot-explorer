@@ -22,6 +22,7 @@ export function BackpackHeader({
     <View style={styles.row}>
       <PillButton
         big
+        color="Ruby"
         label={t('BACKPACK_WEARABLES')}
         icon="wearables"
         selected={mode === 'wearables'}
@@ -29,6 +30,7 @@ export function BackpackHeader({
       />
       <PillButton
         big
+        color="Ruby"
         label={t('BACKPACK_EMOTES')}
         icon="emotes"
         selected={mode === 'emotes'}

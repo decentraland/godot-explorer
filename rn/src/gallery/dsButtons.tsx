@@ -432,7 +432,7 @@ function DsButtons() {
 
       <Section title="PillButton" figma="Button/Pill">
         <Block
-          label="Size Big"
+          label="Lavender · Size Big"
           spec="Height 60px · Corner 100 · Font 26pt · Icon 32x32"
           columns={['Default / Pressed', 'Selected']}
           rows={[
@@ -440,6 +440,7 @@ function DsButtons() {
               label: 'Icon=True',
               render: s => (
                 <PillButton
+                  color="Lavender"
                   big
                   icon="fav"
                   label="Pill"
@@ -451,13 +452,19 @@ function DsButtons() {
             {
               label: 'Icon=False',
               render: s => (
-                <PillButton big label="Pill" selected={on(s)} onPress={noop} />
+                <PillButton
+                  big
+                  color="Lavender"
+                  label="Pill"
+                  selected={on(s)}
+                  onPress={noop}
+                />
               ),
             },
           ]}
         />
         <Block
-          label="Size Medium"
+          label="Lavender · Size Medium"
           spec="Height 56px · Corner 100 · Font 24pt · Icon 32x32"
           columns={['Default / Pressed', 'Selected']}
           rows={[
@@ -465,6 +472,7 @@ function DsButtons() {
               label: 'Icon=True',
               render: s => (
                 <PillButton
+                  color="Lavender"
                   icon="fav"
                   label="Pill"
                   selected={on(s)}
@@ -482,6 +490,76 @@ function DsButtons() {
               label: 'Notification badge',
               render: s => (
                 <PillButton
+                  color="Lavender"
+                  label="Pill"
+                  badge
+                  selected={on(s)}
+                  onPress={noop}
+                />
+              ),
+            },
+          ]}
+        />
+        <Block
+          label="Ruby · Size Big"
+          spec="Height 60px · Corner 100 · Font 26pt · Icon 32x32"
+          columns={['Default / Pressed', 'Selected']}
+          rows={[
+            {
+              label: 'Icon=True',
+              render: s => (
+                <PillButton
+                  color="Ruby"
+                  big
+                  icon="fav"
+                  label="Pill"
+                  selected={on(s)}
+                  onPress={noop}
+                />
+              ),
+            },
+            {
+              label: 'Icon=False',
+              render: s => (
+                <PillButton
+                  big
+                  color="Ruby"
+                  label="Pill"
+                  selected={on(s)}
+                  onPress={noop}
+                />
+              ),
+            },
+          ]}
+        />
+        <Block
+          label="Ruby · Size Medium"
+          spec="Height 56px · Corner 100 · Font 24pt · Icon 32x32"
+          columns={['Default / Pressed', 'Selected']}
+          rows={[
+            {
+              label: 'Icon=True',
+              render: s => (
+                <PillButton
+                  color="Ruby"
+                  icon="fav"
+                  label="Pill"
+                  selected={on(s)}
+                  onPress={noop}
+                />
+              ),
+            },
+            {
+              label: 'Icon=False',
+              render: s => (
+                <PillButton label="Pill" selected={on(s)} onPress={noop} />
+              ),
+            },
+            {
+              label: 'Notification badge',
+              render: s => (
+                <PillButton
+                  color="Ruby"
                   label="Pill"
                   badge
                   selected={on(s)}
