@@ -119,12 +119,13 @@ func _fallback(token: String, reason: String) -> Dictionary:
 ## Runs from _ready, not from the FTUE: the resolved token lives only in Rust memory and
 ## attribution starts once per install, so a process killed before the FTUE is reached would
 ## lose it for good. Residual gap: a kill before attribution settles still loses it.
+## No deadline of its own: Tenjin only starts once the EULA (and on iOS the tracking prompt) is
+## answered, which can be well past launch, and Metrics bounds the wait from that point.
 func _async_watch_attribution() -> void:
 	if not OS.get_name() in ["Android", "iOS"] or Global.metrics == null:
 		_attribution_settled = true
 		return
 
-	var deadline := Time.get_ticks_msec() + int(ATTRIBUTION_MAX_WAIT_SECONDS * 1000.0)
 	while true:
 		var token := String(Global.metrics.get_resolved_campaign_token()).strip_edges()
 		if not token.is_empty():
@@ -139,10 +140,6 @@ func _async_watch_attribution() -> void:
 			_attribution_settled = true
 			return
 		if not Global.metrics.is_install_attribution_pending():
-			_attribution_settled = true
-			return
-		if Time.get_ticks_msec() >= deadline:
-			push_warning("[CAMPAIGN] install attribution never settled")
 			_attribution_settled = true
 			return
 		await get_tree().create_timer(ATTRIBUTION_POLL_SECONDS).timeout

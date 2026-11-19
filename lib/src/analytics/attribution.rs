@@ -66,6 +66,8 @@ impl Attribution {
         };
         if !ok {
             tracing::warn!("[attribution] Tenjin failed to start");
+            // Nothing will answer: settle with no campaign so the campaign watcher stops waiting.
+            self.attribution_wanted = false;
             return;
         }
         self.started = true;
