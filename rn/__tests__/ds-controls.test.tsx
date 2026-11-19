@@ -5,6 +5,7 @@ import {
   Checkbox,
   Dropdown,
   Header,
+  IconButton,
   SearchField,
   Slider,
   Switch,
@@ -106,7 +107,9 @@ describe('Header', () => {
         search={{ value: 'hat', onChangeText: () => {}, onClose }}
       />,
     );
-    expect(tree.root.findAllByProps({ value: 'hat' }).length).toBeGreaterThan(0);
+    expect(tree.root.findAllByProps({ value: 'hat' }).length).toBeGreaterThan(
+      0,
+    );
     act(() => pressable(tree, 'Back').props.onPress());
     expect(onClose).toHaveBeenCalled();
   });
@@ -383,6 +386,50 @@ describe('Button', () => {
     );
     expect(pressable(plain, 'PLAIN').props.accessibilityState).toEqual({
       disabled: false,
+    });
+  });
+});
+
+describe('touch target', () => {
+  const target = (tree: ReturnType<typeof create>, label: string) =>
+    tree.root
+      .findAllByProps({ accessibilityLabel: label })
+      .find((n: ReactTestInstance) => typeof n.props.onLayout === 'function')!;
+  const layout = (
+    tree: ReturnType<typeof create>,
+    label: string,
+    width: number,
+    height: number,
+  ) =>
+    act(() =>
+      target(tree, label).props.onLayout({
+        nativeEvent: { layout: { width, height } },
+      }),
+    );
+
+  it('pads a control drawn under 44dp out to 44dp', () => {
+    const tree = render(
+      <IconButton icon="dice" accessibilityLabel="Filter" onPress={() => {}} />,
+    );
+    layout(tree, 'Filter', 27, 30);
+    expect(target(tree, 'Filter').props.hitSlop).toEqual({
+      left: 8.5,
+      right: 8.5,
+      top: 7,
+      bottom: 7,
+    });
+  });
+
+  it('adds nothing to a control already 44dp or larger', () => {
+    const tree = render(
+      <Button tone="primary" label="CONTINUE" onPress={() => {}} />,
+    );
+    layout(tree, 'CONTINUE', 200, 48);
+    expect(target(tree, 'CONTINUE').props.hitSlop).toEqual({
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0,
     });
   });
 });
