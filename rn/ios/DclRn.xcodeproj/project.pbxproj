@@ -19,7 +19,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		D0F0A1E5F0A1E5F0A1E50001 /* fonts */ = {isa = PBXFileReference; lastKnownFileType = folder; name = fonts; path = ../android/app/src/rnassets/fonts; sourceTree = "<group>"; };
+		D0F0A1E5F0A1E5F0A1E50001 /* fonts */ = {isa = PBXFileReference; lastKnownFileType = folder; name = fonts; path = DclRn/fonts; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* DclRn.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DclRn.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = DclRn/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = DclRn/Info.plist; sourceTree = "<group>"; };
