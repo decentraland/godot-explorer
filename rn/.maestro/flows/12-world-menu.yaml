@@ -13,6 +13,8 @@ name: World HUD, chat and menu
 - assertVisible: "hey! anyone going to the theatre at 12,45?"
 - assertVisible: "@Mateo welcome to Genesis Plaza"
 - tapOn: "Write a message"
+# The tap swaps the panel for a compact input above the keyboard; typing goes to it only once it is tapped.
+- tapOn: "Write a message\\.\\.\\."
 - inputText: "hello from maestro"
 - pressKey: Enter
 - assertVisible: ".*hello from maestro.*"
