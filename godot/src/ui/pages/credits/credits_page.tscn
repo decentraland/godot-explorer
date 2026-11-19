@@ -37,6 +37,7 @@ corner_radius_bottom_right = 100
 corner_radius_bottom_left = 100
 
 [node name="CreditsPage" type="Control"]
+z_index = 2
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0

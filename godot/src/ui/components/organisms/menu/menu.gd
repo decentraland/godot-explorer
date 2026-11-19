@@ -20,7 +20,6 @@ var selected_node: PlaceholderManager
 var current_screen_name: String = ""
 var _fade_tweens: Dictionary = {}
 var _credits_page: CreditsPage = null
-var _credits_layer: CanvasLayer = null
 var _credits_was_portrait: bool = true
 var _close_modulate_tween: Tween = null
 var _close_hide_tween: Tween = null
@@ -175,19 +174,17 @@ func async_show_credits(source: String = "UNKNOWN"):
 	_open()
 	_credits_was_portrait = Global.is_orientation_portrait()
 	Global.set_orientation_portrait()
-	_credits_layer = CanvasLayer.new()
-	add_child(_credits_layer)
 	var scene = load("res://src/ui/pages/credits/credits_page.tscn")
 	_credits_page = scene.instantiate()
 	_credits_page.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_credits_layer.add_child(_credits_page)
+	# Child of Menus, not a full-screen layer: it stops above the bottom bar so the navbar stays.
+	%Menus.add_child(_credits_page)
 	_credits_page.closed.connect(_on_credits_page_closed)
 
 
 func _on_credits_page_closed() -> void:
-	if is_instance_valid(_credits_layer):
-		_credits_layer.queue_free()
-		_credits_layer = null
+	if is_instance_valid(_credits_page):
+		_credits_page.queue_free()
 		_credits_page = null
 		if not _credits_was_portrait:
 			Global.set_orientation_landscape()
@@ -305,6 +302,9 @@ func _needs_save_on_leave(node: PlaceholderManager) -> bool:
 
 
 func async_select_node(node: PlaceholderManager, play_sfx: bool = true):
+	# A navbar tab pressed over Credits must reveal its screen, not stay hidden behind the page.
+	if is_instance_valid(_credits_page):
+		_on_credits_page_closed()
 	if selected_node and not selected_node.instance:
 		selected_node = null
 	if selected_node != node:
