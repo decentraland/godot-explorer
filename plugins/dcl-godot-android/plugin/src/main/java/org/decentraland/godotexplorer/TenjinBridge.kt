@@ -27,6 +27,7 @@ class TenjinBridge {
             if (userId.isNotEmpty()) instance.setCustomerUserId(userId)
             instance.connect()
             sdk = instance
+            Log.i(tag, "started")
             true
         } catch (e: Throwable) {
             Log.w(tag, "start failed: ${e.message}")
@@ -58,6 +59,7 @@ class TenjinBridge {
         val instance = sdk ?: return false
         return try {
             if (value == 0) instance.eventWithName(name) else instance.eventWithNameAndValue(name, value)
+            Log.i(tag, "event '$name' sent")
             true
         } catch (e: Throwable) {
             Log.w(tag, "event '$name' failed: ${e.message}")
