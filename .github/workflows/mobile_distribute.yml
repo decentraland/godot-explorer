@@ -75,7 +75,9 @@ jobs:
        github.event.pull_request.head.repo.full_name == github.repository &&
        (github.base_ref == 'main' || github.base_ref == '1.x' || github.base_ref == 'release' || startsWith(github.base_ref, 'release-')))
     runs-on: ubuntu-latest
-    environment: mobile-release
+    environment:
+      name: mobile-release
+      deployment: false
     permissions:
       contents: read
       pull-requests: write
@@ -324,7 +326,9 @@ jobs:
     if: needs.prepare.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    environment: mobile-release
+    environment:
+      name: mobile-release
+      deployment: false
     permissions:
       contents: read
     outputs:
@@ -470,7 +474,9 @@ jobs:
     needs: [prepare, ios-resolve]
     if: needs.prepare.outputs.should_build == 'true' && needs.ios-resolve.outputs.reuse == 'true'
     runs-on: ubuntu-latest
-    environment: mobile-release
+    environment:
+      name: mobile-release
+      deployment: false
     permissions:
       contents: read
     env:
@@ -535,7 +541,9 @@ jobs:
       (needs.ios-build.result == 'success' || needs.ios-dispatch.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 200
-    environment: mobile-release
+    environment:
+      name: mobile-release
+      deployment: false
     permissions:
       contents: read
     env:
@@ -659,7 +667,9 @@ jobs:
         needs.ios-build.result == 'failure' || needs.ios-build.result == 'cancelled' ||
         needs.ios-dispatch.result == 'failure' || needs.ios-dispatch.result == 'cancelled' )
     runs-on: ubuntu-latest
-    environment: mobile-release
+    environment:
+      name: mobile-release
+      deployment: false
     permissions:
       contents: read
     steps:
@@ -715,7 +725,9 @@ jobs:
     if: needs.prepare.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    environment: mobile-release
+    environment:
+      name: mobile-release
+      deployment: false
     permissions:
       contents: read
     outputs:
@@ -872,7 +884,9 @@ jobs:
     if: always() && needs.prepare.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment: mobile-release
+    environment:
+      name: mobile-release
+      deployment: false
     permissions:
       contents: read
       id-token: write   # OIDC token for keyless Google Cloud auth (Firebase App Distribution via WIF)
