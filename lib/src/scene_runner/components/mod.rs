@@ -7,6 +7,7 @@ pub mod avatar_attach;
 pub mod avatar_data;
 pub mod avatar_locomotion_settings;
 pub mod avatar_modifier_area;
+pub mod avatar_nametag;
 pub mod avatar_shape;
 pub mod billboard;
 pub mod camera_mode_area;

@@ -6,8 +6,9 @@ use std::{
 };
 
 use godot::{
+    classes::Node3D,
     obj::Singleton,
-    prelude::{varray, Callable, ToGodot, Transform3D},
+    prelude::{varray, Callable, Gd, ToGodot, Transform3D},
 };
 
 /// Per-state cumulative CPU timing across all scene threads. Read+reset from
@@ -92,6 +93,7 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
         S::AvatarShape => "AvatarShape",
         S::AvatarShapeEmoteCommand => "AvatarShapeEmoteCommand",
         S::Raycasts => "Raycasts",
+        S::AvatarNametag => "AvatarNametag",
         S::AvatarAttach => "AvatarAttach",
         S::SceneUi => "SceneUi",
         S::VideoPlayer => "VideoPlayer",
@@ -175,7 +177,8 @@ use crate::{
     },
     godot_classes::dcl_global::DclGlobal,
     scene_runner::components::{
-        audio_stream::update_audio_stream, avatar_shape::update_avatar_shape_emote_command,
+        audio_stream::update_audio_stream, avatar_nametag::update_avatar_nametag,
+        avatar_shape::update_avatar_shape_emote_command,
         virtual_cameras::update_main_and_virtual_cameras,
     },
 };
@@ -205,6 +208,7 @@ pub fn _process_scene(
     apply_only: bool,
     bench_disable_tweens: bool,
     bench_disable_transforms: bool,
+    player_avatar_node: Option<&Gd<Node3D>>,
 ) -> bool {
     let crdt = scene.dcl_scene.scene_crdt.clone();
 
@@ -496,6 +500,15 @@ pub fn _process_scene(
                 }
                 SceneUpdateState::AvatarShapeEmoteCommand => {
                     update_avatar_shape_emote_command(scene, crdt_state);
+                    false
+                }
+                SceneUpdateState::AvatarNametag => {
+                    update_avatar_nametag(
+                        scene,
+                        crdt_state,
+                        current_parcel_scene_id,
+                        player_avatar_node,
+                    );
                     false
                 }
                 SceneUpdateState::Raycasts => {
