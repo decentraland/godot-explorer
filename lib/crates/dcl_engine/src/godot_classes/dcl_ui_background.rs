@@ -471,11 +471,13 @@ impl DclUiBackground {
                 let texture_size = godot_texture.get_size();
                 let (patch_margin_left, patch_margin_top, patch_margin_right, patch_margin_bottom) =
                     if let Some(slices) = self.current_value.texture_slices.as_ref() {
+                        let (left, right) = clamp_opposite_slices(slices.left, slices.right);
+                        let (top, bottom) = clamp_opposite_slices(slices.top, slices.bottom);
                         (
-                            slices.left * texture_size.x,
-                            slices.top * texture_size.y,
-                            slices.right * texture_size.x,
-                            slices.bottom * texture_size.y,
+                            left * texture_size.x,
+                            top * texture_size.y,
+                            right * texture_size.x,
+                            bottom * texture_size.y,
                         )
                     } else {
                         (
@@ -495,12 +497,12 @@ impl DclUiBackground {
                 self.base_mut()
                     .set_patch_margin(godot::builtin::Side::RIGHT, patch_margin_right as i32);
 
-                // TODO: should be TILE or STRETCH?
+                // Edges and centre stretch, as Unity's sliced background does.
                 self.base_mut().set_h_axis_stretch_mode(
-                    godot::classes::nine_patch_rect::AxisStretchMode::TILE_FIT,
+                    godot::classes::nine_patch_rect::AxisStretchMode::STRETCH,
                 );
                 self.base_mut().set_v_axis_stretch_mode(
-                    godot::classes::nine_patch_rect::AxisStretchMode::TILE_FIT,
+                    godot::classes::nine_patch_rect::AxisStretchMode::STRETCH,
                 );
 
                 let slices_info = if self.current_value.texture_slices.is_some() {
@@ -701,6 +703,17 @@ impl DclUiBackground {
     }
 }
 
+/// Unity's `DCLImage.AdjustSlices`: when two opposite slices add up to more than the texture, the
+/// first keeps its value (at most all of it) and the second gets what is left.
+fn clamp_opposite_slices(first: f32, second: f32) -> (f32, f32) {
+    if first + second > 1.0 {
+        let first = first.min(1.0);
+        (first, 1.0 - first)
+    } else {
+        (first, second)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -753,5 +766,17 @@ mod tests {
             TextureRepeat::DISABLED
         );
         assert_eq!(texture_repeat_from_texture(&None), TextureRepeat::DISABLED);
+    }
+
+    #[test]
+    fn opposite_slices_that_fit_are_kept() {
+        assert_eq!(clamp_opposite_slices(0.25, 0.5), (0.25, 0.5));
+    }
+
+    #[test]
+    fn opposite_slices_that_overflow_give_the_second_the_rest() {
+        let (first, second) = clamp_opposite_slices(0.7, 0.6);
+        assert!((first - 0.7).abs() < 1e-6 && (second - 0.3).abs() < 1e-6);
+        assert_eq!(clamp_opposite_slices(1.5, 0.2), (1.0, 0.0));
     }
 }
