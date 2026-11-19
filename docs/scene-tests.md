@@ -94,7 +94,7 @@ What the engine made of an entity, without a screenshot:
 | `renderedMesh(entity)` | the `MeshRenderer` mesh class and visibility |
 | `renderedModel(entity)` | the `GltfContainer` source, loading state and visibility |
 | `renderedText(entity)` | the `TextShape` label: text, size, colours, outline, alignment, font |
-| `renderedUi(entity)` | a UI entity's rect in pixels, its background (colour, texture, nine-slice margins, stretch mode, UVs) and text |
+| `renderedUi(entity)` | a UI entity's rect in pixels, its background (colour, texture, nine-slice margins, stretch mode, UVs, corner radii) and text |
 | `renderedDropdown(entity)` | a `UiDropdown`'s options, selected index (-1 for none) and the button's text |
 
 `settled(context, read, done)` re-reads one of them each tick until it holds, since the engine
