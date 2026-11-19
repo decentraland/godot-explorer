@@ -418,6 +418,9 @@ impl INode for CommunicationManager {
     }
 
     fn ready(&mut self) {
+        // Run before the scene kick (priority -5), which reads this frame's inbound messages; at
+        // the default 0 they reached the scenes a frame late.
+        self.base_mut().set_process_priority(-10);
         self.run_deferred(|this| this.init_rs());
     }
 
@@ -512,6 +515,16 @@ impl INode for CommunicationManager {
         let mut outgoing_messages = Vec::new();
         let mut disconnects = Vec::new();
 
+        // Pull what the rooms received before the processor hands messages to the scenes, not
+        // after (that cost every inbound message a frame). The polls below still run and handle a
+        // dead room.
+        if let Some(main_room) = &mut self.main_room {
+            main_room.poll();
+        }
+        #[cfg(feature = "use_livekit")]
+        if let Some(scene_room) = &mut self.scene_room {
+            scene_room.poll();
+        }
         if let Some(processor) = &mut self.message_processor {
             let processor_polling_ok = processor.poll();
             let chats = processor.consume_chats();
