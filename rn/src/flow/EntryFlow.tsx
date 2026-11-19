@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { BackHandler } from 'react-native';
+import { BackHandler, Keyboard } from 'react-native';
 import {
   acceptTerms,
   alreadySignedIn,
@@ -170,6 +170,7 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
         return;
       }
       setBusy(false);
+      Keyboard.dismiss();
       // The code was right: "Confirming login..." until the profile is read.
       dispatch({ type: 'codeAccepted' });
       acceptTerms().catch(() => {});
