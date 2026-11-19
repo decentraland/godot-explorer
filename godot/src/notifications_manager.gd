@@ -982,7 +982,7 @@ func async_sync_attended_events() -> void:
 	_check_and_handle_version_change()
 
 	# Don't surface the OS permission dialog from this background sync — the prompt is
-	# only shown on the explicit Play-as-Guest / Sign-In taps now (issue #2377). If
+	# only shown over the lobby's Let's Go screens now (#2377, #3183). If
 	# permission isn't granted we still schedule; the OS drops it gracefully and the
 	# reminders start surfacing once the user grants from the entry flow.
 	if not has_local_notification_permission():
