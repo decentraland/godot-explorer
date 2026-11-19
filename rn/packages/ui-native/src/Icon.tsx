@@ -32,6 +32,7 @@ import {
   navBarPaths,
   navProfileActiveSvg,
   navProfileSvg,
+  profilePaths,
   settingsPaths,
   strokePaths,
   walletConnectSvg,
@@ -92,6 +93,7 @@ const monoFamilies: { family: GlyphFamily; paths: Record<string, Glyph> }[] = [
   { family: menuPaths, paths: prefixed('menu', menuPaths) },
   { family: navBarPaths, paths: prefixed('nav', navBarPaths) },
   { family: settingsPaths, paths: prefixed('settings', settingsPaths) },
+  { family: profilePaths, paths: prefixed('profile', profilePaths) },
   { family: logoPaths, paths: logoPaths.paths },
   { family: badgePaths, paths: badgePaths.paths },
   { family: namePaths, paths: namePaths.paths },
@@ -163,6 +165,7 @@ type MonoName =
   | `menu${Capitalize<keyof typeof menuPaths.paths>}`
   | `nav${Capitalize<keyof typeof navBarPaths.paths>}`
   | `settings${Capitalize<keyof typeof settingsPaths.paths>}`
+  | `profile${Capitalize<keyof typeof profilePaths.paths>}`
   | keyof typeof logoPaths.paths
   | keyof typeof badgePaths.paths
   | keyof typeof namePaths.paths;
@@ -180,6 +183,13 @@ export const iconNames = [
   ...Object.keys(aliases),
 ] as IconName[];
 
+/**
+ * Figma Icon/Base: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=48-3563
+ * Figma Icon/Menu: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=42-3274
+ * Figma Icon/Settings: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=606-112
+ * Figma Icon/Modal: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=562-7607
+ * Figma Icon/Profile: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=1012-265
+ */
 export function Icon({
   name: requested,
   size: designSize = 24,

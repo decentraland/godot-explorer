@@ -84,6 +84,11 @@ Optional extras, in this order, only when they add clarity: a **Heads-up** line 
 `ModalShell`"*); a **Changes** list (file → what it does) inside Details; a **Future plans** or
 **Known gaps** line at the end.
 
+Not optional: when the diff replaces a screenshot reference (`tests/snapshots/scenes/*.png`),
+Details lists each one with why the picture changed and the old and new images (`REVIEW.md` §3
+#21). If you can't name the change that explains a picture, don't replace it: see
+`docs/scene-tests.md` → "Change a reference image".
+
 ### 2.2 Writing What and Why
 
 `## What` and `## Why` are the deliverable. Everything else is optional. Write them so that
@@ -180,6 +185,7 @@ Follow `REVIEW.md` §4 exactly. In short:
 - [ ] Test plan cases start from opening the app and end in an observable result.
 - [ ] Every Expected/Regression line in the Test plan is a `- [ ] **Expected:** …` box — no bare `- [ ]`, no tables, no prose-only cases.
 - [ ] Affected teams are named and were (or will be) told before merge.
+- [ ] Each replaced screenshot reference is listed in Details with its reason and old/new images.
 - [ ] Visible text outside `<details>` fits on one screen.
 - [ ] Opened as a draft, unless the author explicitly said it is ready for review.
 

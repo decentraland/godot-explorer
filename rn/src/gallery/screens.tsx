@@ -13,6 +13,7 @@ import { StyleSheet, View } from 'react-native';
 import { BottomNav, colors, Menu } from '@dcl/ui-native';
 import './dsButtons';
 import './dsCards';
+import './dsAdditions';
 import { registerPreview } from './registry';
 
 const noop = () => {};

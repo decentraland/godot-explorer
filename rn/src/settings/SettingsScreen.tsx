@@ -107,7 +107,7 @@ export function SettingsScreen({
           <SectionRows
             devTools={m.env.devTools}
             selected={current}
-            rowHeight={30}
+            size="Small"
             onSelect={setSection}
           />
           <View style={styles.spacer} />
@@ -146,7 +146,7 @@ export function SettingsScreen({
           <View style={styles.flex}>
             <SectionRows
               devTools={m.env.devTools}
-              rowHeight={51}
+              size="Large"
               onSelect={setSection}
             />
             <View style={styles.spacer} />

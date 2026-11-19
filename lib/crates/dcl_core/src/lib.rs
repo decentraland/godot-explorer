@@ -36,6 +36,7 @@ pub mod seasonal_skin;
 pub mod session;
 pub mod settings;
 pub mod urls;
+pub mod world_scenes;
 
 #[cfg(feature = "ffi")]
 uniffi::setup_scaffolding!();

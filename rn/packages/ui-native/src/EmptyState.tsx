@@ -7,7 +7,9 @@ import { u } from './scale';
 
 /** Figma `EmptyState` 866:372: an optional icon in an outlined Purple 100 badge over a title and body.
  * `lg` for full screens and sheet content, `sm` for side panels and landscape. `actionLabel` is a
- * code-only retry button under the text (the node has none). */
+ * code-only retry button under the text (the node has none).
+ * Figma EmptyState: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=866-372
+ */
 export function EmptyState({
   icon,
   title,

@@ -11,7 +11,11 @@ import { u } from './scale';
  * 60×60 Dice square with a 54 glyph). Colors
  * are passed directly, not a `tone` enum — this family's palette varies per concrete use (purple
  * nav overlay vs. black filter overlay vs. a semantic accept/cancel border) in a way a shared tone
- * system can't express without forcing unrelated cases through the same few names. */
+ * system can't express without forcing unrelated cases through the same few names.
+ * Figma Button/Filter: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=4-1554
+ * Figma Button/Discover: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=4-1222
+ * Figma Button/Social: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=300-383
+ */
 export function IconButton({
   icon,
   onPress,

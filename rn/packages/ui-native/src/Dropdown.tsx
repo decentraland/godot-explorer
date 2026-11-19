@@ -18,7 +18,11 @@ const LIST_GAP = 2;
 
 /** Figma `Input/DropdownLabeled`: label + `Input/Dropdown` field + an overlay `Input/OptionsList`
  * (it does not push content) that opens down or up. `readOnly` has no chevron and cannot open;
- * `error` is the Red border plus the message below. */
+ * `error` is the Red border plus the message below.
+ * Figma Input/Dropdown: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=562-6622
+ * Figma Input/DropdownLabeled: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=562-6646
+ * Figma Input/OptionsList: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=562-6694
+ */
 export function Dropdown({
   label,
   value,
@@ -33,6 +37,7 @@ export function Dropdown({
   maxVisibleRows = 5,
   defaultOpen = false,
   onOpenChange,
+  accessibilityLabel,
 }: {
   label: string;
   value: string | null;
@@ -48,6 +53,8 @@ export function Dropdown({
   defaultOpen?: boolean;
   /** Lets a parent raise this field above its siblings while the list is open. */
   onOpenChange?: (open: boolean) => void;
+  /** Read by screen readers when the visible label is drawn elsewhere (defaults to `label`). */
+  accessibilityLabel?: string;
 }) {
   const [open, setOpenState] = useState(defaultOpen);
   const setOpen = (next: boolean) => {
@@ -120,7 +127,7 @@ export function Dropdown({
         {direction === 'up' && list}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={label}
+          accessibilityLabel={accessibilityLabel ?? label}
           accessibilityState={{ expanded: isOpen, disabled: locked }}
           disabled={locked}
           onPress={() => setOpen(!open)}
@@ -144,11 +151,7 @@ export function Dropdown({
           </AppText>
           {selected?.icon && (
             <View style={styles.optionIcon}>
-              <Icon
-                name={selected.icon}
-                size={16}
-                color={selected.iconColor}
-              />
+              <Icon name={selected.icon} size={16} color={selected.iconColor} />
             </View>
           )}
           <View style={styles.spacer} />

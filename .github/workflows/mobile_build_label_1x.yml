@@ -1,0 +1,33 @@
+name: 📱 Mobile build label (1.x)
+
+# GitHub reads a pull_request_target workflow from the default branch whatever the PR's base, so
+# the `build` label on a PR into 1.x lands here. It runs 1.x's own mobile_distribute.yml, which
+# builds that line's code with that line's scripts.
+on:
+  pull_request_target:
+    types: [labeled]
+    branches: [1.x]
+
+permissions:
+  contents: read
+
+# Per label, so adding an unrelated label does not cancel a running build.
+concurrency:
+  group: mobile-label-1x-${{ github.event.pull_request.number }}-${{ github.event.label.name }}
+  cancel-in-progress: true
+
+jobs:
+  distribute:
+    if: >-
+      (github.event.label.name == 'build' || github.event.label.name == 'build-ios') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    uses: decentraland/godot-explorer/.github/workflows/mobile_distribute.yml@1.x
+    # The most any job in the called workflows asks for: prepare removes the label and cancels
+    # older runs, the Android builder image is pushed to ghcr, and Firebase authenticates via OIDC.
+    permissions:
+      contents: read
+      pull-requests: write
+      actions: write
+      packages: write
+      id-token: write
+    secrets: inherit

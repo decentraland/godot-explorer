@@ -7,7 +7,9 @@ import { t } from './i18n';
 
 /** Figma `Input/Search` (540×68: Black 40%, radius 12, `Icon/Base` search 56, Lavender Light
  * border while focused) with the optional back chevron of `Header` SearchOpen; `framed` only
- * widens the gap after the chevron. */
+ * widens the gap after the chevron.
+ * Figma Input/Search: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=562-5083
+ */
 export function SearchField({
   value,
   onChangeText,

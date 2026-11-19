@@ -7,7 +7,9 @@ const SIZES = {
   sm: { width: 55, height: 28, pad: 1.75, knobW: 30 },
 } as const;
 
-/** Figma `Control/Switch`: Ruby track when on, Black 40% when off; `lg` 140×64, `sm` 110×56. */
+/** Figma `Control/Switch`: Ruby track when on, Black 40% when off; `lg` 140×64, `sm` 110×56.
+ * Figma Control/Switch: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=562-9023
+ */
 export function Switch({
   value,
   onChange,

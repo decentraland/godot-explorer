@@ -14,7 +14,9 @@ export type EventTimeKind =
   | 'date';
 
 /** Figma `Tag/EventTime`: Live is Ruby with the player count box, StartingSoon is Snow with Ruby
- * text, the rest are Snow with Shadow text. The app builds the text. */
+ * text, the rest are Snow with Shadow text. The app builds the text.
+ * Figma Tag/EventTime: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=35-761
+ */
 export function EventTimeTag({
   kind,
   label,
@@ -59,7 +61,9 @@ const TRENDING = [
   { offset: 1, color: '#34C070' },
 ];
 
-/** Figma `Tag/Event`: a gradient highlight tag, Trending (teal) or Featured (light rainbow). */
+/** Figma `Tag/Event`: a gradient highlight tag, Trending (teal) or Featured (light rainbow).
+ * Figma Tag/Event: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=35-785
+ */
 export function EventBadge({
   type,
   label,
@@ -80,7 +84,9 @@ export function EventBadge({
 }
 
 /** Figma `RarityLabel` 825:6933: the rarity name in its Rarities colour on a 20% tint of it (Base: Gray
- * on Pearl 20%, Exotic: on its Light colour). The caller passes the translated name. */
+ * on Pearl 20%, Exotic: on its Light colour). The caller passes the translated name.
+ * Figma RarityLabel: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=825-6933
+ */
 export function RarityLabel({
   rarity,
   label,

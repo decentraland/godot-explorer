@@ -52,6 +52,8 @@ export const colors = {
   black60: 'rgba(0,0,0,0.6)',
   black70: 'rgba(0,0,0,0.7)',
   white: '#FFFFFF',
+  /** Figma `color/black`. */
+  black: '#000000',
   white40: 'rgba(255,255,255,0.4)',
   snow10: 'rgba(252,252,252,0.1)',
   snow70: 'rgba(252,252,252,0.7)',
@@ -83,6 +85,111 @@ export const colors = {
   lavender50: 'rgba(232,185,255,0.5)',
 } as const;
 
+/** The Figma `alpha/*` primitives by name: `alpha/white-30` is `alpha['white-30']`. */
+export const alpha = {
+  'black-4': 'rgba(0,0,0,0.04)',
+  'black-8': 'rgba(0,0,0,0.08)',
+  'black-10': 'rgba(0,0,0,0.1)',
+  'black-20': 'rgba(0,0,0,0.2)',
+  'black-30': 'rgba(0,0,0,0.3)',
+  'black-40': 'rgba(0,0,0,0.4)',
+  'black-50': 'rgba(0,0,0,0.5)',
+  'black-60': 'rgba(0,0,0,0.6)',
+  'black-70': 'rgba(0,0,0,0.7)',
+  'white-4': 'rgba(255,255,255,0.04)',
+  'white-8': 'rgba(255,255,255,0.08)',
+  'white-10': 'rgba(255,255,255,0.1)',
+  'white-20': 'rgba(255,255,255,0.2)',
+  'white-30': 'rgba(255,255,255,0.3)',
+  'white-40': 'rgba(255,255,255,0.4)',
+  'white-70': 'rgba(255,255,255,0.7)',
+  'snow-10': 'rgba(252,252,252,0.1)',
+  'snow-30': 'rgba(252,252,252,0.3)',
+  'snow-50': 'rgba(252,252,252,0.5)',
+  'snow-70': 'rgba(252,252,252,0.7)',
+  'silver-50': 'rgba(160,155,168,0.5)',
+  'ruby-50': 'rgba(255,45,85,0.5)',
+  'gray-30': 'rgba(207,205,212,0.3)',
+  'purple-20': 'rgba(105,31,169,0.2)',
+  'purple-40': 'rgba(105,31,169,0.4)',
+  'purple-60': 'rgba(105,31,169,0.6)',
+  'purple-70': 'rgba(105,31,169,0.7)',
+  'deep-purple-40': 'rgba(53,8,84,0.4)',
+  'deep-purple-50': 'rgba(53,8,84,0.5)',
+  'lavender-30': 'rgba(232,185,255,0.3)',
+  'lavender-50': 'rgba(232,185,255,0.5)',
+  'lavender-70': 'rgba(232,185,255,0.7)',
+  'violet-70': 'rgba(161,75,243,0.7)',
+  'shadow-70': 'rgba(22,21,24,0.7)',
+  'shadow-90': 'rgba(22,21,24,0.9)',
+  'midnight-90': 'rgba(26,9,37,0.9)',
+} as const;
+
+/** The Figma "Color" collection (Design System Mobile, Colors page 1:154) by its own names: `text/link`
+ * is `color.text.link`. Each points at the palette above. */
+export const color = {
+  background: {
+    canvas: colors.shadow,
+    elevated: colors.paleBlack,
+    brand: colors.brand,
+  },
+  surface: {
+    overlay: colors.black40,
+    'overlay-pressed': colors.black60,
+    'overlay-disabled': colors.black30,
+    subtle: colors.white10,
+    'subtle-strong': colors.white20,
+    inverse: colors.snow,
+    'inverse-pressed': colors.snow70,
+    'inverse-disabled': colors.snow10,
+    modal: colors.modal,
+    'modal-glow': colors.mythic,
+    'modal-special': '#160338',
+    'modal-special-glow': '#AE59FF',
+    scrim: colors.scrim,
+    nametag: alpha['shadow-70'],
+    navbar: colors.navbar,
+    menu: colors.menu,
+    selected: alpha['lavender-30'],
+  },
+  text: {
+    primary: colors.snow,
+    secondary: colors.pearl,
+    placeholder: colors.white50,
+    disabled: colors.textDisabled,
+    inverse: colors.shadow,
+    accent: colors.ruby,
+    username: '#34FEE6',
+    link: colors.link,
+  },
+  border: {
+    default: colors.snow,
+    disabled: colors.textDisabled,
+    accent: colors.ruby,
+    subtle: colors.white30,
+    menu: colors.lavender70,
+  },
+  action: {
+    primary: colors.ruby,
+    'primary-pressed': colors.rubyPressed,
+    'primary-disabled': colors.rubyDisabled,
+    selected: colors.lavender,
+  },
+  status: {
+    success: '#34CE77',
+    online: colors.green,
+    danger: colors.danger,
+    live: colors.ruby,
+    notification: colors.ruby,
+  },
+  icon: {
+    default: colors.snow,
+    secondary: colors.pearl,
+    disabled: colors.textDisabled,
+    danger: colors.danger,
+  },
+} as const;
+
 /** Figma `Gradients/Light Rainbow` (Featured tag, selected avatar card); CSS 147.6° = `LinearFill` 32. */
 export const lightRainbow = [
   { offset: 0, color: '#FFBC5B' },
@@ -100,9 +207,9 @@ export const claimGradient = [
 
 /** Figma `Elevation/Down|Up`: one shadow, 0/±4 offset, blur 4, Shadow at 50% — values ÷ 2 for
  * dp. `boxShadow` draws the same on both platforms (Android `elevation` ignores the colour). */
-const shadow = (offsetY: number, blurRadius = u(2), alpha = '80') => ({
+const shadow = (offsetY: number, blurRadius = u(2), opacity = '80') => ({
   boxShadow: [
-    { offsetX: 0, offsetY, blurRadius, color: `${colors.shadow}${alpha}` },
+    { offsetX: 0, offsetY, blurRadius, color: `${colors.shadow}${opacity}` },
   ],
 });
 export const elevation = {
@@ -152,6 +259,19 @@ export const space = {
   lg: u(12),
   xl: u(16),
   '2xl': u(24),
+  '10': u(5),
+  '14': u(7),
+  '18': u(9),
+  '20': u(10),
+  '26': u(13),
+  '30': u(15),
+  '40': u(20),
+  '44': u(22),
+  '50': u(25),
+  '54': u(27),
+  '56': u(28),
+  '60': u(30),
+  '64': u(32),
 } as const;
 export const radius = {
   xs: u(2),
@@ -162,6 +282,7 @@ export const radius = {
   '2xl': u(12),
   pill: 999,
 } as const;
+/** @deprecated Use `control` (Figma `control/*`). */
 export const controlHeight = {
   lg: u(48),
   md: u(37),
@@ -171,11 +292,30 @@ export const controlHeight = {
   tag: u(21),
   badge: u(16),
 } as const;
+/** @deprecated Use `icon` (Figma `icon/*` sizes). */
 export const iconSize = {
   buttonLg: 16,
   buttonMd: 14,
   buttonSm: 12,
   iconButton: 20,
+  pill: 16,
+  tag: 13,
+} as const;
+/** The Figma "Size" collection: `control/pill-lg` is `control['pill-lg']`. */
+export const control = {
+  lg: u(48),
+  md: u(37),
+  sm: u(27),
+  'pill-lg': u(30),
+  'pill-md': u(28),
+  tag: u(21),
+  badge: u(16),
+} as const;
+export const icon = {
+  'button-lg': 16,
+  'button-md': 14,
+  'button-sm': 12,
+  'icon-button': 20,
   pill: 16,
   tag: 13,
 } as const;
@@ -195,10 +335,12 @@ export const motion = {
 } as const;
 
 export const fonts = {
+  light: 'Inter-Light',
   regular: 'Inter-Regular',
   medium: 'Inter-Medium',
   semibold: 'Inter-SemiBold',
   bold: 'Inter-Bold',
+  black: 'Inter-Black',
 } as const;
 
 /** Item grids are always three columns, 12dp apart, 24dp from the screen edge. */

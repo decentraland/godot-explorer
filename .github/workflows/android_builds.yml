@@ -27,6 +27,20 @@ on:
         required: false
         type: string
         default: ''
+      run_scene_tests:
+        description: >
+          Also run the scene tests (tests/scene-tests) on this commit's Linux library. runner.yml
+          sets it; mobile_distribute's on-demand rebuild does not.
+        required: false
+        type: boolean
+        default: false
+      build_android:
+        description: >
+          Build the Android library and the APK. runner.yml turns it off on PRs, which then run only
+          the Linux library and the scene tests (Android builds through the `build` label).
+        required: false
+        type: boolean
+        default: true
     secrets:
       ANDROID_KEYSTORE_BASE64:
         required: true
@@ -68,6 +82,7 @@ jobs:
   # builds and pushes a new tag once, every other run only checks that the tag exists.
   builder-image:
     name: Android builder image
+    if: inputs.build_android
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -116,15 +131,79 @@ jobs:
           cache-from: type=registry,ref=ghcr.io/decentraland/godot-explorer/android-builder:buildcache
           cache-to: type=registry,ref=ghcr.io/decentraland/godot-explorer/android-builder:buildcache,mode=max
 
-  build:
-    name: Build Android
+  # The scene tests exercise the Godot side only: a PR that changes nothing there (the React Native
+  # app, docs, unrelated CI) skips them and the Linux library they need. Pushes always run them.
+  changes:
+    name: Godot-side changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      godot: ${{ steps.files.outputs.godot }}
+    steps:
+      - id: files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ -z "$PR_NUMBER" ]; then
+            echo "godot=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files=$(gh api "repos/$REPO/pulls/$PR_NUMBER/files" --paginate --jq '.[].filename')
+          godot_side='^(lib/|godot/|src/|tests/scene-tests/|scripts/ci/scene-tests\.sh|scripts/serve-scene-tests\.sh|Cargo\.(toml|lock)$|rust-toolchain\.toml$|\.github/workflows/(scene_tests|android_builds|runner)\.yml$|\.github/actions/(install-deps|import-assets|set-up-cache|set-prod-flag)/)'
+          if printf '%s\n' "$files" | grep -qE "$godot_side"; then
+            echo "godot=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "godot=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Scene tests skipped::This PR changes nothing on the Godot side."
+          fi
+
+  # The Linux library is the Godot editor's GDExtension for the import and export below, and the
+  # client the scene tests run. Pinned to the builder image's Ubuntu 24.04: built on a newer glibc
+  # (ubuntu-latest is 26.04), the .so does not load in that container.
+  linux-lib:
+    name: Linux library
+    needs: changes
+    if: inputs.build_android || needs.changes.outputs.godot == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
+        with:
+          toolchain: "1.94"
+      - name: Set up cache
+        uses: ./.github/actions/set-up-cache
+      - name: Install dependencies
+        uses: ./.github/actions/install-deps
+      - name: Cargo install
+        run: cargo run -- install
+      - name: Set prod flag
+        uses: ./.github/actions/set-prod-flag
+        with:
+          ref: ${{ inputs.ref || github.head_ref }}
+      - name: Build
+        run: cargo run -- build --release --features disable_telemetry ${{ env.PROD_FLAG }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libdclgodot-linux-release
+          path: lib/target/libdclgodot_linux/libdclgodot.so
+          retention-days: 1
+          compression-level: 1
+          if-no-files-found: error
+
+  android-lib:
+    name: Android library
     needs: builder-image
+    if: inputs.build_android
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
       packages: read
-    timeout-minutes: 50
+    timeout-minutes: 40
     container:
       image: ${{ needs.builder-image.outputs.image }}
       credentials:
@@ -166,8 +245,9 @@ jobs:
       - name: Install Android targets
         run: |
           rustup target add aarch64-linux-android
+      # The Android dependencies (.bin/android_deps) the Android build checks for.
       - name: Cargo install
-        run: cargo run -- install --targets android linux
+        run: cargo run -- install --targets android
 
       # Pass the real branch so release* PRs / on-demand rebuilds bake --prod: `inputs.ref` when
       # mobile_distribute rebuilds a specific commit, `head_ref` on PR events (where github.ref is
@@ -179,8 +259,7 @@ jobs:
           ref: ${{ inputs.ref || github.head_ref }}
 
       # Allocate the store build number (Cloudflare Worker, idempotent per commit SHA + flavor). MUST run
-      # BEFORE the lib build so build.rs bakes it into the version string (GODOT_EXPLORER_VERSION),
-      # and so the APK + AAB exports below stamp the same versionCode for this commit.
+      # BEFORE the lib build so build.rs bakes it into the version string (GODOT_EXPLORER_VERSION).
       - name: Compute build number
         uses: ./.github/actions/compute-build-number
         with:
@@ -189,14 +268,10 @@ jobs:
           secret: ${{ secrets.BUILD_NUMBER_SECRET }}
           allocated-by: android
 
-      - name: Build Rust libraries
-        run: |
-          cargo run -- build --release ${{ env.PROD_FLAG }}
-          cargo run -- build --release --target android ${{ env.PROD_FLAG }}
-          cargo run -- import-assets
+      - name: Build Rust library
+        run: cargo run -- build --release --target android ${{ env.PROD_FLAG }}
 
-      # Persist the freshly built target/ — no-op off main (see save-warp-cache). Placed right
-      # after the build so a later export/sign failure can't lose a valid cache.
+      # Placed right after the build so a later failure can't lose a valid cache.
       - name: Save build cache (main only)
         if: github.ref == 'refs/heads/main' && steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
@@ -209,6 +284,138 @@ jobs:
             target/
             lib/target/
           key: ${{ steps.cache.outputs.cache-primary-key }}
+
+      # Unstripped: the AAB embeds its symbols and the Sentry step uploads it with sources. The
+      # checkpoints are the version strings build.rs wrote, which the export job's Sentry step reads.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libdclgodot-android-release
+          path: |
+            lib/target/libdclgodot_android/libdclgodot.so
+            .build.version
+            .build.sentry_release
+          include-hidden-files: true
+          retention-days: 1
+          compression-level: 1
+          if-no-files-found: error
+
+  scene-tests:
+    name: 🧪 Scene tests
+    needs: [changes, linux-lib]
+    if: inputs.run_scene_tests && needs.changes.outputs.godot == 'true'
+    uses: ./.github/workflows/scene_tests.yml
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}
+
+  # The check to require in branch protection: it reports on every PR, while skipped scene tests
+  # report under another name. Fails when any job it needs failed or was cancelled.
+  scene-tests-result:
+    name: Scene tests result
+    needs: [changes, linux-lib, scene-tests]
+    if: always() && inputs.run_scene_tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the scene tests and what they need
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "changes, Linux library, scene tests: $RESULTS"
+          for result in $RESULTS; do
+            case "$result" in
+              success|skipped) ;;
+              *) echo "::error::a scene-test job ended with '$result'"; exit 1 ;;
+            esac
+          done
+
+  build:
+    name: Build Android
+    needs: [builder-image, linux-lib, android-lib]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      packages: read
+    timeout-minutes: 50
+    container:
+      image: ${{ needs.builder-image.outputs.image }}
+      credentials:
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      volumes:
+        - /home/user/.cache/devgodot:/github/home/.cache/devgodot
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}
+      - name: Add safe directory
+        run: |
+          git config --global --add safe.directory $GITHUB_WORKSPACE
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
+        with:
+          toolchain: "1.94"
+          components: clippy, rustfmt
+
+      # Both libraries come from the jobs above; this job only compiles the xtask, whose
+      # target/ and cargo registry are cached on their own (a few hundred MB, not the 2.8 GB build).
+      - name: Restore xtask cache
+        id: xtask-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: xtask-${{ hashFiles('Cargo.lock') }}
+          restore-keys: xtask-
+
+      - name: Cargo install
+        run: cargo run -- install --targets android linux
+
+      # Pass the real branch so release* PRs / on-demand rebuilds bake --prod: `inputs.ref` when
+      # mobile_distribute rebuilds a specific commit, `head_ref` on PR events (where github.ref is
+      # refs/pull/N/merge and would always map to --staging). Both empty on plain pushes → the
+      # action falls back to github.ref, unchanged behavior.
+      - name: Set prod flag
+        uses: ./.github/actions/set-prod-flag
+        with:
+          ref: ${{ inputs.ref || github.head_ref }}
+
+      # The same number android-lib baked into the library (idempotent per commit SHA + flavor), so
+      # the APK + AAB exports below stamp the same versionCode for this commit.
+      - name: Compute build number
+        uses: ./.github/actions/compute-build-number
+        with:
+          sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.sha }}
+          flavor: ${{ env.BUILD_FLAVOR }}
+          secret: ${{ secrets.BUILD_NUMBER_SECRET }}
+          allocated-by: android
+
+      - name: Download Linux library
+        uses: actions/download-artifact@v4
+        with:
+          name: libdclgodot-linux-release
+          path: lib/target/libdclgodot_linux
+      - name: Download Android library
+        uses: actions/download-artifact@v4
+        with:
+          name: libdclgodot-android-release
+          path: .
+
+      - name: Import assets
+        run: cargo run -- import-assets
+
+      - name: Save xtask cache (main only)
+        if: github.ref == 'refs/heads/main' && steps.xtask-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ steps.xtask-cache.outputs.cache-primary-key }}
 
       # The shipping app is the React Native app in rn/: `cargo run -- export` builds it from the
       # Godot export, and its Gradle build bundles the JS with Node.

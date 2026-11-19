@@ -11,7 +11,9 @@ export type LoginProvider = 'google' | 'apple' | 'wallet' | 'email';
  * four `Type`s (Google/Apple/Wallet/Mail), not four bespoke buttons: Google/Apple/Wallet share the
  * white/`DCL Shadow` styling ("light"), Mail is the one dark variant (Figma's own note: "Mail uses
  * variant=secondary"). Icon-to-label gap is per-brand in Figma (10px Wallet, 8px Mail, 4px
- * Google/Apple), not a single shared value. */
+ * Google/Apple), not a single shared value.
+ * Figma Button/Entry: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=244-492
+ */
 export function LoginButton({
   provider,
   label,

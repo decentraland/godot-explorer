@@ -10,7 +10,11 @@ export const counterLabel = (length: number, max: number): string =>
   `${length}/${max}`;
 
 /** Figma `Input/Labeled` + `Input/Field`: label, optional counter, clear X while focused, and the
- * Focus (Lavender Light) / Error (`status/danger`) borders. Disabled is a palette state, not a dim. */
+ * Focus (Lavender Light) / Error (`status/danger`) borders. Disabled is a palette state, not a dim.
+ * Figma Input/Field: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=562-4820
+ * Figma Input/Labeled: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=562-4890
+ * Figma Input/Counter: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=562-5035
+ */
 export function TextField({
   label,
   value,
@@ -32,6 +36,7 @@ export function TextField({
   autoFocus = false,
   secureTextEntry = false,
   onFocusChange,
+  accessibilityLabel,
 }: {
   label: string;
   value: string;
@@ -58,6 +63,8 @@ export function TextField({
   secureTextEntry?: boolean;
   /** Told when the field gains or loses focus, for a caller that validates on blur. */
   onFocusChange?: (focused: boolean) => void;
+  /** Read by screen readers when the visible label is drawn elsewhere (defaults to `label`). */
+  accessibilityLabel?: string;
 }) {
   const [focused, setFocused] = useState(false);
   const showClear = focused && value.length > 0 && !disabled && !!onClear;
@@ -108,7 +115,7 @@ export function TextField({
         ]}
       >
         <TextInput
-          accessibilityLabel={label}
+          accessibilityLabel={accessibilityLabel ?? label}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}

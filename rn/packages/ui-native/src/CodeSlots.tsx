@@ -7,7 +7,9 @@ import { u } from './scale';
 /** Figma `Input/CodeSlots` laid out as `OTP-Input`: one 84×130 slot per digit, 10 apart. The slot
  * being typed gets the Lavender Light border, filled slots a Pearl one, every slot `status/danger`
  * when `error`. `errorMessage` reserves its line under the slots and shows it while `error`. A
- * hidden input carries the real text so the OS keyboard and autofill work. */
+ * hidden input carries the real text so the OS keyboard and autofill work.
+ * Figma Input/CodeSlots: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=562-5058
+ */
 export function CodeSlots({
   value,
   length,

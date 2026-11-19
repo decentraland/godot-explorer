@@ -79,7 +79,9 @@ function useClaimedMotion(claimed: boolean) {
 /** Figma `Modal/Claim` 871:701: the reward claim modal of wearable campaigns over `Modal/Scrim`, on
  * the `Modal-Background` surface (`surface/modal` + the Dialog glows scaled to its 312×340 card).
  * `reward` is the campaign art. `loading` shows the spinner in its place and dims the button;
- * `claimed` adds the rays, disables the button and closes on a tap anywhere. */
+ * `claimed` adds the rays, disables the button and closes on a tap anywhere.
+ * Figma Modal/Claim: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=871-701
+ */
 export function ClaimDialog({
   visible,
   state,

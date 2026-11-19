@@ -561,13 +561,13 @@ impl Player {
         match rig::toggle_direction(self.pinch_accumulated_delta) {
             1 => {
                 if mode == CameraMode::ThirdPerson {
-                    set_global_camera_mode(CameraMode::FirstPerson);
+                    self.switch_camera_mode(CameraMode::FirstPerson);
                 }
                 self.pinch_accumulated_delta = 0.0;
             }
             -1 => {
                 if mode == CameraMode::FirstPerson {
-                    set_global_camera_mode(CameraMode::ThirdPerson);
+                    self.switch_camera_mode(CameraMode::ThirdPerson);
                 }
                 self.pinch_accumulated_delta = 0.0;
             }
@@ -908,8 +908,16 @@ impl Player {
             return;
         }
         if self.current_camera_mode() != CameraMode::ThirdPerson {
-            set_global_camera_mode(CameraMode::ThirdPerson);
+            self.switch_camera_mode(CameraMode::ThirdPerson);
         }
+    }
+
+    /// The Player's own camera switch, applied here and recorded globally. Not through
+    /// `DclGlobal::set_camera_mode`: its `camera_mode_set` reaches this Player's listener while
+    /// `self` is still borrowed, and the switch is dropped.
+    fn switch_camera_mode(&mut self, mode: CameraMode) {
+        self.set_camera_mode_with_sound(mode, true);
+        DclGlobal::singleton().bind_mut().current_camera_mode = mode.to_i32();
     }
 
     fn build_raycast_exclude(&mut self) {
@@ -1825,10 +1833,6 @@ impl Player {
         hit.get("normal")
             .is_some_and(|normal| normal.to::<Vector3>().y >= WALKABLE_NORMAL_Y)
     }
-}
-
-fn set_global_camera_mode(mode: CameraMode) {
-    DclGlobal::set_camera_mode(mode.to_i32());
 }
 
 fn explorer_has_focus() -> bool {

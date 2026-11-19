@@ -432,15 +432,29 @@ fn dump_children(node: &Gd<Node>, collect_nodes: &Map<String, Value>, data: &mut
     }
 }
 
+/// Every visual node under the entity, glTF meshes included, in the entity's own space. Child
+/// entities are left out: they report their own bounds.
 fn world_aabb(node: &Gd<Node3D>) -> Option<godot::builtin::Aabb> {
+    let to_local = node.get_global_transform().affine_inverse();
+    let mut bounds = None;
+    merge_visual_bounds(&node.clone().upcast(), to_local, &mut bounds);
+    bounds
+}
+
+fn merge_visual_bounds(
+    node: &Gd<Node>,
+    to_local: godot::builtin::Transform3D,
+    bounds: &mut Option<godot::builtin::Aabb>,
+) {
     if let Ok(visual) = node.clone().try_cast::<VisualInstance3D>() {
-        return Some(visual.get_aabb());
+        let local = to_local * visual.get_global_transform() * visual.get_aabb();
+        *bounds = Some(bounds.map_or(local, |merged| merged.merge(local)));
     }
-    node.get_children()
-        .iter_shared()
-        .filter_map(|child| child.try_cast::<VisualInstance3D>().ok())
-        .map(|visual| visual.get_aabb())
-        .reduce(|merged, next| merged.merge(next))
+    for child in node.get_children().iter_shared() {
+        if !child.is_class("DclNodeEntity3d") {
+            merge_visual_bounds(&child, to_local, bounds);
+        }
+    }
 }
 
 // ---- the app's own UI

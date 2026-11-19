@@ -1,0 +1,216 @@
+#!/usr/bin/env node
+//
+// Deploys the scene tests to the QA World as production builds, where each scene shows its manual
+// QA steps (docs/scene-tests.md): at their own parcels, or all of them into a PR's zone, pointing QA
+// at the ones the PR changed; or removes a zone.
+// CI runs it (scene_tests_world.yml): the World comes from SCENE_TESTS_WORLD and the deployer's key
+// only from the DCL_PRIVATE_KEY environment variable, which that workflow fills from a secret.
+//
+//   deploy-scene-tests.mjs deploy [--zone <pr>] [--base origin/main]
+//   deploy-scene-tests.mjs undeploy --zone <pr>
+//   SCENE_TESTS_WORLD=mobile1.dcl.eth deploy-scene-tests.mjs deploy|undeploy [--zone <pr>] --dry-run
+//       what would be deployed where, with its links, or which scenes a zone's undeploy would remove;
+//       needs no key, so it runs anywhere
+import { execFileSync } from 'node:child_process'
+import fs from 'node:fs'
+import { createRequire } from 'node:module'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+const SUITE = path.join(ROOT, 'tests/scene-tests')
+const SDK_COMMANDS = path.join(SUITE, 'node_modules/.bin/sdk-commands')
+const WORLDS = (process.env.WORLDS_SERVER || 'https://worlds-content-server.decentraland.org').replace(/\/+$/, '')
+
+// A PR's zone: 30x30 parcels on the World's west half (x -150..-31), away from the merged scenes'
+// own parcels. Every scene goes in, at the same place in every zone (they span 3x23). Two PRs share
+// a zone only when their numbers are 40 apart, so a PR's scenes carry its number in their title and
+// its undeploy removes only those.
+const ZONE_SIZE = 30
+const ZONE_COLUMNS = 4
+const ZONE_ROWS = 10
+
+const require = createRequire(path.join(SUITE, 'package.json'))
+const { Authenticator } = require('@dcl/crypto')
+const { ethSign, recoverAddressFromEthSignature } = require('@dcl/crypto/dist/crypto')
+
+function fail(message) {
+  console.error(message)
+  process.exit(1)
+}
+
+function parseArgs(argv) {
+  const [command, ...rest] = argv
+  const options = { command, zone: null, base: 'origin/main', dryRun: false }
+  for (let i = 0; i < rest.length; i += 1) {
+    if (rest[i] === '--zone') options.zone = Number(rest[++i])
+    else if (rest[i] === '--base') options.base = rest[++i]
+    else if (rest[i] === '--dry-run') options.dryRun = true
+    else fail(`unknown argument: ${rest[i]}`)
+  }
+  if (!['deploy', 'undeploy'].includes(command)) fail('usage: deploy-scene-tests.mjs deploy|undeploy [--zone <pr>] [--base <ref>]')
+  if (options.zone !== null && !Number.isInteger(options.zone)) fail('--zone takes a PR number')
+  if (command === 'undeploy' && options.zone === null) fail('undeploy needs --zone <pr>')
+  return options
+}
+
+function zoneOf(pr) {
+  const index = pr % (ZONE_COLUMNS * ZONE_ROWS)
+  return { x: -150 + (index % ZONE_COLUMNS) * ZONE_SIZE, y: -150 + Math.floor(index / ZONE_COLUMNS) * ZONE_SIZE }
+}
+
+const parse = (parcel) => parcel.split(',').map(Number)
+const prTag = (pr) => ` · PR #${pr}`
+
+/** Every scene folder (`x,y-name`), with its parcels from scene.json. */
+function sceneFolders() {
+  return fs
+    .readdirSync(SUITE)
+    .filter((name) => /^-?\d+,-?\d+-/.test(name) && fs.existsSync(path.join(SUITE, name, 'scene.json')))
+    .map((folder) => ({ folder, scene: JSON.parse(fs.readFileSync(path.join(SUITE, folder, 'scene.json'), 'utf8')).scene }))
+}
+
+/** The scene folders a PR changed: what QA is pointed at. */
+function changedFolders(base) {
+  return new Set(
+    execFileSync('git', ['diff', '--name-only', `${base}...HEAD`, '--', 'tests/scene-tests'], { cwd: ROOT, encoding: 'utf8' })
+      .split('\n')
+      .filter(Boolean)
+      .map((file) => file.split('/')[2])
+  )
+}
+
+/** Moves the scenes, keeping their layout, so their lowest corner lands on the zone's. */
+function placeInZone(scenes, zone) {
+  const parcels = scenes.flatMap(({ scene }) => scene.parcels.map(parse))
+  const minX = Math.min(...parcels.map(([x]) => x))
+  const minY = Math.min(...parcels.map(([, y]) => y))
+  const maxX = Math.max(...parcels.map(([x]) => x))
+  const maxY = Math.max(...parcels.map(([, y]) => y))
+  if (maxX - minX >= ZONE_SIZE || maxY - minY >= ZONE_SIZE) fail(`the scenes span more than ${ZONE_SIZE}x${ZONE_SIZE} parcels`)
+  const move = (parcel) => {
+    const [x, y] = parse(parcel)
+    return `${x - minX + zone.x},${y - minY + zone.y}`
+  }
+  return scenes.map(({ folder, scene }) => ({ folder, parcels: scene.parcels.map(move), base: move(scene.base) }))
+}
+
+function deployScene(world, key, { folder, parcels, base, tag }) {
+  const sceneJsonPath = path.join(SUITE, folder, 'scene.json')
+  const original = fs.readFileSync(sceneJsonPath, 'utf8')
+  const sceneJson = JSON.parse(original)
+  sceneJson.worldConfiguration = { name: world }
+  sceneJson.scene = { ...sceneJson.scene, parcels, base }
+  // Worlds rejects a thumbnail the deployment does not include.
+  const thumbnail = sceneJson.display?.navmapThumbnail
+  if (thumbnail && !fs.existsSync(path.join(SUITE, folder, thumbnail))) delete sceneJson.display.navmapThumbnail
+  if (tag) sceneJson.display = { ...sceneJson.display, title: `${sceneJson.display?.title ?? folder}${tag}` }
+  fs.writeFileSync(sceneJsonPath, JSON.stringify(sceneJson, null, 2))
+  const cwd = path.join(SUITE, folder)
+  try {
+    execFileSync(SDK_COMMANDS, ['build', '--production', '--skip-install'], { cwd, stdio: 'inherit' })
+    execFileSync(
+      SDK_COMMANDS,
+      ['deploy', '--target-content', WORLDS, '--multi-scene', '--skip-build', '--no-browser'],
+      { cwd, stdio: 'inherit', env: { ...process.env, DCL_PRIVATE_KEY: key } }
+    )
+  } finally {
+    fs.writeFileSync(sceneJsonPath, original)
+  }
+}
+
+const privateKey = (key) => Uint8Array.from(Buffer.from(key.replace(/^0x/, ''), 'hex'))
+const addressOf = (key) => recoverAddressFromEthSignature(ethSign(privateKey(key), 'address'), 'address')
+
+/** ADR-44 signed fetch as the deployer, for the Worlds calls a deploy does not cover. */
+async function signedFetch(key, url, method) {
+  const pk = privateKey(key)
+  const address = addressOf(key)
+  const timestamp = String(Date.now())
+  const metadata = JSON.stringify({ signer: 'scene-tests-ci' })
+  const payload = [method, new URL(url).pathname, timestamp, metadata].join(':').toLowerCase()
+  const chain = Authenticator.createSimpleAuthChain(payload, address, ethSign(pk, payload))
+  const headers = { 'x-identity-timestamp': timestamp, 'x-identity-metadata': metadata }
+  chain.forEach((link, index) => {
+    headers[`x-identity-auth-chain-${index}`] = JSON.stringify(link)
+  })
+  return fetch(url, { method, headers })
+}
+
+async function worldScenes(world) {
+  const scenes = []
+  for (let offset = 0; ; offset += 100) {
+    const response = await fetch(`${WORLDS}/world/${encodeURIComponent(world)}/scenes?limit=100&offset=${offset}`)
+    if (!response.ok) fail(`Worlds answered ${response.status} listing ${world}'s scenes`)
+    const page = (await response.json()).scenes ?? []
+    scenes.push(...page)
+    if (page.length < 100) return scenes
+  }
+}
+
+/** Removes the scenes this deployer put in the zone for this PR, and nothing else in it. */
+async function undeployZone(world, key, zone, pr, dryRun) {
+  const inZone = (parcel) => {
+    const [x, y] = parse(parcel)
+    return x >= zone.x && x < zone.x + ZONE_SIZE && y >= zone.y && y < zone.y + ZONE_SIZE
+  }
+  // A dry run without the key cannot tell the deployer, so it matches on the PR tag alone.
+  const deployer = key ? addressOf(key).toLowerCase() : null
+  const ours = (scene) =>
+    (deployer === null || scene.deployer?.toLowerCase() === deployer) &&
+    (scene.entity?.metadata?.display?.title ?? '').endsWith(prTag(pr))
+  for (const scene of await worldScenes(world)) {
+    const parcel = (scene.parcels ?? []).find(inZone)
+    if (parcel === undefined || !ours(scene)) continue
+    if (dryRun) {
+      console.log(`Would undeploy the scene on ${parcel}: ${scene.entity.metadata.display.title}`)
+      continue
+    }
+    const url = `${WORLDS}/world/${encodeURIComponent(world)}/scenes/${encodeURIComponent(parcel)}`
+    const response = await signedFetch(key, url, 'DELETE')
+    // already gone is what we wanted
+    if (!response.ok && response.status !== 404) fail(`Worlds refused to undeploy ${parcel}: ${response.status} ${await response.text()}`)
+    console.log(`Undeployed the scene on ${parcel}`)
+  }
+}
+
+/** `changed`: the scenes to point QA at, listed first; none outside a PR or when it changed no scene. */
+function report(world, deployed, zone, changed) {
+  const query = (base) => `realm=${encodeURIComponent(world)}&position=${base}`
+  const mobile = (base) => `https://mobile.dclexplorer.com/open?${query(base)}`
+  const row = ({ folder, base }) => `| ${folder} | ${base} | [mobile](${mobile(base)}) · [desktop](https://decentraland.org/play/?${query(base)}) |`
+  const table = (scenes) => ['| Scene | Position | Open |', '|---|---|---|', ...scenes.map(row)]
+  const pointed = deployed.filter(({ folder }) => changed.has(folder))
+  const lines = [zone === null ? `### QA World: ${world}` : `### QA zone ${zone.x},${zone.y} in ${world}`, '']
+  if (pointed.length > 0 && pointed.length < deployed.length) lines.push('**Changed in this PR**', '', ...table(pointed), '', '**Every scene**', '')
+  lines.push(...table(deployed))
+  const text = lines.join('\n')
+  console.log(text)
+  const { GITHUB_STEP_SUMMARY, GITHUB_OUTPUT, GITHUB_SERVER_URL, GITHUB_REPOSITORY, GITHUB_RUN_ID } = process.env
+  if (GITHUB_STEP_SUMMARY) fs.appendFileSync(GITHUB_STEP_SUMMARY, `${text}\n`)
+  // The PR's "View deployment": its scene when it changed one, else this run's table.
+  const url = pointed.length === 1 ? mobile(pointed[0].base) : `${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}`
+  if (GITHUB_OUTPUT && GITHUB_RUN_ID) fs.appendFileSync(GITHUB_OUTPUT, `url=${url}\n`)
+}
+
+const options = parseArgs(process.argv.slice(2))
+const world = (process.env.SCENE_TESTS_WORLD || '').trim().toLowerCase()
+const key = (process.env.DCL_PRIVATE_KEY || '').trim()
+// Only `deploy` gets the key, explicitly: the scene builds run the PR's own code.
+delete process.env.DCL_PRIVATE_KEY
+if (!world) fail('SCENE_TESTS_WORLD is not set (the QA World, e.g. name.dcl.eth)')
+if (!key && !options.dryRun) fail('DCL_PRIVATE_KEY is not set (the deployer wallet the World owner allowed)')
+const zone = options.zone === null ? null : zoneOf(options.zone)
+
+if (options.command === 'undeploy') {
+  await undeployZone(world, key, zone, options.zone, options.dryRun)
+} else {
+  const all = sceneFolders()
+  const targets =
+    zone === null
+      ? all.map(({ folder, scene }) => ({ folder, parcels: scene.parcels, base: scene.base }))
+      : placeInZone(all, zone).map((target) => ({ ...target, tag: prTag(options.zone) }))
+  // One at a time: Worlds holds at most 10 pending deployments per deployer.
+  if (!options.dryRun) for (const target of targets) deployScene(world, key, target)
+  report(world, targets, zone, zone === null ? new Set() : changedFolders(options.base))
+}

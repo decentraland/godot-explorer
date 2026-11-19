@@ -172,6 +172,30 @@ pub enum RpcCall {
     SceneTestResult {
         body: SceneTestResult,
     },
+    /// Scene-test mode only: press or release one of the player's input actions; a press with
+    /// `frames` > 0 is released by the engine after exactly that many frames.
+    SimulateInput {
+        action: String,
+        pressed: bool,
+        strength: f32,
+        frames: u32,
+    },
+    /// Scene-test mode only: a shell command, a setting change or a debug-hub query (`kind`), with
+    /// its JSON `payload`; the reply is JSON.
+    TestCommand {
+        kind: String,
+        payload: String,
+        response: RpcResultSender<Result<String, String>>,
+    },
+    /// Scene-test mode only: play a named touch gesture (`joystick`, `look`, `pinch`) through the
+    /// mobile controls.
+    SimulateGesture {
+        kind: String,
+        x: f32,
+        y: f32,
+        strength: f32,
+        frames: u32,
+    },
     SendAsync {
         body: CreateRequest,
         response: RpcResultSender<Result<serde_json::Value, String>>,

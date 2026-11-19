@@ -25,6 +25,11 @@ export type ButtonTone =
   | 'reminder'
   | 'claim';
 
+/**
+ * Figma Button/Primary: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=1-17
+ * Figma Button/Secondary: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=2-767
+ * Figma Button/Reminder: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=594-589
+ */
 export function Button({
   label,
   onPress,

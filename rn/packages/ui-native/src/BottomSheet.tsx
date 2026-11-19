@@ -43,6 +43,7 @@ export const SHEET_HANDLE_HEIGHT = u(32);
  * Figma `Sheet` (Handle=On) that rests at peek / half / full. Only the handle + `header` area
  * drags, so scrollable `children` keep their own gestures. `snap` is
  * controlled: the sheet reports the target through `onSnapChange`.
+ * Figma Sheet: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=841-1057
  */
 export function BottomSheet({
   snap,

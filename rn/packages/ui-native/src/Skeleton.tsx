@@ -15,7 +15,9 @@ const band = (color: string) => [
 const BAND = { dark: band('#FFFFFF'), light: band('#000000') };
 
 /** Figma `Skeleton`: an 8% block (White on dark surfaces, Black on light ones). Wave sweeps a
- * half-width highlight across it in 1 s ease-out; Pulse fades it to 4% and back, 0.75 s each way. */
+ * half-width highlight across it in 1 s ease-out; Pulse fades it to 4% and back, 0.75 s each way.
+ * Figma Skeleton: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=790-1783
+ */
 export function Skeleton({
   width,
   height,

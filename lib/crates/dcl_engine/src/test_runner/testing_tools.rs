@@ -3,7 +3,11 @@
 //! `--scene-test`.
 
 use godot::classes::node::ProcessMode;
-use godot::classes::{Camera3D, DirAccess, FileAccess, Image, Node, Node3D, RenderingServer};
+use godot::classes::sub_viewport::UpdateMode;
+use godot::classes::{
+    Camera3D, Control, DirAccess, FileAccess, Image, Input, InputEventScreenDrag,
+    InputEventScreenTouch, Node, Node3D, RenderingServer, SubViewport,
+};
 use godot::prelude::*;
 
 use super::image_compare::{rgb_difference, rgb_similarity};
@@ -11,11 +15,14 @@ use super::scene_plan::{
     parse_parcels, summarize, SceneReport, SceneTest, SCENE_TESTS_TIMEOUT, SCENE_TIMEOUT,
 };
 use super::snapshot_files::{snapshot_file_name, SnapshotFolders};
+use crate::dcl::components::proto_components::sdk::components::PbUiCanvasInformation;
+use crate::dcl::SceneId;
 use crate::engine::local_task::{await_all, defer, next_frame, sleep, spawn_local};
 use crate::fetcher::globals;
 use crate::godot_classes::dcl_avatar::DclAvatar;
 use crate::godot_classes::dcl_global::DclGlobal;
 use crate::godot_classes::rpc_sender::take_and_compare_snapshot_response::DclRpcSenderTakeAndCompareSnapshotResponse;
+use crate::scene_runner::components::ui::scene_ui::relayout_for_capture;
 
 /// The camera layers that show the world without the outline layer (20).
 const CAMERA_CULL_MASK: u32 = 524287;
@@ -26,6 +33,17 @@ const STABLE_CHECKS: u32 = 3;
 const LOAD_CHECK_INTERVAL: f64 = 0.1;
 const SETTLE_FRAMES: u32 = 5;
 const SETTLE_SECONDS: f64 = 0.2;
+/// The player actions a scene test may press through `~system/Testing.simulateInput`: the ones
+/// the on-screen joystick and buttons press.
+const SIMULATED_ACTIONS: [&str; 7] = [
+    "ia_forward",
+    "ia_backward",
+    "ia_left",
+    "ia_right",
+    "ia_jump",
+    "ia_sprint",
+    "ia_walk",
+];
 
 /// A snapshot a scene asked the test run to take and compare.
 pub struct SnapshotRequest {
@@ -188,6 +206,8 @@ impl DclTestingTools {
         if !test.teleported {
             test.teleported = true;
             test.reset_timeout();
+            // A test that threw mid-hold must not keep walking the player into the next scene.
+            release_simulated_input();
             if let Some(mut body) = self.player_body.clone().filter(|b| b.is_instance_valid()) {
                 body.set_global_position(Vector3::new(
                     test.parcel.x as f32 * 16.0 + 8.0,
@@ -225,6 +245,159 @@ async fn realm_timeout(tools: Gd<DclTestingTools>) {
 }
 
 /// Takes the picture a scene asked for, compares it with its stored one and answers the scene.
+/// Presses (with a strength in 0..1) or releases one of the player's actions for a scene test. A
+/// press with `frames` > 0 is released after exactly that many frames, here on the main thread:
+/// the scene's own ticks run on another thread and would land a frame early or late.
+pub fn simulate_input(action: &str, pressed: bool, strength: f32, frames: u32) {
+    if !SIMULATED_ACTIONS.contains(&action) {
+        tracing::warn!("simulateInput: '{action}' is not a player action");
+        return;
+    }
+    let mut input = Input::singleton();
+    if !pressed {
+        input.action_release(action);
+        return;
+    }
+    input
+        .action_press_ex(action)
+        .strength(strength.clamp(0.0, 1.0))
+        .done();
+    if frames > 0 {
+        let action = action.to_string();
+        spawn_local(async move {
+            for _ in 0..frames {
+                next_frame().await;
+            }
+            Input::singleton().action_release(&action);
+        });
+    }
+}
+
+/// First touch index of a simulated gesture, clear of the ones a real screen hands out first.
+const GESTURE_TOUCH: i32 = 20;
+/// Where a simulated look or pinch happens, as a fraction of the screen: the open camera area
+/// right of the joystick's zone and above the action buttons.
+const LOOK_POINT: (f32, f32) = (0.62, 0.35);
+const PINCH_POINTS: [(f32, f32); 2] = [(0.56, 0.35), (0.72, 0.35)];
+
+/// A named touch gesture for a scene test, played through the real mobile controls as touch
+/// events: `joystick` pushes the stick toward `x,y` by `strength` and holds it `frames` frames;
+/// `look` drags one finger by `x,y` pixels over `frames`; `pinch` spreads two fingers by `x`
+/// pixels (negative closes them) over `frames`.
+pub fn simulate_gesture(kind: &str, x: f32, y: f32, strength: f32, frames: u32) {
+    let Some(ui) = globals::explorer()
+        .and_then(|explorer| explorer.upcast::<Node>().get_node_or_null("UI"))
+        .and_then(|node| node.try_cast::<Control>().ok())
+    else {
+        tracing::warn!("simulateGesture: the explorer UI is not loaded");
+        return;
+    };
+    let size = ui.get_viewport_rect().size;
+    let at = |(fx, fy): (f32, f32)| Vector2::new(size.x * fx, size.y * fy);
+    let frames = frames.max(1);
+    let gesture = match kind {
+        "joystick" => {
+            let Some(joystick) = ui.get_node_or_null("VirtualJoystick_Left") else {
+                tracing::warn!("simulateGesture: no joystick in the explorer UI");
+                return;
+            };
+            let Some(area) = joystick
+                .get_node_or_null("ActiveArea")
+                .and_then(|node| node.try_cast::<Control>().ok())
+            else {
+                return;
+            };
+            let reach = joystick
+                .get("clampzone_size")
+                .try_to::<f32>()
+                .unwrap_or(75.0);
+            let start = area.get_global_rect().center();
+            let push = Vector2::new(x, y).normalized_or_zero() * strength.clamp(0.0, 1.0) * reach;
+            Gesture {
+                fingers: vec![(start, start + push)],
+                move_frames: 1,
+                hold_frames: frames,
+            }
+        }
+        "look" => {
+            let start = at(LOOK_POINT);
+            Gesture {
+                fingers: vec![(start, start + Vector2::new(x, y))],
+                move_frames: frames,
+                hold_frames: 0,
+            }
+        }
+        "pinch" => {
+            let [a, b] = PINCH_POINTS.map(at);
+            let half = Vector2::new(x / 2.0, 0.0);
+            Gesture {
+                fingers: vec![(a, a - half), (b, b + half)],
+                move_frames: frames,
+                hold_frames: 0,
+            }
+        }
+        _ => {
+            tracing::warn!("simulateGesture: unknown gesture '{kind}'");
+            return;
+        }
+    };
+    // Touches arrive in window pixels; the viewport maps them back to the canvas the UI lives in.
+    let to_window = ui.get_viewport_transform();
+    spawn_local(play_gesture(gesture, to_window));
+}
+
+struct Gesture {
+    /// Each finger's start and end, in canvas coordinates.
+    fingers: Vec<(Vector2, Vector2)>,
+    move_frames: u32,
+    hold_frames: u32,
+}
+
+async fn play_gesture(gesture: Gesture, to_window: Transform2D) {
+    let mut input = Input::singleton();
+    let index = |finger: usize| GESTURE_TOUCH + finger as i32;
+    for (finger, (start, _)) in gesture.fingers.iter().enumerate() {
+        let mut touch = InputEventScreenTouch::new_gd();
+        touch.set_index(index(finger));
+        touch.set_position(to_window * *start);
+        touch.set_pressed(true);
+        input.parse_input_event(&touch);
+    }
+    next_frame().await;
+    for step in 1..=gesture.move_frames {
+        let t = step as f32 / gesture.move_frames as f32;
+        let previous = (step - 1) as f32 / gesture.move_frames as f32;
+        for (finger, (start, end)) in gesture.fingers.iter().enumerate() {
+            let now = to_window * start.lerp(*end, t);
+            let before = to_window * start.lerp(*end, previous);
+            let mut drag = InputEventScreenDrag::new_gd();
+            drag.set_index(index(finger));
+            drag.set_position(now);
+            drag.set_relative(now - before);
+            drag.set_screen_relative(now - before);
+            input.parse_input_event(&drag);
+        }
+        next_frame().await;
+    }
+    for _ in 0..gesture.hold_frames {
+        next_frame().await;
+    }
+    for (finger, (_, end)) in gesture.fingers.iter().enumerate() {
+        let mut touch = InputEventScreenTouch::new_gd();
+        touch.set_index(index(finger));
+        touch.set_position(to_window * *end);
+        touch.set_pressed(false);
+        input.parse_input_event(&touch);
+    }
+}
+
+fn release_simulated_input() {
+    let mut input = Input::singleton();
+    for action in SIMULATED_ACTIONS {
+        input.action_release(action);
+    }
+}
+
 pub fn take_and_compare_snapshot(request: SnapshotRequest) {
     let tools = DclGlobal::singleton().bind().testing_tools.clone();
     defer(move || spawn_local(capture_and_answer(tools, request)));
@@ -273,19 +446,25 @@ fn send(request: SnapshotRequest, result: VarDictionary) {
     sender.bind_mut().send(result.to_variant());
 }
 
-/// Waits until the content queue has been empty for a few checks in a row.
+/// Waits until no content promise is pending and no load has started or finished for a few
+/// checks in a row. The load counters are running totals, and a failed load never counts as
+/// finished, so "nothing in flight" is a counter that stopped moving, not one at zero.
 async fn wait_for_content() {
     let mut stable = 0;
+    let mut last = None;
     for _ in 0..LOAD_CHECKS {
-        let (pending, loading) = {
+        let (pending, counters) = {
             let provider = globals::content_provider();
             let provider = provider.bind();
             (
                 provider.get_pending_promises(),
-                provider.count_loading_resources(),
+                (
+                    provider.count_loading_resources(),
+                    provider.count_loaded_resources(),
+                ),
             )
         };
-        if pending.is_empty() && loading == 0 {
+        if pending.is_empty() && last == Some(counters) {
             stable += 1;
             if stable >= STABLE_CHECKS {
                 return;
@@ -296,41 +475,83 @@ async fn wait_for_content() {
                 await_all(pending.iter_shared().collect()).await;
             }
         }
+        last = Some(counters);
         sleep(LOAD_CHECK_INTERVAL).await;
     }
+    godot_warn!(
+        "snapshot: content still loading after {:.0} s; capturing anyway",
+        LOAD_CHECKS as f64 * LOAD_CHECK_INTERVAL
+    );
 }
 
-/// The scene from the requested camera, alone: the world UI and the avatars hidden.
+/// The scene from the requested camera at exactly the requested size, drawn off-screen: the
+/// window's own size (a phone shape, or what the display allows) never changes the picture. The
+/// scene's UI is lent to the capture; the explorer's HUD and the avatars stay out of it.
 async fn capture(tools: &Gd<DclTestingTools>, request: &SnapshotRequest) -> Option<Gd<Image>> {
     RenderingServer::singleton().set_default_clear_color(Color::from_rgba(0.0, 0.0, 0.0, 0.0));
-    let mut window = tools.get_window()?;
-    let previous_camera = window.get_camera_3d();
-    let previous_size = window.get_size();
+    let window = tools.get_window()?;
+    let mut viewport = SubViewport::new_alloc();
+    viewport.set_size(Vector2i::new(request.size.x as i32, request.size.y as i32));
+    viewport.set_world_3d(&window.find_world_3d()?);
+    viewport.set_msaa_3d(window.get_msaa_3d());
+    viewport.set_screen_space_aa(window.get_screen_space_aa());
+    viewport.set_update_mode(UpdateMode::ALWAYS);
+    tools.clone().add_child(&viewport);
 
     let mut camera = Camera3D::new_alloc();
     camera.set_cull_mask(CAMERA_CULL_MASK);
-    tools.clone().add_child(&camera);
+    viewport.add_child(&camera);
     camera.make_current();
-    window.set_size(Vector2i::new(request.size.x as i32, request.size.y as i32));
     camera.set_global_position(request.camera_position);
     camera.look_at(request.camera_target);
 
-    crate::world::state::current().inspect(|w| w.ui_root.clone().set_visible(false));
+    let lent_ui = lend_scene_ui(&viewport);
+    if lent_ui.is_some() {
+        relayout_scene_ui(request.scene_id, request.size);
+    }
     freeze_avatars();
     for _ in 0..SETTLE_FRAMES {
         next_frame().await;
     }
     sleep(SETTLE_SECONDS).await;
-    let image = window.get_texture().and_then(|texture| texture.get_image());
+    let image = viewport
+        .get_texture()
+        .and_then(|texture| texture.get_image());
 
-    crate::world::state::current().inspect(|w| w.ui_root.clone().set_visible(true));
-    window.set_size(previous_size);
-    if let Some(mut previous) = previous_camera {
-        previous.make_current();
+    if let Some((mut ui, mut parent, index)) = lent_ui {
+        ui.reparent(&parent);
+        // Input picks scene UI by its place among its siblings.
+        parent.move_child(&ui, index);
     }
-    tools.clone().remove_child(&camera);
-    camera.queue_free();
+    tools.clone().remove_child(&viewport);
+    viewport.queue_free();
     image
+}
+
+/// Moves the scene's UI container into the capture viewport, where it fills the capture's size,
+/// and returns where it came from.
+fn lend_scene_ui(viewport: &Gd<SubViewport>) -> Option<(Gd<Control>, Gd<Node>, i32)> {
+    let world = crate::world::state::current()?;
+    let mut ui = world.scene_ui.clone();
+    let parent = ui.get_parent()?;
+    let index = ui.get_index();
+    ui.reparent(viewport);
+    Some((ui, parent, index))
+}
+
+/// The scene's UI laid out for the capture's size: percentages and centering follow it.
+fn relayout_scene_ui(scene_id: i32, size: Vector2) {
+    let canvas = PbUiCanvasInformation {
+        width: size.x as i32,
+        height: size.y as i32,
+        device_pixel_ratio: 1.0,
+        ..Default::default()
+    };
+    let mut runner = globals::scene_runner();
+    let mut runner = runner.bind_mut();
+    if let Some(scene) = runner.get_scene_mut(&SceneId(scene_id)) {
+        relayout_for_capture(scene, &canvas);
+    }
 }
 
 /// Still and hidden: the remote avatars and the player's.

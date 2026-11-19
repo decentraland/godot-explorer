@@ -62,6 +62,9 @@ function glowsFor(
   };
 }
 
+/**
+ * Figma Rarity-Backgrounds: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=785-970
+ */
 export function RarityBackground({
   rarity = 'base',
   disabled = false,
@@ -131,7 +134,9 @@ const BAR_BG = {
   detail: colors.shadow,
 } as const;
 
-/** Figma `Cards-Wearables` (96 dp square); the grid sizes it through `style`. */
+/** Figma `Cards-Wearables` (96 dp square); the grid sizes it through `style`.
+ * Figma Cards-Wearables: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=785-1018
+ */
 export function ItemCard({
   thumbnail,
   rarity = 'base',

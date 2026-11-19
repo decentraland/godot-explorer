@@ -16,7 +16,9 @@ export type TabItem<K extends string> = {
 };
 
 /** Figma `Tab/Underline`: uppercase label, Snow + 6px Ruby underline when selected, Gray otherwise.
- * Each tab hugs its label. */
+ * Each tab hugs its label.
+ * Figma Tab/Underline: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=618-130
+ */
 export function Tabs<K extends string>({
   items,
   active,

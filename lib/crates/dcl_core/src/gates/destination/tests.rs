@@ -108,12 +108,17 @@ fn world_base() -> String {
     realm::dcl_world_url("arena.dcl.eth")
 }
 
+/// The first (and only) page of the world's `/scenes` listing.
+fn world_scenes_page() -> String {
+    format!("{}/scenes?limit=100&offset=0", world_base())
+}
+
 fn world_fetch(permissions: Value) -> FakeFetch {
     FakeFetch::default()
         .get(&format!("{}/about", world_base()), Ok(about()))
         .get(&format!("{}/permissions", world_base()), Ok(permissions))
         .get(
-            &format!("{}/scenes", world_base()),
+            &world_scenes_page(),
             Ok(json!({"scenes": [
                 {"parcels": ["0,0"], "entity": entity("bafk1", "Lobby")},
                 {"parcels": ["1,0", "2,0"], "entity": entity("bafk2", "Arena")},
@@ -224,7 +229,7 @@ async fn unlisted_access_kinds_fail_open() {
     // An unreadable /permissions is an open world.
     let fetch = FakeFetch::default()
         .get(&format!("{}/about", world_base()), Ok(about()))
-        .get(&format!("{}/scenes", world_base()), Ok(json!({})));
+        .get(&world_scenes_page(), Ok(json!({})));
     assert!(go(&fetch, "arena.dcl.eth").await.ready);
 }
 

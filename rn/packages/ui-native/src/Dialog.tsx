@@ -79,7 +79,9 @@ export function useKeyboardLift(active: boolean): number {
 
 /** Figma `Modal/Dialog` over `Modal/Scrim`: Portrait card 600 wide, Landscape 720, `surface/modal`
  * with the glow, an optional `Icon/Modal` overlapping the top edge, and a CTA row where every
- * button fills an equal share. The scrim is Black 60% (the no-blur fallback); tapping it closes. */
+ * button fills an equal share. The scrim is Black 60% (the no-blur fallback); tapping it closes.
+ * Figma Modal/Dialog: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=562-7666
+ */
 export function Dialog({
   visible,
   title,

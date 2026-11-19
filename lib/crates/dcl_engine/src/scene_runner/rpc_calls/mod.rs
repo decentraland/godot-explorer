@@ -94,6 +94,33 @@ pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_ca
                     *test_entry = Some(body);
                 }
             }
+            RpcCall::SimulateInput {
+                action,
+                pressed,
+                strength,
+                frames,
+            } => crate::test_runner::testing_tools::simulate_input(
+                &action, pressed, strength, frames,
+            ),
+            RpcCall::TestCommand {
+                kind,
+                payload,
+                response,
+            } => {
+                // Not inside this borrow of the scene manager: a query reads it.
+                crate::engine::local_task::spawn_local(async move {
+                    response.send(crate::test_runner::test_commands::test_command(
+                        &kind, &payload,
+                    ));
+                });
+            }
+            RpcCall::SimulateGesture {
+                kind,
+                x,
+                y,
+                strength,
+                frames,
+            } => crate::test_runner::testing_tools::simulate_gesture(&kind, x, y, strength, frames),
             RpcCall::SendAsync { body, response } => {
                 DclGlobal::singleton()
                     .bind()

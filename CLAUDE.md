@@ -60,7 +60,9 @@ cargo run -- run --no-default-features --features use_livekit,use_deno
 
 # Run tests
 cargo run -- run --itest                  # Integration tests
-cargo run -- run --stest                  # Scene tests
+scripts/ci/scene-tests.sh                 # Scene tests, headless (docs/scene-tests.md)
+scripts/qa-scene.sh <name>                # One scene test in QA mode (production build, QA panel)
+cargo run -- run --stest                  # Scene tests via xtask, with scripts/serve-scene-tests.sh running
 ```
 
 ### Android Development
@@ -284,6 +286,13 @@ The habits AI-assisted changes most often get wrong in this repo. Reviewers hold
 - No helper, base class or abstraction for a single call site — the repo is consciously
   non-abstracted (`REVIEW.md` §9).
 - English only in comments and identifiers; no `print(` left behind (`REVIEW.md` §7).
+
+### Scene-test screenshot references
+
+- A failing screenshot comparison is a possible regression. Never replace a reference in
+  `tests/snapshots/scenes/` just to make a test pass, and never copy the whole `comparison/` folder.
+- Before replacing one, follow `docs/scene-tests.md` → "Change a reference image": show the user the
+  reference, the capture and the diff, say which change explains the difference, and ask.
 
 ## Important Notes
 

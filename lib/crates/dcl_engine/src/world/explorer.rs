@@ -131,6 +131,8 @@ fn build_world(explorer: &Gd<Explorer>) -> Option<std::rc::Rc<World>> {
 struct Destination {
     realm: Option<String>,
     location: Option<Vector2i>,
+    /// The deeplink or `--location` names a parcel; the emulator's own 0,0 does not count.
+    parcel_chosen: bool,
 }
 
 fn destination() -> Destination {
@@ -153,7 +155,13 @@ fn destination() -> Destination {
             realm = Some(DclUrls::main_realm().to_string());
         }
     }
-    Destination { realm, location }
+    let parcel_chosen =
+        link.is_location_defined() || !cli.bind().get_arg("--location".into()).is_empty();
+    Destination {
+        realm,
+        location,
+        parcel_chosen,
+    }
 }
 
 fn setting_str(name: &str) -> String {
@@ -227,7 +235,7 @@ fn start(explorer: Gd<Explorer>, world: &World) {
     globals::scene_fetcher()
         .bind_mut()
         .update_position(start_parcel, true);
-    navigate(destination.realm, start_parcel);
+    navigate(destination.realm, start_parcel, destination.parcel_chosen);
     globals::scene_runner().set_process_mode(godot::classes::node::ProcessMode::INHERIT);
     connect_identity(&explorer);
     finish(world, &explorer);
@@ -265,7 +273,7 @@ fn connect_world(world: &World) {
     controls::connect_world_signals(world);
 }
 
-fn navigate(realm: Option<String>, parcel: Vector2i) {
+fn navigate(realm: Option<String>, parcel: Vector2i, parcel_chosen: bool) {
     let Some(realm) = realm else {
         let mut boot = setting_str("last_realm_joined");
         if boot.is_empty() {
@@ -284,7 +292,8 @@ fn navigate(realm: Option<String>, parcel: Vector2i) {
         .bind()
         .preview
         .clone();
-    if DclRealmRules::is_dcl_ens(realm.as_str().into()) && preview.is_empty() {
+    // Without a chosen parcel the world names its own spawn point.
+    if DclRealmRules::is_dcl_ens(realm.as_str().into()) && preview.is_empty() && !parcel_chosen {
         DclNavigator::join_world(realm.as_str().into());
         return;
     }

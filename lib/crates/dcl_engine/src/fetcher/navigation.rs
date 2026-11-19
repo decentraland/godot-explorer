@@ -336,6 +336,7 @@ async fn enter(navigation: &Navigation, resolution: Resolution, when: &str) -> b
             listing: resolution.listing,
             credential: world_secret(&navigation.realm).unwrap_or_default(),
             wants_spawn: navigation.is_intent && navigation.parcel.is_none(),
+            has_parcel: navigation.parcel.is_some(),
         };
         let realm = globals::realm();
         if !realm_flow::apply(realm, landing).await {

@@ -1765,6 +1765,16 @@
     "orientation": "portrait"
   },
   {
+    "id": "extra/ds-figma-additions",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/ds-modal-special",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
     "id": "extra/flow-account",
     "source": "extra",
     "orientation": "portrait"

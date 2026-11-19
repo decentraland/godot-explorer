@@ -9,11 +9,23 @@ export {
 export type { DetailType } from './DiscoverCard';
 export { ActionSquareButton } from './ActionSquareButton';
 export { AppText } from './AppText';
+export type { FigmaTextStyle, TextVariant } from './AppText';
 export { Badge } from './Badge';
 export { BottomNav } from './BottomNav';
 export type { NavKey } from './BottomNav';
 export { BottomSheet, SHEET_HANDLE_HEIGHT, useSheetDrag } from './BottomSheet';
 export { Button } from './Button';
+export { ButtonProfileLink } from './ButtonProfileLink';
+export { ButtonSeeMore } from './ButtonSeeMore';
+export { IconProfile } from './IconProfile';
+export type { ProfileIconType } from './IconProfile';
+export { InputUsername } from './InputUsername';
+export type { UsernameTab } from './InputUsername';
+export { MenuNavItem } from './MenuNavItem';
+export { ModalSpecial } from './ModalSpecial';
+export { ProfileAttribute } from './ProfileAttribute';
+export { ScrollFade } from './ScrollFade';
+export { SettingsRow } from './SettingsRow';
 export { Checkbox } from './Checkbox';
 export { Chip } from './Chip';
 export { CodeSlots } from './CodeSlots';
@@ -67,11 +79,15 @@ export { ToastBubble, ToastProvider, toastReducer, useToast } from './Toast';
 export { WarningBanner } from './WarningBanner';
 export { SCALE, u } from './scale';
 export {
+  alpha,
   border,
+  color,
   colors,
+  control,
   controlHeight,
   elevation,
   fonts,
+  icon,
   iconSize,
   layout,
   lightRainbow,

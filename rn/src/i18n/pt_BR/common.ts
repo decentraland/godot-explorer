@@ -7,4 +7,7 @@ export const common: Partial<Record<keyof typeof en, string>> = {
   APP_CLOSE: 'Fechar',
   APP_TICKET: 'Ingressos',
   APP_CREDITS: 'Créditos',
+  APP_REMOVE: 'Remover',
+  APP_SEE_LESS: 'Ver menos',
+  APP_SEE_MORE: 'Ver mais',
 };

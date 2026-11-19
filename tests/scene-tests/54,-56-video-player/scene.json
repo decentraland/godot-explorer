@@ -1,0 +1,35 @@
+{
+  "ecs7": true,
+  "runtimeVersion": "7",
+  "display": {
+    "title": "Video Player Unit Test",
+    "description": "Video Player Unit Test",
+    "navmapThumbnail": "images/scene-thumbnail.png",
+    "favicon": "favicon_asset"
+  },
+  "owner": "",
+  "contact": {
+    "name": "Seba",
+    "email": ""
+  },
+  "main": "bin/game.js",
+  "tags": [],
+  "scene": {
+    "parcels": ["54,-56"],
+    "base": "54,-56"
+  },
+  "spawnPoints": [
+    {
+      "name": "spawn1",
+      "position": { "x": 1, "y": 1, "z": 1 },
+      "cameraTarget": { "x": 8, "y": 2, "z": 16 },
+      "default": true
+    }
+  ],
+  "requiredPermissions": [
+    "ALLOW_TO_TRIGGER_AVATAR_EMOTE",
+    "ALLOW_TO_MOVE_PLAYER_INSIDE_SCENE"
+  ],
+  "featureToggles": {},
+  "name": "mode-testing"
+}

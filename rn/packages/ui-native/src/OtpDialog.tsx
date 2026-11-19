@@ -15,7 +15,9 @@ export type OtpState = 'default' | 'verifying' | 'error';
 /** Figma `MOdal-OTP` 891:15421: the e-mail verification code modal over `Modal/Scrim`, a 310 dp
  * `surface/modal` card with the Dialog glows, the mail badge, the `OTP-Input` slots and the resend
  * line, portrait only (the flow locks the orientation). `body` may nest a semibold `AppText` for the address. `verifying` shows the spinner row
- * between the slots and the resend line; `error` paints the slots and shows `errorMessage`. */
+ * between the slots and the resend line; `error` paints the slots and shows `errorMessage`.
+ * Figma MOdal-OTP: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=891-15421
+ */
 export function OtpDialog({
   visible,
   state,

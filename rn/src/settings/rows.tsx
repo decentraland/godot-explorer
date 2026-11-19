@@ -1,6 +1,14 @@
 import { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { AppText, colors, fonts, Switch, u } from '@dcl/ui-native';
+import {
+  AppText,
+  colors,
+  fonts,
+  SettingsRow,
+  space,
+  Switch,
+  u,
+} from '@dcl/ui-native';
 
 const CAPTION_GAP = 22;
 
@@ -23,7 +31,8 @@ export function SectionCaption({
   );
 }
 
-/** Label (plus optional description) on the left, switch on the right; disabled dims all of it. */
+/** `Settings/Row` with a switch. The group's gap already spaces the rows as Figma does, so the row's
+ * own vertical padding is taken back. */
 export function ToggleRow({
   label,
   description,
@@ -39,23 +48,19 @@ export function ToggleRow({
 }) {
   return (
     <View style={styles.toggleRow}>
-      <View style={[styles.toggleText, disabled && styles.dim]}>
-        <View style={styles.labelBox}>
-          <AppText variant="body" style={styles.rowLabel}>
-            {label}
-          </AppText>
-        </View>
-        {description && (
-          <AppText variant="caption" style={styles.description}>
-            {description}
-          </AppText>
-        )}
-      </View>
-      <Switch
+      <SettingsRow
+        type={description ? 'SwitchDescription' : 'Switch'}
         label={label}
-        value={value}
-        onChange={onChange}
+        description={description}
         disabled={disabled}
+        control={
+          <Switch
+            label={label}
+            value={value}
+            onChange={onChange}
+            disabled={disabled}
+          />
+        }
       />
     </View>
   );
@@ -85,19 +90,5 @@ const styles = StyleSheet.create({
     paddingBottom: u(4),
   },
   divider: { height: 1, backgroundColor: colors.lavender },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    minHeight: u(32),
-  },
-  labelBox: { minHeight: u(32), justifyContent: 'center' },
-  toggleText: { flex: 1, paddingRight: u(20) },
-  rowLabel: { fontFamily: fonts.medium, fontSize: u(15), color: colors.snow },
-  description: {
-    fontFamily: fonts.regular,
-    fontSize: u(11),
-    color: colors.white70,
-  },
-  dim: { opacity: 0.35 },
+  toggleRow: { marginVertical: -space.xs },
 });
