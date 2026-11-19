@@ -11,9 +11,12 @@ import { u } from './scale';
  */
 export function Spinner({
   size = 75,
+  color = colors.ruby,
   accessibilityLabel,
 }: {
   size?: number;
+  /** The arc. Ruby by default; a spinner drawn on a Ruby surface needs another colour. */
+  color?: string;
   accessibilityLabel?: string;
 }) {
   const turn = useRef(new Animated.Value(0)).current;
@@ -67,7 +70,7 @@ export function Spinner({
           cx={px / 2}
           cy={px / 2}
           r={r}
-          stroke={colors.ruby}
+          stroke={color}
           strokeWidth={stroke}
           fill="none"
           strokeDasharray={`${(circumference * 159) / 360} ${circumference}`}
