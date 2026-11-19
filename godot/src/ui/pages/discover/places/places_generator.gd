@@ -117,7 +117,7 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 		# routing straight to the full Discover screen's own SidePanelWrapper flow.
 		item.item_pressed.connect(item_pressed.emit)
 		if is_instance_valid(discover):
-			item.item_pressed.connect(discover.on_item_pressed)
+			item.item_pressed.connect(discover.on_item_pressed.bind(item))
 
 	if last_places.size() > 0:
 		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS)
@@ -226,6 +226,6 @@ func _async_fetch_places(url: String, limit: int = 100) -> void:
 		# routing straight to the full Discover screen's own SidePanelWrapper flow.
 		item.item_pressed.connect(item_pressed.emit)
 		if is_instance_valid(discover):
-			item.item_pressed.connect(discover.on_item_pressed)
+			item.item_pressed.connect(discover.on_item_pressed.bind(item))
 
 	report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS)

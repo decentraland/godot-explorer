@@ -117,41 +117,23 @@ impl<'de> serde::Deserialize<'de> for SceneMetaScene {
         let base_parcel = parcel_from_str(s.base.as_str())
             .ok_or_else(|| serde::de::Error::custom(format!("Invalid base parcel: {}", s.base)))?;
 
-        // Parse all parcels and filter out outliers
-        let mut all_parcels: Vec<Vector2i> = Vec::new();
-        for parcel_str in s.parcels.iter() {
-            if let Some(parcel) = parcel_from_str(parcel_str) {
-                all_parcels.push(parcel);
-            }
-        }
-
-        // Filter out suspicious outlier parcels
-        const MAX_DISTANCE_FROM_BASE: i32 = 50; // Maximum reasonable distance from base parcel
-        let mut valid_parcels = Vec::new();
-
-        for parcel in all_parcels {
-            let distance_from_base = (parcel.x - base_parcel.x)
-                .abs()
-                .max((parcel.y - base_parcel.y).abs());
-
-            // Filter out parcels too far from base (likely data errors)
-            // Also filter (0,0) if it's far from base, as it's likely a default/error value
-            if distance_from_base > MAX_DISTANCE_FROM_BASE {
-                continue;
-            }
-
-            // Parcel is within valid distance, keep it
-            valid_parcels.push(parcel);
-        }
+        // This list is the scene's declared extent: `getSceneInformation`, the in-scene
+        // check and the floors read it, so only entries that are not "x,y" are dropped —
+        // dropping reachable parcels reports a smaller scene than the deployed one.
+        let mut parcels: Vec<Vector2i> = s
+            .parcels
+            .iter()
+            .filter_map(|parcel_str| parcel_from_str(parcel_str))
+            .collect();
 
         // Ensure base parcel is always included if not already
-        if !valid_parcels.contains(&base_parcel) {
-            valid_parcels.insert(0, base_parcel);
+        if !parcels.contains(&base_parcel) {
+            parcels.insert(0, base_parcel);
         }
 
         Ok(SceneMetaScene {
             base: base_parcel,
-            parcels: valid_parcels,
+            parcels,
         })
     }
 }
@@ -195,6 +177,78 @@ mod tests {
         assert_eq!(
             display.navmap_thumbnail.as_deref(),
             Some("images/raft_game.png")
+        );
+    }
+
+    fn metadata_from_parcels(base: &str, parcels: Vec<String>) -> SceneEntityMetadata {
+        serde_json::from_value(serde_json::json!({
+            "main": "bin/index.js",
+            "scene": { "base": base, "parcels": parcels }
+        }))
+        .unwrap()
+    }
+
+    // #3039: a 100x100 scene e.g. with its base in a corner has parcels 99 away from
+    // the base, and they used to be dropped, leaving a 51x51 (2601) scene.
+    #[test]
+    fn parcels_far_from_base_are_kept() {
+        let mut parcels = Vec::new();
+        for x in 0..100 {
+            for y in 0..100 {
+                parcels.push(format!("{x},{y}"));
+            }
+        }
+
+        let meta = metadata_from_parcels("0,0", parcels);
+        assert_eq!(meta.scene.parcels.len(), 10000);
+        for corner in [(0, 99), (99, 0), (99, 99)] {
+            assert!(meta
+                .scene
+                .parcels
+                .contains(&Vector2i::new(corner.0, corner.1)));
+        }
+
+        // Scenes read the extent from `getSceneInformation`, which serializes this back
+        // out, so the count has to survive the round trip too.
+        let round_trip = serde_json::to_value(&meta).unwrap();
+        assert_eq!(
+            round_trip["scene"]["parcels"].as_array().unwrap().len(),
+            10000
+        );
+    }
+
+    #[test]
+    fn parcels_negative_and_far_from_base_are_kept() {
+        let meta = metadata_from_parcels("0,0", vec!["0,0".to_string(), "-80,-80".to_string()]);
+        assert_eq!(
+            meta.scene.parcels,
+            vec![Vector2i::new(0, 0), Vector2i::new(-80, -80)]
+        );
+    }
+
+    #[test]
+    fn unparsable_parcel_entries_are_skipped() {
+        let meta = metadata_from_parcels(
+            "0,0",
+            vec![
+                "0,0".to_string(),
+                "not-a-parcel".to_string(),
+                "1".to_string(),
+                "1,1".to_string(),
+            ],
+        );
+        assert_eq!(
+            meta.scene.parcels,
+            vec![Vector2i::new(0, 0), Vector2i::new(1, 1)]
+        );
+    }
+
+    #[test]
+    fn base_parcel_is_added_when_missing_from_the_list() {
+        let meta = metadata_from_parcels("5,5", vec!["5,6".to_string()]);
+        assert_eq!(
+            meta.scene.parcels,
+            vec![Vector2i::new(5, 5), Vector2i::new(5, 6)]
         );
     }
 

@@ -102,6 +102,8 @@ pub struct UiResults {
     pub pointer_event_results: Vec<(SceneEntityId, PbPointerEventsResult)>,
     pub input_results: HashMap<SceneEntityId, PbUiInputResult>,
     pub dropdown_results: HashMap<SceneEntityId, PbUiDropdownResult>,
+    // A scene font finished loading after its text was laid out.
+    pub relayout_requested: bool,
 }
 
 impl UiResults {
@@ -110,6 +112,7 @@ impl UiResults {
             pointer_event_results: Vec::new(),
             input_results: HashMap::new(),
             dropdown_results: HashMap::new(),
+            relayout_requested: false,
         }))
     }
 }
@@ -122,6 +125,11 @@ const UI_COMPONENT_IDS: [SceneComponentId; 6] = [
     SceneComponentId::UI_BACKGROUND,
     SceneComponentId::UI_INPUT_BINDING,
 ];
+
+// Each UI level is one Godot Control level plus several Taffy frames of
+// main-thread recursion (iOS main stack ~1 MB). Real SDK UIs nest well under
+// 20 levels; deeper nodes are hidden, like nodes whose parent never resolves.
+const MAX_UI_TREE_DEPTH: usize = 64;
 
 enum ContextNode {
     UiText(bool, Gd<godot::classes::Label>),
@@ -184,8 +192,10 @@ fn update_layout(
         })
         .expect("failed to create root node");
 
-    processed_nodes.insert(SceneEntityId::ROOT, (root_node, 0));
+    // (taffy node, next child slot, depth)
+    processed_nodes.insert(SceneEntityId::ROOT, (root_node, 0, 0usize));
 
+    let mut too_deep = false;
     let mut modified = true;
     while modified && !unprocessed_uis.is_empty() {
         modified = false;
@@ -206,6 +216,12 @@ fn update_layout(
             let Some(parent) = processed_nodes.get(&ui_node.ui_transform.parent) else {
                 return true;
             };
+
+            let depth = parent.2 + 1;
+            if depth > MAX_UI_TREE_DEPTH {
+                too_deep = true;
+                return true;
+            }
 
             if ui_node.computed_parent != ui_node.ui_transform.parent {
                 if let Some(new_parent) =
@@ -271,7 +287,7 @@ fn update_layout(
             }
 
             let _ = taffy.add_child(parent.0, child);
-            processed_nodes.insert(*entity, (child, 0));
+            processed_nodes.insert(*entity, (child, 0, depth));
             processed_nodes_sorted.push((*entity, child));
 
             // mark to continue and remove from unprocessed
@@ -284,6 +300,14 @@ fn update_layout(
         if let Some(ui_node) = godot_dcl_scene.get_node_or_null_ui_mut(unprocessed_entity) {
             ui_node.base_control.hide();
         }
+    }
+
+    if too_deep && !scene.warned_ui_depth {
+        scene.warned_ui_depth = true;
+        tracing::warn!(
+            "scene {:?}: UI tree deeper than {MAX_UI_TREE_DEPTH} levels, deeper nodes hidden",
+            scene.scene_id
+        );
     }
 
     let size = taffy::prelude::Size {
@@ -628,7 +652,8 @@ pub fn update_scene_ui(
         && dirty_lww_components
             .get(&SceneComponentId::UI_INPUT_BINDING)
             .is_none()
-        && !need_update_ui_canvas;
+        && !need_update_ui_canvas
+        && !scene.godot_dcl_scene.ui_results.borrow().relayout_requested;
 
     if need_skip {
         update_input_result(scene, crdt_state);
@@ -640,6 +665,11 @@ pub fn update_scene_ui(
         update_ui_input(scene, crdt_state);
         update_ui_dropdown(scene, crdt_state);
         update_ui_input_binding(scene, crdt_state);
+        scene
+            .godot_dcl_scene
+            .ui_results
+            .borrow_mut()
+            .relayout_requested = false;
         update_layout(scene, crdt_state, ui_canvas_information);
 
         update_input_result(scene, crdt_state);

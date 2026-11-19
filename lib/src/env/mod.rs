@@ -72,10 +72,14 @@ pub enum ServiceGroup {
     /// different host than mobile-bff (`intercom-proxy.decentraland.<env>`), so
     /// QA can point reports at zone while the rest of the app stays on org.
     IntercomProxy,
+    /// Social service (friends, blocks and their real-time stream). Its own group so QA can
+    /// test a social-service deployment on zone while the rest of the app stays on org
+    /// (`social::zone,org`).
+    Social,
 }
 
 impl ServiceGroup {
-    pub const COUNT: usize = 12;
+    pub const COUNT: usize = 13;
 
     pub fn index(self) -> usize {
         match self {
@@ -91,6 +95,7 @@ impl ServiceGroup {
             Self::Profile => 9,
             Self::Marketplace => 10,
             Self::IntercomProxy => 11,
+            Self::Social => 12,
         }
     }
 
@@ -108,6 +113,7 @@ impl ServiceGroup {
             Self::Profile => "profile",
             Self::Marketplace => "marketplace",
             Self::IntercomProxy => "intercomproxy",
+            Self::Social => "social",
         }
     }
 
@@ -125,6 +131,7 @@ impl ServiceGroup {
             "profile" => Some(Self::Profile),
             "marketplace" => Some(Self::Marketplace),
             "intercomproxy" => Some(Self::IntercomProxy),
+            "social" => Some(Self::Social),
             _ => None,
         }
     }
@@ -142,6 +149,7 @@ impl ServiceGroup {
         Self::Profile,
         Self::Marketplace,
         Self::IntercomProxy,
+        Self::Social,
     ];
 }
 
@@ -338,6 +346,7 @@ mod tests {
             ServiceGroup::parse("notifications"),
             Some(ServiceGroup::Notifications)
         );
+        assert_eq!(ServiceGroup::parse("social"), Some(ServiceGroup::Social));
         assert_eq!(ServiceGroup::parse("invalid"), None);
         // case insensitive
         assert_eq!(ServiceGroup::parse("AUTH"), Some(ServiceGroup::Auth));
@@ -419,5 +428,13 @@ mod tests {
         let config = DclEnvConfig::parse("auth::zone,org").unwrap();
         assert_eq!(config.suffix_for(ServiceGroup::Auth), "zone");
         assert_eq!(config.suffix_for(ServiceGroup::Comms), "org");
+    }
+
+    #[test]
+    fn test_config_social_override_leaves_comms_alone() {
+        let config = DclEnvConfig::parse("social::zone,org").unwrap();
+        assert_eq!(config.suffix_for(ServiceGroup::Social), "zone");
+        assert_eq!(config.suffix_for(ServiceGroup::Comms), "org");
+        assert_eq!(config.to_string_repr(), "social::zone,org");
     }
 }

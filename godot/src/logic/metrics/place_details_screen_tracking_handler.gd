@@ -7,8 +7,17 @@ func track_screen_viewed(item_data: Dictionary):
 	var place_title = item_data.get("title", "unknown-title")
 	var orientation = "portrait" if Global.is_orientation_portrait() else "landscape"
 
-	var extra_properties = JSON.stringify(
-		{"place_id": place_id, "place_title": place_title, "orientation": orientation}
+	var extra_properties = (
+		JSON
+		. stringify(
+			{
+				"place_id": place_id,
+				"place_title": place_title,
+				"orientation": orientation,
+				"carousel": item_data.get("_carousel"),
+				"position": item_data.get("_carousel_position"),
+			}
+		)
 	)
 
 	Global.metrics.track_screen_viewed("PLACE_DETAILS", extra_properties)

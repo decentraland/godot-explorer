@@ -11,7 +11,9 @@ use crate::{
         },
     },
     godot_classes::dcl_gltf_container::{DclGltfContainer, GltfContainerLoadingState},
-    scene_runner::{godot_dcl_scene::add_own_visual_child, scene::Scene},
+    scene_runner::{
+        components::physics_layers, godot_dcl_scene::add_own_visual_child, scene::Scene,
+    },
 };
 use godot::prelude::*;
 
@@ -70,10 +72,12 @@ pub fn update_gltf_container(
                     }
                 }
             } else if let Some(new_value) = new_value {
-                let visible_meshes_collision_mask =
-                    new_value.visible_meshes_collision_mask.unwrap_or(0) as i32;
-                let invisible_meshes_collision_mask =
-                    new_value.invisible_meshes_collision_mask.unwrap_or(3) as i32;
+                let visible_meshes_collision_mask = physics_layers::collider_layer(
+                    new_value.visible_meshes_collision_mask.unwrap_or(0),
+                ) as i32;
+                let invisible_meshes_collision_mask = physics_layers::collider_layer(
+                    new_value.invisible_meshes_collision_mask.unwrap_or(3),
+                ) as i32;
 
                 if let Some(mut gltf_node) = existing {
                     gltf_node.call(

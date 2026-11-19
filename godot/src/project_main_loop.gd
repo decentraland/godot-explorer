@@ -109,6 +109,16 @@ var sentry_sample_rate := DEFAULT_SENTRY_SAMPLE_RATE
 # breadcrumb mask is untouched), so crash events retain the recent-error trail.
 var sentry_error_events_enabled := false
 
+# Secrets and wallets must not leave the device inside event text: LiveKit room tokens
+# ride in `?access_token=` and a wallet identifies the player. Only `message` is writable
+# from GDScript; logger events keep their text in exception 0, which is why the sources
+# themselves stopped printing tokens (comms redacts the query string).
+static var _scrub_access_token := RegEx.create_from_string("access_token=[^&\\s'\"]+")
+static var _scrub_jwt := RegEx.create_from_string(
+	"eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+"
+)
+static var _scrub_wallet := RegEx.create_from_string("(0x[0-9a-fA-F]{4})[0-9a-fA-F]{36}")
+
 
 func _initialize() -> void:
 	# Skip Sentry init when telemetry is disabled at build time
@@ -221,10 +231,19 @@ func set_sentry_error_events_enabled(enabled: bool) -> void:
 	sentry_error_events_enabled = enabled
 
 
+static func _scrub_text(text: String) -> String:
+	if text.is_empty():
+		return text
+	text = _scrub_access_token.sub(text, "access_token=[redacted]", true)
+	text = _scrub_jwt.sub(text, "[jwt]", true)
+	return _scrub_wallet.sub(text, "$1…", true)
+
+
 func _before_send(event: SentryEvent) -> SentryEvent:
 	# Discard events for dev builds - only prod and staging report to Sentry.
 	if self.is_dev_version:
 		return null
+	event.message = _scrub_text(event.message)
 
 	# These two are tested first, and in this order, both deliberately. The addon
 	# routes its on_crash hook through this same callback, and a crashpad crash

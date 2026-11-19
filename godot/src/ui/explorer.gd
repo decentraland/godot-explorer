@@ -1739,16 +1739,11 @@ func _share_place():
 			if scene.parcels.size() > 0:
 				share_position = scene.parcels[0]
 
-		url = (
-			"https://mobile.dclexplorer.com/open?position="
-			+ str(share_position[0])
-			+ ","
-			+ str(share_position[1])
-		)
+		url = DclUrls.jump_places() + "?position=%d,%d" % [share_position[0], share_position[1]]
 	else:
 		var realm_url = Global.realm.realm_url
 		var short_realm_url = _extract_short_realm_url(realm_url)
-		url = "https://mobile.dclexplorer.com/open?realm=" + short_realm_url
+		url = DclUrls.jump_places() + "?realm=" + short_realm_url
 
 	if scene_title.length() == 0:
 		scene_title = "Decentraland"

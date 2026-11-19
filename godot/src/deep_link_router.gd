@@ -318,17 +318,26 @@ func _handle_signin_deep_link(identity_id: String, auth_request_id: String) -> v
 		print("[DEEPLINK] Ignoring signin token: the user cancelled this sign-in")
 		return
 
-	# Bound to a sign-in this install didn't start (or already settled): the server would
-	# reject it without the matching verifier anyway.
-	if Global.player_identity.is_foreign_mobile_signin(auth_request_id):
-		print("[DEEPLINK] Ignoring signin token: it belongs to another sign-in request")
-		return
-
 	if Global.player_identity.has_pending_mobile_auth():
 		# Warm resume: this same process opened the browser, so the lobby is alive with the
 		# AUTH_BROWSER_OPEN spinner up and its auth signals connected. Complete right here.
+		# Another attempt's id is still refused; an empty one is this attempt's, from an auth
+		# site that predates authRequestId or a verifier that could not be persisted at start.
+		if (
+			not auth_request_id.is_empty()
+			and Global.player_identity.is_foreign_mobile_signin(auth_request_id)
+		):
+			print("[DEEPLINK] Ignoring signin token: it belongs to another sign-in request")
+			return
 		deep_link_signin_completing.emit()
 		Global.player_identity.complete_mobile_connect_account(identity_id, auth_request_id)
+		return
+
+	# Not bound to a sign-in this install started: another attempt's id, or no id while nothing
+	# is pending. The server would reject it without the matching verifier anyway, so there
+	# is nothing to complete here.
+	if Global.player_identity.is_foreign_mobile_signin(auth_request_id):
+		print("[DEEPLINK] Ignoring signin token: no sign-in was started from this app")
 		return
 
 	# Already signed in, so this cannot be the cold start we rescue. Parking it leaves a token

@@ -9,7 +9,7 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
-    scene_runner::scene::Scene,
+    scene_runner::{components::physics_layers, scene::Scene},
 };
 use godot::{
     classes::{
@@ -281,7 +281,9 @@ pub fn create_or_update_mesh(
                         .unwrap_or(BoxShape3D::new_gd()),
                     None => BoxShape3D::new_gd(),
                 };
-                box_shape.set_size(godot::prelude::Vector3::new(1.0, 1.0, 0.0));
+                // Matches Unity's `PrimitivesSize.PLANE_SIZE` (1m x 1m, 1cm
+                // thick) instead of a degenerate zero-thickness box.
+                box_shape.set_size(godot::prelude::Vector3::new(1.0, 1.0, 0.01));
                 box_shape.upcast::<Shape3D>()
             }
         },
@@ -297,7 +299,7 @@ pub fn create_or_update_mesh(
     };
 
     collision_shape.set_shape(&godot_shape);
-    static_body_3d.set_collision_layer(collision_mask);
+    static_body_3d.set_collision_layer(physics_layers::collider_layer(collision_mask));
     static_body_3d.set_collision_mask(0);
 }
 

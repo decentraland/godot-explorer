@@ -326,6 +326,7 @@ impl INode for DclGlobal {
         );
 
         log_panics::init();
+        crate::tools::last_panic::install_hook();
 
         // Scene Inspector is initialized lazily when the first scene with
         // --scene-inspector enabled is spawned (see scene_thread in dcl/js/mod.rs).

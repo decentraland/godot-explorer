@@ -5,7 +5,7 @@ name: 🔢 Bump Marketing Version
 #   - Android version/name
 #   - iOS application/short_version
 # The store BUILD NUMBER (Android version/code / iOS application/version) is allocated from the
-# Cloudflare Worker (idempotent per commit SHA) and stamped at build time by the
+# Cloudflare Worker (idempotent per commit SHA + flavor) and stamped at build time by the
 # `compute-build-number` action — this workflow never touches it.
 
 on:
