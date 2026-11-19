@@ -24,6 +24,7 @@ mod install_dependency;
 mod ios_xcode;
 mod keystore;
 mod log_server;
+mod maestro;
 mod path;
 mod platform;
 mod rn_app;
@@ -407,6 +408,26 @@ fn main() -> Result<(), anyhow::Error> {
                         .help("Device-facing bind address (default: 0.0.0.0)")
                         .takes_value(true)
                         .default_value("0.0.0.0"),
+                ),
+        ).subcommand(
+            Command::new("maestro")
+                .about("Build the React Native app without the engine, install it on the connected Android device and run the Maestro UI flows (rn/.maestro/flows)")
+                .arg(
+                    Arg::new("flows")
+                        .help("Flows to run, by file-name prefix (04, 04-discover). Default: all, in file-name order")
+                        .multiple_values(true),
+                )
+                .arg(
+                    Arg::new("device")
+                        .long("device")
+                        .help("adb device id (required when several devices are connected)")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::new("skip-build")
+                        .long("skip-build")
+                        .help("Run on the mock build already installed instead of building and installing it")
+                        .takes_value(false),
                 ),
         ).subcommand(
             Command::new("update-ios-xcode")
@@ -1025,6 +1046,13 @@ fn main() -> Result<(), anyhow::Error> {
                 .context("please provide a package with -p")?,
         ),
         ("doctor", _) => doctor::run_doctor(),
+        ("maestro", sm) => {
+            let flows: Vec<String> = sm
+                .values_of("flows")
+                .map(|values| values.map(String::from).collect())
+                .unwrap_or_default();
+            maestro::run(&flows, sm.value_of("device"), sm.is_present("skip-build"))
+        }
         ("update-ios-xcode", sm) => ios_xcode::update_ios_xcode(
             sm.is_present("godot"),
             sm.is_present("plugin"),
