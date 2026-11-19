@@ -23,23 +23,12 @@
 #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
 
 static bool tenjin_started = false;
-static bool tenjin_connected = false;
-// Events sent before the delayed first connect; replayed right after it. Main thread only.
-static NSMutableArray<NSArray *> *pending_events = nil;
 static bool attribution_requested = false;
 static NSDictionary *attribution_result = nil;
 static bool attribution_failed = false;
 
 static Class tenjin_class() {
 	return NSClassFromString(@"TenjinSDK");
-}
-
-static void send_event(Class cls, NSString *name, NSInteger value) {
-	if (value == 0) {
-		[cls performSelector:@selector(sendEventWithName:) withObject:name];
-	} else {
-		((void (*)(Class, SEL, NSString *, NSInteger))objc_msgSend)(cls, @selector(sendEventWithName:andValue:), name, value);
-	}
 }
 
 bool tenjin_start(NSString *sdk_key, NSString *user_id) {
@@ -55,19 +44,8 @@ bool tenjin_start(NSString *sdk_key, NSString *user_id) {
 	if (user_id.length > 0) {
 		[cls performSelector:@selector(setCustomerUserId:) withObject:user_id];
 	}
+	[cls performSelector:@selector(connect)];
 	tenjin_started = true;
-	pending_events = [NSMutableArray array];
-	// Tenjin's README: Google's on-device conversion SDK (bundled with Firebase iOS) needs the
-	// first connect at least 3 s after initialize.
-	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-		[cls performSelector:@selector(connect)];
-		tenjin_connected = true;
-		for (NSArray *event in pending_events) {
-			send_event(cls, event[0], [event[1] integerValue]);
-		}
-		pending_events = nil;
-		TENJIN_LOG(@"connected");
-	});
 	TENJIN_LOG(@"started");
 	return true;
 }
@@ -76,11 +54,12 @@ bool tenjin_event(NSString *name, NSInteger value) {
 	if (!tenjin_started) {
 		return false;
 	}
-	if (!tenjin_connected) {
-		[pending_events addObject:@[ name, @(value) ]];
-		return true;
+	Class cls = tenjin_class();
+	if (value == 0) {
+		[cls performSelector:@selector(sendEventWithName:) withObject:name];
+	} else {
+		((void (*)(Class, SEL, NSString *, NSInteger))objc_msgSend)(cls, @selector(sendEventWithName:andValue:), name, value);
 	}
-	send_event(tenjin_class(), name, value);
 	return true;
 }
 
@@ -96,9 +75,6 @@ NSDictionary *tenjin_attribution_if_ready(bool *failed) {
 	*failed = false;
 	if (!tenjin_started) {
 		*failed = true;
-		return nil;
-	}
-	if (!tenjin_connected) {
 		return nil;
 	}
 	@synchronized([NSBundle mainBundle]) {
