@@ -49,7 +49,7 @@ runs:
           echo "current=true" >> "$GITHUB_OUTPUT"
           exit 0
         fi
-        BAKED=$(aws s3 cp "s3://${BUCKET}/${SIDECAR_KEY}" - --endpoint-url "$ENDPOINT" 2>/dev/null | tr -dc '0-9' || true)
+        BAKED=$(aws s3 cp "s3://${BUCKET}/${SIDECAR_KEY}" - --region auto --endpoint-url "$ENDPOINT" 2>/dev/null | tr -dc '0-9' || true)
         if [ -z "$BAKED" ]; then
           echo "⚠️  No build_number sidecar at s3://${BUCKET}/${SIDECAR_KEY} → not current (rebuild to bake $EXPECTED)."
           echo "current=false" >> "$GITHUB_OUTPUT"

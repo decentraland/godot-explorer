@@ -332,6 +332,9 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
           AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+          # R2 signs SigV4 with region `auto`: pinned so the CLI never picks up a region
+          # from the runner's environment (a us-west-2 runner failed with InvalidRegionName).
+          AWS_DEFAULT_REGION: auto
           AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
         run: |
           set -eu
@@ -347,7 +350,7 @@ jobs:
           # R2 occasionally rejects CompleteMultipartUpload with InvalidPart; a fresh attempt
           # starts a new multipart upload, so retry up to 3 times.
           for attempt in 1 2 3; do
-            aws s3 cp handoff/export.tar.gz "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" && break
+            aws s3 cp handoff/export.tar.gz "s3://${AWS_S3_BUCKET}/${KEY}" --region auto --endpoint-url "$AWS_ENDPOINT_URL" && break
             if [ "$attempt" -eq 3 ]; then
               echo "❌ export upload failed after 3 attempts"
               exit 1
@@ -359,7 +362,7 @@ jobs:
           # ~1 GB object hits the CLI read timeout after 3 min before any fallback could run.
           # asc-deploy's manual dispatch defaults to ios/<branch>/latest, so it must stay populated.
           echo "🔗 Updating latest pointer s3://${AWS_S3_BUCKET}/${LATEST_KEY}"
-          aws s3 cp handoff/export.tar.gz "s3://${AWS_S3_BUCKET}/${LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+          aws s3 cp handoff/export.tar.gz "s3://${AWS_S3_BUCKET}/${LATEST_KEY}" --region auto --endpoint-url "$AWS_ENDPOINT_URL"
 
           # Sidecar: the build number this export was BAKED with, next to the tarball. The deploy
           # orchestrator (mobile_distribute ios-resolve) compares it against a fresh allocation before
@@ -370,10 +373,10 @@ jobs:
             LATEST_BUILD_NUMBER_KEY="ios/${R2_SEGMENT}/latest/build_number.txt"
             printf '%s' "$BUILD_NUMBER" > build_number.txt
             echo "🔢 Writing build_number sidecar ($BUILD_NUMBER) → s3://${AWS_S3_BUCKET}/${BUILD_NUMBER_KEY}"
-            aws s3 cp build_number.txt "s3://${AWS_S3_BUCKET}/${BUILD_NUMBER_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+            aws s3 cp build_number.txt "s3://${AWS_S3_BUCKET}/${BUILD_NUMBER_KEY}" --region auto --endpoint-url "$AWS_ENDPOINT_URL"
             aws s3api copy-object --bucket "$AWS_S3_BUCKET" --key "$LATEST_BUILD_NUMBER_KEY" \
-              --copy-source "${AWS_S3_BUCKET}/${BUILD_NUMBER_KEY}" --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null \
-              || aws s3 cp build_number.txt "s3://${AWS_S3_BUCKET}/${LATEST_BUILD_NUMBER_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+              --copy-source "${AWS_S3_BUCKET}/${BUILD_NUMBER_KEY}" --region auto --endpoint-url "$AWS_ENDPOINT_URL" >/dev/null \
+              || aws s3 cp build_number.txt "s3://${AWS_S3_BUCKET}/${LATEST_BUILD_NUMBER_KEY}" --region auto --endpoint-url "$AWS_ENDPOINT_URL"
           else
             echo "ℹ️  no build number — no build_number sidecar."
           fi
