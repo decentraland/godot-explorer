@@ -18,6 +18,16 @@ name: Guided tutorial
     timeout: 15000
 - tapOn: "Randomize"
 - tapOn: "Continue"
+# The first-run carousel comes from the live list of first-run places and is skipped when that list has
+# exactly one place, so it is crossed only when it shows.
+- extendedWaitUntil:
+    visible: "Welcome to Decentraland!|JUMP IN"
+    timeout: 30000
+- runFlow:
+    when:
+      visible: "JUMP IN"
+    commands:
+      - tapOn: "JUMP IN"
 # The mock always offers the tutorial. START begins it; its steps ask for gestures such as a pinch, which
 # Maestro cannot send, so only the first step and the way out are checked.
 - extendedWaitUntil:

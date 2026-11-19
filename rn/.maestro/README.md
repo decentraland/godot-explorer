@@ -3,38 +3,38 @@
 UI flows for the React Native layer. They run on the mock build: `src/core/mock` stands in for the core and
 `GodotPlaceholder` for the world and the avatar preview, so the data is fixed and the screens are reproducible.
 
-## Build and install
-
-```bash
-cd rn && npm ci
-cargo run -- run --target android --no-godot        # bundled build, installs on the connected device
-```
-
-The mock APK has `versionCode` 1 and is not signed with the CI key, so it does not install over a CI build. Set
-`DCL_BUILD_NUMBER` above the installed version, or uninstall the installed app first:
-
-```bash
-DCL_BUILD_NUMBER=9999 cargo run -- run --target android --no-godot
-```
-
-The Android toolchain needs JDK 17 (`JAVA_HOME`).
-
 ## Run
 
-```bash
-maestro --device <id> test rn/.maestro/flows/<file>.yaml
-```
-
-Maestro runs a folder in its own order, not by file name. To run all flows in order:
+With one Android device or emulator connected (`adb devices`), from the repository root:
 
 ```bash
-for f in rn/.maestro/flows/*.yaml; do maestro --device <id> test "$f"; done
+cargo run -- maestro                   # build the mock app, install it, run every flow in file order
+cargo run -- maestro 04 11             # only the flows whose file name starts with 04 and 11
+cargo run -- maestro 04 --skip-build   # reuse the mock build already on the device
+cargo run -- maestro --device <id>     # when several devices are connected
 ```
 
-Nothing persists across launches in this build, so every flow starts from "Before you start";
-`subflows/ensure-home.yaml` repairs the starting point when a flow needs the Discover home. The six flows that cross the
-Discover home (`04`, `05`, `06`, `07`, `08`, `09`) take 3 to 10 minutes each on a Galaxy A54 and the whole set about
-45 minutes; the other nine take 20 seconds to 4 minutes each.
+The command exits non-zero when a flow fails and prints one `PASS` / `FAIL` line per flow. Each flow leaves a JUnit
+report (`exports/maestro/<flow>.xml`) and a folder with Maestro's logs and failure screenshot
+(`exports/maestro/<flow>/`).
+
+It needs [Maestro](https://docs.maestro.dev/getting-started/installing-maestro), `adb`, Node 22 and JDK 17
+(`JAVA_HOME`).
+
+- **Mock build only.** The flows clear the app's data, sign out, open the delete-account dialog and toggle
+  Favorite / Like. `appId` is the id of the shipping app, so never point them at a build with the engine and a real
+  account. The command installs the mock build itself; it has `versionCode` 1 and the local debug key, so when another
+  build is installed the command removes it first.
+- **English device.** The mock leaves the app language empty, which follows the device language, and every flow
+  asserts English text. Set the device to English.
+- **Network.** Featured, Popular, Events, the place lists and search come from the public services (see Data). A flow
+  that fails on an empty rail may be a service problem, not a UI regression.
+
+`smoke.yaml`, next to this file, is a different test: it runs on the shipping build with the engine, accepts the three
+app languages and only checks that a new guest reaches the first world. `cargo run -- maestro` does not run it.
+
+Every flow starts from a clean app (`01-entry` clears the app's data and `subflows/ensure-home.yaml` runs it first), so
+flows do not depend on each other or on their order.
 
 ## Flows
 
@@ -59,27 +59,31 @@ Discover home (`04`, `05`, `06`, `07`, `08`, `09`) take 3 to 10 minutes each on 
 ## Data
 
 - **Mock (fixed, in the repo):** session, avatar and wearables, profile, settings, notifications, chat, friends,
-  favorites and votes (in memory). Flows assert these by exact name.
-- **Live public APIs:** Featured, Popular, Events and the place lists. They change daily, so flows check structure
-  (a rail has content under its title), never a place or event name.
+  the current place, favorites and votes (in memory). Flows assert these by exact name.
+- **Live public services:** Featured, Popular, Events, the place lists and search results. They change daily, so flows
+  check structure (a rail has content under its title), never a place or event name. The flows still need the rails
+  to have content and `05-search` needs a result that contains "plaza".
 
 If a file under `src/core/mock` or `src/menu/mockData.ts` changes, the flows that assert its values change with it.
 
 ## Writing a flow
 
+- Name the file `NN-name.yaml`; the number is the run order and the prefix `cargo run -- maestro NN` selects.
+- Start with `subflows/ensure-home.yaml` when the flow needs the Discover home, or with `clearState` and `launchApp`
+  otherwise, so the flow does not depend on what ran before it.
 - Check live data by structure (`text: ".+"` with `below` / `above`); check mock data by name.
 - Text matching ignores case; use labels that only the screen under test has.
-- Start with `subflows/ensure-home.yaml` when the flow needs the Discover home.
 - For anything the app keeps between steps, tap only when not selected, then assert it is selected.
 - Prefer a fixed `swipe` over `scrollUntilVisible` on the Discover home (see Known limits).
 
 ## Known limits
 
-- Profile and Backpack opened from the world drawer crash this build: `showAvatarPreview` in
-  `src/core/mock/control.ts` rejects the `InWorld` state and nothing catches the throw in `src/backpack/AvatarStage.tsx`.
-  From the bottom tabs both pages work, so no flow here opens them from the drawer.
-- `Report Bug` (Settings > Help & Support) and `ADD EMAIL` (Settings > Account) do nothing: their API calls in
-  `src/settings/coreApi.ts` are empty. No flow covers them.
+- Android only: the flows use the system Back button and were written against Android.
+- Profile and Backpack opened from the world drawer crash this build
+  ([#3265](https://github.com/decentraland/godot-explorer/issues/3265)). From the bottom tabs both pages work, so no
+  flow here opens them from the drawer.
+- `Report Bug` (Settings > Help & Support) and `ADD EMAIL` (Settings > Account) do nothing
+  ([#3266](https://github.com/decentraland/godot-explorer/issues/3266)). No flow covers them.
 - `CREATE ACCOUNT` opens a page titled "Sign in" with the same methods as `SIGN IN`.
 - The friend sheet has no close button: its `Close` element is the dimmed scrim over the whole screen, so the flow taps
   the area above the sheet by point.

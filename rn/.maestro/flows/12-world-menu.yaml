@@ -18,12 +18,15 @@ name: World HUD, chat and menu
 - assertVisible: ".*hello from maestro.*"
 - tapOn: "Close chat"
 
-# Drawer: Discover panel for the current place.
+# Drawer: Discover panel for the current place (mock). Featured and Events are live data, so only "some
+# content under Featured" is checked.
 - tapOn: "Menu"
 - assertVisible: "Genesis Plaza"
 - assertVisible: "by Decentraland"
 - assertVisible: "Featured"
-- assertVisible: "Old McTiger's Farm"
+- assertVisible:
+    text: ".+"
+    below: "Featured"
 - assertVisible: "Events"
 
 # Social: three tabs and the fixed people.
