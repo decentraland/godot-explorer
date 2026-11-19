@@ -11,12 +11,9 @@ use dcl_core::Core;
 use godot::prelude::*;
 use multihash_codetable::MultihashDigest;
 use serde::Serialize;
-use std::{
-    io::Read,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
 };
 
 static DEPLOY_DISABLED: AtomicBool = AtomicBool::new(false);
@@ -222,27 +219,13 @@ impl ProfileService {
         entity_authchain: crate::auth::wallet::SimpleAuthChain,
         deployment_bytes: Vec<u8>,
     ) -> Result<(Vec<u8>, String), anyhow::Error> {
-        let mut form_data = multipart::client::lazy::Multipart::new();
-        form_data.add_text("entityId", cid.clone());
-        for (key, data) in entity_authchain.formdata() {
-            form_data.add_text(key, data);
-        }
-        form_data.add_stream(
-            cid,
-            std::io::Cursor::new(deployment_bytes),
-            Option::<&str>::None,
-            None,
-        );
+        let mut fields = vec![("entityId".to_owned(), cid.clone())];
+        fields.extend(entity_authchain.formdata());
+        let form = dcl_core::profile::multipart::build(&fields, &cid, &deployment_bytes);
 
         // ADR-290: No snapshot images are uploaded anymore
 
-        let mut prepared = form_data.prepare()?;
-        let boundary = prepared.boundary().to_string();
-        let mut prepared_data = Vec::default();
-        prepared.read_to_end(&mut prepared_data)?;
-
-        let content_type = format!("multipart/form-data; boundary={}", boundary);
-        Ok((prepared_data, content_type))
+        Ok((form.body, form.content_type))
     }
 
     // ADR-290: Snapshots are no longer included in profile deployments
