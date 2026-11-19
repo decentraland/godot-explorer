@@ -404,7 +404,7 @@ salido mal"
 "MODAL_PURCHASE_UNAVAILABLE_TITLE";"";"";"No disponible
 temporalmente"
 "MODAL_RELOAD_SCENE_BODY";"";"";"Vuelve al punto de inicio de este lugar."
-"MODAL_RELOAD_SCENE_PRIMARY";"";"";"REAPARECER"
+"MODAL_RELOAD_SCENE_PRIMARY";"";"";"RECARGAR"
 "MODAL_RELOAD_SCENE_TITLE";"";"";"¿No puedes moverte?"
 "MODAL_SCENE_CRASH_BODY";"";"";"Esta escena ha dejado de funcionar. Recárgala o vuelve a Descubrir."
 "MODAL_SCENE_CRASH_PRIMARY";"";"";"RECARGAR"
