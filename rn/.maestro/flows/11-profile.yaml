@@ -1,0 +1,56 @@
+appId: org.decentraland.godotexplorer
+name: Profile
+---
+# The profile is the fixed mock (#0001, Argentina, He / Him...). Edit is exercised up to the point of
+# saving: the form is filled and cancelled so nothing is written.
+- runFlow: ../subflows/ensure-home.yaml
+- tapOn: "profile"
+- assertVisible: "#0001"
+- assertVisible: "0xgue...00001"
+- assertVisible: "ABOUT ME"
+- assertVisible: "Visit my personal web.*"
+- assertVisible: "Argentina"
+- assertVisible: "He / Him"
+- assertVisible: "Male"
+- assertVisible: "Single"
+- assertVisible: "Bisexual"
+- assertVisible: "Working"
+
+# Edit form.
+- tapOn: "EDIT PROFILE"
+- assertVisible: "Edit Profile"
+- assertVisible: "UNIQUE NAME"
+- assertVisible: "NON-UNIQUE USERNAME"
+- assertVisible: "0/15"
+- assertVisible: "156/300"
+- assertVisible: "Instagram"
+- assertVisible: "GitHub"
+
+# Typing a name moves the counter.
+- tapOn: "username"
+- inputText: "Tester"
+- assertVisible: "6/15"
+- hideKeyboard
+
+# A link chip can be removed.
+- tapOn: "Remove Instagram"
+- assertNotVisible: "Instagram"
+
+# Cancel with changes asks for confirmation: STAY keeps the form, LEAVE discards it.
+- tapOn: "CANCEL"
+- assertVisible: "Leave without saving?"
+- tapOn: "STAY"
+- extendedWaitUntil:
+    notVisible: "Leave without saving?"
+    timeout: 10000
+# STAY can return focus to the name field, and then the keyboard covers CANCEL. Back is only sent when it does.
+- runFlow:
+    when:
+      notVisible: "CANCEL"
+    commands:
+      - hideKeyboard
+- tapOn: "CANCEL"
+- tapOn: "LEAVE"
+- extendedWaitUntil:
+    visible: "EDIT PROFILE"
+    timeout: 10000

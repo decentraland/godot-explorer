@@ -1,0 +1,50 @@
+appId: org.decentraland.godotexplorer
+name: Settings toggles
+---
+# Settings are kept in memory by the mock, so each toggle is flipped, checked and flipped back.
+- runFlow: ../subflows/ensure-home.yaml
+- tapOn: "settings"
+- tapOn: "Gameplay"
+
+# A plain toggle.
+- tapOn: "Show My Nametag"
+- assertVisible:
+    text: "Show My Nametag"
+    checked: true
+- tapOn: "Show My Nametag"
+- assertVisible:
+    text: "Show My Nametag"
+    checked: false
+
+# Two options stay disabled until the interface is hidden.
+- assertVisible:
+    text: "Hide Interaction Prompts"
+    enabled: false
+- tapOn: "Hide Interface"
+- assertVisible:
+    text: "Hide Interface"
+    checked: true
+- assertVisible:
+    text: "Hide Interaction Prompts"
+    enabled: true
+- tapOn: "Hide Interface"
+- assertVisible:
+    text: "Hide Interaction Prompts"
+    enabled: false
+- tapOn:
+    text: "Back"
+    index: 0
+
+# Graphics: the preset picker depends on Dynamic Graphics.
+- tapOn: "Graphics"
+- tapOn: "Dynamic Graphics"
+- assertVisible:
+    text: "Dynamic Graphics"
+    checked: false
+- assertVisible:
+    text: "Graphic Profiles"
+    enabled: true
+- tapOn: "Dynamic Graphics"
+- assertVisible:
+    text: "Dynamic Graphics"
+    checked: true

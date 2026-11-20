@@ -1,0 +1,66 @@
+appId: org.decentraland.godotexplorer
+name: Search
+---
+# Results come from the live places and events services, so they are matched loosely and case-insensitively.
+- runFlow: ../subflows/ensure-home.yaml
+- tapOn: "Search"
+
+# While typing the app lists suggestions; the real results appear once the search is submitted.
+- inputText: "Plaza"
+- assertVisible: "Clear search"
+- pressKey: Enter
+- extendedWaitUntil:
+    visible:
+      text: "(?i).*plaza.*"
+      below: "Clear search"
+    timeout: 20000
+
+# The Discover home is gone while the results show.
+- assertNotVisible: "Popular"
+
+# Clear search empties the field and shows the recent searches, with the first query kept.
+- tapOn: "Clear search"
+- extendedWaitUntil:
+    visible: "Recent searches"
+    timeout: 20000
+- assertVisible: "Plaza"
+
+# Back from the recent searches leaves the search.
+- tapOn:
+    text: "Back"
+    index: 0
+- extendedWaitUntil:
+    visible: "Popular"
+    timeout: 20000
+
+# A query with no match shows the empty state.
+- tapOn: "Search"
+- inputText: "zzqxjvk"
+- pressKey: Enter
+- extendedWaitUntil:
+    visible: "No result found"
+    timeout: 20000
+- assertVisible: "Try searching with different keywords."
+
+# Back from the empty results returns to the home.
+- tapOn:
+    text: "Back"
+    index: 0
+- extendedWaitUntil:
+    visible: "Popular"
+    timeout: 20000
+
+# Opening the search again lists the recent queries; Clean all empties the list.
+- tapOn: "Search"
+- extendedWaitUntil:
+    visible: "Recent searches"
+    timeout: 20000
+- assertVisible: "Plaza"
+- tapOn: "Clean all"
+- assertNotVisible: "Plaza"
+- tapOn:
+    text: "Back"
+    index: 0
+- extendedWaitUntil:
+    visible: "Popular"
+    timeout: 20000
