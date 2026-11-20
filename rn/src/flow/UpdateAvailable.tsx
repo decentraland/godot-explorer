@@ -1,9 +1,13 @@
-import { Linking, StyleSheet, View } from 'react-native';
+import { Linking, Platform, StyleSheet, View } from 'react-native';
 import { AppText, Button, colors, u } from '@dcl/ui-native';
 import { FlowFrame } from './FlowFrame';
 import { t } from '../i18n';
 
-const STORE_URL = 'market://details?id=org.decentraland.godotexplorer';
+const STORE_URL = Platform.select({
+  ios: 'https://apps.apple.com/us/app/decentraland/id6478403840',
+  default:
+    'https://play.google.com/store/apps/details?id=org.decentraland.godotexplorer',
+});
 
 /** Figma UPDATE available (1546:14269 with LATER, 1546:14186 forced): the version gate's screen. */
 export function UpdateAvailable({
