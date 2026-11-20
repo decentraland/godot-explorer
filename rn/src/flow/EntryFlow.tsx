@@ -81,7 +81,7 @@ export function EntryFlow({
   }, [step]);
 
   const [busy, setBusy] = useState(false);
-  const [preset, setPreset] = useState(0);
+  const [preset, setPreset] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
   // Every code is sent with a 2 minute wait before the next one can be asked for.
@@ -225,7 +225,7 @@ export function EntryFlow({
     setEmailError(null);
     // Backing out of the avatar ends the session: the next one starts on the first look again.
     if (step === 'avatar_create') {
-      setPreset(0);
+      setPreset(null);
     }
     dispatch({ type: 'back' });
   }, [step]);

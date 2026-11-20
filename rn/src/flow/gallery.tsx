@@ -38,7 +38,7 @@ registerPreview('extra/flow-create', {
     'Figma AVATAR_CREATE 2776:23661; the presets are placeholders and no avatar shows.',
   render: () => (
     <AvatarCreate
-      selected={0}
+      selected={null}
       onSelect={noop}
       onCustomize={noop}
       onContinue={noop}

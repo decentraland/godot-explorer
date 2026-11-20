@@ -146,9 +146,10 @@ export function AvatarCreate({
   onBack,
 }: {
   onCustomize: () => void;
-  /** Lives in the flow, so coming back from EDIT or the name returns to the same preset. */
-  selected: number;
-  onSelect: (index: number) => void;
+  /** The preset's id, kept in the flow: coming back from EDIT or the name returns to the same preset
+   * even when a different subset of them resolves. Null is the first one. */
+  selected: string | null;
+  onSelect: (id: string) => void;
   onContinue: () => void;
   onBack: () => void;
 }) {
@@ -178,13 +179,13 @@ export function AvatarCreate({
   }, []);
   // An edit before the engine reports the avatar is dropped: apply again once it is there.
   const hasAvatar = avatar !== null;
+  const current = presets.find(p => p.id === selected) ?? presets[0];
   useEffect(() => {
-    const preset = presets[selected];
-    if (preset && hasAvatar) {
-      applyPresetAvatar(preset);
+    if (current && hasAvatar) {
+      applyPresetAvatar(current);
       setReleased(true);
     }
-  }, [presets, selected, hasAvatar]);
+  }, [current, hasAvatar]);
 
   return (
     <View style={styles.fill}>
@@ -240,8 +241,8 @@ export function AvatarCreate({
                   <PresetCard
                     key={preset?.id ?? i}
                     preset={preset}
-                    selected={i === selected}
-                    onPress={() => onSelect(i)}
+                    selected={!!preset && preset === current}
+                    onPress={() => preset && onSelect(preset.id)}
                   />
                 ),
               )}
