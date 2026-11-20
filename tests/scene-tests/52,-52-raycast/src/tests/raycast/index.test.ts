@@ -2,11 +2,13 @@ import {
   type Entity,
   EngineInfo,
   MeshCollider,
+  MeshRenderer,
   Raycast,
   RaycastQueryType,
   RaycastResult,
   Transform,
-  engine
+  engine,
+  raycastSystem
 } from '@dcl/sdk/ecs'
 import { Quaternion, Vector3 } from '@dcl/sdk/math'
 
@@ -16,9 +18,9 @@ import {
   assertEquals
 } from 'testing-library/src/testing/assert'
 import { type TestFunctionContext } from 'testing-library/src/testing/types'
-import { test } from 'testing-library/src/testing'
+import { skipTest, test } from 'testing-library/src/testing'
 import { customAddEntity } from 'testing-library/src/utils/entity'
-import { createChainedEntities } from 'testing-library/src/utils/helpers'
+import { assertMovePlayerTo, createChainedEntities } from 'testing-library/src/utils/helpers'
 import { waitForMeshColliderApplied } from 'testing-library/src/utils/godot'
 
 function getNextTickNumber(): number {
@@ -554,4 +556,89 @@ test('raycast: localDirection raycasting from a translated origin works, with ro
     hits: [],
     tickNumber: resultTickNumber
   })
+})
+
+// One downward raycast from the player, resolved: where it started and its hits.
+async function raycastDownFromPlayer(context: TestFunctionContext) {
+  let result: { origin: Vector3; hits: Array<{ length: number; recomputed: number }> } | undefined
+  raycastSystem.registerGlobalDirectionRaycast(
+    {
+      entity: engine.PlayerEntity,
+      opts: { queryType: RaycastQueryType.RQT_HIT_FIRST, direction: Vector3.Down(), maxDistance: 10 }
+    },
+    (raycast) => {
+      const origin = raycast.globalOrigin ?? Vector3.Zero()
+      result = {
+        origin,
+        hits: raycast.hits.map((hit) => ({
+          length: hit.length ?? -1,
+          recomputed: Vector3.distance(hit.globalOrigin ?? origin, hit.position ?? origin)
+        }))
+      }
+    }
+  )
+  for (let tick = 0; tick < 30 && result === undefined; tick++) await context.helpers.waitNTicks(1)
+  raycastSystem.removeRaycasterEntity(engine.PlayerEntity)
+  assert(result !== undefined, 'the raycast from the player got no result')
+  return result!
+}
+
+function slab(position: Vector3, scale: Vector3, rotation = Quaternion.Identity()): void {
+  const entity = customAddEntity.addEntity()
+  Transform.create(entity, { position, scale, rotation })
+  MeshRenderer.setBox(entity)
+  MeshCollider.setBox(entity)
+}
+
+async function standOn(context: TestFunctionContext, position: Vector3): Promise<void> {
+  await assertMovePlayerTo(context, position, Vector3.create(position.x, position.y, 16))
+  // Let the player land and settle on the surface.
+  await context.helpers.waitNTicks(30)
+}
+
+// Skipped until #3243 is fixed: a scene's first raycast from the player starts at (0, 0, 0). It
+// must stay the first raycast from the player in this scene.
+skipTest('raycast: the first raycast from the player starts at the player', async function (context) {
+  customAddEntity.clean()
+  slab(Vector3.create(8, 0.5, 8), Vector3.create(4, 1, 4))
+  await waitForMeshColliderApplied(context)
+  await standOn(context, Vector3.create(8, 2, 8))
+  const player = Transform.get(engine.PlayerEntity).position
+  const { origin } = await raycastDownFromPlayer(context)
+  assert(Vector3.distance(origin, player) < 0.05, `the ray started at ${JSON.stringify(origin)}, the player is at ${JSON.stringify(player)}`)
+  customAddEntity.clean()
+})
+
+// #2830: a downward raycast from the player standing on a slope reported a hit much farther than
+// the ground under its feet on mobile (1.979 instead of 0.08 at the top of a ramp). The first hit
+// must be the surface right below, and its length the distance from the ray's origin to the hit.
+async function groundUnderPlayer(context: TestFunctionContext, standAt: Vector3) {
+  await standOn(context, standAt)
+  // Until #3243 is fixed the scene's first raycast from the player starts at (0, 0, 0).
+  await raycastDownFromPlayer(context)
+  const { hits } = await raycastDownFromPlayer(context)
+  assert(hits.length > 0, 'the raycast from the player hit nothing')
+  return hits[0]
+}
+
+test('raycast: a downward ray from the player on a slope hits the ground under its feet', async function (context) {
+  customAddEntity.clean()
+  // A box pitched to rise 2 m over 6 m, as in the community repro (stom66/dcl-bugtest-raycast-hit).
+  const pitch = (Math.atan2(2, 6) * 180) / Math.PI
+  slab(Vector3.create(8, 1, 8), Vector3.create(2, 0.2, Math.sqrt(40)), Quaternion.fromEulerDegrees(-pitch, 0, 0))
+  await waitForMeshColliderApplied(context)
+  const hit = await groundUnderPlayer(context, Vector3.create(8, 3, 10))
+  assert(hit.length < 0.3, `on the ramp the first hit is ${hit.length} m below the player, expected under 0.3`)
+  assert(Math.abs(hit.length - hit.recomputed) < 0.01, `reported ${hit.length} m, origin to hit is ${hit.recomputed} m`)
+  customAddEntity.clean()
+})
+
+test('raycast: a downward ray from the player on flat ground hits the ground under its feet', async function (context) {
+  customAddEntity.clean()
+  slab(Vector3.create(8, 0.5, 8), Vector3.create(4, 1, 4))
+  await waitForMeshColliderApplied(context)
+  const hit = await groundUnderPlayer(context, Vector3.create(8, 2, 8))
+  assert(hit.length < 0.3, `on the box the first hit is ${hit.length} m below the player, expected under 0.3`)
+  assert(Math.abs(hit.length - hit.recomputed) < 0.01, `reported ${hit.length} m, origin to hit is ${hit.recomputed} m`)
+  customAddEntity.clean()
 })
