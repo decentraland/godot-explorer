@@ -119,6 +119,36 @@ fn body_shape_drops_misfits_and_refills_required_categories() {
 }
 
 #[test]
+fn a_look_replaces_everything_and_skips_what_the_catalog_lacks() {
+    let start = avatar(FEMALE, &["hair_a", "f_sweater"]);
+    let next = set_look(
+        &start,
+        &catalog(),
+        MALE,
+        &[format!("{BASE}green_hoodie"), "urn:unknown".into()],
+        "#AABBCC",
+        "#112233",
+        "#445566",
+    )
+    .unwrap();
+    assert_eq!(next.body_shape, MALE);
+    assert_eq!(
+        next.wearables,
+        vec![
+            format!("{BASE}eyes_00"),
+            format!("{BASE}eyebrows_00"),
+            format!("{BASE}mouth_00"),
+            format!("{BASE}green_hoodie"),
+        ]
+    );
+    assert_eq!(
+        (next.skin.as_str(), next.hair.as_str(), next.eyes.as_str()),
+        ("#aabbcc", "#112233", "#445566")
+    );
+    assert_eq!(next.emotes, start.emotes);
+}
+
+#[test]
 fn body_shape_must_be_one_of_the_two() {
     assert!(matches!(
         set_body_shape(&avatar(MALE, &[]), &catalog(), "urn:other"),

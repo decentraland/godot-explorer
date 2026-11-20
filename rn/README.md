@@ -69,6 +69,11 @@ cargo run -- run --target ios --no-godot
 cargo run -- run --target android --no-godot
 ```
 
+Check screens on the emulator at the Figma frame size: `npm run emulator:figma` pins it to 720x1600 at 320 dpi
+(360x800dp @2x, the size of every Figma frame), so a screenshot is the frame's size and compares 1:1 with the design,
+with no scaling argument. `npm run emulator:reset` gives the phone back. The real aspect ratio is the second check,
+not the first.
+
 The Expo Go workflow ended with the FFI: a custom native module cannot load in Expo Go.
 React Native is pinned to the version of Expo SDK 57 (RN 0.86.3); upgrading RN means moving to the Expo SDK that
 ships it. `expo` is excluded from native autolinking (`react-native.config.js`).
