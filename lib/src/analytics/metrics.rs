@@ -241,6 +241,18 @@ impl INode for Metrics {
             }
         }
 
+        // iOS Firebase: the SDK is configured in the plugin's module init, so user id / property
+        // can be seeded right away. There is no ready signal; the app instance id is nil for a
+        // moment after configure, so it is read here and, if still empty, on each flush tick.
+        if matches!(self.mobile_platform, Some(MobilePlatform::Ios)) {
+            DclIosPlugin::set_firebase_user_id(GString::from(&self.user_id));
+            DclIosPlugin::set_firebase_user_property(
+                GString::from("session_id"),
+                GString::from(&self.common.session_id),
+            );
+            self.poll_ios_firebase_instance_id();
+        }
+
         // Same race on iOS: push_service.mm asks UIKit for the token from the plugin's module
         // init, well before this `ready()`, so read the cached value back after connecting.
         if matches!(self.mobile_platform, Some(MobilePlatform::Ios)) {
@@ -458,6 +470,7 @@ impl Metrics {
         // nothing leaves the device until the gated send below. Behind the gate the sources
         // would go unread until the user taps through and their own deadlines had expired.
         self.poll_install_attribution();
+        self.poll_ios_firebase_instance_id();
 
         // Consent gate: never ship anything until the user has accepted the EULA. Events keep
         // accumulating in `self.events` and will flow through once the gate opens.
@@ -466,6 +479,33 @@ impl Metrics {
         }
 
         self.process_and_send_events(false);
+    }
+
+    /// Queues `Firebase Init` once the iOS SDK has an app instance id. Android gets a signal;
+    /// iOS only has a getter that returns "" until Analytics is up, so the flush tick retries.
+    /// Stops for good when Firebase is not in the build (no plist) or the event is queued.
+    fn poll_ios_firebase_instance_id(&mut self) {
+        if self.firebase_init_queued
+            || !matches!(self.mobile_platform, Some(MobilePlatform::Ios))
+            || !DclIosPlugin::firebase_is_available()
+        {
+            return;
+        }
+        let id = DclIosPlugin::get_firebase_app_instance_id();
+        if !id.is_empty() {
+            self._on_firebase_app_instance_id_ready(id);
+        }
+    }
+
+    /// Logs a Firebase Analytics event through whichever mobile plugin is present. False on
+    /// desktop and when the SDK is not in the build, so one-shot callers keep their flag.
+    fn log_firebase_event(&self, name: &str, params_json: &str) -> bool {
+        let (name, params) = (GString::from(name), GString::from(params_json));
+        match self.mobile_platform {
+            Some(MobilePlatform::Android) => DclAndroidPlugin::log_firebase_event(name, params),
+            Some(MobilePlatform::Ios) => DclIosPlugin::log_firebase_event(name, params),
+            None => false,
+        }
     }
 
     /// Polls both attribution mechanisms (Android only, auto-completes once settled) and
@@ -1073,7 +1113,7 @@ impl Metrics {
         self.eula_accepted
     }
 
-    /// Fire an `eula_accepted` event through Firebase Analytics (Android only). Intended to be
+    /// Fire an `eula_accepted` event through Firebase Analytics (mobile only). Intended to be
     /// called from GDScript right after `set_eula_accepted(true)` so this event itself respects
     /// the consent gate (we never log it before the user has actually accepted).
     #[func]
@@ -1081,24 +1121,18 @@ impl Metrics {
         if !self.eula_accepted {
             return;
         }
-        if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
-            return;
-        }
         if self.debug_level > 0 {
             tracing::debug!("[Metrics] Firebase event 'eula_accepted'");
         }
-        DclAndroidPlugin::log_firebase_event(GString::from("eula_accepted"), GString::new());
+        self.log_firebase_event("eula_accepted", "");
     }
 
-    /// Fire a `login` event through Firebase Analytics (Android only).
+    /// Fire a `login` event through Firebase Analytics (mobile only).
     /// `dcl_eth_address` and `is_guest` are passed directly from the `wallet_connected` signal
     /// because `common.dcl_eth_address` is only updated later via `update_identity`.
     #[func]
     pub fn track_login(&mut self, dcl_eth_address: String, is_guest: bool) {
         if !self.eula_accepted {
-            return;
-        }
-        if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
             return;
         }
         let params = serde_json::json!({
@@ -1109,23 +1143,17 @@ impl Metrics {
         if self.debug_level > 0 {
             tracing::debug!("[Metrics] Firebase event 'login_success': {}", params_str);
         }
-        DclAndroidPlugin::log_firebase_event(
-            GString::from("login_success"),
-            GString::from(&params_str),
-        );
+        self.log_firebase_event("login_success", &params_str);
     }
 
-    /// Fire a one-shot `first_move_in_world` event through Firebase Analytics (Android only).
+    /// Fire a one-shot `first_move_in_world` event through Firebase Analytics (mobile only).
     /// Intended to be called from GDScript the first time the player actually moves after a
     /// `loading_finished`. Returns true when the event was actually dispatched — callers should
     /// persist the `first_move_in_world_sent` config flag ONLY on `true` so we don't burn the
-    /// one-shot on platforms where the event was a no-op (non-Android, pre-EULA).
+    /// one-shot on platforms where the event was a no-op (desktop, no Firebase in the build, pre-EULA).
     #[func]
     pub fn track_first_move_in_world(&mut self) -> bool {
         if !self.eula_accepted {
-            return false;
-        }
-        if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
             return false;
         }
         let params = serde_json::json!({
@@ -1140,22 +1168,16 @@ impl Metrics {
                 params_str
             );
         }
-        DclAndroidPlugin::log_firebase_event(
-            GString::from("first_move_in_world"),
-            GString::from(&params_str),
-        )
+        self.log_firebase_event("first_move_in_world", &params_str)
     }
 
-    /// Fire the `first_social_action` Firebase event (Android only). `action` is one of `emote`,
+    /// Fire the `first_social_action` Firebase event (mobile only). `action` is one of `emote`,
     /// `friend_request`, `friend_accept`, `chat`. Once per install is the caller's job: persist
     /// its flag ONLY on `true`, same contract as `track_first_move_in_world`. `is_guest` comes
     /// from the caller because `common.dcl_is_guest` is false for thirdweb (Play-as-Guest) guests.
     #[func]
     pub fn track_first_social_action(&mut self, action: String, is_guest: bool) -> bool {
         if !self.eula_accepted {
-            return false;
-        }
-        if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
             return false;
         }
         let params = serde_json::json!({
@@ -1170,10 +1192,7 @@ impl Metrics {
                 params_str
             );
         }
-        DclAndroidPlugin::log_firebase_event(
-            GString::from("first_social_action"),
-            GString::from(&params_str),
-        )
+        self.log_firebase_event("first_social_action", &params_str)
     }
 
     #[func]

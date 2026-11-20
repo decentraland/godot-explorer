@@ -218,6 +218,66 @@ impl DclIosPlugin {
         true
     }
 
+    /// Whether the Firebase SDK is linked and configured in this build. False when the export
+    /// had no GoogleService-Info.plist, in which case every Firebase call below is a no-op.
+    #[func]
+    pub fn firebase_is_available() -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        singleton.call("firebase_is_available", &[]).booleanize()
+    }
+
+    /// The Firebase Analytics app instance id, or "" until Analytics has produced it.
+    #[func]
+    pub fn get_firebase_app_instance_id() -> GString {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return GString::new();
+        };
+        let result = singleton.call("get_firebase_app_instance_id", &[]);
+        result.try_to::<GString>().unwrap_or_default()
+    }
+
+    /// Set the canonical Firebase Analytics user id. Pass "" to clear it.
+    #[func]
+    pub fn set_firebase_user_id(user_id: GString) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        singleton
+            .call("set_firebase_user_id", &[user_id.to_variant()])
+            .booleanize()
+    }
+
+    /// Set a Firebase Analytics user property. Pass "" as the value to clear it.
+    #[func]
+    pub fn set_firebase_user_property(name: GString, value: GString) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        singleton
+            .call(
+                "set_firebase_user_property",
+                &[name.to_variant(), value.to_variant()],
+            )
+            .booleanize()
+    }
+
+    /// Log a custom Firebase Analytics event. `params_json` is a JSON object string of
+    /// primitive values; pass "" for no parameters. False when Firebase is unavailable.
+    #[func]
+    pub fn log_firebase_event(event_name: GString, params_json: GString) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        singleton
+            .call(
+                "log_firebase_event",
+                &[event_name.to_variant(), params_json.to_variant()],
+            )
+            .booleanize()
+    }
+
     /// Whether alerts are authorized (UNAuthorizationStatusAuthorized). Provisional and
     /// not-yet-asked both read false, same as a refusal.
     #[func]
