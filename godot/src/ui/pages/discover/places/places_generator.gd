@@ -11,8 +11,7 @@ const DISCOVER_CARROUSEL_ITEM = preload(
 )
 
 const JUMP_BACK_IN_MAX_ITEMS: int = 6
-const NEW_IN_DECENTRALAND_MAX_ITEMS: int = 6
-const NEW_IN_DECENTRALAND_CANDIDATE_POOL: int = 100
+const NEW_IN_DECENTRALAND_PAGE_SIZE: int = 100
 const NEW_IN_DECENTRALAND_MAX_AGE_SECONDS: int = 7 * 24 * 60 * 60
 
 @export var order_by: OrderBy = OrderBy.NONE
@@ -135,8 +134,10 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 	_loading = false
 
 
-## The API sorts by one column only: it returns the newest destinations (places#896), and the
-## 7-day cut and the user_count/like_score order are applied here.
+## New = created or redeployed in the last 7 days. The API sorts by one column and has no
+## deployed_at order, so this joins the newest destinations (created_at, paged until the window
+## ends) with the most active page filtered on deployed_at, which holds every destination with
+## people in it. Redeployed scenes nobody is in are left out.
 func async_request_new_in_decentraland(_offset: int, _limit: int) -> void:
 	_no_more_elements = true
 	if _loading:
@@ -144,40 +145,41 @@ func async_request_new_in_decentraland(_offset: int, _limit: int) -> void:
 
 	_loading = true
 
-	var query: String = (
-		"?offset=0&limit=%d&order_by=created_at&order=desc&sdk=7"
-		% NEW_IN_DECENTRALAND_CANDIDATE_POOL
-	)
-	if Global.is_ios_or_emulating():
-		query += "&tag=allowed_ios"
-
-	var url := PlacesHelper.get_api_url() + query
-	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
-
-	if not can_populate():
-		return
-
-	if response is PromiseError:
-		printerr("Error request places ", url, " ", response.get_error())
-		report_loading_status.emit(CarrouselGenerator.LoadingStatus.ERROR)
-		_loading = false
-		return
-
-	var json: Dictionary = response.get_string_response_as_json()
 	var now: int = int(Time.get_unix_time_from_system())
 	var candidates: Array = []
-	for item_data in json.data:
-		var created_at: String = item_data.get("created_at", "")
-		if created_at.is_empty():
+	var seen_ids: Dictionary = {}
+	var page_offset: int = 0
+	var window_ended: bool = false
+	while not window_ended:
+		var page = await _async_fetch_new_in_decentraland_page(
+			"offset=%d&order_by=created_at&order=desc" % page_offset
+		)
+		if not page is Array:
+			return
+		for item_data in page:
+			# Newest first: everything after the first stale one is older.
+			if not _is_within_new_window(item_data, "created_at", now):
+				window_ended = true
+				break
+			seen_ids[item_data.get("id")] = true
+			candidates.append(item_data)
+
+		# Not `+= PAGE_SIZE`: with tag=allowed_ios the BFF ignores `limit` and returns everything
+		# from the offset on.
+		if page.size() < NEW_IN_DECENTRALAND_PAGE_SIZE:
+			window_ended = true
+		page_offset += page.size()
+
+	var most_active = await _async_fetch_new_in_decentraland_page("offset=0&order_by=most_active")
+	if not most_active is Array:
+		return
+	for item_data in most_active:
+		if seen_ids.has(item_data.get("id")):
 			continue
-		var created_unix: int = Time.get_unix_time_from_datetime_string(created_at.substr(0, 19))
-		# Newest first: everything after the first stale one is older.
-		if now - created_unix > NEW_IN_DECENTRALAND_MAX_AGE_SECONDS:
-			break
-		candidates.append(item_data)
+		if _is_within_new_window(item_data, "deployed_at", now):
+			candidates.append(item_data)
 
 	candidates.sort_custom(_sort_by_active_users_then_rating)
-	candidates = candidates.slice(0, NEW_IN_DECENTRALAND_MAX_ITEMS)
 
 	for item_data in candidates:
 		var item = DISCOVER_CARROUSEL_ITEM.instantiate()
@@ -192,6 +194,36 @@ func async_request_new_in_decentraland(_offset: int, _limit: int) -> void:
 	else:
 		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS)
 	_loading = false
+
+
+## Returns the page's destinations, or null once it has reported an error or can no longer
+## populate.
+func _async_fetch_new_in_decentraland_page(params: String) -> Variant:
+	var url: String = (
+		PlacesHelper.get_api_url() + "?%s&limit=%d&sdk=7" % [params, NEW_IN_DECENTRALAND_PAGE_SIZE]
+	)
+	if Global.is_ios_or_emulating():
+		url += "&tag=allowed_ios"
+
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
+	if not can_populate():
+		return null
+
+	if response is PromiseError:
+		printerr("Error request places ", url, " ", response.get_error())
+		report_loading_status.emit(CarrouselGenerator.LoadingStatus.ERROR)
+		_loading = false
+		return null
+
+	return response.get_string_response_as_json().data
+
+
+func _is_within_new_window(item_data: Dictionary, field: String, now: int) -> bool:
+	var timestamp: String = item_data.get(field, "")
+	if timestamp.is_empty():
+		return false
+	var unix: int = Time.get_unix_time_from_datetime_string(timestamp.substr(0, 19))
+	return now - unix <= NEW_IN_DECENTRALAND_MAX_AGE_SECONDS
 
 
 func _sort_by_active_users_then_rating(a: Dictionary, b: Dictionary) -> bool:
