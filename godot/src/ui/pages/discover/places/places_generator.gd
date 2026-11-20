@@ -135,18 +135,8 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 	_loading = false
 
 
-## `order_by=created_at` exists server-side but today it's buried under `highlighted`/`ranking`
-## (places#896 fixes that, pending review/merge — see
-## https://github.com/decentraland/places/pull/896), so this fetches one large most_active page
-## and filters/sorts client-side on `deployed_at` / `user_count` / `like_score` instead. A scene
-## that's brand-new but not yet in the most_active page won't surface — acceptable for v1, see
-## issue #2981.
-##
-## TODO(places#896): once that merges and deploys, switch the query to
-## `order_by=created_at&order=desc` — it'll return genuinely-newest destinations first instead of
-## hoping they also rank in the most_active page, so the client-side `deployed_at` filter below can
-## likely shrink or go away (the `user_count`/`like_score` sort still has to stay client-side,
-## since the API only sorts by one column).
+## The API sorts by one column only: it returns the newest destinations (places#896), and the
+## 7-day cut and the user_count/like_score order are applied here.
 func async_request_new_in_decentraland(_offset: int, _limit: int) -> void:
 	_no_more_elements = true
 	if _loading:
@@ -154,8 +144,9 @@ func async_request_new_in_decentraland(_offset: int, _limit: int) -> void:
 
 	_loading = true
 
-	var query := (
-		"?offset=0&limit=%d&order_by=most_active&sdk=7" % NEW_IN_DECENTRALAND_CANDIDATE_POOL
+	var query: String = (
+		"?offset=0&limit=%d&order_by=created_at&order=desc&sdk=7"
+		% NEW_IN_DECENTRALAND_CANDIDATE_POOL
 	)
 	if Global.is_ios_or_emulating():
 		query += "&tag=allowed_ios"
@@ -173,27 +164,28 @@ func async_request_new_in_decentraland(_offset: int, _limit: int) -> void:
 		return
 
 	var json: Dictionary = response.get_string_response_as_json()
-	var now := int(Time.get_unix_time_from_system())
+	var now: int = int(Time.get_unix_time_from_system())
 	var candidates: Array = []
 	for item_data in json.data:
-		var deployed_at: String = item_data.get("deployed_at", "")
-		if deployed_at.is_empty():
+		var created_at: String = item_data.get("created_at", "")
+		if created_at.is_empty():
 			continue
-		var deployed_unix := Time.get_unix_time_from_datetime_string(deployed_at.substr(0, 19))
-		if now - deployed_unix > NEW_IN_DECENTRALAND_MAX_AGE_SECONDS:
-			continue
+		var created_unix: int = Time.get_unix_time_from_datetime_string(created_at.substr(0, 19))
+		# Newest first: everything after the first stale one is older.
+		if now - created_unix > NEW_IN_DECENTRALAND_MAX_AGE_SECONDS:
+			break
 		candidates.append(item_data)
 
 	candidates.sort_custom(_sort_by_active_users_then_rating)
 	candidates = candidates.slice(0, NEW_IN_DECENTRALAND_MAX_ITEMS)
 
 	for item_data in candidates:
-		var item := DISCOVER_CARROUSEL_ITEM.instantiate()
+		var item = DISCOVER_CARROUSEL_ITEM.instantiate()
 		item_container.add_child(item)
 		item.set_data(item_data)
 		item.item_pressed.connect(item_pressed.emit)
 		if is_instance_valid(discover):
-			item.item_pressed.connect(discover.on_item_pressed)
+			item.item_pressed.connect(discover.on_item_pressed.bind(item))
 
 	if candidates.size() > 0:
 		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS)
