@@ -289,6 +289,22 @@ impl SceneCrashReport {
     }
 }
 
+/// Stops anything audible/visible the scene owns right away, instead of waiting for the
+/// (potentially multi-second) graceful JS-thread kill handshake that frees its nodes.
+fn silence_scene_media(scene: &mut Scene) {
+    for (_, audio_source_node) in scene.audio_sources.iter() {
+        let mut audio_source_node = audio_source_node.clone();
+        audio_source_node.bind_mut().set_dcl_enable(false);
+        audio_source_node.bind_mut().apply_audio_props(false);
+    }
+    for (_, audio_stream_node) in scene.audio_streams.iter_mut() {
+        audio_stream_node.bind_mut().set_muted(true);
+    }
+    for (_, video_player_node) in scene.video_players.iter_mut() {
+        video_player_node.bind_mut().set_muted(true);
+    }
+}
+
 #[godot_api]
 impl SceneManager {
     #[signal]
@@ -542,6 +558,13 @@ impl SceneManager {
         if let Some(scene) = self.scenes.get_mut(&scene_id) {
             if let SceneState::Alive = scene.state {
                 scene.state = SceneState::ToKill(now_us);
+                // Silence media right away: the graceful kill handshake with the
+                // scene's JS thread (reap_dying_scenes) can take several seconds
+                // (up to KILL_SCENE_TIMEOUT_US) before the Godot nodes are freed,
+                // which otherwise leaves AudioSource/AudioStream/VideoPlayer
+                // audibly playing well after the scene is considered gone (#music
+                // keeps playing after leaving a scene).
+                silence_scene_media(scene);
                 self.dying_scene_ids.push(scene_id);
                 return true;
             }
@@ -555,6 +578,7 @@ impl SceneManager {
         for (scene_id, scene) in self.scenes.iter_mut() {
             if let SceneState::Alive = scene.state {
                 scene.state = SceneState::ToKill(now_us);
+                silence_scene_media(scene);
                 self.dying_scene_ids.push(*scene_id);
             }
         }
@@ -3247,17 +3271,7 @@ impl SceneManager {
         }
 
         if let Some(scene) = self.scenes.get_mut(&self.last_current_parcel_scene_id) {
-            for (_, audio_source_node) in scene.audio_sources.iter() {
-                let mut audio_source_node = audio_source_node.clone();
-                audio_source_node.bind_mut().set_dcl_enable(false);
-                audio_source_node.bind_mut().apply_audio_props(false);
-            }
-            for (_, audio_stream_node) in scene.audio_streams.iter_mut() {
-                audio_stream_node.bind_mut().set_muted(true);
-            }
-            for (_, video_player_node) in scene.video_players.iter_mut() {
-                video_player_node.bind_mut().set_muted(true);
-            }
+            silence_scene_media(scene);
 
             // Stop and clear every particle system (idle scenes tick too slowly
             // for the per-frame reconcile to feel immediate).
