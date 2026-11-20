@@ -165,15 +165,16 @@ impl Backpack {
             clipper.set_anchors_and_offsets_preset(LayoutPreset::FULL_RECT);
             return;
         }
-        let window_width = DisplayServer::singleton().window_get_size().x;
-        let scale = match self.host.get_viewport() {
-            Some(v) if window_width > 0 => v.get_visible_rect().size.x / window_width as f32,
-            _ => 1.0,
+        let Some(viewport) = self.host.get_viewport() else {
+            return;
         };
-        let width = self
-            .host
-            .get_viewport()
-            .map_or(0.0, |v| v.get_visible_rect().size.x);
+        let width = viewport.get_visible_rect().size.x;
+        let window_width = DisplayServer::singleton().window_get_size().x;
+        let scale = if window_width > 0 {
+            width / window_width as f32
+        } else {
+            1.0
+        };
         clipper.set_anchors_preset(LayoutPreset::TOP_LEFT);
         clipper.set_position(Vector2::ZERO);
         clipper.set_size(Vector2::new(width, bottom as f32 * scale));
