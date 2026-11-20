@@ -1267,7 +1267,9 @@ func _on_scene_crash_reload(_entity_id: String) -> void:
 
 func _on_reload_scene_primary() -> void:
 	if Global.metrics != null:
-		Global.metrics.track_click_button("reload", "DISCOVER_PANEL", "")
+		Global.metrics.track_click_button(
+			"reload", "DISCOVER_IN_GAME", JSON.stringify({"details": "reload"})
+		)
 	Navigator.async_go(Destination.reload_current(), "on_reload")
 	close_current_modal()
 
