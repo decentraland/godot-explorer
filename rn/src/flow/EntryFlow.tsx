@@ -16,12 +16,16 @@ import {
   whenSignedIn,
 } from './auth';
 import { core } from '../core';
+import type { Place } from '../discover/api';
+import { useApi } from '../discover/ApiContext';
+import { ftuePlaces } from '../discover/ftue';
 import { UpdateDecision } from '../core/native';
 import { UpdateAvailable } from './UpdateAvailable';
 import { AvatarCustomize } from './AvatarCustomize';
 import { takePreviewLaunch, whenInitialLinkRouted } from './launchLink';
 import { askNotificationPermission } from '../notifications/push';
 import { AuthOtpEntercode } from './AuthOtpEntercode';
+import { FtueStep } from './FtueStep';
 import { initialFlow, reduceFlow } from './flowMachine';
 import { AvatarCreate, PreviewArea, Comeback } from './previewScreens';
 import {
@@ -38,10 +42,17 @@ import { t } from '../i18n';
 
 const RESEND_WAIT_MS = 2 * 60 * 1000;
 
-/** Portrait-only entry flow: splash → account → (auth) → avatar → name → app. */
-export function EntryFlow({ onDone }: { onDone: () => void }) {
+/** Portrait-only entry flow: splash → account → (auth) → avatar → name → FTUE → app. */
+export function EntryFlow({
+  onDone,
+  onJumpIn,
+}: {
+  onDone: () => void;
+  onJumpIn?: (place: Place) => Promise<boolean>;
+}) {
   const [flow, dispatch] = useReducer(reduceFlow, initialFlow);
   const { step, provider } = flow;
+  const api = useApi();
   const previewLaunch = useRef(false);
   previewLaunch.current = flow.preview;
 
@@ -50,6 +61,24 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
       onDone();
     }
   }, [step, onDone]);
+
+  // Ahead of the FTUE gate, so deciding the single-place bypass never waits on the network.
+  useEffect(() => {
+    if (step === 'avatar_create') {
+      ftuePlaces(api);
+    }
+  }, [step, api]);
+
+  // Only an account without a profile reaches the FTUE after its avatar: it was made here.
+  useEffect(() => {
+    if (step === 'ftue') {
+      try {
+        core().ftueMarkNewPlayer();
+      } catch {
+        // Signed out meanwhile: there is no account to remember.
+      }
+    }
+  }, [step]);
 
   const [busy, setBusy] = useState(false);
   const [preset, setPreset] = useState(0);
@@ -362,14 +391,16 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
           onBack={back}
           onSubmit={name => {
             setAvatarName(name);
-            // Only an account without a profile names an avatar here: it is a new player.
-            try {
-              core().ftueMarkNewPlayer();
-            } catch {
-              // Signed out meanwhile: there is no account to remember.
-            }
             dispatch({ type: 'named', name });
           }}
+        />
+      );
+    case 'ftue':
+      return (
+        <FtueStep
+          username={flow.name}
+          onJumpIn={onJumpIn}
+          onFinish={() => dispatch({ type: 'finish' })}
         />
       );
     default:

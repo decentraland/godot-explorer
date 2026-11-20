@@ -106,7 +106,13 @@ function AppBody() {
       {entered ? (
         <Shell onJumpIn={jumpIn} onLeave={leave} />
       ) : (
-        <EntryFlow onDone={onDone} />
+        <EntryFlow
+          onDone={onDone}
+          onJumpIn={place => {
+            onDone();
+            return jumpIn(place);
+          }}
+        />
       )}
     </View>
   );
