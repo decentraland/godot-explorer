@@ -135,8 +135,8 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 
 
 ## New = created or redeployed in the last 7 days. The API sorts by one column and has no
-## deployed_at order, so this joins the newest destinations (created_at, paged until the window
-## ends) with the most active page filtered on deployed_at, which holds every destination with
+## deployed_at order, so this joins the newest destinations (created_at, paged while the window
+## lasts) with the most active page filtered on deployed_at, which holds every destination with
 ## people in it. Redeployed scenes nobody is in are left out.
 func async_request_new_in_decentraland(_offset: int, _limit: int) -> void:
 	_no_more_elements = true
@@ -144,6 +144,10 @@ func async_request_new_in_decentraland(_offset: int, _limit: int) -> void:
 		return
 
 	_loading = true
+	# Cleared so on_request's guard holds once the window is shown: scrolling past card 10 would
+	# otherwise clean the row and fetch it again.
+	_new_search = false
+	report_loading_status.emit(CarrouselGenerator.LoadingStatus.LOADING)
 
 	var now: int = int(Time.get_unix_time_from_system())
 	var candidates: Array = []
@@ -156,17 +160,19 @@ func async_request_new_in_decentraland(_offset: int, _limit: int) -> void:
 		)
 		if not page is Array:
 			return
+		# Filtered item by item: with tag=allowed_ios the BFF returns places then worlds, each
+		# sorted on its own, so a stale row does not mean the rest are stale too.
 		for item_data in page:
-			# Newest first: everything after the first stale one is older.
-			if not _is_within_new_window(item_data, "created_at", now):
-				window_ended = true
-				break
-			seen_ids[item_data.get("id")] = true
-			candidates.append(item_data)
+			if _is_within_new_window(item_data, "created_at", now):
+				seen_ids[item_data.get("id")] = true
+				candidates.append(item_data)
 
 		# Not `+= PAGE_SIZE`: with tag=allowed_ios the BFF ignores `limit` and returns everything
 		# from the offset on.
-		if page.size() < NEW_IN_DECENTRALAND_PAGE_SIZE:
+		if (
+			page.size() < NEW_IN_DECENTRALAND_PAGE_SIZE
+			or not _is_within_new_window(page.back(), "created_at", now)
+		):
 			window_ended = true
 		page_offset += page.size()
 
@@ -207,6 +213,7 @@ func _async_fetch_new_in_decentraland_page(params: String) -> Variant:
 
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
 	if not can_populate():
+		_loading = false
 		return null
 
 	if response is PromiseError:
@@ -219,8 +226,8 @@ func _async_fetch_new_in_decentraland_page(params: String) -> Variant:
 
 
 func _is_within_new_window(item_data: Dictionary, field: String, now: int) -> bool:
-	var timestamp: String = item_data.get(field, "")
-	if timestamp.is_empty():
+	var timestamp = item_data.get(field)
+	if not timestamp is String or timestamp.is_empty():
 		return false
 	var unix: int = Time.get_unix_time_from_datetime_string(timestamp.substr(0, 19))
 	return now - unix <= NEW_IN_DECENTRALAND_MAX_AGE_SECONDS
