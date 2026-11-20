@@ -119,7 +119,7 @@ const ftueApi = {
 registerPreview('extra/flow-ftue', {
   title: 'Flow: Discover FTUE',
   orientation: 'portrait',
-  notes: 'Figma DISCOVER_FTUE 1458:8149; the places are mock data.',
+  notes: 'Figma DISCOVER_FTUE 1564:10016; the places are mock data.',
   render: () => (
     <ApiProvider api={ftueApi}>
       <FtueScreen username="Ana" onJump={noop} onSkip={noop} />

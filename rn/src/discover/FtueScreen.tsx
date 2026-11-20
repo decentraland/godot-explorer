@@ -174,7 +174,8 @@ const styles = StyleSheet.create({
     width: u(CARD_W),
     height: u(CARD_H),
     borderRadius: u(4),
-    borderWidth: 1,
+    // 0.622 px in the frame, on the settled card.
+    borderWidth: u(0.311),
     borderColor: colors.lavender,
     overflow: 'hidden',
     backgroundColor: colors.purple450,
