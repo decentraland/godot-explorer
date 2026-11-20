@@ -1,0 +1,38 @@
+appId: org.decentraland.godotexplorer
+name: Entry
+---
+# Clean start. In the mock build the avatar preview and the world are placeholders and the data is the
+# fixed mock, so every screen below appears at once and in the same way on every run.
+- clearState
+- launchApp
+- extendedWaitUntil:
+    visible: "Before you start"
+    timeout: 30000
+- tapOn: "Accept and continue"
+- extendedWaitUntil:
+    visible: "Get started!"
+    timeout: 15000
+- tapOn: "Play as guest"
+- extendedWaitUntil:
+    visible: "Randomize"
+    timeout: 15000
+- tapOn: "Randomize"
+- tapOn: "Continue"
+# The first-run carousel comes from the live list of first-run places and is skipped when that list has
+# exactly one place, so it is crossed only when it shows.
+- extendedWaitUntil:
+    visible: "Welcome to Decentraland!|JUMP IN"
+    timeout: 30000
+- runFlow:
+    when:
+      visible: "JUMP IN"
+    commands:
+      - tapOn: "JUMP IN"
+# The mock always offers the tutorial; the FPS label shows the mock version string.
+- extendedWaitUntil:
+    visible: "Welcome to Decentraland!"
+    timeout: 30000
+- tapOn: "SKIP"
+- extendedWaitUntil:
+    visible: ".*mock.*FPS.*"
+    timeout: 15000

@@ -1,0 +1,31 @@
+appId: org.decentraland.godotexplorer
+name: Account
+---
+# Both destructive dialogs are cancelled; only the sign out is confirmed, which the mock handles in memory.
+- runFlow: ../subflows/ensure-home.yaml
+- tapOn: "settings"
+- tapOn: "Account"
+- assertVisible: "#0001"
+- assertVisible: "0xgue…00001"
+- assertVisible: "Unlock the full experience"
+- assertVisible: "ADD EMAIL"
+
+# Delete asks for confirmation; CANCEL keeps the account.
+- tapOn: "Delete your account?"
+- assertVisible: "Delete account"
+- assertVisible: "This will permanently delete your account and cannot be undone."
+- tapOn: "CANCEL"
+- assertVisible: "SIGN OUT"
+
+# Sign out: cancel first, then confirm.
+- tapOn: "SIGN OUT"
+- assertVisible: "Sign out"
+- tapOn: "CANCEL"
+- assertVisible: "Account"
+- tapOn: "SIGN OUT"
+- tapOn:
+    text: "SIGN OUT"
+    index: 1
+- extendedWaitUntil:
+    visible: "Before you start|Get started!"
+    timeout: 20000

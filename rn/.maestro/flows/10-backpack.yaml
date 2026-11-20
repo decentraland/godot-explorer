@@ -1,0 +1,111 @@
+appId: org.decentraland.godotexplorer
+name: Backpack
+---
+# The wearables and emotes are the fixed mock, so each slot is checked for the item it must list. The 3D
+# avatar is a placeholder here: only the React Native side (tabs, slots, selection) is covered.
+- runFlow: ../subflows/ensure-home.yaml
+- tapOn: "backpack"
+- assertVisible: "Wearables"
+- assertVisible: "Emotes"
+
+# ALL: the equipped items of the mock avatar.
+- tapOn: "ALL"
+- assertVisible: "green_hoodie"
+- assertVisible: "brown_pants"
+- assertVisible: "sneakers"
+- assertVisible: "short_hair"
+
+# BODY: shape is a pair of exclusive options; end on the second one.
+- tapOn: "BODY"
+- assertVisible: "Shape"
+- assertVisible: "Skin"
+- runFlow:
+    when:
+      notVisible:
+        text: "BaseFemale"
+        selected: true
+    commands:
+      - tapOn: "BaseFemale"
+- assertVisible:
+    text: "BaseFemale"
+    selected: true
+- runFlow:
+    when:
+      notVisible:
+        text: "BaseMale"
+        selected: true
+    commands:
+      - tapOn: "BaseMale"
+- assertVisible:
+    text: "BaseMale"
+    selected: true
+
+# FACE: Hair slot, the fixed palette and the hair item.
+- tapOn: "FACE"
+- assertVisible: "Hair"
+- assertVisible: "Facial Hair"
+- assertVisible: "Eye"
+- assertVisible: "Eyebrows"
+- assertVisible: "Mouth"
+- assertVisible: "short_hair"
+- assertVisible: "Custom color"
+- runFlow:
+    when:
+      notVisible:
+        text: "#1c1c1c"
+        selected: true
+    commands:
+      - tapOn: "#1c1c1c"
+- assertVisible:
+    text: "#1c1c1c"
+    selected: true
+- runFlow:
+    when:
+      notVisible:
+        text: "#5a3410"
+        selected: true
+    commands:
+      - tapOn: "#5a3410"
+- assertVisible:
+    text: "#5a3410"
+    selected: true
+
+# CLOTHING
+- tapOn: "CLOTHING"
+- assertVisible: "Chest"
+- assertVisible: "Legs"
+- assertVisible: "Feet"
+- assertVisible: "Hand"
+- assertVisible: "green_hoodie"
+
+# EXTRAS: the guest owns nothing here, so the slots list and the empty state shows.
+- tapOn: "EXTRAS"
+- assertVisible: "Hat"
+- assertVisible: "Helmets"
+- assertVisible: "Tiaras"
+- assertVisible: "Glasses"
+- assertVisible: "Mask"
+- assertVisible: "Nothing here yet"
+
+# Emotes: twelve emotes and six slots.
+- tapOn: "Emotes"
+- assertVisible: "Wave"
+- assertVisible: "Dance"
+- assertVisible: "Clap"
+- assertVisible: "Dab"
+- assertVisible: "Emote slot 1"
+- assertVisible: "Emote slot 6"
+
+# Filter menu: All and Collectibles.
+- tapOn: "Filter"
+- assertVisible: "Collectibles"
+- tapOn: "Collectibles"
+- tapOn: "Filter"
+- assertVisible:
+    text: "Collectibles"
+    selected: true
+- tapOn: "All"
+
+# Back to Wearables.
+- tapOn: "Wearables"
+- assertVisible: "BODY"
