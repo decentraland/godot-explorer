@@ -116,14 +116,14 @@ pub struct AvatarScene {
 
     // map alias to the entity_id
     avatar_entity: HashMap<AvatarAlias, SceneEntityId>,
-    avatar_godot_scene: HashMap<SceneEntityId, Gd<DclAvatar>>,
+    pub(super) avatar_godot_scene: HashMap<SceneEntityId, Gd<DclAvatar>>,
     avatar_address: HashMap<H160, AvatarAlias>,
     pending_avatars: VecDeque<PendingAvatar>,
     slots_full_warned: bool,
 
-    crdt_state: SceneCrdtState,
+    pub(super) crdt_state: SceneCrdtState,
 
-    last_updated_profile: HashMap<SceneEntityId, UserProfile>,
+    pub(super) last_updated_profile: HashMap<SceneEntityId, UserProfile>,
 
     // Timestamp tracking for movement messages
     last_movement_timestamp: HashMap<AvatarAlias, f32>,
@@ -1306,6 +1306,13 @@ impl AvatarScene {
         }
     }
 
+    /// Called by the local player's avatar after it loads: `visible_urns` are the wearables that
+    /// ended up rendered. Writes `AvatarEquippedData.wearables[].visible` for the player.
+    #[func]
+    pub fn set_player_equipped_visibility(&mut self, visible_urns: PackedStringArray) {
+        self.apply_player_equipped_visibility(&visible_urns);
+    }
+
     #[func]
     pub fn update_dcl_avatar_by_alias(&mut self, alias: u32, profile: Gd<DclUserProfile>) {
         self.update_avatar_by_alias(alias, &profile.bind().inner);
@@ -2139,12 +2146,21 @@ impl AvatarScene {
                 .put(entity_id, new_avatar_base);
         }
 
-        let new_avatar_equipped_data = Some(profile.content.to_pb_avatar_equipped_data());
+        let mut new_avatar_equipped_data = Some(profile.content.to_pb_avatar_equipped_data());
         let avatar_equipped_data_component =
             SceneCrdtStateProtoComponents::get_avatar_equipped_data(&self.crdt_state);
         let avatar_equipped_data_value = avatar_equipped_data_component
             .get(&entity_id)
             .and_then(|v| v.value.clone());
+        // Same outfit: keep the visibility already resolved (the avatar will not reload).
+        if let (Some(new), Some(old)) = (
+            new_avatar_equipped_data.as_mut(),
+            &avatar_equipped_data_value,
+        ) {
+            if new.wearable_urns == old.wearable_urns {
+                new.wearables = old.wearables.clone();
+            }
+        }
         if avatar_equipped_data_value != new_avatar_equipped_data {
             // Push dirty state in all the scenes
             let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
