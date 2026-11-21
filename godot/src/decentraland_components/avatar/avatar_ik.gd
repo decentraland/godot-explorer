@@ -42,7 +42,10 @@ func update(
 		and not stunned
 		and _avatar._lod_distance <= REMOTE_DISTANCE
 	)
-	_head.update_remote(delta, head_on, _avatar.head_ik_yaw, _avatar.head_ik_pitch)
+	var body := AvatarHeadIK.wire_to_body(
+		_avatar.head_ik_yaw, _avatar.head_ik_pitch, _avatar.global_transform.basis
+	)
+	_head.update_remote(delta, head_on, body.x, body.y)
 
 
 func _update_local(delta: float, enabled: bool, movement_speed: float) -> void:
@@ -52,14 +55,16 @@ func _update_local(delta: float, enabled: bool, movement_speed: float) -> void:
 	# Head IK looks where the view camera looks, and only while nearly standing
 	# still (Unity disables it above ~0.7 m/s of movement).
 	var camera := _avatar.get_viewport().get_camera_3d()
+	var look_dir := Vector3.ZERO if camera == null else -camera.global_transform.basis.z
 	var head_on: bool = enabled and movement_speed < AvatarHeadIK.MAX_SPEED and camera != null
-	_head.update_ik(
-		delta, head_on, Vector3.ZERO if camera == null else -camera.global_transform.basis.z
-	)
+	_head.update_ik(delta, head_on, look_dir)
 	# Mirrored onto the avatar so the sender's dirty check can see the turn while
 	# it stands still.
 	_avatar.head_ik_yaw = _head.head_yaw_deg
 	_avatar.head_ik_pitch = _head.head_pitch_deg
 	_avatar.head_ik_yaw_enabled = head_on
 	_avatar.head_ik_pitch_enabled = head_on
-	Global.comms.set_head_ik(head_on, _head.head_yaw_deg, _head.head_pitch_deg)
+	var wire := AvatarHeadIK.body_to_wire(
+		_head.head_yaw_deg, _head.head_pitch_deg, _avatar.global_transform.basis
+	)
+	Global.comms.set_head_ik(head_on, wire.x, wire.y)

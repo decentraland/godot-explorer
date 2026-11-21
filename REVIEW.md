@@ -13,7 +13,7 @@
 These are blocking prerequisites. Resolve each one (or explicitly note its status in your review) before reading the diff.
 
 1. **Branch must be up to date with `main`.** Run `gh pr view <pr> --json mergeStateStatus,headRefOid,baseRefOid` (or check the PR page). If the PR is behind `main`, **request the author update the branch before a substantive review** — CI signals (especially Android/iOS artifacts) are not trustworthy on a stale base, and recently-merged fixes (autoload ordering, mouse-filter changes, skeleton recycling) frequently invalidate older diffs. A one-line "please rebase / merge `main` and I'll re-review" is the right output if the branch is stale.
-2. **iOS build must be present for platform-sensitive changes.** Mobile builds are gated on the `build` label (alias: `build-ios`) and skipped by default. Check the PR's **📱 Mobile build pipeline** comment (posted by the `build` label) for a `🍏 iOS` row reading "✅ TestFlight build N". A row reading "❓ TestFlight result unknown" means CI could not confirm the outcome (the watch timed out or the API call failed), **not** that no build exists — check the linked `godot-asc-deploy` run or Slack before holding on it.
+2. **iOS build must be present for platform-sensitive changes.** Mobile builds are gated on the `build` label (alias: `build-ios`) and skipped by default. Check the PR's **📱 Mobile build pipeline** comment (written by the mobile board's GitHub account once the `build` label has run a distribution) for a `🍏 iOS` row reading "✅ TestFlight build N". A row reading "❓ TestFlight result unknown" means CI could not confirm the outcome (the watch timed out or the API call failed), **not** that no build exists — check the linked `godot-asc-deploy` run or Slack before holding on it.
    - If the PR touches: native iOS plugins (`plugins/dcl-godot-ios/**`), `OS.get_name() == "iOS"` branches, deeplinks, virtual keyboard / safe-area / `UIView` paths, audio/video/livekit interop, or anything under `lib/src/comms/` or `lib/src/av/` → **an iOS build is required**.
    - If no iOS artifact exists, output exactly: *"No iOS build on this PR — a maintainer can add the `build` label to trigger one. I will not approve platform-sensitive iOS changes without a green iOS build."* and hold approval.
    - If the PR is purely backend / GDScript-with-no-platform-branch / docs, an iOS build is **not** required — call that out and proceed.
@@ -242,7 +242,7 @@ The PR-level workflows a reviewer should expect green before approving:
 - `Clippy` — `-D warnings`
 - `🐧 Linux`, `🪟 Windows`, `🍎 macOS` builds — build-only smoke checks; desktop is not a distribution target (see Section 1). Keep them green, but a desktop-only runtime issue is not grounds to block.
 - `🤖 Android` builds (APK/AAB posted as a sticky comment on the PR)
-- `🍏 iOS` is **opt-in** — gated on the `build` label (alias: `build-ios`), which also posts a Slack "Android build ready" notification with the R2 APK download link and keeps a single **📱 Mobile build pipeline** comment on the PR up to date (build number, iOS/Android state, APK/TestFlight links). See Section 0 pre-flight: for platform-sensitive changes the iOS build is *required* and the PR should be held until a maintainer adds the label. For pure-backend / docs PRs, an absent iOS build is fine — say so explicitly.
+- `🍏 iOS` is **opt-in** — gated on the `build` label (alias: `build-ios`), which also reports every leg to the mobile board; the board posts the Slack build card and keeps a single **📱 Mobile build pipeline** comment on the PR up to date (build number, iOS/Android state, APK/TestFlight links). See Section 0 pre-flight: for platform-sensitive changes the iOS build is *required* and the PR should be held until a maintainer adds the label. For pure-backend / docs PRs, an absent iOS build is fine — say so explicitly.
 
 ### Release flow
 `release` branch is used for production cuts. PRs titled `chore: sync release into main (vX.Y.Z)` / `chore: merge release back into main` appear periodically and should usually be merge-only (no review nits on code that's already been reviewed upstream).
@@ -355,6 +355,12 @@ Length:
 - Small fix PR (1 file, <30 lines): a short paragraph, or a one-line approval when nothing is wrong.
 - Feature PR (200+ lines, multiple dirs): full structured review with findings sections is expected.
 - Refactors / cross-cutting changes: open with the architectural read before individual findings.
+
+Where the review goes (Slack vs GitHub):
+- **The full review lives on GitHub only** — the structured review, findings, severity labels, file/line citations, fixes and the `Approving` / `Requesting changes` / `Commenting` recommendation are posted as a PR review. Never paste the full review into Slack.
+- **Slack gets a brief** when you are asked in Slack (e.g. mentioned as `@clawtonio` on the PR-state message): 2–5 short bullets with only the important topics — the verdict, each blocker in a few words, and the one or two things the author must act on. No file paths, line numbers, code, rationale or nit-level items. End with a link to the GitHub review (`Full review: <PR review URL>`).
+- Post the GitHub review first so the link exists, then reply in Slack. If there is nothing to flag, the Slack reply is one line (e.g. "Approved — nothing blocking. Full review: <url>").
+- Keep the two consistent: every blocker named in Slack must appear in the GitHub review, and Slack must never state a verdict the GitHub review does not.
 
 ---
 

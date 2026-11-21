@@ -599,13 +599,24 @@ func _on_main_category_filter_type(type: String):
 	_update_visible_categories()
 
 
+# i18n-keys: WEARABLE_CATEGORY_BODY, WEARABLE_CATEGORY_HAIR, WEARABLE_CATEGORY_EYES
+func _color_category_key(type: String) -> TranslationKey:
+	match type:
+		Wearables.Categories.HAIR:
+			return TranslationKey.new("WEARABLE_CATEGORY_HAIR")
+		Wearables.Categories.EYES:
+			return TranslationKey.new("WEARABLE_CATEGORY_EYES")
+	return TranslationKey.new("WEARABLE_CATEGORY_BODY")
+
+
 func _on_wearable_filter_button_filter_type(type):
 	_marketplace_preview_restore()
 	_load_filtered_data(type)
 	avatar_preview.focus_camera_on(type)
 	if _ios_marketplace_section:
 		_ios_marketplace_section.update_category(type)
-	var color_name := tr("BACKPACK_COLOR_LABEL").format({"category": type.to_pascal_case()})
+	var category_key := _color_category_key(type)
+	var color_name := tr("BACKPACK_COLOR_LABEL").format({"category": category_key.text()})
 	color_carrousel.set_title(color_name)
 
 	var mutable_avatar = Global.player_identity.get_mutable_avatar()

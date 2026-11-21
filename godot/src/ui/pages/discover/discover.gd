@@ -1,14 +1,26 @@
 class_name Discover
 extends Control
 
+# The name play_stream() registers the seasonal track under with MusicPlayer — not a
+# res://assets/sfx/ambient/ resource name, just a marker get_current_music() is compared against.
+const SEASONAL_MUSIC_NAME := "seasonal_discover"
+# places_featured.fetch_tag swaps between these — content ops tags places "season" instead of
+# "featured" for the duration, same carousel, no separate flag.
+const DEFAULT_FEATURED_TAG := "featured"
+const SEASONAL_FEATURED_TAG := "season"
+
 var search_text: String = ""
 var _generator_statuses: Dictionary = {}
+# Whatever Global.music_player was playing right before the seasonal track took over — restored
+# once Discover is hidden, so leaving it doesn't leave the seasonal track running elsewhere.
+var _music_before_seasonal: String = ""
 # Guards _show_streak_modal_if_pending() against overlapping calls — it's awaited from both
 # _ready() and every _on_visibility_changed() re-show, and take_pending_modal()/
 # take_current_reminder() being one-shot consuming reads doesn't stop two concurrent calls from
 # each resolving a different state and racing to show/suppress-nudge/resume-nudge independently.
 var _showing_streak_modal: bool = false
 
+@onready var texture_rect_seasonal_overlay: TextureRect = %TextureRect_SeasonalOverlay
 @onready var jump_in: SidePanelWrapper = %JumpIn
 @onready var event_details: SidePanelWrapper = %EventDetails
 
@@ -16,7 +28,7 @@ var _showing_streak_modal: bool = false
 
 @onready var friends_online: VBoxContainer = %FriendsOnline
 @onready var last_visited: VBoxContainer = %LastVisited
-@onready var places_featured: Control = %PlacesFeatured
+@onready var places_featured: SnapCarousel = %PlacesFeatured
 @onready var places_most_active: VBoxContainer = %PlacesMostActive
 @onready var events: VBoxContainer = %Events
 @onready var places_favorites: VBoxContainer = %PlacesFavorites
@@ -45,6 +57,8 @@ func _ready():
 	jump_in.hide()
 	event_details.hide()
 	search_bar.close_searchbar()
+	Global.seasonal_skin_manager.seasonal_assets_ready.connect(_apply_seasonal_skin)
+	Global.seasonal_skin_manager.seasonal_assets_ready.connect(_apply_seasonal_featured_tag)
 
 	jump_in.jump_in.connect(_on_jump_in_jump_in)
 	jump_in.jump_in_world.connect(_on_jump_in_world)
@@ -78,6 +92,11 @@ func _ready():
 	events.generator.report_loading_status.connect(_on_report_loading_status.bind(events))
 	places_favorites.generator.report_loading_status.connect(
 		_on_report_loading_status.bind(places_favorites)
+	)
+	# Not in _get_active_carousels(), so it doesn't change the messages; its report only re-sends
+	# the DISCOVER snapshot once My Places has loaded.
+	places_my_places.generator.report_loading_status.connect(
+		_on_report_loading_status.bind(places_my_places)
 	)
 
 
@@ -145,18 +164,59 @@ func _on_featured_card_tapped(index: int) -> void:
 		var tex = card.get_texture()
 		if tex:
 			data["_preloaded_texture"] = tex
+		data["_carousel"] = "featured"
+		data["_carousel_position"] = index
 		jump_in.set_data(data)
 		jump_in.open_panel.call_deferred()
 
 
-func on_item_pressed(data):
+func on_item_pressed(data, card: PlaceItem = null):
+	if card:
+		_set_card_origin(data, card)
 	jump_in.set_data(data)
 	jump_in.open_panel()
 
 
-func on_friend_pressed(data):
+func on_friend_pressed(data, card: PlaceItem = null):
+	if card:
+		_set_card_origin(data, card)
 	friend_jump_in.set_data(data)
 	friend_jump_in.open_panel()
+
+
+# Carousel node -> key, shared by the DISCOVER event's `carousels` and the `carousel` that
+# PLACE_DETAILS / PLACE_DETAIL_CLICK log, so the two always join. `featured` is a SnapCarousel
+# and is handled on its own.
+func _carousel_keys() -> Dictionary:
+	# search_param, not search_text: search_text follows keystrokes before a search is submitted.
+	var searching: bool = not places_most_active.generator.search_param.is_empty()
+	return {
+		friends_online: "friends",
+		last_visited: "last_visited",
+		places_most_active: "search" if searching else "most_active",
+		events: "events",
+		places_favorites: "favorites",
+		places_my_places: "my_places",
+	}
+
+
+# 0-based slots count PlaceItem siblings, the same way _collect_carousel_data() does.
+func _set_card_origin(data: Dictionary, card: PlaceItem) -> void:
+	var container := card.get_parent()
+	var carousel_keys := _carousel_keys()
+	# Both keys or neither: a slot without its carousel would read as a real position.
+	for carousel in carousel_keys:
+		if carousel.item_container == container:
+			data["_carousel"] = carousel_keys[carousel]
+			var slot := 0
+			for child in container.get_children():
+				if child == card:
+					break
+				if child is PlaceItem:
+					slot += 1
+			data["_carousel_position"] = slot
+			return
+	push_warning("[Discover] place card tapped from an untracked carousel")
 
 
 func _on_friend_jump_in(parcel_position: Vector2i, realm: String):
@@ -191,6 +251,7 @@ func async_open_place_by_id(place_id: String) -> void:
 	if place_data.is_empty():
 		printerr("[Discover] Empty place data for id: ", place_id)
 		return
+	place_data["_carousel"] = "deeplink"
 	on_item_pressed(place_data)
 
 
@@ -204,7 +265,8 @@ func _on_jump_in_world(realm: String):
 	Global.async_join_world(realm)
 
 
-func _get_ui_location() -> String:
+# Shared with menu.gd so every DISCOVER event carries the same `location`.
+static func get_ui_location() -> String:
 	return "in_game" if Global.get_explorer() else "pre_game"
 
 
@@ -226,12 +288,67 @@ func _on_visibility_changed():
 		_show_device_support_modal_if_needed()
 		Global.set_orientation_portrait()
 		Global.metrics.track_screen_viewed(
-			"DISCOVER", JSON.stringify({"location": _get_ui_location()})
+			"DISCOVER", JSON.stringify({"location": get_ui_location()})
 		)
 		_show_low_spec_warning_if_needed()
 		if Global.get_explorer():
 			if button_back_to_explorer:
 				button_back_to_explorer.show()
+		# Fire-and-forget, no-op after the first call — see async_request_assets().
+		Global.seasonal_skin_manager.async_request_assets()
+		_apply_seasonal_skin()
+		_apply_seasonal_featured_tag()
+	else:
+		# Only restore if the seasonal track is still playing (don't fight a later change), and
+		# stop() rather than play("") when nothing played before — the latter just no-ops.
+		if Global.music_player.get_current_music() == SEASONAL_MUSIC_NAME:
+			if _music_before_seasonal.is_empty():
+				Global.music_player.stop()
+			else:
+				Global.music_player.play(_music_before_seasonal)
+			_music_before_seasonal = ""
+
+
+## Shows/hides the seasonal overlay and swaps Discover's music, per SeasonalSkinManager
+## (issue #3025). Starting the music is gated on is_visible_in_tree(): the fetch it reacts to
+## can resolve after the player already left Discover, and the overlay texture is harmless to
+## set either way (a hidden Control never draws it), but starting a track isn't.
+func _apply_seasonal_skin() -> void:
+	if not is_instance_valid(texture_rect_seasonal_overlay):
+		return
+	if not Global.seasonal_skin_manager.is_seasonal_skin_active():
+		texture_rect_seasonal_overlay.visible = false
+		return
+	var overlay_texture := Global.seasonal_skin_manager.get_discover_overlay_texture()
+	if is_instance_valid(overlay_texture):
+		texture_rect_seasonal_overlay.texture = overlay_texture
+		texture_rect_seasonal_overlay.visible = true
+	if not is_visible_in_tree():
+		return
+	var audio_stream := Global.seasonal_skin_manager.get_discover_audio_stream()
+	if (
+		is_instance_valid(audio_stream)
+		and Global.music_player.get_current_music() != SEASONAL_MUSIC_NAME
+	):
+		_music_before_seasonal = Global.music_player.get_current_music()
+		Global.music_player.play_stream(audio_stream, SEASONAL_MUSIC_NAME)
+
+
+## Swaps the home-tab featured carousel's query tag between "featured" and "season" to match
+## SeasonalSkinManager (issue #3025) — content ops tags places "season" for the duration instead
+## of a separate flag. Falls back to "featured" if nothing's tagged "season" yet (e.g. ops hasn't
+## caught up with content), so the carousel is never left empty. No-op once already on the right
+## tag, so a re-show doesn't re-fetch for nothing.
+func _apply_seasonal_featured_tag() -> void:
+	if not is_instance_valid(places_featured):
+		return
+	var season_active := Global.seasonal_skin_manager.is_seasonal_skin_active()
+	var tag := SEASONAL_FEATURED_TAG if season_active else DEFAULT_FEATURED_TAG
+	if places_featured.fetch_tag == tag:
+		return
+	places_featured.fallback_fetch_tag = DEFAULT_FEATURED_TAG if season_active else ""
+	places_featured.fetch_tag = tag
+	places_featured.fetch()
 
 
 ## Android-only counterpart of the low-spec-iPhone warning below: shows the "device no longer
@@ -558,7 +675,7 @@ func _update_global_messages() -> void:
 				. metrics
 				. track_screen_viewed(
 					"DISCOVER",
-					JSON.stringify({"location": _get_ui_location(), "carousels": carousels_data}),
+					JSON.stringify({"location": get_ui_location(), "carousels": carousels_data}),
 				)
 			)
 
@@ -570,13 +687,9 @@ func _update_global_messages() -> void:
 
 func _collect_carousel_data() -> Dictionary:
 	var result := {}
-	var carousel_map := {
-		"most_active": places_most_active,
-		"events": events,
-		"last_visited": last_visited,
-	}
-	for key in carousel_map:
-		var carousel = carousel_map[key]
+	var carousel_keys := _carousel_keys()
+	for carousel in carousel_keys:
+		var key: String = carousel_keys[carousel]
 		if not carousel.visible:
 			continue
 		var items := []

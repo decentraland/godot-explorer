@@ -363,6 +363,7 @@ func _async_on_button_add_friend_pressed() -> void:
 
 	# Request Friend metric
 	Global.metrics.track_request_friend(social_data.address)
+	Global.analytics_controller.track_first_social_action("friend_request")
 
 	current_friendship_status = Global.FriendshipStatus.REQUEST_SENT
 	button_add_friend.hide()
@@ -398,6 +399,7 @@ func _async_on_button_accept_pressed() -> void:
 
 	# Accept Friend metric
 	Global.metrics.track_accept_friend(social_data.address, social_data.friendship_id)
+	Global.analytics_controller.track_first_social_action("friend_accept")
 
 	# Emit signal locally since the service doesn't stream back our own actions
 	Global.social_service.friendship_request_accepted.emit(social_data.address)

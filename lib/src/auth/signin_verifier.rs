@@ -37,9 +37,8 @@ pub struct PendingVerifier {
 pub enum Selection {
     /// The verifier to send with the identity fetch.
     Use(PendingVerifier),
-    /// The deep link has no `authRequestId` and none is pending: fetch without the header.
-    NoVerifier,
-    /// The deep link names an `authRequestId` this install never started.
+    /// The deep link names an `authRequestId` this install never started, or carries none
+    /// while nothing is pending: no sign-in was started from this install.
     Foreign,
 }
 
@@ -80,7 +79,7 @@ fn select(entries: &[PendingVerifier], auth_request_id: &str) -> Selection {
         return entries
             .last()
             .cloned()
-            .map_or(Selection::NoVerifier, Selection::Use);
+            .map_or(Selection::Foreign, Selection::Use);
     }
     entries
         .iter()
@@ -214,8 +213,8 @@ mod tests {
     }
 
     #[test]
-    fn no_id_and_nothing_pending_fetches_without_a_verifier() {
-        assert_eq!(select(&[], ""), Selection::NoVerifier);
+    fn no_id_and_nothing_pending_is_foreign() {
+        assert_eq!(select(&[], ""), Selection::Foreign);
     }
 
     #[test]

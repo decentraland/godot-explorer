@@ -4,9 +4,15 @@ use godot::{
     prelude::*,
 };
 
-use crate::dcl::components::proto_components::sdk::components::{
-    common::{Font, TextAlignMode},
-    PbUiText, TextWrap,
+use std::{cell::RefCell, rc::Rc};
+
+use crate::{
+    content::content_mapping::ContentMappingAndUrlRef,
+    dcl::components::proto_components::sdk::components::{
+        common::TextAlignMode, PbUiText, TextWrap,
+    },
+    godot_classes::font::{FontStyle, SceneFont},
+    scene_runner::components::ui::scene_ui::UiResults,
 };
 
 #[derive(GodotClass)]
@@ -14,7 +20,8 @@ use crate::dcl::components::proto_components::sdk::components::{
 pub struct DclUiText {
     base: Base<Label>,
 
-    current_font: Font,
+    scene_font: SceneFont,
+    ui_result: Option<Rc<RefCell<UiResults>>>,
 }
 
 #[godot_api]
@@ -22,20 +29,43 @@ impl ILabel for DclUiText {
     fn init(base: Base<Label>) -> Self {
         Self {
             base,
-            current_font: Font::FSansSerif,
+            scene_font: SceneFont::default(),
+            ui_result: None,
         }
     }
 
     fn ready(&mut self) {
-        let new_font_resource = self.current_font.get_font_resource();
-        self.base_mut()
-            .add_theme_font_override("font", &new_font_resource);
+        self.apply_font();
     }
 }
 
 #[godot_api]
 impl DclUiText {
-    pub fn change_value(&mut self, new_value: &PbUiText) {
+    #[func]
+    fn _on_font_loaded(&mut self) {
+        if !self.scene_font.is_loaded() {
+            return;
+        }
+        self.apply_font();
+        if let Some(ui_result) = self.ui_result.as_ref() {
+            ui_result.borrow_mut().relayout_requested = true;
+        }
+    }
+
+    fn apply_font(&mut self) {
+        let font = self.scene_font.get(FontStyle::Regular);
+        self.base_mut().add_theme_font_override("font", &font);
+    }
+
+    pub fn set_ui_result(&mut self, ui_result: Rc<RefCell<UiResults>>) {
+        self.ui_result = Some(ui_result);
+    }
+
+    pub fn change_value(
+        &mut self,
+        new_value: &PbUiText,
+        content_mapping: &ContentMappingAndUrlRef,
+    ) {
         self.base_mut()
             .add_theme_font_size_override("font_size", new_value.font_size.unwrap_or(10));
         let font_color = new_value
@@ -114,11 +144,14 @@ impl DclUiText {
         self.base_mut()
             .set_justification_flags(JustificationFlag::NONE);
 
-        if new_value.font() != self.current_font {
-            self.current_font = new_value.font();
-            let new_font_resource = self.current_font.get_font_resource();
-            self.base_mut()
-                .add_theme_font_override("font", &new_font_resource);
+        if self.scene_font.update(
+            new_value.font(),
+            new_value.font_src.as_deref(),
+            content_mapping,
+        ) {
+            self.apply_font();
+            self.scene_font
+                .on_loaded(&self.base().callable("_on_font_loaded"));
         }
 
         if new_value.text_wrap_compat() == TextWrap::TwWrap {

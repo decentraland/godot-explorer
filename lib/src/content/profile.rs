@@ -4,7 +4,7 @@ use ethers_core::types::H160;
 use serde::Deserialize;
 
 use crate::{
-    comms::profile::{SerializedProfile, UserProfile},
+    comms::profile::{ProfileNotFound, SerializedProfile, UserProfile},
     godot_classes::dcl_global::DclGlobal,
     http_request::{
         http_queue_requester::HttpQueueRequester,
@@ -46,7 +46,21 @@ pub(crate) async fn request_registry_profile(
     profile_base_url: &str,
     http_requester: Arc<HttpQueueRequester>,
 ) -> Result<UserProfile, anyhow::Error> {
-    let url = urls::asset_bundle_registry_profiles();
+    request_registry_profile_by_url(
+        user_id,
+        profile_base_url,
+        http_requester,
+        urls::asset_bundle_registry_profiles(),
+    )
+    .await
+}
+
+pub(crate) async fn request_registry_profile_by_url(
+    user_id: H160,
+    profile_base_url: &str,
+    http_requester: Arc<HttpQueueRequester>,
+    url: String,
+) -> Result<UserProfile, anyhow::Error> {
     let body = serde_json::json!({ "ids": [format!("{:#x}", user_id)] }).to_string();
     let headers = {
         let mut map = std::collections::HashMap::new();
@@ -70,6 +84,12 @@ pub(crate) async fn request_registry_profile(
         .await
         .map_err(|v| anyhow::Error::msg(v.error_message))?;
 
+    if response.status_code == http::StatusCode::NOT_FOUND {
+        return Err(ProfileNotFound.into());
+    }
+    if !response.status_code.is_success() {
+        return Err(anyhow::anyhow!("registry HTTP {}", response.status_code));
+    }
     match &response.response_data {
         Ok(crate::http_request::request_response::ResponseEnum::String(json)) => {
             let entries: Vec<RegistryProfileEntry> = serde_json::from_str(json.as_str())
@@ -78,7 +98,7 @@ pub(crate) async fn request_registry_profile(
                 .into_iter()
                 .next()
                 .and_then(|e| e.avatars.into_iter().next())
-                .ok_or_else(|| anyhow::anyhow!("profile not found in registry"))?;
+                .ok_or(ProfileNotFound)?;
             content.convert_snapshots();
             Ok(UserProfile {
                 version: content.version as u32,
@@ -120,6 +140,34 @@ pub(crate) fn lambda_profile_url(lamda_server_base_url: &str, user_id: H160) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn missing_profile_is_distinct_from_server_and_parse_failures() {
+        use crate::http_request::request_response::{RequestResponse, ResponseEnum};
+        for (status, body, missing) in [
+            (404, "not found", true),
+            (200, r#"{"avatars":[]}"#, true),
+            (503, r#"{"avatars":[]}"#, false),
+            (200, "invalid json", false),
+        ] {
+            let response = RequestResponse {
+                request_option: RequestOption::new(
+                    0,
+                    String::new(),
+                    http::Method::GET,
+                    ResponseType::AsString,
+                    None,
+                    None,
+                    None,
+                ),
+                status_code: http::StatusCode::from_u16(status).unwrap(),
+                headers: None,
+                response_data: Ok(ResponseEnum::String(body.into())),
+            };
+            let error = UserProfile::from_lambda_response(&response, "").unwrap_err();
+            assert_eq!(error.is::<ProfileNotFound>(), missing);
+        }
+    }
 
     #[test]
     fn lambda_profile_url_tolerates_both_trailing_slash_styles() {

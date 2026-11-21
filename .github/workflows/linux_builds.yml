@@ -9,7 +9,8 @@ concurrency:
 jobs:
   build:
     name: Build Linux
-    runs-on: ubuntu-latest
+    # Same Ubuntu as the Dockerfile: a library built on a newer glibc won't load in the image.
+    runs-on: ubuntu-24.04
     timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4

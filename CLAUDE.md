@@ -194,26 +194,49 @@ bypasses that check for local debugging only. The baked files live in
    - The strip command auto-detects already-stripped templates (< 1GB) and skips
 
 5. **Android APK hosting & mobile distribution**:
-   Every Android CI build (`android_builds.yml`, on every push/PR) uploads the signed
-   APK to the R2 mobile-artifacts bucket and links it from the PR build-report comment.
-   Required repo secrets: `MOBILE_ARTIFACTS_R2_{ACCESS_KEY_ID,SECRET_ACCESS_KEY,ENDPOINT,BUCKET}`.
-   APKs are served at `https://mobile-artifacts.dclregenesislabs.xyz/android/<branch>/<sha>/decentraland.godot.client.apk`.
+   Builds and signing are separate jobs everywhere. The job that checks out and compiles the
+   commit under test (`android_builds.yml` `build`, `ios_r2_artifact.yml` `build`) holds no
+   secrets and signs the APK with the throwaway keystore xtask generates; it hands an artifact
+   to a `sign-publish` / `publish` job bound to the **`mobile-release`** GitHub environment
+   (deployment branches `main`, `1.x`, `release`, `release-*`), which re-signs with the
+   distribution key, signs the AAB with the Play upload key, uploads to R2, registers the Sentry
+   release and reports to the board. Every mobile secret (`APK_ANDROID_KEYSTORE_*`,
+   `ANDROID_KEYSTORE_*`, `MOBILE_ARTIFACTS_R2_*`, `BUILD_NUMBER_SECRET`,
+   `ASC_DEPLOY_DISPATCH_TOKEN`, `SENTRY_*`, `BUILD_REPORTER_TOKEN`, `FIREBASE_ANDROID_APP_ID`)
+   lives in that environment, never at repository level. Repo variable
+   `APK_SIGNING_CERT_SHA256` pins the expected distribution certificate.
 
-   `mobile_distribute.yml` builds & ships iOS → TestFlight and, once the commit's APK is
-   in R2, posts a Slack "🤖 Android Build Ready" notification (uses the existing
-   `SLACK_WEBHOOK_URL`). It does not rebuild Android and does not push to any store. For
-   **`main`/`release`** builds it additionally surfaces the **AAB** (Play Store artifact)
-   and posts a "📦 Android AAB Ready" Slack notification — the AAB is only uploaded for
-   `main`/`release` builds.
+   PR CI (`runner.yml` on `pull_request`) does not build Android; PRs get device builds through
+   the `build` label only. Pushes to `main`/`release` build Android and publish the signed APK
+   (+ AAB) to R2 at
+   `https://mobile-artifacts.dclregenesislabs.xyz/android/<branch>/<sha>/decentraland.godot.client.apk`.
 
-   Status is mirrored in a Slack root card (`.github/scripts/slack-root.py`, merge-on-read
-   via message metadata; byte-duplicated in `decentraland/godot-asc-deploy` — edit both
-   copies together) and ONE sticky **📱 Mobile build pipeline** PR comment
-   (`.github/scripts/pr-card.py`, same model — state lives in a hidden HTML comment; each leg
-   merges only its own fields; `SHA` + `RUN_ID` guard against a superseded run). `pr-card.py`
-   lives only here: asc-deploy has no token for this repo, so the `ios-wait` job watches the
-   asc-deploy run (matched by its `run-name` `🍏 <branch> @ <sha>`, via
-   `ASC_DEPLOY_DISPATCH_TOKEN`) and mirrors the TestFlight result onto the card.
+   `mobile_distribute.yml` builds & ships iOS → TestFlight and, once the commit's APK is in R2,
+   surfaces the APK on the build card and pushes it to Firebase App Distribution (and, for
+   **`main`/`release*`** refs, the **AAB** — only uploaded for those). It rebuilds Android only
+   when no current APK exists for the commit and does not push to any store. R2 keys use a
+   segment `prepare` computes from event data, never from a branch name: `main` / `1.x` /
+   `release` / `release-<x>` for push, cron and dispatch, and **`pr-<N>`** for labelled PRs
+   (`android/pr-<N>/<sha>/…`, `ios/pr-<N>/<sha>/export.tar.gz`), so PR runs and main/release
+   distributions never share an R2 key.
+
+   Status reporting lives in the mobile board (`dcl-regenesislabs/mobile-board`, a Cloudflare
+   Worker): every leg POSTs one event with `.github/scripts/report-build-event.py` (secret
+   `BUILD_REPORTER_TOKEN`; env-var interface: `STATUS`, `IOS_LINE`, `ANDROID_LINE`, `APK_URL`…,
+   plus `MESSAGE` for a Slack thread reply and `LOG` for a PR-card timeline entry). The board
+   stores the state, renders the Slack root card + thread replies and keeps ONE sticky
+   **📱 Mobile build pipeline** PR comment (hidden `mobile-build-card:state` JSON) — CI holds no
+   Slack token and writes no PR comments. The board merges only the non-empty fields each leg
+   sends, never lets `status` regress from failed/cancelled to success, and ignores legs of a
+   superseded run. `prepare` sends `RESET=1`; its `slack_ts` output is forwarded to godot-asc-deploy
+   only because that workflow still declares the input — asc-deploy reports to the board itself,
+   with events keyed by commit SHA (the board attaches them to the distribution run and rejects a
+   `run_id` from that source); `ios-wait` is the fallback for outcomes it cannot send. The board
+   URL is the `BOARD_EVENTS_URL` repository variable.
+   The `ios-wait` job runs for every distribution: it watches the asc-deploy run (matched by its
+   `run-name` `🍏 <segment> @ <sha>`, e.g. `🍏 pr-123 @ <sha>`, via `ASC_DEPLOY_DISPATCH_TOKEN`)
+   and reports the TestFlight result. The script never fails the build; CI reaches the board
+   through its `workers.dev` host because the custom domain's Bot Fight Mode blocks GitHub runners.
 
    It is triggered by:
    - **Every push to `release`** → full distribution.
@@ -223,10 +246,14 @@ bypasses that check for local debugging only. The baked files live in
      unchanged the `prepare` job logs "main unchanged — skipping" and the iOS/Android jobs
      are skipped (the run still concludes successfully, which is what the next cron run
      compares against).
-   - **The `build` label** (or legacy alias `build-ios`) on a PR.
-   - **Manual `workflow_dispatch`** on `main`/`release`.
+   - **The `build` label** (or legacy alias `build-ios`) on a same-repo PR into `main`, `1.x` or
+     `release*`. This runs as `pull_request_target`: the workflow, `.github/actions/*` and
+     `.github/scripts/*` come from the base branch, and only the secret-less build jobs run the
+     PR's code. Branch names and other PR-controlled values reach shell steps through `env:` only.
+   - **Manual `workflow_dispatch`** on `main`/`1.x`/`release`; the `ref` input must be `main`,
+     `1.x`, `release` or `release-*`.
    ```bash
-   # On a PR: add the build label (iOS TestFlight + Android Slack notification)
+   # On a PR: add the build label (iOS TestFlight + Android APK on the build card)
    gh pr edit --add-label "build"
 
    # Manual trigger on main/release (GitHub Actions UI or gh CLI)
