@@ -30,6 +30,8 @@ assignment arrives, including when gatekeeper still sees a closing participant.
 - Client-fault kicks (input/event rate caps, malformed messages, handshake replay) reconnect
   like a transport drop, so the modal appears only after the 10-second outage. Their backoff
   keeps growing across re-establishment until a session ends for another reason.
+- `PlayerStateInput` is sent at most every 80 ms; newer states coalesce until then. The
+  broadcast timer runs at 10 Hz with a 1 Hz idle keepalive, and the server disconnects above 20 Hz.
 - Resume grace lasts 30 seconds and permits one Pulse session reclaim. Repeated duplicate
   eviction cannot continuously reclaim the account during that window.
 - Cleanup replaces the scene-room result channel, invalidating pending requests from the
