@@ -169,11 +169,22 @@ describe('entry flow', () => {
 });
 
 describe('isValidName', () => {
-  it('accepts 3–15 alphanumerics only', () => {
+  it('accepts 3–15 letters or digits only', () => {
     expect(isValidName('Mateo')).toBe(true);
     expect(isValidName('  Ana3 ')).toBe(true);
     expect(isValidName('ab')).toBe(false);
     expect(isValidName('has space')).toBe(false);
     expect(isValidName('a'.repeat(16))).toBe(false);
+  });
+
+  it('accepts accented letters (#3078)', () => {
+    expect(isValidName('Ñoqui')).toBe(true);
+    expect(isValidName('Maçã')).toBe(true);
+    expect(isValidName('José')).toBe(true);
+    expect(isValidName('Ação')).toBe(true);
+    expect(isValidName('Mac\u0327a\u0303')).toBe(true);
+    expect(isValidName('a!b')).toBe(false);
+    expect(isValidName('ab_c')).toBe(false);
+    expect(isValidName('😀😀😀')).toBe(false);
   });
 });

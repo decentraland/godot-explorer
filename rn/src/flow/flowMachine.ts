@@ -165,7 +165,7 @@ export const PREVIEW_STEPS: readonly Step[] = [
   'welcome_back',
 ];
 
-/** Name rule from the lobby naming screen: 3–15 letters or digits. */
-export const NAME_PATTERN = /^[A-Za-z0-9]{3,15}$/;
+/** Name rule from the lobby naming screen: 3–15 letters (any script, accents included) or digits. */
+export const NAME_PATTERN = /^[\p{L}\p{M}\p{N}]{3,15}$/u;
 
 export const isValidName = (name: string) => NAME_PATTERN.test(name.trim());

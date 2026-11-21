@@ -13,6 +13,7 @@ import {
   validateText,
 } from '../src/profile/logic';
 import { MOCK_PROFILE } from '../src/profile/mockData';
+import { usernameError } from '../src/profile/UsernameField';
 import {
   GENDERS,
   optionLabel,
@@ -58,6 +59,12 @@ describe('formatting and validation', () => {
     expect(validateText('', 15, { url: true })).toBeUndefined();
     expect(validateText(' x', 15, { noEdgeSpaces: true })).toBe('edgeSpaces');
     expect(validateText('x y', 15, { noEdgeSpaces: true })).toBeUndefined();
+  });
+
+  it('accepts accented letters in the username (#3078)', () => {
+    expect(usernameError('Ñoqui')).toBeUndefined();
+    expect(usernameError('Maçã')).toBeUndefined();
+    expect(usernameError('José')).toBeUndefined();
   });
 
   it('enables SAVE only for a titled link with a valid URL', () => {
