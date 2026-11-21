@@ -1,0 +1,32 @@
+{
+  "label": "2x-noon-r0",
+  "build": "2x",
+  "scenario": "gp-noon",
+  "device": "SM-A546E",
+  "device_serial": "R5CW60624NE",
+  "pkg": "org.decentraland.godotexplorer",
+  "version_name": "2.0.0(2723)",
+  "pid_before": 18623,
+  "trace_wall_seconds": 30.21,
+  "started_at": "2026-11-12T10:14:22-0300",
+  "frames": {
+    "frames": "768",
+    "fps_avg": "25.420000",
+    "span_s": "29.940000",
+    "interval_p50_ms": "41.620000",
+    "interval_p95_ms": "50.060000",
+    "interval_p99_ms": "69.490000",
+    "interval_max_ms": "166.690000",
+    "fps_p1_low": "14.390000",
+    "fps_p5_low": "19.980000",
+    "fps_median": "24.030000",
+    "pct_missed_deadline": "32.290000",
+    "jank_any": "767"
+  },
+  "rss_peak_kb": 2208819,
+  "rss_steady_kb": 2097774,
+  "mem_samples": 17,
+  "notes": "",
+  "thermal_end_c": 48.0,
+  "cpu_mean_pct": 182.5
+}

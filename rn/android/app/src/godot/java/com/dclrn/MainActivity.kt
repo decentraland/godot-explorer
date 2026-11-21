@@ -101,7 +101,13 @@ class MainActivity : ReactActivity(), GodotHost {
 
   override fun getGodot(): Godot? = godotFragment?.godot
 
-  override fun getCommandLine(): List<String> = BOOT_ARGS
+  // The Genesis Plaza benchmark is started by a CLI flag the shell never passes, and a warm deep
+  // link does not reach the engine's own params, so a benchmark run asks for it here instead of
+  // needing a separate APK.
+  override fun getCommandLine(): List<String> {
+    val wantsBenchmark = intent?.data?.toString()?.contains("gp-benchmark=true") == true
+    return if (wantsBenchmark) BOOT_ARGS + "--gp-benchmark" else BOOT_ARGS
+  }
 
   companion object {
     private const val GODOT_CONTAINER_ID = 0x00D0D0

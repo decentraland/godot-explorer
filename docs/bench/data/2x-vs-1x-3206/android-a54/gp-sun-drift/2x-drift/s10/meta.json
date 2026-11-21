@@ -1,0 +1,32 @@
+{
+  "label": "2x-drift-s10",
+  "build": "2x",
+  "scenario": "gp-sun-drift",
+  "device": "SM-A546E",
+  "device_serial": "R5CW60624NE",
+  "pkg": "org.decentraland.godotexplorer",
+  "version_name": "2.0.0(2723)",
+  "pid_before": 14942,
+  "trace_wall_seconds": 30.17,
+  "started_at": "2026-11-11T12:19:16-0300",
+  "frames": {
+    "frames": "648",
+    "fps_avg": "21.480000",
+    "span_s": "29.910000",
+    "interval_p50_ms": "49.910000",
+    "interval_p95_ms": "62.940000",
+    "interval_p99_ms": "75.120000",
+    "interval_max_ms": "117.000000",
+    "fps_p1_low": "13.310000",
+    "fps_p5_low": "15.890000",
+    "fps_median": "20.030000",
+    "pct_missed_deadline": "19.140000",
+    "jank_any": "645"
+  },
+  "rss_peak_kb": 2519832,
+  "rss_steady_kb": 2405226,
+  "mem_samples": 17,
+  "notes": "",
+  "thermal_end_c": 48.9,
+  "cpu_mean_pct": 194.8
+}

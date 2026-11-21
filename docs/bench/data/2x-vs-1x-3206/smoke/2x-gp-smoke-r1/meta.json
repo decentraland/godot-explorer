@@ -1,0 +1,32 @@
+{
+  "label": "2x-gp-smoke-r1",
+  "build": "2x",
+  "scenario": "gp-smoke",
+  "device": "SM-A546E",
+  "device_serial": "R5CW60624NE",
+  "pkg": "org.decentraland.godotexplorer",
+  "version_name": "2.0.0(2723)",
+  "pid_before": 24908,
+  "trace_wall_seconds": 10.06,
+  "started_at": "2026-11-03T10:53:29-0300",
+  "frames": {
+    "frames": "179",
+    "fps_avg": "17.790000",
+    "span_s": "9.880000",
+    "interval_p50_ms": "58.250000",
+    "interval_p95_ms": "66.740000",
+    "interval_p99_ms": "68.670000",
+    "interval_max_ms": "75.010000",
+    "fps_p1_low": "14.560000",
+    "fps_p5_low": "14.980000",
+    "fps_median": "17.170000",
+    "pct_missed_deadline": "0.560000",
+    "jank_any": "178"
+  },
+  "rss_peak_kb": 2035695,
+  "rss_steady_kb": 2015307,
+  "mem_samples": 8,
+  "notes": "",
+  "thermal_end_c": 41.2,
+  "cpu_mean_pct": 0.0
+}

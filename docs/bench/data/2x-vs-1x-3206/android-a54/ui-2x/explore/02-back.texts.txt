@@ -1,0 +1,7 @@
+# raw `scripts/bench/2x-vs-1x/ui.sh texts` output, world state, after KEYCODE_BACK, 2026-11-05 09:52.
+# (re-dumping it later was not possible: in the shell BACK opens the place sheet instead, and this
+#  dialog only exists while the Godot world is the foreground screen)
+Leave this world? | 134 357 945 436
+You will go back to the menus. | 134 460 945 517
+CANCEL | 238 617 424 682
+LEAVE | 677 617 819 682

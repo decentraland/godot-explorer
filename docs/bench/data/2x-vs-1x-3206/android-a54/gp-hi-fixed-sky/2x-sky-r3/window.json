@@ -1,0 +1,15 @@
+{
+  "frames": "406",
+  "fps_avg": "13.470000",
+  "span_s": "29.860000",
+  "interval_p50_ms": "75.050000",
+  "interval_p95_ms": "83.430000",
+  "interval_p99_ms": "91.590000",
+  "interval_max_ms": "99.960000",
+  "fps_p1_low": "10.920000",
+  "fps_p5_low": "11.990000",
+  "fps_median": "13.330000",
+  "pct_missed_deadline": "39.900000",
+  "jank_any": "406"
+}
+wrote docs/bench/data/2x-vs-1x-3206/android-a54/gp-hi-fixed-sky/2x-sky-r3

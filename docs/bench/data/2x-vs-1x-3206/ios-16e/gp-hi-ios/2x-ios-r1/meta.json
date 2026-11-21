@@ -1,0 +1,43 @@
+{
+  "label": "2x-ios-r1",
+  "build": "2x",
+  "platform": "ios",
+  "device": "iPhone17,5 (iPhone 16e), iOS 26.6.2",
+  "app": "2.0.0.2723-e3b7aa1-staging",
+  "scene": "Genesis Plaza (position -3,-2)",
+  "settings": {
+    "dynamic_graphics_enabled": false,
+    "graphic_profile": 3,
+    "dynamic_skybox": false,
+    "skybox_time": 43200,
+    "shadow_quality": 1,
+    "bloom_quality": 2
+  },
+  "method": "fps sampled from the engine HUD through the accessibility tree (1 Hz), 20 samples over ~30 s after a 25 s settle; no frame timeline on iOS, so there is no p50/p99",
+  "fps_samples": [
+    37,
+    37,
+    38,
+    37,
+    38,
+    39,
+    38,
+    38,
+    39,
+    40,
+    38,
+    39,
+    38,
+    38,
+    38,
+    40,
+    39,
+    39,
+    37,
+    38
+  ],
+  "fps_median": 38.0,
+  "fps_min": 37,
+  "fps_max": 40,
+  "luma_mean": 61.9
+}

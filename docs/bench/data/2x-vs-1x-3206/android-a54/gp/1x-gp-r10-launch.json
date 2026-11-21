@@ -1,0 +1,7 @@
+{
+  "build": "1x",
+  "label": "1x-gp-r10",
+  "am_total_time_ms": 327,
+  "cold_launch_to_render_ready_ms": 27588,
+  "settle_seconds": 25
+}

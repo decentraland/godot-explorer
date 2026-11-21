@@ -1,0 +1,6 @@
+{
+  "build": "2x",
+  "label": "2x-noon-r3",
+  "am_total_time_ms": 267,
+  "cold_launch_to_render_ready_ms": 6933
+}
