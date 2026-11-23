@@ -14,6 +14,7 @@ import {
   ScrollFade,
   SettingsRow,
   Switch,
+  TagCategory,
 } from '@dcl/ui-native';
 
 function render(element: ReactElement) {
@@ -114,6 +115,20 @@ describe('Figma components added to the DS', () => {
       <MenuNavItem label="Account" badge onPress={jest.fn()} />,
     );
     expect(flagged.root.findByType(NotificationBadge).props.size).toBe(8);
+  });
+
+  it('TagCategory shows the category icon unless icon is false', () => {
+    const withIcon = render(<TagCategory type="art" label="Art" />);
+    expect(texts(withIcon.root)).toContain('Art');
+    expect(withIcon.root.findAllByProps({ name: 'categoryArt' })).toHaveLength(
+      1,
+    );
+    const textOnly = render(
+      <TagCategory type="art" label="Art" icon={false} />,
+    );
+    expect(textOnly.root.findAllByProps({ name: 'categoryArt' })).toHaveLength(
+      0,
+    );
   });
 
   it('SettingsRow dims its text when disabled', () => {
