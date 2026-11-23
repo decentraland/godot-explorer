@@ -55,3 +55,54 @@ test('avatar-attach: attached entities follow the player', async function (conte
   await expectAnchors(context, entities)
   customAddEntity.clean()
 })
+
+// #1730: every bone anchor lands on its bone. Bone positions depend on the body and the idle pose,
+// so these are the body's structure, not exact heights: the spine runs up from the hips to the
+// head, each limb runs down from the shoulder or hip, and left bones are on the left (-x).
+const BONES: Array<[string, AvatarAnchorPointType]> = [
+  ['hip', AvatarAnchorPointType.AAPT_HIP],
+  ['spine', AvatarAnchorPointType.AAPT_SPINE],
+  ['neck', AvatarAnchorPointType.AAPT_NECK],
+  ['head', AvatarAnchorPointType.AAPT_HEAD],
+  ['left shoulder', AvatarAnchorPointType.AAPT_LEFT_SHOULDER],
+  ['left arm', AvatarAnchorPointType.AAPT_LEFT_ARM],
+  ['left forearm', AvatarAnchorPointType.AAPT_LEFT_FOREARM],
+  ['left hand index', AvatarAnchorPointType.AAPT_LEFT_HAND_INDEX],
+  ['left up leg', AvatarAnchorPointType.AAPT_LEFT_UP_LEG],
+  ['left leg', AvatarAnchorPointType.AAPT_LEFT_LEG],
+  ['left foot', AvatarAnchorPointType.AAPT_LEFT_FOOT],
+  ['left toe base', AvatarAnchorPointType.AAPT_LEFT_TOE_BASE],
+  ['right shoulder', AvatarAnchorPointType.AAPT_RIGHT_SHOULDER],
+  ['right arm', AvatarAnchorPointType.AAPT_RIGHT_ARM],
+  ['right forearm', AvatarAnchorPointType.AAPT_RIGHT_FOREARM],
+  ['right hand index', AvatarAnchorPointType.AAPT_RIGHT_HAND_INDEX],
+  ['right up leg', AvatarAnchorPointType.AAPT_RIGHT_UP_LEG],
+  ['right leg', AvatarAnchorPointType.AAPT_RIGHT_LEG],
+  ['right foot', AvatarAnchorPointType.AAPT_RIGHT_FOOT],
+  ['right toe base', AvatarAnchorPointType.AAPT_RIGHT_TOE_BASE]
+]
+
+test('avatar-attach: each bone anchor lands on its bone', async function (context) {
+  customAddEntity.clean()
+  await assertMovePlayerTo(context, Vector3.create(8, 0, 8), Vector3.create(8, 1, 16))
+  await context.helpers.waitNTicks(50)
+  const entities = BONES.map(([, anchor]) => attach(anchor))
+  const at: Record<string, Vector3> = {}
+  for (const [index, [name]] of BONES.entries()) at[name] = await offsetFromPlayer(context, entities[index])
+  const where = (names: string[]) => names.map((name) => `${name} ${describe(at[name])}`).join(', ')
+  const risesThrough = (names: string[]) => names.every((name, i) => i === 0 || at[name].y > at[names[i - 1]].y)
+
+  assert(risesThrough(['hip', 'spine', 'neck', 'head']), `the spine does not rise: ${where(['hip', 'spine', 'neck', 'head'])}`)
+  for (const side of ['left', 'right']) {
+    const arm = [`${side} hand index`, `${side} forearm`, `${side} arm`, `${side} shoulder`]
+    const leg = [`${side} toe base`, `${side} leg`, `${side} up leg`]
+    assert(risesThrough(arm), `the ${side} arm does not run down from the shoulder: ${where(arm)}`)
+    assert(risesThrough(leg), `the ${side} leg does not run down from the hip: ${where(leg)}`)
+    const feet = [`${side} foot`, `${side} toe base`]
+    assert(feet.every((name) => at[name].y < 0.3), `the ${side} foot is off the ground: ${where(feet)}`)
+    const limbs = [`${side} shoulder`, `${side} arm`, `${side} forearm`, `${side} up leg`, `${side} leg`, `${side} foot`]
+    const onItsSide = limbs.every((name) => (side === 'left' ? at[name].x < -0.03 : at[name].x > 0.03))
+    assert(onItsSide, `the ${side} limbs are not on the ${side}: ${where(limbs)}`)
+  }
+  customAddEntity.clean()
+})
