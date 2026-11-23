@@ -14,12 +14,51 @@ pub fn get_extension(file_path: &str) -> String {
     "".to_string()
 }
 
+/// Decode RFC 3986 percent escapes; `+` stays literal (glTF percent-encodes, it
+/// does not form-encode). `None` on a malformed escape or invalid UTF-8, so the
+/// caller keeps the URI as written instead of failing the whole model.
+fn percent_decode(uri: &str) -> Option<String> {
+    if !uri.contains('%') {
+        return Some(uri.to_string());
+    }
+    let bytes = uri.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' {
+            let high = hex_digit(*bytes.get(i + 1)?)?;
+            let low = hex_digit(*bytes.get(i + 2)?)?;
+            out.push((high << 4) | low);
+            i += 3;
+        } else {
+            out.push(bytes[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8(out).ok()
+}
+
+fn hex_digit(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    }
+}
+
 /// Join a glTF dependency URI onto its base directory, collapsing `.`, `..` and
 /// repeated separators, so `assets/models` + `../tex/t.jpg` becomes
 /// `assets/tex/t.jpg` (the key the content mapping actually holds).
 /// Returns `None` for non-relative URIs (`scheme://`, `/rooted`) and for paths
 /// that would climb above `base_dir`; both are rejected rather than resolved.
 pub fn resolve_dependency_path(base_dir: &str, dep: &str) -> Option<String> {
+    // The mapping is keyed by the file name as it exists in the bundle
+    // (`base color.png`), not by the percent-encoded URI (`base%20color.png`). Only
+    // `dep` is decoded; `%2F` is a literal `/` per RFC 3986 and the pass below runs
+    // after it, so `..%2F` normalizes like `../`.
+    let decoded = percent_decode(dep);
+    let dep = decoded.as_deref().unwrap_or(dep);
     if dep.starts_with('/') || dep.starts_with('\\') || dep.contains("://") {
         return None;
     }
@@ -96,6 +135,65 @@ mod tests {
         }
         // One segment too many for a single-segment base.
         assert_eq!(resolve_dependency_path("models", "../../t.jpg"), None);
+    }
+
+    #[test]
+    fn decodes_percent_encoded_dependencies() {
+        let base_dir = get_base_dir("assets/models/a.glb");
+        for (dep, expected) in [
+            ("base%20color.png", "assets/models/base color.png"),
+            ("base%23color.png", "assets/models/base#color.png"),
+            ("a%2Bb.png", "assets/models/a+b.png"),
+            ("100%25.png", "assets/models/100%.png"),
+            ("caf%C3%A9.png", "assets/models/café.png"),
+            ("sub%2Fb.png", "assets/models/sub/b.png"),
+        ] {
+            assert_eq!(
+                resolve_dependency_path(&base_dir, dep).as_deref(),
+                Some(expected),
+                "dep={dep}"
+            );
+        }
+        // `+` is literal in glTF URIs, it never stands for a space.
+        assert_eq!(
+            resolve_dependency_path(&base_dir, "base+color.png").as_deref(),
+            Some("assets/models/base+color.png")
+        );
+    }
+
+    #[test]
+    fn keeps_malformed_percent_escapes_intact() {
+        let base_dir = get_base_dir("assets/models/a.glb");
+        for dep in ["100%.png", "%ZZ.png", "%2.png", "caf%C3.png", "%FF%FE.png"] {
+            let expected = format!("assets/models/{dep}");
+            assert_eq!(
+                resolve_dependency_path(&base_dir, dep).as_deref(),
+                Some(expected.as_str()),
+                "dep={dep}"
+            );
+        }
+    }
+
+    #[test]
+    fn normalizes_after_decoding() {
+        let base_dir = get_base_dir("assets/models/a.glb");
+        assert_eq!(
+            resolve_dependency_path(&base_dir, "%2E%2E/optimized-textures/t.jpg").as_deref(),
+            Some("assets/optimized-textures/t.jpg")
+        );
+        assert_eq!(
+            resolve_dependency_path(&base_dir, "..%2Foptimized-textures%2Ft.jpg").as_deref(),
+            Some("assets/optimized-textures/t.jpg")
+        );
+        // Escapes that only become a rooted or absolute URI after decoding are
+        // still rejected, because the checks run on the decoded string.
+        for dep in ["%2Fassets%2Ft.jpg", "https%3A%2F%2Fcdn.example%2Ft.jpg"] {
+            assert_eq!(resolve_dependency_path(&base_dir, dep), None, "dep={dep}");
+        }
+        assert_eq!(
+            resolve_dependency_path(&base_dir, "%2E%2E%2F..%2F..%2Ft.jpg"),
+            None
+        );
     }
 
     #[test]
