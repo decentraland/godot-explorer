@@ -117,17 +117,16 @@ func _on_parcel_changed(new_position: Vector2i) -> void:
 
 
 func _on_adapter_changed(_voice_chat_enabled: bool, new_adapter: String) -> void:
-	SentrySDK.set_tag("comms_adapter", new_adapter)
+	# LiveKit adapters carry the room token in the query string.
+	SentrySDK.set_tag("comms_adapter", new_adapter.split("?")[0])
 
 
 # Keep user.id pinned to analytics_user_id across auth changes so
-# "Users affected" stays attributed to a single install. Only username
-# tracks the wallet/profile state.
-func _on_wallet_connected(address: String, _chain_id: int, is_guest_value: bool) -> void:
+# "Users affected" stays attributed to a single install. username carries
+# the public display name (_on_profile_changed), never the wallet.
+func _on_wallet_connected(_address: String, _chain_id: int, is_guest_value: bool) -> void:
 	var sentry_user := SentryUser.new()
 	sentry_user.id = Global.config.analytics_user_id
-	if not is_guest_value:
-		sentry_user.username = address
 	SentrySDK.set_user(sentry_user)
 	SentrySDK.set_tag("is_guest", "true" if is_guest_value else "false")
 

@@ -235,6 +235,10 @@ pub fn jump_events() -> String {
         suffix(ServiceGroup::Events)
     )
 }
+/// Base of shared place/world links (`?position=x,y` or `?realm=<world>`).
+pub fn jump_places() -> String {
+    format!("{}/jump/places", host())
+}
 
 // Mobile BFF
 pub fn mobile_bff() -> String {
@@ -611,6 +615,7 @@ mod tests {
             terms_of_service(),
             content_policy(),
             jump_events(),
+            jump_places(),
             account_deletion(),
             intercom_tickets(),
             intercom_origin(),

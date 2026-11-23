@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/test/logic/test_about_normalize.gd" id="1_about"]
+
+[node name="TestAboutNormalize" type="Node"]
+script = ExtResource("1_about")
