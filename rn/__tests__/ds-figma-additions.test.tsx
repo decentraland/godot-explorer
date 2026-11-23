@@ -9,6 +9,7 @@ import {
   InputUsername,
   MenuNavItem,
   ModalSpecial,
+  NotificationBadge,
   ProfileAttribute,
   ScrollFade,
   SettingsRow,
@@ -104,6 +105,15 @@ describe('Figma components added to the DS', () => {
     );
     const label = StyleSheet.flatten(tree.root.findByType(Text).props.style);
     expect(label.fontFamily).toBe('Inter-Bold');
+  });
+
+  it('MenuNavItem shows the notification dot only with badge', () => {
+    const plain = render(<MenuNavItem label="Account" onPress={jest.fn()} />);
+    expect(plain.root.findAllByType(NotificationBadge)).toHaveLength(0);
+    const flagged = render(
+      <MenuNavItem label="Account" badge onPress={jest.fn()} />,
+    );
+    expect(flagged.root.findByType(NotificationBadge).props.size).toBe(8);
   });
 
   it('SettingsRow dims its text when disabled', () => {
