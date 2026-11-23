@@ -73,6 +73,8 @@ export { Spinner } from './Spinner';
 export { Switch } from './Switch';
 export { Tabs } from './Tabs';
 export { EventBadge, EventTimeTag, RarityLabel } from './Tags';
+export { TagCategory } from './TagCategory';
+export type { CategoryType } from './TagCategory';
 export type { EventTimeKind } from './Tags';
 export { counterLabel, TextField } from './TextField';
 export { ToastBubble, ToastProvider, toastReducer, useToast } from './Toast';

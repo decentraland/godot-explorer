@@ -13,6 +13,7 @@ import {
   ScrollFade,
   SettingsRow,
   Switch,
+  TagCategory,
 } from '@dcl/ui-native';
 
 function render(element: ReactElement) {
@@ -104,6 +105,20 @@ describe('Figma components added to the DS', () => {
     );
     const label = StyleSheet.flatten(tree.root.findByType(Text).props.style);
     expect(label.fontFamily).toBe('Inter-Bold');
+  });
+
+  it('TagCategory shows the category icon unless icon is false', () => {
+    const withIcon = render(<TagCategory type="art" label="Art" />);
+    expect(texts(withIcon.root)).toContain('Art');
+    expect(withIcon.root.findAllByProps({ name: 'categoryArt' })).toHaveLength(
+      1,
+    );
+    const textOnly = render(
+      <TagCategory type="art" label="Art" icon={false} />,
+    );
+    expect(textOnly.root.findAllByProps({ name: 'categoryArt' })).toHaveLength(
+      0,
+    );
   });
 
   it('SettingsRow dims its text when disabled', () => {
