@@ -9,7 +9,6 @@ extends RefCounted
 ## so no shader change is needed. A `skybox_texture` swaps the sky material for a
 ## panorama; the rest of the time-of-day pipeline stays as is.
 
-const FOG_OPACITY_TARGET := 4.605  # ln(100): the distance where fog is 99% opaque
 const LUT_WIDTH := 256
 const EQUIRECTANGULAR_TOLERANCE := 0.02
 
@@ -36,6 +35,7 @@ var _pano_material: PanoramaSkyMaterial = null
 var _saved_material: Material = null
 var _params_material: Material = null
 var _saved_params := {}
+var _saved_fog := {}
 
 
 func _init(sky: Node) -> void:
@@ -90,11 +90,19 @@ func restore() -> void:
 		if material is ShaderMaterial:
 			for param in _saved_params:
 				material.set_shader_parameter(param, _saved_params[param])
+		var environment := _environment()
+		if environment != null and not _saved_fog.is_empty():
+			environment.fog_mode = _saved_fog["mode"]
+			environment.fog_density = _saved_fog["density"]
+			environment.fog_depth_begin = _saved_fog["begin"]
+			environment.fog_depth_end = _saved_fog["end"]
+			environment.fog_depth_curve = _saved_fog["curve"]
 		var sky_resource := _sky_resource()
 		if _pano_material != null and sky_resource != null:
 			if sky_resource.sky_material == _pano_material:
 				sky_resource.sky_material = _saved_material
 	_saved_params.clear()
+	_saved_fog.clear()
 	_params_material = null
 	_pano_material = null
 	_saved_material = null
@@ -181,18 +189,18 @@ func _async_load_texture(src: String) -> void:
 		return
 
 	if not _is_equirectangular(texture):
+		# The proto asks for 2:1, but the Unity client stretches whatever arrives over the
+		# dome, so rejecting it here leaves the two clients showing different skies.
 		var size := texture.get_size()
 		push_warning(
 			(
 				(
-					"PBSkybox.skybox_texture must be equirectangular 2:1, got %dx%d (%s); "
-					+ "keeping the default sky"
+					"PBSkybox.skybox_texture is not equirectangular 2:1, got %dx%d (%s); "
+					+ "rendering it stretched"
 				)
 				% [size.x, size.y, src]
 			)
 		)
-		_apply_procedural_overrides()
-		return
 
 	_apply_texture(texture)
 
@@ -268,17 +276,24 @@ func _apply_fog_density() -> void:
 	var fog: Dictionary = _config.get("fog", {})
 	if not fog.has("density"):
 		return
-
 	var environment := _environment()
 	if environment == null:
 		return
 
-	# The renderer fogs by distance (FOG_MODE_DEPTH) while the proto's density is a per
-	# meter exponential: fog = 1 - e^(-density * distance). Land the depth range where
-	# that exponential has reached 99% opacity. Whether fog is on stays a player setting.
-	var density: float = maxf(float(fog["density"]), 0.000001)
-	environment.fog_depth_begin = 0.0
-	environment.fog_depth_end = FOG_OPACITY_TARGET / density
+	# The player's view-distance setting owns depth fog (environment_selector.gd), so save
+	# that state once: a scene density must not survive into the default sky after Reset.
+	if _saved_fog.is_empty():
+		_saved_fog = {
+			"mode": environment.fog_mode,
+			"density": environment.fog_density,
+			"begin": environment.fog_depth_begin,
+			"end": environment.fog_depth_end,
+			"curve": environment.fog_depth_curve,
+		}
+
+	# The proto's density is per meter: fog = 1 - e^(-density * distance).
+	environment.fog_mode = Environment.FOG_MODE_EXPONENTIAL
+	environment.fog_density = maxf(float(fog["density"]), 0.0)
 
 
 func _material() -> Material:

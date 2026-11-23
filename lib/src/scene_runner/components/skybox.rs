@@ -101,6 +101,13 @@ pub fn build_skybox_config(
                     gradient_map.insert(name.to_owned(), json);
                 }
             }
+            // Spec: an unset `rim` follows `horizon` when that one is set.
+            if !gradient_map.contains_key("rim") {
+                if let Some(horizon) = gradient_map.get("horizon").cloned() {
+                    gradient_map.insert("rim".to_owned(), horizon);
+                }
+            }
+
             if !gradient_map.is_empty() {
                 config.insert(
                     "sky_colors".to_owned(),
@@ -363,6 +370,37 @@ mod tests {
 
         assert!(sky_colors.contains_key("horizon"));
         assert!(!sky_colors.contains_key("zenith"));
+    }
+
+    #[test]
+    fn unset_rim_follows_horizon() {
+        let skybox = PbSkybox {
+            sky_colors: Some(SkyColors {
+                horizon: Some(gradient(vec![key(0.0, 1.0, 0.5, 0.25)])),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        let config = build_skybox_config(Some(&skybox), None, None);
+        let sky_colors = config["sky_colors"].as_object().unwrap();
+
+        assert_eq!(sky_colors["rim"], sky_colors["horizon"]);
+    }
+
+    #[test]
+    fn explicit_rim_is_kept() {
+        let skybox = PbSkybox {
+            sky_colors: Some(SkyColors {
+                horizon: Some(gradient(vec![key(0.0, 1.0, 0.5, 0.25)])),
+                rim: Some(gradient(vec![key(0.0, 0.0, 0.0, 1.0)])),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        let config = build_skybox_config(Some(&skybox), None, None);
+        let sky_colors = config["sky_colors"].as_object().unwrap();
+
+        assert_ne!(sky_colors["rim"], sky_colors["horizon"]);
     }
 
     #[test]
