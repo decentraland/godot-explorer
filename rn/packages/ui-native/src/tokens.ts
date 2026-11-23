@@ -83,6 +83,14 @@ export const colors = {
   exoticTint: '#CAFF73',
   /** Figma `alpha/lavender-50`: Lavender Light at 50%. */
   lavender50: 'rgba(232,185,255,0.5)',
+  /** Figma `color/purple/600`. */
+  purple600: '#160338',
+  /** Figma `color/heliotrope`. */
+  heliotrope: '#AE59FF',
+  /** Figma `color/aqua`. */
+  aqua: '#34FEE6',
+  /** Figma `color/success/300`. */
+  success300: '#34CE77',
 } as const;
 
 /** The Figma `alpha/*` primitives by name: `alpha/white-30` is `alpha['white-30']`. */
@@ -144,8 +152,8 @@ export const color = {
     'inverse-disabled': colors.snow10,
     modal: colors.modal,
     'modal-glow': colors.mythic,
-    'modal-special': '#160338',
-    'modal-special-glow': '#AE59FF',
+    'modal-special': colors.purple600,
+    'modal-special-glow': colors.heliotrope,
     scrim: colors.scrim,
     nametag: alpha['shadow-70'],
     navbar: colors.navbar,
@@ -159,14 +167,14 @@ export const color = {
     disabled: colors.textDisabled,
     inverse: colors.shadow,
     accent: colors.ruby,
-    username: '#34FEE6',
+    username: colors.aqua,
     link: colors.link,
   },
   border: {
     default: colors.snow,
     disabled: colors.textDisabled,
     accent: colors.ruby,
-    subtle: colors.white30,
+    subtle: alpha['snow-30'],
     menu: colors.lavender70,
   },
   action: {
@@ -176,7 +184,7 @@ export const color = {
     selected: colors.lavender,
   },
   status: {
-    success: '#34CE77',
+    success: colors.success300,
     online: colors.green,
     danger: colors.danger,
     live: colors.ruby,
