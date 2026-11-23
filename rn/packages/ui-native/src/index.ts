@@ -77,6 +77,16 @@ export type { EventTimeKind } from './Tags';
 export { counterLabel, TextField } from './TextField';
 export { ToastBubble, ToastProvider, toastReducer, useToast } from './Toast';
 export { WarningBanner } from './WarningBanner';
+export { BugReportDialog, BUG_DESCRIPTION_MAX } from './BugReportDialog';
+export { FriendRow } from './FriendRow';
+export type { FriendAction } from './FriendRow';
+export { MenuDrawer } from './MenuDrawer';
+export { NotificationRow } from './NotificationRow';
+export type { NotificationKind } from './NotificationRow';
+export { PlaceModalLandscape } from './PlaceModalLandscape';
+export type { PlaceModalAction } from './PlaceModalLandscape';
+export { ScreenshotCard } from './ScreenshotCard';
+export { SectionCollapsible } from './SectionCollapsible';
 export { SCALE, u } from './scale';
 export {
   alpha,

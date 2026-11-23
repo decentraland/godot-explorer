@@ -13,6 +13,8 @@ export type TabItem<K extends string> = {
   badge?: boolean | number;
   /** An `Icon/Settings` glyph before the label. */
   icon?: IconName;
+  /** Figma `Count`: the number after the label, same size in Regular (e.g. NEARBY 10). */
+  count?: number;
 };
 
 /** Figma `Tab/Underline`: uppercase label, Snow + 6px Ruby underline when selected, Gray otherwise.
@@ -60,6 +62,17 @@ export function Tabs<K extends string>({
             >
               {item.label}
             </AppText>
+            {item.count !== undefined && (
+              <AppText
+                variant="Tab/Count"
+                style={[
+                  { color },
+                  labelSize !== undefined && { fontSize: u(labelSize) },
+                ]}
+              >
+                {item.count}
+              </AppText>
+            )}
             {typeof item.badge === 'number' && (
               <View style={styles.count}>
                 <Badge count={item.badge} />
