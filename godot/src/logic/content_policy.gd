@@ -1,13 +1,13 @@
 class_name ContentPolicy
 
 ## The iOS block list (#3224): the parcels and worlds the mobile-bff keeps out of the iOS app
-## (casino, adult and restricted places, backoffice bans). Discover is already filtered by the
-## bff; this is the entry gate for teleports, /goto, deep links and Jump In.
+## (casino, adult and restricted places, places tagged `banned_ios`). Discover is already
+## filtered by the bff; this is the entry gate for teleports, /goto, deep links and Jump In.
 ##
 ## Fails OPEN: an unreachable or malformed policy blocks nothing. With the bff's
 ## `ios-blocklist` flag off the lists come back empty, which is the old allow-list behaviour.
 
-## A ban made in the backoffice reaches a running app within this window.
+## A `banned_ios` tag set in the backoffice reaches a running app within this window.
 const CACHE_TTL_MS := 30 * 60 * 1000
 
 ## After a failed fetch, keep what we had and ask again no sooner than this.

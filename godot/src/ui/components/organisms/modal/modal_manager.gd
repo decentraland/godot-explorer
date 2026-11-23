@@ -531,7 +531,7 @@ func async_show_invalid_destination_modal(failure: Destination.Failure) -> void:
 
 
 ## A place the iOS block list keeps out (#3224): casino, adult or restricted content, or a
-## backoffice ban.
+## place tagged `banned_ios` in the backoffice.
 func async_show_blocked_content_modal(dest: Destination) -> void:
 	_force_hide_loading_screen()
 	await _async_show_simple_modal(
