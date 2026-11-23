@@ -9,7 +9,12 @@ import { t } from './i18n';
 export const counterLabel = (length: number, max: number): string =>
   `${length}/${max}`;
 
-/** Labelled input with optional counter, clear X while focused, and focus / error / disabled borders. */
+/** Figma `Input/Labeled` + `Input/Field`: label, optional counter, clear X while focused, and the
+ * Focus (Lavender Light) / Error (`status/danger`) borders. Disabled is a palette state, not a dim.
+ * Figma Input/Field: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=562-4820
+ * Figma Input/Labeled: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=562-4890
+ * Figma Input/Counter: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=562-5035
+ */
 export function TextField({
   label,
   value,
@@ -30,6 +35,7 @@ export function TextField({
   multilineHeight,
   autoFocus = false,
   secureTextEntry = false,
+  accessibilityLabel,
 }: {
   label: string;
   value: string;
@@ -54,21 +60,34 @@ export function TextField({
   multilineHeight?: number;
   autoFocus?: boolean;
   secureTextEntry?: boolean;
+  /** Read by screen readers when the visible label is drawn elsewhere (defaults to `label`). */
+  accessibilityLabel?: string;
 }) {
   const [focused, setFocused] = useState(false);
   const showClear = focused && value.length > 0 && !disabled && !!onClear;
   const hint = error ?? (helperAbove ? undefined : helper);
   const counter =
     showCounter && maxLength !== undefined ? (
-      <AppText variant="caption">
+      <AppText
+        variant="caption"
+        style={[
+          styles.counter,
+          disabled && styles.textDisabled,
+          !!error && styles.errorText,
+          !error && value.length >= maxLength && styles.counterMax,
+        ]}
+      >
         {counterLabel(value.length, maxLength)}
       </AppText>
     ) : null;
   return (
-    <View style={[styles.root, disabled && styles.disabled]}>
+    <View style={styles.root}>
       {(!!label || (!counterBelow && !!counter)) && (
         <View style={styles.labelRow}>
-          <AppText variant="body" style={styles.label}>
+          <AppText
+            variant="body"
+            style={[styles.label, disabled && styles.labelDisabled]}
+          >
             {label}
           </AppText>
           {!counterBelow && counter}
@@ -83,16 +102,21 @@ export function TextField({
         style={[
           styles.box,
           multiline && styles.boxMultiline,
+          multiline &&
+            multilineHeight !== undefined && {
+              minHeight: u(multilineHeight),
+            },
           focused && styles.focused,
           !!error && styles.error,
+          disabled && styles.boxDisabled,
         ]}
       >
         <TextInput
-          accessibilityLabel={label}
+          accessibilityLabel={accessibilityLabel ?? label}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={colors.white30}
+          placeholderTextColor={disabled ? colors.white20 : colors.white50}
           multiline={multiline}
           maxLength={maxLength}
           editable={!disabled}
@@ -104,11 +128,8 @@ export function TextField({
           onBlur={() => setFocused(false)}
           style={[
             styles.input,
+            disabled && styles.textDisabled,
             multiline && styles.inputMultiline,
-            multiline &&
-              multilineHeight !== undefined && {
-                minHeight: u(multilineHeight),
-              },
           ]}
         />
         {suffix}
@@ -119,7 +140,7 @@ export function TextField({
             hitSlop={8}
             onPress={onClear}
           >
-            <Icon name="close" size={16} color={colors.lavender} />
+            <Icon name="close" size={20} />
           </Pressable>
         )}
       </View>
@@ -140,27 +161,33 @@ export function TextField({
 
 const styles = StyleSheet.create({
   root: { alignSelf: 'stretch' },
-  disabled: { opacity: 0.5 },
   labelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: u(6),
+    marginBottom: u(10),
   },
-  label: { fontSize: u(15) },
+  label: { fontFamily: fonts.medium, fontSize: u(15), color: colors.snow },
+  labelDisabled: { color: colors.white30 },
   box: {
     minHeight: u(34),
     borderRadius: u(6),
-    paddingHorizontal: u(12),
+    paddingHorizontal: u(8),
+    gap: u(5),
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.black40,
     borderWidth: 1,
     borderColor: 'transparent',
   },
-  boxMultiline: { alignItems: 'flex-start', paddingVertical: u(8) },
-  focused: { borderColor: '#D9B3FF' },
-  error: { borderColor: colors.ruby },
+  boxMultiline: {
+    alignItems: 'flex-start',
+    paddingVertical: u(8),
+    minHeight: u(108),
+  },
+  boxDisabled: { backgroundColor: colors.black30 },
+  focused: { borderColor: colors.lavender },
+  error: { borderColor: colors.danger },
   input: {
     flex: 1,
     padding: 0,
@@ -168,9 +195,23 @@ const styles = StyleSheet.create({
     fontSize: u(15),
     color: colors.snow,
   },
-  inputMultiline: { minHeight: u(80), textAlignVertical: 'top' },
-  helperAbove: { marginBottom: u(6), fontSize: u(10), color: colors.pearl },
-  counterBelow: { marginTop: u(6) },
-  hint: { marginTop: u(6), fontSize: u(11), color: colors.lavender70 },
-  errorText: { color: colors.ruby },
+  textDisabled: { color: colors.white20 },
+  inputMultiline: { alignSelf: 'stretch', textAlignVertical: 'top' },
+  helperAbove: {
+    marginBottom: u(5),
+    paddingBottom: u(4),
+    fontFamily: fonts.regular,
+    fontSize: u(11),
+    color: colors.pearl,
+  },
+  counter: { fontFamily: fonts.regular, fontSize: u(10), color: colors.pearl },
+  counterMax: { color: colors.ruby200 },
+  counterBelow: { marginTop: u(4) },
+  hint: {
+    marginTop: u(4),
+    fontFamily: fonts.regular,
+    fontSize: u(10),
+    color: colors.pearl,
+  },
+  errorText: { color: colors.danger },
 });

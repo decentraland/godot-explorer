@@ -1,0 +1,14 @@
+# Starting point for the flows that work on the Discover home. Entry clears the app's data and signs in as a
+# new guest, so every flow starts from the same state whatever ran before it.
+appId: org.decentraland.godotexplorer
+---
+- runFlow: ../flows/01-entry.yaml
+# Leave the world the way a player does: Back asks for confirmation.
+- back
+- extendedWaitUntil:
+    visible: "Leave this world?"
+    timeout: 10000
+- tapOn: "LEAVE"
+- extendedWaitUntil:
+    visible: "Popular"
+    timeout: 15000

@@ -3,12 +3,19 @@
  * this contract, not just the catalogue. */
 export type UiNativeKey =
   | 'APP_BACK'
+  | 'APP_CREDITS'
+  | 'APP_SEARCH'
+  | 'APP_TICKET'
   | 'APP_CLEAR'
   | 'APP_CLEAR_SEARCH'
+  | 'APP_CLOSE'
   | 'APP_COLOR_BRIGHTNESS'
   | 'APP_COLOR_HUE'
   | 'APP_COLOR_SATURATION'
-  | 'APP_DISMISS_DIALOG';
+  | 'APP_DISMISS_DIALOG'
+  | 'APP_REMOVE'
+  | 'APP_SEE_LESS'
+  | 'APP_SEE_MORE';
 
 let translate: (key: UiNativeKey) => string = key => key;
 

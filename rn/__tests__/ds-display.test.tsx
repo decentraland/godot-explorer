@@ -3,19 +3,28 @@ import { act, create, ReactTestInstance } from 'react-test-renderer';
 import { Text } from 'react-native';
 import {
   ActionSquareButton,
+  AvatarCard,
   Badge,
+  DetailRow,
+  DiscoverCard,
+  DiscoverCardSkeleton,
+  Header,
   Chip,
   CollapsibleSection,
   EmptyState,
   HudCircleButton,
   Icon,
-  IconButton,
   LinkRow,
+  Menu,
   PageDots,
+  ProfileCard,
   ProgressBar,
+  RarityLabel,
+  Sheet,
   Skeleton,
   SnapCarousel,
-  StatusPill,
+  EventBadge,
+  EventTimeTag,
   Tabs,
   WarningBanner,
   colors,
@@ -49,8 +58,10 @@ describe('tokens', () => {
   it('has the new Figma colours', () => {
     expect(colors.mythic).toBe('#FF4BED');
     expect(colors.iconHud).toBe('#DFD0FF');
-    expect(colors.teal).toBe('#2FCF9A');
-    expect(colors.periwinkle).toBe('#9D8CFF');
+    expect(colors.teal).toBe('#22C1C1');
+    expect(colors.periwinkle).toBe('#A0ABFF');
+    expect(colors.link).toBe('#A0ABFF');
+    expect(colors.rubyDisabled).toBe('rgba(255,45,85,0.5)');
     expect(colors.fieldDark).toBe('#2B0847');
   });
 });
@@ -66,23 +77,85 @@ describe('Icon', () => {
   });
 });
 
+describe('Menu', () => {
+  it('reports the pressed item and marks the selected one', () => {
+    const onSelect = jest.fn();
+    const tree = render(
+      <Menu
+        items={[
+          { key: 'share', label: 'Share', icon: 'share' },
+          { key: 'report', label: 'Report', selected: true, check: true },
+        ]}
+        onSelect={onSelect}
+      />,
+    );
+    act(() => pressable(tree, 'Share').props.onPress());
+    expect(onSelect).toHaveBeenCalledWith('share');
+    expect(pressable(tree, 'Report').props.accessibilityState.selected).toBe(
+      true,
+    );
+  });
+});
+
+describe('Cards_Discover and Cards_Backpack', () => {
+  it('DiscoverCard shows ImageNotFound without an image and the event creator row', () => {
+    const place = render(
+      <DiscoverCard
+        type="place"
+        title="Genesis Plaza"
+        image=""
+        users="12"
+        likeRate="90%"
+      />,
+    );
+    expect(text(place)).toContain('Genesis Plaza');
+    expect(text(place)).toContain('90%');
+    expect(place.root.findAllByProps({ name: 'imageOff' }).length).toBe(1);
+    const event = render(
+      <DiscoverCard
+        type="event"
+        title="Party"
+        image="https://example.com/a.png"
+        byLabel="by"
+        creator="Ana"
+      />,
+    );
+    expect(text(event)).toContain('Ana');
+    expect(event.root.findAllByProps({ name: 'imageOff' }).length).toBe(0);
+  });
+
+  it('DetailRow, skeleton and AvatarCard render', () => {
+    expect(text(render(<DetailRow type="coords" value="-12,40" />))).toContain(
+      '-12,40',
+    );
+    expect(
+      render(<DiscoverCardSkeleton type="event" />).toJSON(),
+    ).not.toBeNull();
+    const onPress = jest.fn();
+    const avatar = render(
+      <AvatarCard selected label="Avatar 1" onPress={onPress} />,
+    );
+    act(() => pressable(avatar, 'Avatar 1').props.onPress());
+    expect(onPress).toHaveBeenCalled();
+    expect(
+      pressable(avatar, 'Avatar 1').props.accessibilityState.selected,
+    ).toBe(true);
+  });
+
+  it('Header Type=Close shows only the close action', () => {
+    const onClose = jest.fn();
+    const tree = render(<Header title="Hidden" onClose={onClose} />);
+    expect(text(tree)).not.toContain('Hidden');
+    act(() => pressable(tree, 'Close').props.onPress());
+    expect(onClose).toHaveBeenCalled();
+  });
+});
+
 describe('Badge, IconButton, Tabs, HudCircleButton', () => {
   it('Badge shows a count, caps it, or is a dot', () => {
     expect(text(render(<Badge count={3} />))).toContain('3');
     expect(text(render(<Badge count={120} />))).toContain('99+');
     expect(text(render(<Badge />))).not.toContain('99');
-  });
-
-  it('IconButton renders a badge and extends the label', () => {
-    const tree = render(
-      <IconButton
-        icon="bell"
-        label="Notifications"
-        badge={2}
-        onPress={() => {}}
-      />,
-    );
-    expect(text(tree)).toContain('2');
   });
 
   it('Tabs show a badge on the tab', () => {
@@ -121,17 +194,22 @@ describe('ActionSquareButton', () => {
   });
 });
 
-describe('StatusPill and Chip', () => {
-  it('renders each kind', () => {
-    expect(text(render(<StatusPill kind="live" label="LIVE" />))).toContain(
-      'LIVE',
+describe('Tags and Chip', () => {
+  it('renders each event time kind and the live player count', () => {
+    const live = text(
+      render(<EventTimeTag kind="live" label="Live" players={12} />),
+    );
+    expect(live).toContain('Live');
+    expect(live).toContain('12');
+    expect(
+      text(render(<EventTimeTag kind="startingSoon" label="In 5 mins" />)),
+    ).toContain('In 5 mins');
+    expect(text(render(<EventTimeTag kind="date" label="Nov 12" />))).toContain(
+      'Nov 12',
     );
     expect(
-      text(render(<StatusPill kind="trending" label="Trending" />)),
-    ).toContain('Trending');
-    expect(text(render(<StatusPill kind="count" label="12" />))).toContain(
-      '12',
-    );
+      text(render(<EventBadge type="featured" label="Featured" />)),
+    ).toContain('Featured');
   });
 
   it('Chip presses and removes', () => {
@@ -187,6 +265,18 @@ describe('Skeleton and EmptyState', () => {
     expect(text(tree)).toContain('Connection lost');
     act(() => pressable(tree, 'RETRY').props.onPress());
     expect(onPress).toHaveBeenCalled();
+  });
+
+  it('EmptyState renders text-only and small without an icon badge', () => {
+    const tree = render(<EmptyState size="sm" title="No friends yet" />);
+    expect(text(tree)).toContain('No friends yet');
+    act(() => tree.unmount());
+  });
+
+  it('RarityLabel shows the label it is given', () => {
+    const tree = render(<RarityLabel rarity="legendary" label="Legendary" />);
+    expect(text(tree)).toContain('Legendary');
+    act(() => tree.unmount());
   });
 });
 
@@ -298,20 +388,62 @@ describe('demo props', () => {
       'BottomSheet',
       'Skeleton',
       'EmptyState',
-      'StatusPill',
+      'EventTimeTag',
+      'EventBadge',
+      'Checkbox',
+      'Header',
       'Chip',
       'ProgressBar',
-      'OutlinedButton',
       'CollapsibleSection',
       'LinkRow',
       'WarningBanner',
       'PageDots',
       'SnapCarousel',
       'HudCircleButton',
-      'ReadOnlyField',
       'ActionSquareButton',
     ]) {
       expect(demos).toHaveProperty(key);
     }
+  });
+});
+
+describe('ProfileCard', () => {
+  it('draws the NAME tile and the credits price', () => {
+    let tree!: ReturnType<typeof create>;
+    act(() => {
+      tree = create(
+        <ProfileCard
+          type="name"
+          title="NAME"
+          name="Name"
+          nameSuffix="DCL.ETH"
+          price="0"
+        />,
+      );
+    });
+    const out = JSON.stringify(tree.toJSON());
+    for (const s of ['NAME', 'Name', 'DCL.ETH', '"0"']) {
+      expect(out).toContain(s);
+    }
+    act(() => tree.unmount());
+  });
+});
+
+describe('Sheet', () => {
+  it('pins the footer under a hug body and drops it when collapsed', () => {
+    let tree!: ReturnType<typeof create>;
+    act(() => {
+      tree = create(
+        <Sheet footer={<Text>Next</Text>}>
+          <Text>Body</Text>
+        </Sheet>,
+      );
+    });
+    expect(JSON.stringify(tree.toJSON())).toContain('Next');
+    act(() =>
+      tree.update(<Sheet height="collapsed" footer={<Text>Next</Text>} />),
+    );
+    expect(JSON.stringify(tree.toJSON())).not.toContain('Next');
+    act(() => tree.unmount());
   });
 });

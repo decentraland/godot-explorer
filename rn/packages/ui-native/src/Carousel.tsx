@@ -1,5 +1,5 @@
-import { ReactNode } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ReactNode, useRef } from 'react';
+import { Animated, StyleSheet, View } from 'react-native';
 import { colors } from './tokens';
 import { u } from './scale';
 
@@ -42,7 +42,8 @@ export function PageDots({
   );
 }
 
-/** Horizontal carousel that settles on one item at a time. */
+/** Horizontal carousel that settles on one item at a time. `renderItem` gets the item's `position`
+ * relative to the settled one, following the scroll: 0 centred, -1 one slot to the left, 1 to the right. */
 export function SnapCarousel<T>({
   data,
   itemWidth,
@@ -56,16 +57,27 @@ export function SnapCarousel<T>({
   itemWidth: number;
   gap?: number;
   keyOf: (item: T) => string;
-  renderItem: (item: T, index: number) => ReactNode;
+  renderItem: (
+    item: T,
+    index: number,
+    position: Animated.AnimatedInterpolation<number>,
+  ) => ReactNode;
   onIndexChange?: (index: number) => void;
   /** Leading/trailing padding in dp so the first item can align with the page gutter. */
   inset?: number;
 }) {
   const width = u(itemWidth);
   const spacing = u(gap);
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const step = width + spacing;
   return (
-    <ScrollView
+    <Animated.ScrollView
       horizontal
+      scrollEventThrottle={16}
+      onScroll={Animated.event(
+        [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+        { useNativeDriver: true },
+      )}
       showsHorizontalScrollIndicator={false}
       snapToInterval={width + spacing}
       decelerationRate="fast"
@@ -83,10 +95,18 @@ export function SnapCarousel<T>({
     >
       {data.map((item, i) => (
         <View key={keyOf(item)} style={{ width }}>
-          {renderItem(item, i)}
+          {renderItem(
+            item,
+            i,
+            scrollX.interpolate({
+              inputRange: [(i - 1) * step, i * step, (i + 1) * step],
+              outputRange: [1, 0, -1],
+              extrapolate: 'clamp',
+            }),
+          )}
         </View>
       ))}
-    </ScrollView>
+    </Animated.ScrollView>
   );
 }
 

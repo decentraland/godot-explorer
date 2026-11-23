@@ -1,4 +1,4 @@
-import { InputModifier, Transform, engine } from '@dcl/sdk/ecs'
+import { InputModifier, Physics, Transform, engine } from '@dcl/sdk/ecs'
 import { Vector3 } from '@dcl/sdk/math'
 import { test } from 'testing-library/src/testing'
 import { assert } from 'testing-library/src/testing/assert'
@@ -99,4 +99,48 @@ test('locomotion: InputModifier disableJump keeps the player on the ground', asy
   } finally {
     InputModifier.deleteFrom(engine.PlayerEntity)
   }
+})
+
+// #1537: one-shot impulses and continuous forces on the player through the SDK's Physics helper.
+/** The highest the player gets over `frames` frames, above where it started. */
+async function highestRise(context: TestFunctionContext, frames: number): Promise<number> {
+  const ground = playerPosition().y
+  let highest = 0
+  for (let frame = 0; frame < frames; frame++) {
+    await context.helpers.waitNTicks(1)
+    highest = Math.max(highest, playerPosition().y - ground)
+  }
+  return highest
+}
+
+test('locomotion: an upward impulse lifts the player, who lands again', async function (context) {
+  await restart(context)
+  Physics.applyImpulseToPlayer(Vector3.create(0, 1, 0), 8)
+  const rise = await highestRise(context, 90)
+  assert(rise > 1, `the impulse lifted the player ${rise.toFixed(2)} m, expected more than 1`)
+  await context.helpers.waitNTicks(60)
+  assert(playerPosition().y < START.y + 0.2, `the player is still ${playerPosition().y.toFixed(2)} m up after landing`)
+})
+
+test('locomotion: a sideways impulse pushes the player along it', async function (context) {
+  await restart(context)
+  const from = playerPosition()
+  Physics.applyImpulseToPlayer(Vector3.create(1, 0.3, 0), 7)
+  await context.helpers.waitNTicks(90)
+  const to = playerPosition()
+  assert(to.x - from.x > 1, `the impulse pushed the player ${(to.x - from.x).toFixed(2)} m along +x, expected more than 1`)
+})
+
+// The force is added against gravity, which is stronger: a lift of 12 makes jumps go higher, it
+// does not lift a standing player.
+test('locomotion: a continuous upward force makes jumps higher until it is removed', async function (context) {
+  const normal = await peakHeight(context, () => tap(context, 'ia_jump'))
+  const source = engine.addEntity()
+  Physics.applyForceToPlayer(source, Vector3.create(0, 1, 0), 12)
+  const lifted = await peakHeight(context, () => tap(context, 'ia_jump'))
+  Physics.removeForceFromPlayer(source)
+  engine.removeEntity(source)
+  const after = await peakHeight(context, () => tap(context, 'ia_jump'))
+  assert(lifted > normal + 0.3, `with the force the jump peaked at ${lifted.toFixed(2)} m, without at ${normal.toFixed(2)} m`)
+  assert(Math.abs(after - normal) < 0.2, `after removing the force the jump peaked at ${after.toFixed(2)} m, before at ${normal.toFixed(2)} m`)
 })

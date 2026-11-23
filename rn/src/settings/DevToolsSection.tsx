@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import {
   AppText,
+  Button,
   Dropdown,
-  OutlinedButton,
   colors,
   Slider,
   TextField,
@@ -74,8 +74,9 @@ export function DevToolsSection({ m }: { m: SettingsModel }) {
           onChange={v => set('process_tick_quota', v, false)}
           onChangeEnd={v => set('process_tick_quota', v)}
         />
-        <OutlinedButton
-          box
+        <Button
+          big
+          tone="secondary"
           label={t('SETTINGS_TEST_NOTIFICATIONS')}
           onPress={() => {
             api.devAction('test_notification');

@@ -44,8 +44,6 @@ function Form({
   return (
     <Dialog
       visible
-      rounded
-      width={310}
       title={t('PROFILE_ADD_LINK')}
       onRequestClose={onCancel}
       buttons={[

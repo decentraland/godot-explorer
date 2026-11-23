@@ -1,5 +1,12 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { ItemCard, Pill, SlotTile, Tabs, layout, u } from '@dcl/ui-native';
+import {
+  ItemCard,
+  PillButton,
+  SlotTile,
+  Tabs,
+  layout,
+  u,
+} from '@dcl/ui-native';
 import type { AvatarState } from '../core/native';
 import { t } from '../i18n';
 import type { I18nKey } from '../i18n';
@@ -80,9 +87,8 @@ export function WearablesPanel(props: WearablesPanelProps) {
           contentContainerStyle={styles.pills}
         >
           {SLOTS[tab].map(entry => (
-            <Pill
+            <PillButton
               key={entry.key}
-              tone="soft"
               label={t(PILL_LABELS[entry.key] ?? entry.label)}
               selected={slot?.key === entry.key}
               onPress={() => props.onSlot(entry)}
@@ -170,8 +176,8 @@ export function WearablesPanel(props: WearablesPanelProps) {
                 thumbnail={item.thumbnail}
                 art={<ItemArt category={item.category} name={item.name} />}
                 rarity={item.rarity}
-                equipped={equipped}
-                caption={
+                state={equipped ? 'unequip' : 'default'}
+                actionLabel={
                   showsUnequipStrip(item.category)
                     ? t('BACKPACK_UNEQUIP')
                     : undefined

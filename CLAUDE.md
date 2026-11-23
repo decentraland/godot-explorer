@@ -63,6 +63,7 @@ cargo run -- run --itest                  # Integration tests
 scripts/ci/scene-tests.sh                 # Scene tests, headless (docs/scene-tests.md)
 scripts/qa-scene.sh <name>                # One scene test in QA mode (production build, QA panel)
 cargo run -- run --stest                  # Scene tests via xtask, with scripts/serve-scene-tests.sh running
+cargo run -- maestro                      # RN UI flows on the mock build, Android device (rn/.maestro/README.md)
 ```
 
 ### Android Development

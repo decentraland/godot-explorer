@@ -20,8 +20,8 @@ import { useSettings } from './useSettings';
 
 const BG_STOPS = [
   { offset: 0, color: '#6B1FA6' },
-  { offset: 0.4, color: '#470071' },
-  { offset: 1, color: '#470071' },
+  { offset: 0.4, color: colors.brand },
+  { offset: 1, color: colors.brand },
 ];
 
 function BackButton({ onPress }: { onPress: () => void }) {
@@ -107,7 +107,7 @@ export function SettingsScreen({
           <SectionRows
             devTools={m.env.devTools}
             selected={current}
-            rowHeight={30}
+            size="Small"
             onSelect={setSection}
           />
           <View style={styles.spacer} />
@@ -146,7 +146,7 @@ export function SettingsScreen({
           <View style={styles.flex}>
             <SectionRows
               devTools={m.env.devTools}
-              rowHeight={51}
+              size="Large"
               onSelect={setSection}
             />
             <View style={styles.spacer} />

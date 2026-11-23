@@ -18,6 +18,7 @@ use crate::{
             sdk::components::{BackgroundTextureMode, PbUiBackground},
         },
     },
+    scene_runner::components::ui::style::{resolve_corner_radii, CornerRadius},
 };
 
 use super::dcl_global::DclGlobal;
@@ -111,7 +112,8 @@ pub struct DclUiBackground {
 
     // SDF rounded-rect clip applied only when any corner radius > 0.
     rounded_clip_material: Option<Gd<ShaderMaterial>>,
-    current_radii: [f32; 4],
+    // As sent; `apply_corner_radii` resolves them against the current size.
+    current_radii: [CornerRadius; 4],
 }
 
 #[godot_api]
@@ -126,7 +128,7 @@ impl INinePatchRect for DclUiBackground {
             uv_child: None,
             uv_shader_material: None,
             rounded_clip_material: None,
-            current_radii: [0.0; 4],
+            current_radii: [CornerRadius::default(); 4],
         }
     }
 
@@ -201,11 +203,8 @@ impl DclUiBackground {
             my_pos
         );
 
-        // Keep the rounded-clip shader's size uniform in sync.
-        if let Some(mat) = self.rounded_clip_material.clone() {
-            let mut mat = mat;
-            mat.set_shader_parameter("control_size", &my_size.to_variant());
-        }
+        // A percentage or a clamp depends on the size.
+        self.apply_corner_radii();
 
         if !self.texture_loaded {
             tracing::debug!("[UI_BKG] _on_parent_size: texture_loaded=false, skipping");
@@ -225,11 +224,17 @@ impl DclUiBackground {
         }
     }
 
-    pub fn set_corner_radii(&mut self, radii: [f32; 4]) {
+    pub fn set_corner_radii(&mut self, radii: [CornerRadius; 4]) {
         if self.current_radii == radii {
             return;
         }
         self.current_radii = radii;
+        self.apply_corner_radii();
+    }
+
+    fn apply_corner_radii(&mut self) {
+        let size = self.base().get_size();
+        let radii = resolve_corner_radii(self.current_radii, size.x, size.y);
         let any = radii.iter().any(|&r| r > 0.0);
 
         if !any {
@@ -250,7 +255,6 @@ impl DclUiBackground {
         };
 
         let radii_v4 = Vector4::new(radii[0], radii[1], radii[2], radii[3]);
-        let size = self.base().get_size();
         mat.set_shader_parameter("corner_radii", &radii_v4.to_variant());
         mat.set_shader_parameter("control_size", &size.to_variant());
         self.base_mut().set_material(&mat);
