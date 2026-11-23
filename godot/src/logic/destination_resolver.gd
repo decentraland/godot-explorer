@@ -35,6 +35,9 @@ static func async_resolve(dest: Destination) -> Destination:
 
 
 static func _async_resolve_once(dest: Destination) -> Destination:
+	if await ContentPolicy.async_blocks(dest):
+		return dest.resolved_blocked()
+
 	var budget := DEADLINE_MS
 	if dest.kind == Destination.Kind.PREVIEW:
 		budget = PREVIEW_DEADLINE_MS

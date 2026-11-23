@@ -767,6 +767,8 @@ func _ready():
 	self.feature_flags = FeatureFlags.new()
 	self.feature_flags.set_name("feature_flags")
 	add_child(self.feature_flags)
+	# The iOS block list, fetched now so the first navigation finds it cached.
+	ContentPolicy.warm.call_deferred()
 	# Reads off the flags above once they arrive — see seasonal_skin_manager.gd.
 	self.seasonal_skin_manager = SeasonalSkinManager.new()
 	self.seasonal_skin_manager.set_name("seasonal_skin_manager")
@@ -1496,6 +1498,8 @@ func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 		# user can't enter is the bug #1725 fixed.
 		if not await _async_precheck_realm_access(new_realm):
 			return
+		if await _async_precheck_blocked(Destination.from_input(new_realm, parcel_position)):
+			return
 		Global.set_orientation_landscape()
 		Global.get_config().last_realm_joined = new_realm
 		Global.get_config().last_parcel_position = parcel_position
@@ -1518,6 +1522,8 @@ func async_join_world(world_realm: String) -> void:
 		# Cold start from the lobby: no explorer to route through, so the private-world gate
 		# stays here rather than booting straight into a world we can't enter (#1725).
 		if not await _async_precheck_realm_access(world_realm):
+			return
+		if await _async_precheck_blocked(Destination.from_input(world_realm)):
 			return
 		Global.get_config().add_place_to_last_places(Vector2i.ZERO, world_realm)  # "Last visited"
 		Global.set_orientation_landscape()
@@ -1797,6 +1803,15 @@ func _async_precheck_realm_access(new_realm_string: String) -> bool:
 		return true
 	_on_realm_access_denied(new_realm_string, world_name)
 	return false
+
+
+## The iOS block list (#3224) before the explorer boots: the player stays in the menus with the
+## modal. True when `dest` is blocked.
+func _async_precheck_blocked(dest: Destination) -> bool:
+	if not await ContentPolicy.async_blocks(dest):
+		return false
+	Global.modal_manager.async_show_blocked_content_modal(dest)
+	return true
 
 
 ## Silent access check for a cold-start deeplink realm — like _async_precheck_realm_access but it
