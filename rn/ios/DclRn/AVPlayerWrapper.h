@@ -18,7 +18,7 @@
  */
 @interface AVPlayerWrapper : NSObject
 
-// Player ID for GDScript reference
+// Player ID the video backend maps it by
 @property (nonatomic, readonly) int playerId;
 
 // Video dimensions (updated when video loads)

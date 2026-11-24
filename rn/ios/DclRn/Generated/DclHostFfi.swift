@@ -441,6 +441,22 @@ fileprivate struct FfiConverterUInt32: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterInt32: FfiConverterPrimitive {
+    typealias FfiType = Int32
+    typealias SwiftType = Int32
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Int32 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: Int32, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
     typealias FfiType = UInt64
     typealias SwiftType = UInt64
@@ -451,6 +467,38 @@ fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
 
     public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
         writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterFloat: FfiConverterPrimitive {
+    typealias FfiType = Float
+    typealias SwiftType = Float
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Float {
+        return try lift(readFloat(&buf))
+    }
+
+    public static func write(_ value: Float, into buf: inout [UInt8]) {
+        writeFloat(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterDouble: FfiConverterPrimitive {
+    typealias FfiType = Double
+    typealias SwiftType = Double
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Double {
+        return try lift(readDouble(&buf))
+    }
+
+    public static func write(_ value: Double, into buf: inout [UInt8]) {
+        writeDouble(&buf, lower(value))
     }
 }
 
@@ -956,6 +1004,280 @@ public func FfiConverterTypeAttestationService_lower(_ value: AttestationService
 
 
 
+public protocol DeviceService: AnyObject, Sendable {
+    
+    func info()  -> DeviceInfo
+    
+    /**
+     * Thermal, battery and (iOS) memory; cheap enough for the game loop.
+     */
+    func readings()  -> DeviceReadings
+    
+    /**
+     * Blocks the UI thread for `ms` (ANR testing); false when unsupported.
+     */
+    func blockUiThread(ms: UInt32)  -> Bool
+    
+}
+open class DeviceServiceImpl: DeviceService, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_dcl_host_fn_clone_deviceservice(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_dcl_host_fn_free_deviceservice(handle, $0) }
+    }
+
+    
+
+    
+open func info() -> DeviceInfo  {
+    return try!  FfiConverterTypeDeviceInfo_lift(try! rustCall() {
+    uniffi_dcl_host_fn_method_deviceservice_info(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Thermal, battery and (iOS) memory; cheap enough for the game loop.
+     */
+open func readings() -> DeviceReadings  {
+    return try!  FfiConverterTypeDeviceReadings_lift(try! rustCall() {
+    uniffi_dcl_host_fn_method_deviceservice_readings(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Blocks the UI thread for `ms` (ANR testing); false when unsupported.
+     */
+open func blockUiThread(ms: UInt32) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+    uniffi_dcl_host_fn_method_deviceservice_block_ui_thread(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt32.lower(ms),$0
+    )
+})
+}
+    
+
+    
+}
+
+
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+fileprivate struct UniffiCallbackInterfaceDeviceService {
+
+    // Create the VTable using a series of closures.
+    // Swift automatically converts these into C callback functions.
+    //
+    // Store the vtable directly.
+    static let vtable: UniffiVTableCallbackInterfaceDeviceService = UniffiVTableCallbackInterfaceDeviceService(
+        uniffiFree: { (uniffiHandle: UInt64) -> () in
+            do {
+                try FfiConverterTypeDeviceService.handleMap.remove(handle: uniffiHandle)
+            } catch {
+                print("Uniffi callback interface DeviceService: handle missing in uniffiFree")
+            }
+        },
+        uniffiClone: { (uniffiHandle: UInt64) -> UInt64 in
+            do {
+                return try FfiConverterTypeDeviceService.handleMap.clone(handle: uniffiHandle)
+            } catch {
+                fatalError("Uniffi callback interface DeviceService: handle missing in uniffiClone")
+            }
+        },
+        info: { (
+            uniffiHandle: UInt64,
+            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> DeviceInfo in
+                guard let uniffiObj = try? FfiConverterTypeDeviceService.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.info(
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterTypeDeviceInfo_lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        readings: { (
+            uniffiHandle: UInt64,
+            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> DeviceReadings in
+                guard let uniffiObj = try? FfiConverterTypeDeviceService.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.readings(
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterTypeDeviceReadings_lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        blockUiThread: { (
+            uniffiHandle: UInt64,
+            ms: UInt32,
+            uniffiOutReturn: UnsafeMutablePointer<Int8>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> Bool in
+                guard let uniffiObj = try? FfiConverterTypeDeviceService.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.blockUiThread(
+                     ms: try FfiConverterUInt32.lift(ms)
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterBool.lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        }
+    )
+
+    // Rust stores this pointer for future callback invocations, so it must live
+    // for the process lifetime (not just for the init function call).
+    //
+    // `nonisolated(unsafe)` is needed under Swift 6 strict concurrency.
+    // This is safe because the pointee is initialized once during static init
+    // and never mutated by either side of the FFI.  Its fields are C function pointers.
+    nonisolated(unsafe) static let vtablePtr: UnsafePointer<UniffiVTableCallbackInterfaceDeviceService> = {
+        let ptr = UnsafeMutablePointer<UniffiVTableCallbackInterfaceDeviceService>.allocate(capacity: 1)
+        ptr.initialize(to: vtable)
+        return UnsafePointer(ptr)
+    }()
+}
+
+private func uniffiCallbackInitDeviceService() {
+    uniffi_dcl_host_fn_init_callback_vtable_deviceservice(UniffiCallbackInterfaceDeviceService.vtablePtr)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDeviceService: FfiConverter {
+    fileprivate static let handleMap = UniffiHandleMap<DeviceService>()
+
+    typealias FfiType = UInt64
+    typealias SwiftType = DeviceService
+
+    public static func lift(_ handle: UInt64) throws -> DeviceService {
+        if ((handle & 1) == 0) {
+            // Rust-generated handle, construct a new class that uses the handle to implement the
+            // interface
+            return DeviceServiceImpl(unsafeFromHandle: handle)
+        } else {
+            // Swift-generated handle, get the object from the handle map
+            return try handleMap.remove(handle: handle)
+        }
+    }
+
+    public static func lower(_ value: DeviceService) -> UInt64 {
+         if let rustImpl = value as? DeviceServiceImpl {
+             // Rust-implemented object.  Clone the handle and return it
+            return rustImpl.uniffiCloneHandle()
+         } else {
+            // Swift object, generate a new vtable handle and return that.
+            return handleMap.insert(obj: value)
+         }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DeviceService {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: DeviceService, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDeviceService_lift(_ handle: UInt64) throws -> DeviceService {
+    return try FfiConverterTypeDeviceService.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDeviceService_lower(_ value: DeviceService) -> UInt64 {
+    return FfiConverterTypeDeviceService.lower(value)
+}
+
+
+
+
+
+
 /**
  * Implemented in Kotlin/Swift. Called from a core thread.
  */
@@ -1200,6 +1522,1175 @@ public func FfiConverterTypeHostListener_lower(_ value: HostListener) -> UInt64 
 
 
 
+
+
+/**
+ * Android: Firebase Analytics, the Play install referrer and the GA4F deferred deep link.
+ */
+public protocol MarketingService: AnyObject, Sendable {
+    
+    func appInstanceId()  -> String
+    
+    func setUserId(userId: String) 
+    
+    func setUserProperty(name: String, value: String) 
+    
+    func logEvent(name: String, paramsJson: String)  -> Bool
+    
+    /**
+     * JSON object with a `status` (`pending`, `ok`, `error`, `not_available`) and its fields.
+     */
+    func installReferrer()  -> String
+    
+    /**
+     * JSON object with a `status` (`pending`, `ok`, `error`) and its fields.
+     */
+    func deferredDeepLink()  -> String
+    
+}
+/**
+ * Android: Firebase Analytics, the Play install referrer and the GA4F deferred deep link.
+ */
+open class MarketingServiceImpl: MarketingService, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_dcl_host_fn_clone_marketingservice(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_dcl_host_fn_free_marketingservice(handle, $0) }
+    }
+
+    
+
+    
+open func appInstanceId() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_dcl_host_fn_method_marketingservice_app_instance_id(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+open func setUserId(userId: String)  {try! rustCall() {
+    uniffi_dcl_host_fn_method_marketingservice_set_user_id(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(userId),$0
+    )
+}
+}
+    
+open func setUserProperty(name: String, value: String)  {try! rustCall() {
+    uniffi_dcl_host_fn_method_marketingservice_set_user_property(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(name),
+        FfiConverterString.lower(value),$0
+    )
+}
+}
+    
+open func logEvent(name: String, paramsJson: String) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+    uniffi_dcl_host_fn_method_marketingservice_log_event(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(name),
+        FfiConverterString.lower(paramsJson),$0
+    )
+})
+}
+    
+    /**
+     * JSON object with a `status` (`pending`, `ok`, `error`, `not_available`) and its fields.
+     */
+open func installReferrer() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_dcl_host_fn_method_marketingservice_install_referrer(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * JSON object with a `status` (`pending`, `ok`, `error`) and its fields.
+     */
+open func deferredDeepLink() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_dcl_host_fn_method_marketingservice_deferred_deep_link(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+    
+}
+
+
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+fileprivate struct UniffiCallbackInterfaceMarketingService {
+
+    // Create the VTable using a series of closures.
+    // Swift automatically converts these into C callback functions.
+    //
+    // Store the vtable directly.
+    static let vtable: UniffiVTableCallbackInterfaceMarketingService = UniffiVTableCallbackInterfaceMarketingService(
+        uniffiFree: { (uniffiHandle: UInt64) -> () in
+            do {
+                try FfiConverterTypeMarketingService.handleMap.remove(handle: uniffiHandle)
+            } catch {
+                print("Uniffi callback interface MarketingService: handle missing in uniffiFree")
+            }
+        },
+        uniffiClone: { (uniffiHandle: UInt64) -> UInt64 in
+            do {
+                return try FfiConverterTypeMarketingService.handleMap.clone(handle: uniffiHandle)
+            } catch {
+                fatalError("Uniffi callback interface MarketingService: handle missing in uniffiClone")
+            }
+        },
+        appInstanceId: { (
+            uniffiHandle: UInt64,
+            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> String in
+                guard let uniffiObj = try? FfiConverterTypeMarketingService.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.appInstanceId(
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterString.lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        setUserId: { (
+            uniffiHandle: UInt64,
+            userId: RustBuffer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeMarketingService.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.setUserId(
+                     userId: try FfiConverterString.lift(userId)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        setUserProperty: { (
+            uniffiHandle: UInt64,
+            name: RustBuffer,
+            value: RustBuffer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeMarketingService.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.setUserProperty(
+                     name: try FfiConverterString.lift(name),
+                     value: try FfiConverterString.lift(value)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        logEvent: { (
+            uniffiHandle: UInt64,
+            name: RustBuffer,
+            paramsJson: RustBuffer,
+            uniffiOutReturn: UnsafeMutablePointer<Int8>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> Bool in
+                guard let uniffiObj = try? FfiConverterTypeMarketingService.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.logEvent(
+                     name: try FfiConverterString.lift(name),
+                     paramsJson: try FfiConverterString.lift(paramsJson)
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterBool.lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        installReferrer: { (
+            uniffiHandle: UInt64,
+            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> String in
+                guard let uniffiObj = try? FfiConverterTypeMarketingService.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.installReferrer(
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterString.lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        deferredDeepLink: { (
+            uniffiHandle: UInt64,
+            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> String in
+                guard let uniffiObj = try? FfiConverterTypeMarketingService.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.deferredDeepLink(
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterString.lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        }
+    )
+
+    // Rust stores this pointer for future callback invocations, so it must live
+    // for the process lifetime (not just for the init function call).
+    //
+    // `nonisolated(unsafe)` is needed under Swift 6 strict concurrency.
+    // This is safe because the pointee is initialized once during static init
+    // and never mutated by either side of the FFI.  Its fields are C function pointers.
+    nonisolated(unsafe) static let vtablePtr: UnsafePointer<UniffiVTableCallbackInterfaceMarketingService> = {
+        let ptr = UnsafeMutablePointer<UniffiVTableCallbackInterfaceMarketingService>.allocate(capacity: 1)
+        ptr.initialize(to: vtable)
+        return UnsafePointer(ptr)
+    }()
+}
+
+private func uniffiCallbackInitMarketingService() {
+    uniffi_dcl_host_fn_init_callback_vtable_marketingservice(UniffiCallbackInterfaceMarketingService.vtablePtr)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMarketingService: FfiConverter {
+    fileprivate static let handleMap = UniffiHandleMap<MarketingService>()
+
+    typealias FfiType = UInt64
+    typealias SwiftType = MarketingService
+
+    public static func lift(_ handle: UInt64) throws -> MarketingService {
+        if ((handle & 1) == 0) {
+            // Rust-generated handle, construct a new class that uses the handle to implement the
+            // interface
+            return MarketingServiceImpl(unsafeFromHandle: handle)
+        } else {
+            // Swift-generated handle, get the object from the handle map
+            return try handleMap.remove(handle: handle)
+        }
+    }
+
+    public static func lower(_ value: MarketingService) -> UInt64 {
+         if let rustImpl = value as? MarketingServiceImpl {
+             // Rust-implemented object.  Clone the handle and return it
+            return rustImpl.uniffiCloneHandle()
+         } else {
+            // Swift object, generate a new vtable handle and return that.
+            return handleMap.insert(obj: value)
+         }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MarketingService {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: MarketingService, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMarketingService_lift(_ handle: UInt64) throws -> MarketingService {
+    return try FfiConverterTypeMarketingService.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMarketingService_lower(_ value: MarketingService) -> UInt64 {
+    return FfiConverterTypeMarketingService.lower(value)
+}
+
+
+
+
+
+
+/**
+ * ExoPlayer on Android, AVPlayer on iOS. Positions are seconds.
+ */
+public protocol VideoBackend: AnyObject, Sendable {
+    
+    func create()  -> Int32
+    
+    func initSurface(player: Int32, width: Int32, height: Int32)  -> Bool
+    
+    func setSource(player: Int32, source: String, local: Bool)  -> Bool
+    
+    func play(player: Int32) 
+    
+    func pause(player: Int32) 
+    
+    func stop(player: Int32) 
+    
+    func seek(player: Int32, seconds: Double) 
+    
+    func position(player: Int32)  -> Double
+    
+    func duration(player: Int32)  -> Double
+    
+    func isPlaying(player: Int32)  -> Bool
+    
+    func setVolume(player: Int32, volume: Float) 
+    
+    func setLooping(player: Int32, looping: Bool) 
+    
+    func setRate(player: Int32, rate: Float) 
+    
+    func takeSizeChanged(player: Int32)  -> Bool
+    
+    func videoSize(player: Int32)  -> VideoSize
+    
+    /**
+     * `AHardwareBuffer*` / `IOSurfaceRef` of a frame that arrived since the last call, else 0.
+     */
+    func pollFrame(player: Int32)  -> UInt64
+    
+    func release(player: Int32) 
+    
+}
+/**
+ * ExoPlayer on Android, AVPlayer on iOS. Positions are seconds.
+ */
+open class VideoBackendImpl: VideoBackend, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_dcl_host_fn_clone_videobackend(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_dcl_host_fn_free_videobackend(handle, $0) }
+    }
+
+    
+
+    
+open func create() -> Int32  {
+    return try!  FfiConverterInt32.lift(try! rustCall() {
+    uniffi_dcl_host_fn_method_videobackend_create(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+open func initSurface(player: Int32, width: Int32, height: Int32) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+    uniffi_dcl_host_fn_method_videobackend_init_surface(
+            self.uniffiCloneHandle(),
+        FfiConverterInt32.lower(player),
+        FfiConverterInt32.lower(width),
+        FfiConverterInt32.lower(height),$0
+    )
+})
+}
+    
+open func setSource(player: Int32, source: String, local: Bool) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+    uniffi_dcl_host_fn_method_videobackend_set_source(
+            self.uniffiCloneHandle(),
+        FfiConverterInt32.lower(player),
+        FfiConverterString.lower(source),
+        FfiConverterBool.lower(local),$0
+    )
+})
+}
+    
+open func play(player: Int32)  {try! rustCall() {
+    uniffi_dcl_host_fn_method_videobackend_play(
+            self.uniffiCloneHandle(),
+        FfiConverterInt32.lower(player),$0
+    )
+}
+}
+    
+open func pause(player: Int32)  {try! rustCall() {
+    uniffi_dcl_host_fn_method_videobackend_pause(
+            self.uniffiCloneHandle(),
+        FfiConverterInt32.lower(player),$0
+    )
+}
+}
+    
+open func stop(player: Int32)  {try! rustCall() {
+    uniffi_dcl_host_fn_method_videobackend_stop(
+            self.uniffiCloneHandle(),
+        FfiConverterInt32.lower(player),$0
+    )
+}
+}
+    
+open func seek(player: Int32, seconds: Double)  {try! rustCall() {
+    uniffi_dcl_host_fn_method_videobackend_seek(
+            self.uniffiCloneHandle(),
+        FfiConverterInt32.lower(player),
+        FfiConverterDouble.lower(seconds),$0
+    )
+}
+}
+    
+open func position(player: Int32) -> Double  {
+    return try!  FfiConverterDouble.lift(try! rustCall() {
+    uniffi_dcl_host_fn_method_videobackend_position(
+            self.uniffiCloneHandle(),
+        FfiConverterInt32.lower(player),$0
+    )
+})
+}
+    
+open func duration(player: Int32) -> Double  {
+    return try!  FfiConverterDouble.lift(try! rustCall() {
+    uniffi_dcl_host_fn_method_videobackend_duration(
+            self.uniffiCloneHandle(),
+        FfiConverterInt32.lower(player),$0
+    )
+})
+}
+    
+open func isPlaying(player: Int32) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+    uniffi_dcl_host_fn_method_videobackend_is_playing(
+            self.uniffiCloneHandle(),
+        FfiConverterInt32.lower(player),$0
+    )
+})
+}
+    
+open func setVolume(player: Int32, volume: Float)  {try! rustCall() {
+    uniffi_dcl_host_fn_method_videobackend_set_volume(
+            self.uniffiCloneHandle(),
+        FfiConverterInt32.lower(player),
+        FfiConverterFloat.lower(volume),$0
+    )
+}
+}
+    
+open func setLooping(player: Int32, looping: Bool)  {try! rustCall() {
+    uniffi_dcl_host_fn_method_videobackend_set_looping(
+            self.uniffiCloneHandle(),
+        FfiConverterInt32.lower(player),
+        FfiConverterBool.lower(looping),$0
+    )
+}
+}
+    
+open func setRate(player: Int32, rate: Float)  {try! rustCall() {
+    uniffi_dcl_host_fn_method_videobackend_set_rate(
+            self.uniffiCloneHandle(),
+        FfiConverterInt32.lower(player),
+        FfiConverterFloat.lower(rate),$0
+    )
+}
+}
+    
+open func takeSizeChanged(player: Int32) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+    uniffi_dcl_host_fn_method_videobackend_take_size_changed(
+            self.uniffiCloneHandle(),
+        FfiConverterInt32.lower(player),$0
+    )
+})
+}
+    
+open func videoSize(player: Int32) -> VideoSize  {
+    return try!  FfiConverterTypeVideoSize_lift(try! rustCall() {
+    uniffi_dcl_host_fn_method_videobackend_video_size(
+            self.uniffiCloneHandle(),
+        FfiConverterInt32.lower(player),$0
+    )
+})
+}
+    
+    /**
+     * `AHardwareBuffer*` / `IOSurfaceRef` of a frame that arrived since the last call, else 0.
+     */
+open func pollFrame(player: Int32) -> UInt64  {
+    return try!  FfiConverterUInt64.lift(try! rustCall() {
+    uniffi_dcl_host_fn_method_videobackend_poll_frame(
+            self.uniffiCloneHandle(),
+        FfiConverterInt32.lower(player),$0
+    )
+})
+}
+    
+open func release(player: Int32)  {try! rustCall() {
+    uniffi_dcl_host_fn_method_videobackend_release(
+            self.uniffiCloneHandle(),
+        FfiConverterInt32.lower(player),$0
+    )
+}
+}
+    
+
+    
+}
+
+
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+fileprivate struct UniffiCallbackInterfaceVideoBackend {
+
+    // Create the VTable using a series of closures.
+    // Swift automatically converts these into C callback functions.
+    //
+    // Store the vtable directly.
+    static let vtable: UniffiVTableCallbackInterfaceVideoBackend = UniffiVTableCallbackInterfaceVideoBackend(
+        uniffiFree: { (uniffiHandle: UInt64) -> () in
+            do {
+                try FfiConverterTypeVideoBackend.handleMap.remove(handle: uniffiHandle)
+            } catch {
+                print("Uniffi callback interface VideoBackend: handle missing in uniffiFree")
+            }
+        },
+        uniffiClone: { (uniffiHandle: UInt64) -> UInt64 in
+            do {
+                return try FfiConverterTypeVideoBackend.handleMap.clone(handle: uniffiHandle)
+            } catch {
+                fatalError("Uniffi callback interface VideoBackend: handle missing in uniffiClone")
+            }
+        },
+        create: { (
+            uniffiHandle: UInt64,
+            uniffiOutReturn: UnsafeMutablePointer<Int32>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> Int32 in
+                guard let uniffiObj = try? FfiConverterTypeVideoBackend.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.create(
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterInt32.lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        initSurface: { (
+            uniffiHandle: UInt64,
+            player: Int32,
+            width: Int32,
+            height: Int32,
+            uniffiOutReturn: UnsafeMutablePointer<Int8>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> Bool in
+                guard let uniffiObj = try? FfiConverterTypeVideoBackend.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.initSurface(
+                     player: try FfiConverterInt32.lift(player),
+                     width: try FfiConverterInt32.lift(width),
+                     height: try FfiConverterInt32.lift(height)
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterBool.lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        setSource: { (
+            uniffiHandle: UInt64,
+            player: Int32,
+            source: RustBuffer,
+            local: Int8,
+            uniffiOutReturn: UnsafeMutablePointer<Int8>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> Bool in
+                guard let uniffiObj = try? FfiConverterTypeVideoBackend.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.setSource(
+                     player: try FfiConverterInt32.lift(player),
+                     source: try FfiConverterString.lift(source),
+                     local: try FfiConverterBool.lift(local)
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterBool.lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        play: { (
+            uniffiHandle: UInt64,
+            player: Int32,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeVideoBackend.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.play(
+                     player: try FfiConverterInt32.lift(player)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        pause: { (
+            uniffiHandle: UInt64,
+            player: Int32,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeVideoBackend.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.pause(
+                     player: try FfiConverterInt32.lift(player)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        stop: { (
+            uniffiHandle: UInt64,
+            player: Int32,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeVideoBackend.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.stop(
+                     player: try FfiConverterInt32.lift(player)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        seek: { (
+            uniffiHandle: UInt64,
+            player: Int32,
+            seconds: Double,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeVideoBackend.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.seek(
+                     player: try FfiConverterInt32.lift(player),
+                     seconds: try FfiConverterDouble.lift(seconds)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        position: { (
+            uniffiHandle: UInt64,
+            player: Int32,
+            uniffiOutReturn: UnsafeMutablePointer<Double>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> Double in
+                guard let uniffiObj = try? FfiConverterTypeVideoBackend.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.position(
+                     player: try FfiConverterInt32.lift(player)
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterDouble.lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        duration: { (
+            uniffiHandle: UInt64,
+            player: Int32,
+            uniffiOutReturn: UnsafeMutablePointer<Double>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> Double in
+                guard let uniffiObj = try? FfiConverterTypeVideoBackend.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.duration(
+                     player: try FfiConverterInt32.lift(player)
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterDouble.lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        isPlaying: { (
+            uniffiHandle: UInt64,
+            player: Int32,
+            uniffiOutReturn: UnsafeMutablePointer<Int8>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> Bool in
+                guard let uniffiObj = try? FfiConverterTypeVideoBackend.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.isPlaying(
+                     player: try FfiConverterInt32.lift(player)
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterBool.lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        setVolume: { (
+            uniffiHandle: UInt64,
+            player: Int32,
+            volume: Float,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeVideoBackend.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.setVolume(
+                     player: try FfiConverterInt32.lift(player),
+                     volume: try FfiConverterFloat.lift(volume)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        setLooping: { (
+            uniffiHandle: UInt64,
+            player: Int32,
+            looping: Int8,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeVideoBackend.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.setLooping(
+                     player: try FfiConverterInt32.lift(player),
+                     looping: try FfiConverterBool.lift(looping)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        setRate: { (
+            uniffiHandle: UInt64,
+            player: Int32,
+            rate: Float,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeVideoBackend.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.setRate(
+                     player: try FfiConverterInt32.lift(player),
+                     rate: try FfiConverterFloat.lift(rate)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        takeSizeChanged: { (
+            uniffiHandle: UInt64,
+            player: Int32,
+            uniffiOutReturn: UnsafeMutablePointer<Int8>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> Bool in
+                guard let uniffiObj = try? FfiConverterTypeVideoBackend.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.takeSizeChanged(
+                     player: try FfiConverterInt32.lift(player)
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterBool.lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        videoSize: { (
+            uniffiHandle: UInt64,
+            player: Int32,
+            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> VideoSize in
+                guard let uniffiObj = try? FfiConverterTypeVideoBackend.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.videoSize(
+                     player: try FfiConverterInt32.lift(player)
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterTypeVideoSize_lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        pollFrame: { (
+            uniffiHandle: UInt64,
+            player: Int32,
+            uniffiOutReturn: UnsafeMutablePointer<UInt64>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> UInt64 in
+                guard let uniffiObj = try? FfiConverterTypeVideoBackend.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.pollFrame(
+                     player: try FfiConverterInt32.lift(player)
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterUInt64.lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        release: { (
+            uniffiHandle: UInt64,
+            player: Int32,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeVideoBackend.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.release(
+                     player: try FfiConverterInt32.lift(player)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        }
+    )
+
+    // Rust stores this pointer for future callback invocations, so it must live
+    // for the process lifetime (not just for the init function call).
+    //
+    // `nonisolated(unsafe)` is needed under Swift 6 strict concurrency.
+    // This is safe because the pointee is initialized once during static init
+    // and never mutated by either side of the FFI.  Its fields are C function pointers.
+    nonisolated(unsafe) static let vtablePtr: UnsafePointer<UniffiVTableCallbackInterfaceVideoBackend> = {
+        let ptr = UnsafeMutablePointer<UniffiVTableCallbackInterfaceVideoBackend>.allocate(capacity: 1)
+        ptr.initialize(to: vtable)
+        return UnsafePointer(ptr)
+    }()
+}
+
+private func uniffiCallbackInitVideoBackend() {
+    uniffi_dcl_host_fn_init_callback_vtable_videobackend(UniffiCallbackInterfaceVideoBackend.vtablePtr)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeVideoBackend: FfiConverter {
+    fileprivate static let handleMap = UniffiHandleMap<VideoBackend>()
+
+    typealias FfiType = UInt64
+    typealias SwiftType = VideoBackend
+
+    public static func lift(_ handle: UInt64) throws -> VideoBackend {
+        if ((handle & 1) == 0) {
+            // Rust-generated handle, construct a new class that uses the handle to implement the
+            // interface
+            return VideoBackendImpl(unsafeFromHandle: handle)
+        } else {
+            // Swift-generated handle, get the object from the handle map
+            return try handleMap.remove(handle: handle)
+        }
+    }
+
+    public static func lower(_ value: VideoBackend) -> UInt64 {
+         if let rustImpl = value as? VideoBackendImpl {
+             // Rust-implemented object.  Clone the handle and return it
+            return rustImpl.uniffiCloneHandle()
+         } else {
+            // Swift object, generate a new vtable handle and return that.
+            return handleMap.insert(obj: value)
+         }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> VideoBackend {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: VideoBackend, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeVideoBackend_lift(_ handle: UInt64) throws -> VideoBackend {
+    return try FfiConverterTypeVideoBackend.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeVideoBackend_lower(_ value: VideoBackend) -> UInt64 {
+    return FfiConverterTypeVideoBackend.lower(value)
+}
+
+
+
+
 /**
  * Where attestation stands, for diagnostics.
  */
@@ -1268,6 +2759,218 @@ public func FfiConverterTypeAttestationStatus_lift(_ buf: RustBuffer) throws -> 
 #endif
 public func FfiConverterTypeAttestationStatus_lower(_ value: AttestationStatus) -> RustBuffer {
     return FfiConverterTypeAttestationStatus.lower(value)
+}
+
+
+public struct DeviceInfo: Equatable, Hashable {
+    public var brand: String
+    public var model: String
+    public var osVersion: String
+    public var totalRamMb: Int32
+    public var socModel: String
+    public var socManufacturer: String
+    public var boardPlatform: String
+    public var hardware: String
+    public var processorType: String
+    public var processorMaxFreqMhz: Int32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(brand: String, model: String, osVersion: String, totalRamMb: Int32, socModel: String, socManufacturer: String, boardPlatform: String, hardware: String, processorType: String, processorMaxFreqMhz: Int32) {
+        self.brand = brand
+        self.model = model
+        self.osVersion = osVersion
+        self.totalRamMb = totalRamMb
+        self.socModel = socModel
+        self.socManufacturer = socManufacturer
+        self.boardPlatform = boardPlatform
+        self.hardware = hardware
+        self.processorType = processorType
+        self.processorMaxFreqMhz = processorMaxFreqMhz
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DeviceInfo: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDeviceInfo: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DeviceInfo {
+        return
+            try DeviceInfo(
+                brand: FfiConverterString.read(from: &buf), 
+                model: FfiConverterString.read(from: &buf), 
+                osVersion: FfiConverterString.read(from: &buf), 
+                totalRamMb: FfiConverterInt32.read(from: &buf), 
+                socModel: FfiConverterString.read(from: &buf), 
+                socManufacturer: FfiConverterString.read(from: &buf), 
+                boardPlatform: FfiConverterString.read(from: &buf), 
+                hardware: FfiConverterString.read(from: &buf), 
+                processorType: FfiConverterString.read(from: &buf), 
+                processorMaxFreqMhz: FfiConverterInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DeviceInfo, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.brand, into: &buf)
+        FfiConverterString.write(value.model, into: &buf)
+        FfiConverterString.write(value.osVersion, into: &buf)
+        FfiConverterInt32.write(value.totalRamMb, into: &buf)
+        FfiConverterString.write(value.socModel, into: &buf)
+        FfiConverterString.write(value.socManufacturer, into: &buf)
+        FfiConverterString.write(value.boardPlatform, into: &buf)
+        FfiConverterString.write(value.hardware, into: &buf)
+        FfiConverterString.write(value.processorType, into: &buf)
+        FfiConverterInt32.write(value.processorMaxFreqMhz, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDeviceInfo_lift(_ buf: RustBuffer) throws -> DeviceInfo {
+    return try FfiConverterTypeDeviceInfo.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDeviceInfo_lower(_ value: DeviceInfo) -> RustBuffer {
+    return FfiConverterTypeDeviceInfo.lower(value)
+}
+
+
+public struct DeviceReadings: Equatable, Hashable {
+    /**
+     * -1 where it is a slow read (Android).
+     */
+    public var memoryUsageMb: Int32
+    public var temperatureCelsius: Float
+    public var thermalState: String
+    public var batteryPercent: Float
+    public var chargingState: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * -1 where it is a slow read (Android).
+         */memoryUsageMb: Int32, temperatureCelsius: Float, thermalState: String, batteryPercent: Float, chargingState: String) {
+        self.memoryUsageMb = memoryUsageMb
+        self.temperatureCelsius = temperatureCelsius
+        self.thermalState = thermalState
+        self.batteryPercent = batteryPercent
+        self.chargingState = chargingState
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DeviceReadings: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDeviceReadings: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DeviceReadings {
+        return
+            try DeviceReadings(
+                memoryUsageMb: FfiConverterInt32.read(from: &buf), 
+                temperatureCelsius: FfiConverterFloat.read(from: &buf), 
+                thermalState: FfiConverterString.read(from: &buf), 
+                batteryPercent: FfiConverterFloat.read(from: &buf), 
+                chargingState: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DeviceReadings, into buf: inout [UInt8]) {
+        FfiConverterInt32.write(value.memoryUsageMb, into: &buf)
+        FfiConverterFloat.write(value.temperatureCelsius, into: &buf)
+        FfiConverterString.write(value.thermalState, into: &buf)
+        FfiConverterFloat.write(value.batteryPercent, into: &buf)
+        FfiConverterString.write(value.chargingState, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDeviceReadings_lift(_ buf: RustBuffer) throws -> DeviceReadings {
+    return try FfiConverterTypeDeviceReadings.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDeviceReadings_lower(_ value: DeviceReadings) -> RustBuffer {
+    return FfiConverterTypeDeviceReadings.lower(value)
+}
+
+
+public struct VideoSize: Equatable, Hashable {
+    public var width: Int32
+    public var height: Int32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(width: Int32, height: Int32) {
+        self.width = width
+        self.height = height
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension VideoSize: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeVideoSize: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> VideoSize {
+        return
+            try VideoSize(
+                width: FfiConverterInt32.read(from: &buf), 
+                height: FfiConverterInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: VideoSize, into buf: inout [UInt8]) {
+        FfiConverterInt32.write(value.width, into: &buf)
+        FfiConverterInt32.write(value.height, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeVideoSize_lift(_ buf: RustBuffer) throws -> VideoSize {
+    return try FfiConverterTypeVideoSize.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeVideoSize_lower(_ value: VideoSize) -> RustBuffer {
+    return FfiConverterTypeVideoSize.lower(value)
 }
 
 
@@ -1732,6 +3435,24 @@ public func installAttestation(service: AttestationService)throws   {try rustCal
     )
 }
 }
+public func installDeviceService(service: DeviceService)  {try! rustCall() {
+    uniffi_dcl_host_fn_func_install_device_service(
+        FfiConverterTypeDeviceService_lower(service),$0
+    )
+}
+}
+public func installMarketingService(service: MarketingService)  {try! rustCall() {
+    uniffi_dcl_host_fn_func_install_marketing_service(
+        FfiConverterTypeMarketingService_lower(service),$0
+    )
+}
+}
+public func installVideoBackend(backend: VideoBackend)  {try! rustCall() {
+    uniffi_dcl_host_fn_func_install_video_backend(
+        FfiConverterTypeVideoBackend_lower(backend),$0
+    )
+}
+}
 
 private enum InitializationResult {
     case ok
@@ -1766,6 +3487,15 @@ private let initializationResult: InitializationResult = {
     if (uniffi_dcl_host_checksum_func_install_attestation() != 45674) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_dcl_host_checksum_func_install_device_service() != 32975) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_func_install_marketing_service() != 48897) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_func_install_video_backend() != 38144) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_dcl_host_checksum_method_hostlistener_engine_required() != 17284) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -1784,9 +3514,90 @@ private let initializationResult: InitializationResult = {
     if (uniffi_dcl_host_checksum_method_attestationservice_ios_attest_key() != 22304) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_dcl_host_checksum_method_deviceservice_info() != 35902) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_deviceservice_readings() != 44013) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_deviceservice_block_ui_thread() != 18315) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_marketingservice_app_instance_id() != 65230) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_marketingservice_set_user_id() != 27356) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_marketingservice_set_user_property() != 39802) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_marketingservice_log_event() != 21877) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_marketingservice_install_referrer() != 58302) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_marketingservice_deferred_deep_link() != 7954) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_videobackend_create() != 63901) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_videobackend_init_surface() != 39897) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_videobackend_set_source() != 46445) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_videobackend_play() != 57619) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_videobackend_pause() != 57567) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_videobackend_stop() != 61512) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_videobackend_seek() != 902) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_videobackend_position() != 12635) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_videobackend_duration() != 16267) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_videobackend_is_playing() != 24825) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_videobackend_set_volume() != 45305) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_videobackend_set_looping() != 26508) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_videobackend_set_rate() != 14856) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_videobackend_take_size_changed() != 2378) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_videobackend_video_size() != 5446) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_videobackend_poll_frame() != 12041) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_videobackend_release() != 9698) {
+        return InitializationResult.apiChecksumMismatch
+    }
 
     uniffiCallbackInitAttestationService()
+    uniffiCallbackInitDeviceService()
     uniffiCallbackInitHostListener()
+    uniffiCallbackInitMarketingService()
+    uniffiCallbackInitVideoBackend()
     return InitializationResult.ok
 }()
 
