@@ -4,3 +4,4 @@ pub mod dcl_user_profile;
 pub mod emote_mask;
 pub mod item;
 pub mod scene_emote;
+pub mod shape_motion;

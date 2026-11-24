@@ -59,6 +59,10 @@ func _init() -> void:
 	# Empty id must never silently match a non-empty exclude entry.
 	_expect("empty avatar_id never matches", failures, "", [ADDR_LOWER], false)
 
+	# Bug #3338: a scene AvatarShape id is a plain string, not an address.
+	_expect("plain scene id matches", failures, "npc-1", ["npc-1"], true)
+	_expect("plain scene id vs another", failures, "npc-1", ["npc-2"], false)
+
 	# Multi-entry list: one of several entries matches with mixed casing.
 	_expect(
 		"mixed-casing entry among many is found",
@@ -69,7 +73,7 @@ func _init() -> void:
 	)
 
 	if failures.is_empty():
-		print("[test_avatar_modifier_exclude_ids] PASS (all 7 cases)")
+		print("[test_avatar_modifier_exclude_ids] PASS (all 9 cases)")
 		quit(0)
 		return
 

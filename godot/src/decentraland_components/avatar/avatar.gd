@@ -499,14 +499,14 @@ func _hide_impostor_render() -> void:
 # Stable identity key for the disk-backed impostor texture cache. The hash
 # combines eth address (for cross-session stability) with the visual identity
 # (body + wearables + colors), so a user that changes outfit gets a fresh
-# capture instead of pulling stale pixels from the previous look's PNG. NPCs
-# fall through the same path with an empty eth segment, so visually-identical
-# NPCs share a cache entry.
+# capture instead of pulling stale pixels from the previous look's PNG. A scene
+# NPC id like "npc-1" is left out, so visually-identical NPCs share a cache entry.
 func _get_impostor_cache_key() -> String:
 	if avatar_data == null:
 		return ""
 	var parts := PackedStringArray()
-	parts.append(avatar_id.to_lower() if avatar_id != "" else "")
+	var is_address := avatar_id.length() == 42 and avatar_id.begins_with("0x")
+	parts.append(avatar_id.to_lower() if is_address else "")
 	parts.append(avatar_data.get_body_shape())
 	var wearables = avatar_data.get_wearables()
 	if wearables is Array:
@@ -573,12 +573,11 @@ func async_update_avatar(
 	# Handle AvatarShape-specific config (NPCs from scene SDK)
 	is_avatar_shape = avatar_shape_config.get("is_avatar_shape", false)
 
-	# Adopt the AvatarShape.id when it's an eth address so the impostor capturer
-	# can route through the catalyst body-texture path
-	# (`avatar_id.begins_with("0x")`) instead of an off-screen render.
+	# The id drives AvatarModifierArea.excludeIds; an eth-address id also takes the
+	# impostor from the catalyst body texture instead of an off-screen render.
 	if is_avatar_shape:
 		var shape_id: String = avatar_shape_config.get("id", "")
-		if shape_id.begins_with("0x") and avatar_id != shape_id:
+		if not shape_id.is_empty() and avatar_id != shape_id:
 			avatar_id = shape_id
 			if click_area:
 				click_area.set_meta("avatar_id", avatar_id)
@@ -1475,6 +1474,10 @@ func _process(delta):
 	_spawn_reveal.tick(delta)
 	# TODO: maybe a gdext crate bug? when process implement the INode3D, super(delta) doesn't work :/
 	self.process(delta)
+	if is_avatar_shape:
+		shape_motion_process(
+			delta, emote_controller.playing_single or emote_controller.playing_mixed
+		)
 
 	if _use_2d_nameplate:
 		NameplateLayer.update(self)
