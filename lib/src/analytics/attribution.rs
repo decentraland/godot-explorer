@@ -137,7 +137,6 @@ impl Attribution {
             click_id: non_empty("click_id"),
             creative_name: non_empty("creative_name"),
             deferred_deeplink_url: Some(deferred_deeplink_url).filter(|v| !v.is_empty()),
-            analytics_installation_id: non_empty("analytics_installation_id"),
             campaign_token: campaign_token.clone(),
         });
         Some(AttributionResult {

@@ -432,8 +432,6 @@ pub struct SegmentEventAttributionInit {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub deferred_deeplink_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub analytics_installation_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub campaign_token: Option<String>,
 }
 
