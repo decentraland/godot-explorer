@@ -13,6 +13,8 @@ import {
   EmptyState,
   HudCircleButton,
   Icon,
+  IconButton,
+  NotificationBadge,
   LinkRow,
   Menu,
   PageDots,
@@ -169,6 +171,23 @@ describe('Badge, IconButton, Tabs, HudCircleButton', () => {
       />,
     );
     expect(text(tree)).toContain('4');
+  });
+
+  it('IconButton Filter shows the red dot only with badge', () => {
+    const icon = (badge: boolean) => (
+      <IconButton
+        icon="filter"
+        badge={badge}
+        accessibilityLabel="Filter"
+        onPress={() => {}}
+      />
+    );
+    expect(
+      render(icon(true)).root.findAllByType(NotificationBadge),
+    ).toHaveLength(1);
+    expect(
+      render(icon(false)).root.findAllByType(NotificationBadge),
+    ).toHaveLength(0);
   });
 
   it('HudCircleButton presses and shows its badge', () => {
