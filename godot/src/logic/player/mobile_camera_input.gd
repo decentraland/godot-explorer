@@ -16,14 +16,17 @@ const LOOK_DEADZONE := 8.0
 # Roblox model: pinch belongs to the CAMERA area only — the joystick's active rect
 # is movement (walk + its own second-finger look), so a touch there is never a
 # pinch candidate. That alone kills the walk-left + look-right false positive (the
-# walk finger simply isn't eligible), so no reach/clampzone heuristic is needed.
-# Both candidate fingers live in the camera area; the pinch and the joystick run
-# independently (you can walk and zoom at once).
+# walk finger simply isn't eligible).
 #
-# With no competing gesture in the camera area, a pinch is simply the finger spread
-# changing past a threshold — no "both fingers must move" / axial gate (those were
-# anti-walk+look heuristics, now moot), so a thumb-anchored or angled pinch is caught.
-# The spread/commit math lives in PinchGestureHelpers (unit-tested headless).
+# "Camera area" is a real zone, not "anywhere the UI didn't consume the touch":
+# the PAIR only forms when at least one finger sits inside a box around the
+# avatar's on-screen position, 30% of the screen per axis (issue #3317). Without
+# that bound, a free finger anywhere plus a thumb in the idle joystick rect read as
+# a pinch and zoomed the camera while walking.
+#
+# The spread/commit math lives in PinchGestureHelpers (unit-tested headless):
+# opening the fingers past COMMIT_SPREAD commits (zoom in), while closing them
+# only commits once they end up together, and the same closure ends the gesture.
 
 var _player: Player = null
 var _chat_panel: Control = null
@@ -33,6 +36,7 @@ var _joystick: VirtualJoystick = null
 # finger over the joystick / a button / scene UI never looks. Independent from the
 # global pinch tracking below.
 var _look_index: int = -1
+
 # True once the look finger travelled past LOOK_DEADZONE (camera actually
 # rotating). Gates joystick-zone pinch candidacy: an engaged look + joystick
 # touch is walk+look, not a pinch.
@@ -173,7 +177,7 @@ func _input(event: InputEvent) -> void:
 		_drive_joystick_area_look(event)
 
 
-# (Re)establish the candidate pair when the touch count changes; end the pinch
+## (Re)establish the candidate pair when the touch count changes; end the pinch
 # when it drops below two.
 func _on_touch_count_changed() -> void:
 	# Only FREE touches are pinch candidates (not the joystick, scene UI, HUD, chat).
@@ -198,17 +202,65 @@ func _on_touch_count_changed() -> void:
 # joystick hasn't engaged movement: a horizontal pinch often anchors a thumb there
 # (QA: "horizontal pinch is hard to trigger"). Excluded while the joystick is
 # walking (is_pressed) or the look is already engaged, so walk + look is untouched.
+# Returns the first PAIR of those with at least one finger inside the pinch zone;
+# no zone (avatar not projectable) or no qualifying pair means no pinch that frame.
 func _free_pinch_candidates() -> Array:
-	var out: Array = []
+	var eligible: Array = []
 	for idx in _free_touches:
 		if _touches.has(idx):
-			out.append(idx)
+			eligible.append(idx)
 	if _joystick and not _joystick.is_pressed and not _look_engaged:
 		var js_rect := _joystick.get_active_area_global_rect()
 		for idx in _touches:
 			if not _free_touches.has(idx) and js_rect.has_point(_touches[idx]):
-				out.append(idx)
-	return out
+				eligible.append(idx)
+	var zone := _pinch_zone()
+	if zone.is_empty():
+		return []
+	var viewport_size: Vector2 = get_viewport_rect().size
+	for a in eligible:
+		for b in eligible:
+			if a == b:
+				continue
+			var has_member := PinchGestureHelpers.pair_has_zone_member(
+				_touches[a], _touches[b], zone["center"], zone["half_size"], viewport_size
+			)
+			if has_member:
+				return [a, b]
+	return []
+
+
+# Pinch zone in screen pixels: a box centred on the avatar's on-screen position,
+# ZONE_HALF_FRACTION of the viewport per axis. Empty when the avatar cannot be
+# projected — no camera, or it is behind the camera — which disables the pinch for
+# that frame rather than widening it to the whole screen. First person keeps a
+# zone (the avatar is hidden at the camera itself) centred on the screen, so
+# pinching back out to third person still works.
+func _pinch_zone() -> Dictionary:
+	if _player == null:
+		return {}
+	var camera: Camera3D = get_viewport().get_camera_3d()
+	if camera == null:
+		return {}
+	var viewport_size: Vector2 = get_viewport_rect().size
+	var half_size: Vector2 = PinchGestureHelpers.zone_half_size(viewport_size)
+	var mode: Global.CameraMode = _player.camera.get_camera_mode() as Global.CameraMode
+	if mode == Global.CameraMode.FIRST_PERSON:
+		return {"center": viewport_size * 0.5, "half_size": half_size}
+	if mode != Global.CameraMode.THIRD_PERSON:
+		return {}
+	# The rig pivot is the point the third-person camera looks at (avatar centred on
+	# screen, issue #2709), so its projection is the avatar's body on screen.
+	var anchor: Vector3 = _player.mount_camera.global_position
+	if camera.is_position_behind(anchor):
+		return {}
+	return {"center": camera.unproject_position(anchor), "half_size": half_size}
+
+
+# "Fingers together" distance for this screen, shared by the closing commit and the
+# gesture end.
+func _end_spread() -> float:
+	return PinchGestureHelpers.end_spread(get_viewport_rect().size)
 
 
 func _seed_pinch_candidate(cam: Array) -> void:
@@ -255,8 +307,10 @@ func _drive_joystick_area_look(event: InputEventScreenDrag) -> void:
 
 
 func _commit_pinch(a: Vector2, b: Vector2) -> void:
+	var distance: float = PinchGestureHelpers.spread(a, b)
+	var start_distance: float = _pinch_start_a.distance_to(_pinch_start_b)
 	_pinch_active = true
-	_pinch_prev_distance = PinchGestureHelpers.spread(a, b)
+	_pinch_prev_distance = distance
 	# Both fingers are in the camera area (never the joystick's), so the walk keeps
 	# running — only the free single-finger look yields to the zoom. A joystick-zone
 	# finger (idle joystick) means the "walk" was really the pinch's anchor thumb:
@@ -268,6 +322,11 @@ func _commit_pinch(a: Vector2, b: Vector2) -> void:
 		_joystick.cancel()
 	if _player:
 		_player.begin_pinch_zoom()
+		# The travel that committed the gesture counts toward the 1p<->3p toggle. A
+		# closing pinch commits only once the fingers are already together, so
+		# starting the accumulator at zero would leave almost no room to reach
+		# MODE_TOGGLE_SPREAD and zoom out would never fire.
+		_player.apply_pinch_zoom(distance - start_distance)
 
 
 func _reseat_pinch(cam: Array) -> void:
@@ -276,6 +335,9 @@ func _reseat_pinch(cam: Array) -> void:
 		return
 	_pinch_a = indices[0]
 	_pinch_b = indices[1]
+	# A re-seated pair measures its spread from where it formed, same as a seeded one.
+	_pinch_start_a = _touches[_pinch_a]
+	_pinch_start_b = _touches[_pinch_b]
 	_pinch_prev_distance = PinchGestureHelpers.spread(_touches[_pinch_a], _touches[_pinch_b])
 
 
@@ -285,6 +347,13 @@ func _update_pinch() -> void:
 	var distance: float = PinchGestureHelpers.spread(_touches[_pinch_a], _touches[_pinch_b])
 	var delta: float = distance - _pinch_prev_distance
 	_pinch_prev_distance = distance
+	# Fingers brought together: the gesture is over. Report the net mode change and
+	# drop the pair so the next pinch has to form from a fresh two-finger touchdown.
+	if PinchGestureHelpers.should_end(
+		_pinch_start_a.distance_to(_pinch_start_b), distance, _end_spread()
+	):
+		_end_pinch()
+		return
 	if _player and not is_zero_approx(delta):
 		_player.apply_pinch_zoom(delta)
 
