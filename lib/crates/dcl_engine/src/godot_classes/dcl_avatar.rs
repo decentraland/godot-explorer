@@ -14,6 +14,7 @@ use crate::avatars::avatar::ik::AvatarIk;
 use crate::avatars::avatar::locomotion::LocomotionState;
 use crate::avatars::avatar::lod::LodRuntime;
 use crate::avatars::avatar::nametag::NametagState;
+use crate::avatars::avatar::shape_motion::ShapeMotion;
 use crate::avatars::avatar::spawn_reveal::SpawnReveal;
 use crate::avatars::avatar::{AvatarNodes, PendingEmote};
 use crate::avatars::avatar_type::DclAvatarWireFormat;
@@ -339,6 +340,7 @@ pub struct DclAvatar {
     pub(crate) lod: LodRuntime,
     pub(crate) glider: GliderState,
     pub(crate) locomotion: LocomotionState,
+    pub(crate) shape_motion: ShapeMotion,
     pub(crate) ik: AvatarIk,
     pub(crate) spawn_reveal: SpawnReveal,
     pub(crate) nametag: NametagState,
@@ -396,6 +398,7 @@ impl INode3D for DclAvatar {
             lod: LodRuntime::default(),
             glider: GliderState::default(),
             locomotion: LocomotionState::default(),
+            shape_motion: ShapeMotion::default(),
             ik: AvatarIk::default(),
             spawn_reveal: SpawnReveal::default(),
             nametag: NametagState::default(),
@@ -670,7 +673,7 @@ impl DclAvatar {
 
     /// Classify walk/jog/run from horizontal speed (m/s). Idle floor 0.5:
     /// below it the anim plays with no visible displacement.
-    fn classify_locomotion(&mut self, speed: f32) {
+    pub(crate) fn classify_locomotion(&mut self, speed: f32) {
         const IDLE_SPEED_FLOOR: f32 = 0.5;
         self.movement_speed = speed;
         self.walk = speed < 4.0 && speed > IDLE_SPEED_FLOOR;

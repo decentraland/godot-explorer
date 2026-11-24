@@ -187,6 +187,9 @@ impl DclAvatar {
     pub(crate) fn life_process(&mut self, delta: f64) {
         self.spawn_reveal_tick(delta);
         self.advance_movement(delta);
+        if self.is_avatar_shape {
+            self.shape_motion_process(delta);
+        }
         if self.nodes.is_none() {
             return;
         }
