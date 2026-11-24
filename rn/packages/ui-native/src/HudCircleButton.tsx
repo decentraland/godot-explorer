@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Badge } from './Badge';
 import { Icon, IconName } from './Icon';
-import { colors } from './tokens';
+import { alpha, color, colors } from './tokens';
 import { u } from './scale';
 
 /** Translucent round in-world HUD button (chat, emotes, menu). */
@@ -33,7 +33,7 @@ export function HudCircleButton({
         pressed && styles.pressed,
       ]}
     >
-      <Icon name={icon} size={size * 0.5} color={colors.iconHud} />
+      <Icon name={icon} size={size * 0.5} color={color.icon.hud} />
       {badge !== undefined && badge !== false && (
         <View style={styles.badge}>
           <Badge count={typeof badge === 'number' ? badge : undefined} />
@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(36,3,59,0.6)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: alpha['white-30'],
   },
   active: { backgroundColor: colors.purple350 },
   pressed: { opacity: 0.8 },

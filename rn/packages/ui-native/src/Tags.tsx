@@ -57,8 +57,8 @@ export function EventTimeTag({
 }
 
 const TRENDING = [
-  { offset: 0.019, color: '#22C1C1' },
-  { offset: 1, color: '#34C070' },
+  { offset: 0.019, color: colors.teal },
+  { offset: 1, color: colors.mint },
 ];
 
 /** Figma `Tag/Event`: a gradient highlight tag, Trending (teal) or Featured (light rainbow).

@@ -91,6 +91,8 @@ export const colors = {
   aqua: '#34FEE6',
   /** Figma `color/success/300`. */
   success300: '#34CE77',
+  /** Figma `color/mint` (end of the Trending tag gradient). */
+  mint: '#34C070',
 } as const;
 
 /** The Figma `alpha/*` primitives by name: `alpha/white-30` is `alpha['white-30']`. */
