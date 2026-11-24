@@ -10,6 +10,7 @@ import {
   type Entity
 } from '@dcl/sdk/ecs'
 import { Color4, Vector3 } from '@dcl/sdk/math'
+import { movePlayerTo } from '~system/RestrictedActions'
 
 const WEARABLES = [
   'urn:decentraland:off-chain:base-avatars:green_hoodie',
@@ -116,6 +117,24 @@ export function startAvatarShapeMotion(): void {
   // The dancer: its emote wins over the motion, as on desktop.
   const dancer = npc('dancer', Vector3.create(8, 0, 10.5), 1, 'dance')
   label('dancer\nkeeps DANCING', Vector3.create(0, 2.6, 0), 2, dancer)
+
+  // A jump lands on the parcel, not the spawn point: frame the view once the player is inside.
+  engine.addSystem(function frame() {
+    const player = Transform.getOrNull(engine.PlayerEntity)?.position
+    if (
+      player === undefined ||
+      player.x < 0 ||
+      player.x > 32 ||
+      player.z < 0 ||
+      player.z > 32
+    )
+      return
+    engine.removeSystem(frame)
+    void movePlayerTo({
+      newRelativePosition: Vector3.create(16, 0, 1),
+      cameraTarget: Vector3.create(16, 1.5, 16)
+    })
+  })
 
   let phase = 0
   let phaseTime = 0
