@@ -37,7 +37,8 @@ without a written safety comment. Porting on the old API would mean porting twic
 - [x] Nothing VR is left: no `quest` target, no `[xr]` settings, no XR code path (5.12).
 - [x] ~~No Godot plugin~~ **Dropped** (user decision 1, 15 Oct 2026): the Android plugins stay as much as possible, and
       scene video keeps going through the plugin singleton by name (the D-39 shape). Not deleted: `plugins/`,
-      `dcl-godot-android`, `dcl_build_plugin`, `godot/android`, the Maven deps.
+      `dcl-godot-android`, `dcl_build_plugin`, `godot/android`, the Maven deps. The plugins were deleted later, on
+      24 Nov 2026 (D-41); `dcl_build_plugin` and `godot/android` remain.
 
 ## Work items
 

@@ -88,4 +88,4 @@ and the event sink for loading and player events (phase 3 and 5).
 | `notifications.rs` → `notifications_manager.gd` | core `notifications` (phase 1.9, 4.6) |
 | `profile_service.rs` → `save_to_settings_file` | core `settings` (phase 4.5) |
 | `dcl_video_player.rs`, `dcl_audio_stream.rs` → `_backend_*` | Rust video/audio components; video frames from the host's `VideoBackend` (phase 5.5, D-41) |
-| `dcl_ios_plugin.rs`, `dcl_swift_lib.rs`, `DclAndroidPlugin` | gone with the Godot plugins (D-41); OS services live in the host, video reaches the engine as a `VideoBackend` from the core (phase 3–5) |
+| `dcl_ios_plugin.rs`, `dcl_swift_lib.rs`, `DclAndroidPlugin` | gone with the Godot plugins (D-41, done 24 Nov 2026); OS services live in the host, video reaches the engine as a `VideoBackend` from the core |
