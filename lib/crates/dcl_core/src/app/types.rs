@@ -155,6 +155,12 @@ pub enum EngineCommand {
     /// The avatar the core computed from an edit; the engine renders it.
     ApplyAvatar(super::AvatarState),
     Control(super::Control),
+    /// A deep link the core routed: the engine applies the engine settings it carries
+    /// (`skip-gltf`, `gp-benchmark`, comms and content overrides). `cold` when it launched the app.
+    ApplyLink {
+        url: String,
+        cold: bool,
+    },
 }
 
 /// Engine → core.

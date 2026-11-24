@@ -9,7 +9,6 @@ use godot::prelude::*;
 
 use crate::fetcher::globals;
 use crate::godot_classes::dcl_global::DclGlobal;
-use crate::godot_classes::dcl_ios_plugin::DclIosPlugin;
 use crate::godot_classes::dcl_parse_deep_link::DclParseDeepLink;
 
 /// Truthy values of a deeplink flag.
@@ -66,10 +65,6 @@ impl DeepLinkRouter {
         let url = url.to_string();
         if url.is_empty() {
             return;
-        }
-        // Consume the plugin's received URL so the next resume does not read it again.
-        if DclIosPlugin::is_available() {
-            let _ = DclIosPlugin::get_deeplink_args();
         }
         let obj = DclParseDeepLink::parse_decentraland_link(url.as_str().into());
         {

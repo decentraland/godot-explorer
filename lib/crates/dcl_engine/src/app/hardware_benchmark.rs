@@ -14,8 +14,6 @@ use godot::classes::{
 use godot::prelude::*;
 
 use crate::engine::local_task::{next_frame, spawn_local};
-use crate::godot_classes::dcl_android_plugin::DclAndroidPlugin;
-use crate::godot_classes::dcl_ios_plugin::DclIosPlugin;
 
 /// What a profile needs: `gpu_max_ms` is the render time in milliseconds (lower is better).
 /// Calibrated on an A54 (Mali-G68): a benchmark score of about 12 ms was about 47 ms in Genesis
@@ -203,17 +201,13 @@ impl HardwareBenchmark {
     }
 }
 
-/// Total RAM: the mobile plugins know best, then the OS, then an assumed 4 GB.
+/// Total RAM: the native host knows best, then the OS, then an assumed 4 GB.
 fn system_ram_gb() -> f32 {
-    let plugin_mb = if DclAndroidPlugin::is_available() {
-        DclAndroidPlugin::get_total_ram_mb()
-    } else if DclIosPlugin::is_available() {
-        DclIosPlugin::get_total_ram_mb()
-    } else {
-        -1
-    };
-    if plugin_mb > 0 {
-        return plugin_mb as f32 / 1024.0;
+    let host_mb = dcl_core::platform::device()
+        .map(|device| device.info().total_ram_mb)
+        .unwrap_or(-1);
+    if host_mb > 0 {
+        return host_mb as f32 / 1024.0;
     }
     let physical = Os::singleton()
         .get_memory_info()

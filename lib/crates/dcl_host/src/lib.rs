@@ -3,9 +3,14 @@
 uniffi::setup_scaffolding!();
 
 mod attestation;
+mod platform;
 pub use attestation::{
     attestation_status, install_attestation, AttestationFailure, AttestationService,
     AttestationStatus,
+};
+pub use platform::{
+    install_device_service, install_marketing_service, install_video_backend, DeviceInfo,
+    DeviceReadings, DeviceService, MarketingService, VideoBackend, VideoSize,
 };
 
 use std::{path::PathBuf, sync::Arc, time::Duration};

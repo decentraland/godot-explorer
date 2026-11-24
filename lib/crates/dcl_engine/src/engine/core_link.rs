@@ -44,6 +44,7 @@ fn signal_payload(command: &EngineCommand) -> Option<(&'static str, VarDictionar
         EngineCommand::SetRendering(_) => None,
         EngineCommand::ApplyAvatar(avatar) => Some(("apply_avatar", avatar_args(avatar))),
         EngineCommand::Control(control) => control_payload(control),
+        EngineCommand::ApplyLink { .. } => None,
     }
 }
 
@@ -198,6 +199,9 @@ impl DclEngine {
                 }
                 EngineCommand::Control(Control::AnswerSceneRequest { id, accepted }) => {
                     self.answer_scene_request(*id, *accepted);
+                }
+                EngineCommand::ApplyLink { url, cold } => {
+                    crate::app::global_runtime::apply_launch_link(url, *cold);
                 }
                 _ => {}
             }

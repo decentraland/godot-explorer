@@ -1,7 +1,6 @@
 use godot::obj::NewGd;
 
 pub mod animator_controller;
-pub mod dcl_android_plugin;
 pub mod dcl_audio_source;
 pub mod dcl_audio_stream;
 pub mod dcl_avatar;
@@ -20,7 +19,6 @@ pub mod dcl_global;
 pub mod dcl_global_time;
 pub mod dcl_gltf_container;
 pub mod dcl_hashing;
-pub mod dcl_ios_plugin;
 pub mod dcl_locomotion_settings;
 pub mod dcl_mesh_renderer;
 pub mod dcl_node_entity_3d;
@@ -34,7 +32,6 @@ pub mod dcl_scene_locale;
 pub mod dcl_scene_node;
 pub mod dcl_session_store;
 pub mod dcl_social_blacklist;
-pub mod dcl_swift_lib;
 pub mod dcl_tokio_rpc;
 pub mod dcl_ui_background;
 pub mod dcl_ui_border;

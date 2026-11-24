@@ -321,33 +321,13 @@ impl SceneInspectorDispatcher {
         }
     }
 
-    /// Detect device name from iOS/Android plugins, or fallback to OS name.
+    /// Detect device name from the native host's device info, or fallback to OS name.
     fn detect_device_name() -> Option<String> {
-        #[cfg(target_os = "ios")]
-        {
-            if let Some(info) =
-                crate::godot_classes::dcl_ios_plugin::DclIosPlugin::get_mobile_device_info_internal(
-                )
-            {
-                let name = format!("{} {}", info.device_brand, info.device_model)
-                    .trim()
-                    .to_string();
-                if !name.is_empty() {
-                    return Some(name);
-                }
-            }
-        }
-
-        #[cfg(target_os = "android")]
-        {
-            if let Some(info) = crate::godot_classes::dcl_android_plugin::DclAndroidPlugin::get_mobile_device_info_internal()
-            {
-                let name = format!("{} {}", info.device_brand, info.device_model)
-                    .trim()
-                    .to_string();
-                if !name.is_empty() {
-                    return Some(name);
-                }
+        if let Some(device) = dcl_core::platform::device() {
+            let info = device.info();
+            let name = format!("{} {}", info.brand, info.model).trim().to_string();
+            if !name.is_empty() {
+                return Some(name);
             }
         }
 
