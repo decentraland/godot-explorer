@@ -119,7 +119,7 @@ export function EntryFlow({
       (provider === 'google' || provider === 'apple' || provider === 'wallet')
     ) {
       try {
-        startBrowserSignIn(provider === 'wallet' ? undefined : provider);
+        startBrowserSignIn(provider === 'wallet' ? 'wallet_connect' : provider);
       } catch {
         // A recovered session can land while the user taps: the core refuses to begin a sign-in
         // when one is already done, and the flow simply moves on.

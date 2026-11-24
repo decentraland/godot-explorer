@@ -30,10 +30,11 @@ export const verifyEmailCode = (email: string, code: string) =>
 
 /**
  * Google, Apple and external wallets: the core asks the shell to open the page (see
- * `startLinkHandling`). No provider shows the page's own picker, which carries the wallets.
+ * `startLinkHandling`). `wallet_connect` opens the page straight on its wallet list, as 1.x does.
  */
-export const startBrowserSignIn = (provider?: 'google' | 'apple') =>
-  core().signInBrowser(provider);
+export const startBrowserSignIn = (
+  provider: 'google' | 'apple' | 'wallet_connect',
+) => core().signInBrowser(provider);
 
 export const cancelSignIn = () => core().cancelSignIn();
 export const signOut = () => core().signOut();

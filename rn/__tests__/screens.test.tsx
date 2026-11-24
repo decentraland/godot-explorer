@@ -143,6 +143,12 @@ describe('screens render', () => {
       act(() => core().cancelSignIn());
     });
 
+    it('opens the auth site on its wallet list from Wallet Connect', async () => {
+      const signInBrowser = jest.spyOn(core(), 'signInBrowser');
+      await press('Wallet Connect');
+      expect(signInBrowser).toHaveBeenCalledWith('wallet_connect');
+    });
+
     it('closes the keyboard before Back leaves a screen', async () => {
       const dismiss = jest.spyOn(Keyboard, 'dismiss');
       await press('Continue with email');
