@@ -541,7 +541,7 @@ func _ready():
 	# Menu/Explorer restore the default 10s when leaving the lobby.
 	Global.metrics.set_flush_interval(2.0)
 
-	Global.music_player.play.call_deferred("music_builder")
+	Global.music_player.play.call_deferred(MusicPlayer.LOBBY_MUSIC)
 
 	var login = %Login
 
