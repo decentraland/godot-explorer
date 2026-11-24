@@ -1,6 +1,21 @@
 class_name SkyBase
 extends Node
 
+# Sky shader uniforms a scene override can write. Their startup values are the defaults a
+# scene has to leave behind.
+const OVERRIDE_PARAMS := [
+	"tint_color_cycle_bottom",
+	"tint_color_cycle_top",
+	"tint_color_cycle_nadir",
+	"rim_color_cycle",
+	"clouds_color_cycle",
+	"cloud_opacity",
+	"clouds_scroll_speed",
+	"stars_energy",
+	"stars_override",
+	"sun_color_cycle",
+]
+
 # External gradient resources for time-of-day lighting
 @export var directional_light_gradient: Gradient
 @export var ambient_light_gradient: Gradient
@@ -38,11 +53,21 @@ var _scene_skybox: SceneSkybox
 @onready var initial_sun_energy = main_light.light_energy
 @onready var sky_material = world_environment.environment.sky.sky_material
 
+static var _pristine_params := {}
+static var _pristine_fog := {}
+static var _pristine_sky_material: Material = null
+
 
 func _ready():
 	# Set up animation: play, sample at position, stop
 	anim_player.play("light_cycle")
 	anim_player.pause()
+
+	# Capture the defaults once, before any scene override ran: a sky swap (quality
+	# setting) rebuilds this node while overrides are live, so reading the live material
+	# there would record the scene's values as the defaults to restore later.
+	if _pristine_params.is_empty():
+		_capture_pristine()
 
 	_scene_skybox = SceneSkybox.new(self)
 	Global.sdk_skybox_changed.connect(_on_sdk_skybox_changed)
@@ -212,3 +237,31 @@ func _process(_delta: float) -> void:
 	# Scene overrides run last: they replace whichever time-of-day value the cycle just
 	# wrote (sun color/position, ambient, fog, sky LUTs) and never touch the light gate.
 	_scene_skybox.apply_frame(skybox_time)
+
+
+func _capture_pristine() -> void:
+	var material: Material = sky_material
+	if material is ShaderMaterial:
+		for param in OVERRIDE_PARAMS:
+			_pristine_params[param] = material.get_shader_parameter(param)
+
+	var environment := world_environment.environment
+	_pristine_fog = {
+		"mode": environment.fog_mode,
+		"density": environment.fog_density,
+	}
+	var sky_resource: Sky = environment.sky
+	if sky_resource != null:
+		_pristine_sky_material = sky_resource.sky_material
+
+
+func pristine_param(param: String) -> Variant:
+	return _pristine_params.get(param)
+
+
+func pristine_fog() -> Dictionary:
+	return _pristine_fog
+
+
+func pristine_sky_material() -> Material:
+	return _pristine_sky_material

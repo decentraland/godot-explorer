@@ -17,6 +17,7 @@ func run() -> bool:
 	_test_sample()
 	_test_make_lut()
 	_test_equirectangular_check()
+	_test_sun_basis()
 	execution_time_seconds = (Time.get_ticks_usec() - start) / 1_000_000.0
 	return errors.is_empty()
 
@@ -117,3 +118,27 @@ func _expect_near(actual: float, expected: float, label: String) -> void:
 func _expect(condition: bool, label: String) -> void:
 	if not condition:
 		errors.append(label)
+
+
+func _test_sun_basis() -> void:
+	# Straight overhead is the proto's own example for `direction`, and it is colinear with
+	# Vector3.UP: `Basis.looking_at` would warn every frame and pick an arbitrary roll.
+	var overhead: Basis = SceneSkyboxScript.sun_basis_for(Vector3(0.0, -1.0, 0.0))
+	_expect(
+		overhead.z.is_equal_approx(Vector3(0.0, 1.0, 0.0)),
+		"overhead sun draws its disc at the zenith (basis.z=%s)" % overhead.z
+	)
+	_expect(
+		is_equal_approx(overhead.determinant(), 1.0),
+		"overhead sun basis is a rotation (det=%s)" % overhead.determinant()
+	)
+
+	var west: Basis = SceneSkyboxScript.sun_basis_for(Vector3(-1.0, 0.0, 0.0))
+	_expect(
+		west.z.is_equal_approx(Vector3(1.0, 0.0, 0.0)),
+		"west sun draws its disc to the east (basis.z=%s)" % west.z
+	)
+	_expect(
+		is_equal_approx(west.determinant(), 1.0),
+		"west sun basis is a rotation (det=%s)" % west.determinant()
+	)
