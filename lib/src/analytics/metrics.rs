@@ -27,9 +27,11 @@ use crate::{
 };
 
 use super::{
+    attribution::Attribution,
     data_definition::{
-        build_segment_event_batch_item, build_segment_identify_body, PushIdentifyTraits,
-        PushPlatform, SegmentEvent, SegmentEventAcceptFriend, SegmentEventAppOpened,
+        build_segment_device_identify_body, build_segment_event_batch_item,
+        build_segment_identify_body, PushIdentifyTraits, PushPlatform, SegmentEvent,
+        SegmentEventAcceptFriend, SegmentEventAppOpened, SegmentEventAttPrompt,
         SegmentEventAttestationAttempt, SegmentEventAttestationSessionCacheLoaded,
         SegmentEventBlockUser, SegmentEventChatMessageSent, SegmentEventClickButton,
         SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
@@ -39,6 +41,7 @@ use super::{
         SegmentEventRequestResult, SegmentEventReviewPrompted, SegmentEventSceneLocaleRequested,
         SegmentEventScreenViewed, SegmentEventSystemInfoReport, SegmentEventUnfriend,
     },
+    device_identifiers::DeviceIdentifierReader,
     frame::Frame,
     install_attribution::InstallAttribution,
 };
@@ -95,6 +98,12 @@ pub struct Metrics {
     install_attribution: Option<InstallAttribution>,
     // Campaign token the attribution resolved to, read by GDScript after the event fires
     resolved_campaign_token: String,
+    // Tenjin: funnel events out, install attribution in
+    attribution: Attribution,
+    // Set once the iOS ATT prompt resolved or was not needed; Tenjin waits for it (#3183).
+    tracking_authorization_settled: bool,
+    // IDFV / IDFA / GAID / App Set ID / Tenjin id, attached to a few events at send (#3272).
+    device_ids: DeviceIdentifierReader,
 
     // Consent gate. While the user has not accepted the EULA, events are queued in `self.events`
     // but never serialized or shipped (neither to Segment nor to Firebase).
@@ -112,8 +121,8 @@ pub struct Metrics {
     // --- Push ---
     // Guards against re-sending an identical identify: (token, permission) as last shipped.
     // The permission belongs in the key because it changes *after* the first identify goes
-    // out — the prompt fires on the Play/Sign-In tap, well past startup — and a guard keyed
-    // on the token alone would leave every freshly-granted user recorded as `denied` until
+    // out — the prompt fires over the lobby's Let's Go screen, well past startup — and a guard
+    // keyed on the token alone would leave every freshly-granted user recorded as `denied` until
     // their next launch, i.e. excluded from the first audience they qualify for.
     push_identify_sent: Option<(String, String)>,
     // Remote kill switch (feature flag `push-enabled`), set from GDScript once flags resolve.
@@ -162,6 +171,9 @@ impl INode for Metrics {
             device_info: None,
             debug_level: 0,
             install_attribution: None,
+            attribution: Attribution::default(),
+            tracking_authorization_settled: false,
+            device_ids: DeviceIdentifierReader::default(),
             resolved_campaign_token: String::new(),
             eula_accepted: false,
             firebase_init_queued: false,
@@ -252,6 +264,9 @@ impl INode for Metrics {
                 self._on_apns_token_ready(cached_token);
             }
         }
+
+        self.device_ids.start();
+        self.queue_device_identify_if_changed();
     }
 
     fn process(&mut self, delta: f64) {
@@ -345,8 +360,8 @@ impl Metrics {
     /// Re-send the push identify because the notification permission just changed.
     ///
     /// Called from NotificationsManager when the prompt resolves. Without it the trait would
-    /// keep saying whatever was true at startup: the prompt only appears on the explicit
-    /// Play-as-Guest / Sign-In tap, which is always after the token resolved.
+    /// keep saying whatever was true at startup: the prompt only appears over the lobby's
+    /// Let's Go screens, which is always after the token resolved.
     #[func]
     pub fn refresh_push_identify(&mut self) {
         let token = self.push_token();
@@ -458,10 +473,15 @@ impl Metrics {
         // nothing leaves the device until the gated send below. Behind the gate the sources
         // would go unread until the user taps through and their own deadlines had expired.
         self.poll_install_attribution();
+        self.poll_tenjin_attribution();
+        self.refresh_device_ids();
 
         // Consent gate: never ship anything until the user has accepted the EULA. Events keep
         // accumulating in `self.events` and will flow through once the gate opens.
         if !self.eula_accepted {
+            return;
+        }
+        if self.device_ids.is_holding() {
             return;
         }
 
@@ -493,6 +513,19 @@ impl Metrics {
         }
     }
 
+    /// Queues Tenjin's attribution once it settles. Same as above: queuing is not sending.
+    fn poll_tenjin_attribution(&mut self) {
+        let Some(result) = self.attribution.poll() else {
+            return;
+        };
+        if self.resolved_campaign_token.is_empty() {
+            if let Some(token) = result.campaign_token {
+                self.resolved_campaign_token = token;
+            }
+        }
+        self.queue_event("Attribution Init", result.event);
+    }
+
     /// Adjust the periodic auto-flush interval. Restarts the timer so the new cadence takes effect
     /// immediately instead of waiting out the current cycle. Values below MIN_FLUSH_INTERVAL_SECONDS
     /// are clamped to avoid hammering the network from a misconfiguration.
@@ -508,11 +541,12 @@ impl Metrics {
         }
     }
 
-    /// Start resolving install attribution from both Android mechanisms (issue #2670):
-    /// the GA4F deferred deep link and the Play install referrer.
-    /// GDScript should call this only once per install (gated by a config flag).
+    /// Start resolving install attribution: Tenjin on both platforms, plus the GA4F deferred
+    /// deep link and the Play install referrer on Android (issue #2670). GDScript calls this
+    /// every launch until `campaigns.gd` sees it settle and sets `install_referrer_sent`.
     #[func]
     pub fn track_install_referrer(&mut self) {
+        self.attribution.request_attribution();
         if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
             return;
         }
@@ -534,7 +568,7 @@ impl Metrics {
     /// full timeout.
     #[func]
     pub fn is_install_attribution_pending(&self) -> bool {
-        self.install_attribution.is_some()
+        self.install_attribution.is_some() || self.attribution.is_pending()
     }
 
     #[func]
@@ -551,6 +585,9 @@ impl Metrics {
             device_info: None,
             debug_level: 0,
             install_attribution: None,
+            attribution: Attribution::default(),
+            tracking_authorization_settled: false,
+            device_ids: DeviceIdentifierReader::default(),
             resolved_campaign_token: String::new(),
             eula_accepted: false,
             firebase_init_queued: false,
@@ -1047,6 +1084,11 @@ impl Metrics {
             tracing::debug!("flush() ignored: EULA not yet accepted");
             return;
         }
+        self.refresh_device_ids();
+        if self.device_ids.is_holding() {
+            tracing::debug!("flush() deferred: waiting for the first Android ad id read");
+            return;
+        }
 
         tracing::debug!("Flushing metrics - forcing immediate send of all pending events");
 
@@ -1064,6 +1106,9 @@ impl Metrics {
         self.eula_accepted = accepted;
         tracing::info!("Metrics EULA gate set to {}", accepted);
         if accepted {
+            if self.tracking_settled() {
+                self.attribution.start(&self.user_id);
+            }
             self.flush();
         }
     }
@@ -1071,6 +1116,26 @@ impl Metrics {
     #[func]
     pub fn get_eula_accepted(&self) -> bool {
         self.eula_accepted
+    }
+
+    /// The iOS ATT prompt (#3183): "shown", then "allowed" | "denied". Called from
+    /// TrackingAuthorization; the ids and `att_status` are attached when the batch is built.
+    #[func]
+    pub fn track_att_prompt(&mut self, result: String) {
+        let event = SegmentEvent::AttPrompt(SegmentEventAttPrompt { result });
+        self.queue_event("ATT Prompt", event);
+    }
+
+    /// Called from TrackingAuthorization once the ATT prompt resolved or was not needed. Starts
+    /// Tenjin if the EULA gate is already open, and re-reads the ids so the identify carries a
+    /// newly allowed IDFA right away.
+    #[func]
+    pub fn set_tracking_authorization_settled(&mut self) {
+        self.tracking_authorization_settled = true;
+        if self.eula_accepted {
+            self.attribution.start(&self.user_id);
+        }
+        self.refresh_device_ids();
     }
 
     /// Fire an `eula_accepted` event through Firebase Analytics (Android only). Intended to be
@@ -1081,6 +1146,7 @@ impl Metrics {
         if !self.eula_accepted {
             return;
         }
+        self.attribution.track_event("eula_accepted");
         if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
             return;
         }
@@ -1098,6 +1164,7 @@ impl Metrics {
         if !self.eula_accepted {
             return;
         }
+        self.attribution.track_event("login_success");
         if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
             return;
         }
@@ -1125,8 +1192,9 @@ impl Metrics {
         if !self.eula_accepted {
             return false;
         }
+        let tenjin_sent = self.attribution.track_event("first_move_in_world");
         if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
-            return false;
+            return tenjin_sent;
         }
         let params = serde_json::json!({
             "position": self.common.position,
@@ -1155,8 +1223,9 @@ impl Metrics {
         if !self.eula_accepted {
             return false;
         }
+        let tenjin_sent = self.attribution.track_event("first_social_action");
         if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
-            return false;
+            return tenjin_sent;
         }
         let params = serde_json::json!({
             "action": action,
@@ -1232,6 +1301,7 @@ impl Metrics {
                 queued.event,
                 queued.created_at,
                 queued.message_id,
+                self.device_ids.current(),
             );
 
             let json_body =
@@ -1298,6 +1368,43 @@ impl Metrics {
 }
 
 impl Metrics {
+    /// Tenjin only starts once iOS has the ATT answer (#3183). Started before it, its first
+    /// session goes out without the IDFA the player may be about to allow.
+    fn tracking_settled(&self) -> bool {
+        self.tracking_authorization_settled
+            || !DclIosPlugin::is_available()
+            || DclIosPlugin::get_tracking_authorization_status()
+                .is_none_or(|status| status != "not_determined")
+    }
+
+    fn refresh_device_ids(&mut self) {
+        self.device_ids.refresh();
+        self.queue_device_identify_if_changed();
+    }
+
+    /// Queues the device-identifier identify (#3272) when the ids changed: once per launch, then
+    /// again when ATT is answered, Tenjin starts or the player changes ad tracking in Settings.
+    /// Rides `serialized_events` like the push identify, so it waits behind the EULA gate too.
+    fn queue_device_identify_if_changed(&mut self) {
+        let Some(ids) = self.device_ids.take_changed() else {
+            return;
+        };
+        let body = build_segment_device_identify_body(
+            self.user_id.clone(),
+            &ids,
+            Utc::now(),
+            Uuid::new_v4().to_string(),
+        );
+        match serde_json::to_string(&body) {
+            Ok(json_body) => {
+                // Never the body: it holds the ids themselves.
+                tracing::debug!("[Metrics] device identifiers identify queued");
+                self.serialized_events.push(json_body);
+            }
+            Err(e) => tracing::error!("[Metrics] failed to serialize device identify: {}", e),
+        }
+    }
+
     /// Stamp an event with its creation time and a stable message id, print it in debug mode, and
     /// queue it for the next flush. Every event path goes through here so the per-event
     /// `timestamp`/`messageId` are captured at creation — NOT at flush, which is what preserves
@@ -1333,6 +1440,8 @@ impl Metrics {
             event.clone(),
             created_at,
             message_id.to_string(),
+            // Not the device ids: the debug print goes to the log.
+            None,
         );
 
         let json = serde_json::to_string_pretty(&event_body)

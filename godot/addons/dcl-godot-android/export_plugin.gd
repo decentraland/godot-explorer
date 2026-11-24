@@ -63,7 +63,12 @@ class AndroidExportPlugin extends EditorExportPlugin:
 			# dependency where someone reading this file would look for it. The engine
 			# fork applies firebase-bom:33.10.0 when google-services.json exists, which
 			# resolves higher; the plugin AAR declares this compileOnly either way.
-			"com.google.firebase:firebase-messaging:24.0.1"
+			"com.google.firebase:firebase-messaging:24.0.1",
+			# Tenjin MMP (TenjinBridge.kt); the AAR does not carry it on its own
+			"com.tenjin:android-sdk:2.0.2",
+			# Google Advertising ID + App Set ID (#3272), also read by Tenjin
+			"com.google.android.gms:play-services-ads-identifier:18.1.0",
+			"com.google.android.gms:play-services-appset:16.1.0"
 		])
 
 	func _get_android_dependencies_maven_repos(platform, debug):

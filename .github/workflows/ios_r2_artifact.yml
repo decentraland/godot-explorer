@@ -257,7 +257,9 @@ jobs:
     if: ${{ !inputs.dry_run }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment: mobile-release
+    environment:
+      name: mobile-release
+      deployment: false
     permissions:
       contents: read
     outputs:

@@ -68,6 +68,7 @@ texture = ExtResource("3_57a8l")
 expand_mode = 1
 
 [node name="Menus" type="Control" parent="VBoxContainer/ColorRect_Background" unique_id=1809653402]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
