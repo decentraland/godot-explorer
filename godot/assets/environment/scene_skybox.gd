@@ -141,6 +141,9 @@ func _apply_procedural_overrides() -> void:
 	var stars: Dictionary = _config.get("stars", {})
 	if stars.has("brightness"):
 		_set_param("stars_energy", float(stars["brightness"]))
+		# A pinned brightness is a constant star layer, the same at every hour, which is what
+		# the Unity explorer draws for the same value: do not let the time of day fade it.
+		_set_param("stars_override", 1.0)
 
 	var sun: Dictionary = _config.get("sun", {})
 	if sun.has("color"):
