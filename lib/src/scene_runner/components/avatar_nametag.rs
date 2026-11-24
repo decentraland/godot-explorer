@@ -35,9 +35,12 @@ pub fn native_background_color() -> Color {
 /// write that lands first must not be lost.
 const PENDING_RETRY_WINDOW: Duration = Duration::from_secs(5);
 
-/// A plate draws at most a few hundred characters before it is clamped to its max
-/// width; the cap keeps a scene-authored megabyte string out of the text shaping path.
-const MAX_LABEL_CHARS: usize = 256;
+/// Client-side cap on a scene label: 15 characters, so a label stays one short line of
+/// the pill. It is a product/design limit, not a protocol one — `avatar_nametag.proto`
+/// puts no length on `label` and documents that spaces are kept (a label of spaces
+/// widens a text-less plate), so an all-spaces label past the cap is cut like any other.
+/// A truncated label ends in `…` and stays within the cap.
+const MAX_LABEL_CHARS: usize = 15;
 
 /// One plate as the renderer draws it, with the protocol's fallbacks resolved.
 #[derive(Debug, Clone, PartialEq)]
@@ -52,16 +55,27 @@ impl NametagPlate {
     pub fn from_proto(value: &PbAvatarNametag) -> Self {
         let background_color = color3_or_background(value.background_color.as_ref());
         Self {
-            // Kept verbatim: an empty label draws a color-only plate, and a label of
-            // spaces widens it (protocol#474). Capped because the plate can never draw
-            // wider than its MAX_WIDTH and the label is scene-authored.
-            label: value.label.chars().take(MAX_LABEL_CHARS).collect(),
+            // Kept verbatim below the cap: an empty label draws a color-only plate, and a
+            // label of spaces widens it (protocol#474).
+            label: clamp_label(&value.label),
             label_color: color3_or(value.label_color.as_ref(), native_label_color()),
             background_color,
             // Border defaults to the background so a plate carries no visible border.
             border_color: color3_or(value.border_color.as_ref(), background_color),
         }
     }
+}
+
+/// `label` cut to [`MAX_LABEL_CHARS`] characters, ending in `…` when it was cut, so the
+/// truncation reads as a truncation. Counts characters, not bytes: a two-byte `ñ` is one.
+fn clamp_label(label: &str) -> String {
+    if label.chars().count() <= MAX_LABEL_CHARS {
+        return String::from(label);
+    }
+
+    let mut clamped: String = label.chars().take(MAX_LABEL_CHARS - 1).collect();
+    clamped.push('…');
+    clamped
 }
 
 fn color3_or(color: Option<&Color3>, fallback: Color) -> Color {
@@ -318,6 +332,28 @@ mod tests {
     }
 
     #[test]
+    fn label_at_the_cap_is_kept_whole() {
+        let label = "a".repeat(MAX_LABEL_CHARS);
+        let plate = NametagPlate::from_proto(&PbAvatarNametag {
+            label: label.clone(),
+            ..Default::default()
+        });
+
+        assert_eq!(plate.label, label);
+    }
+
+    #[test]
+    fn label_past_the_cap_ends_in_an_ellipsis() {
+        let plate = NametagPlate::from_proto(&PbAvatarNametag {
+            label: "a".repeat(MAX_LABEL_CHARS + 1),
+            ..Default::default()
+        });
+
+        assert_eq!(plate.label.chars().count(), MAX_LABEL_CHARS);
+        assert_eq!(plate.label, format!("{}…", "a".repeat(MAX_LABEL_CHARS - 1)));
+    }
+
+    #[test]
     fn label_is_capped_to_the_drawable_length() {
         let plate = NametagPlate::from_proto(&PbAvatarNametag {
             label: "a".repeat(MAX_LABEL_CHARS * 4),
@@ -325,6 +361,7 @@ mod tests {
         });
 
         assert_eq!(plate.label.chars().count(), MAX_LABEL_CHARS);
+        assert!(plate.label.ends_with('…'));
     }
 
     #[test]
@@ -336,6 +373,7 @@ mod tests {
 
         assert_eq!(plate.label.chars().count(), MAX_LABEL_CHARS);
         assert!(plate.label.len() > MAX_LABEL_CHARS);
+        assert!(plate.label.ends_with('…'));
     }
 
     #[test]
