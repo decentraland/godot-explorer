@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
 import { Icon, IconName } from './Icon';
 import { PressableBase } from './internal/PressableBase';
+import { NotificationBadge } from './NotificationBadge';
 import { alpha, border, colors, iconSize } from './tokens';
 import { u } from './scale';
 
@@ -26,6 +27,8 @@ export function IconButton({
   /** `variant="filled"` Filter only: `Background=Off` draws the glyph alone, with the same per-state
    * colours. */
   background = true,
+  /** `variant="filled"` Filter only: `Badge=true`, the red dot that marks an applied filter. */
+  badge = false,
   /** `variant="outline"` only: the border and icon colour while pressed, for a semantic
    * accept/cancel flash (e.g. `colors.ruby` for cancel, a green rarity colour for accept).
    * Defaults to no change — only the background darkens on press. */
@@ -41,6 +44,7 @@ export function IconButton({
   selected?: boolean;
   disabled?: boolean;
   background?: boolean;
+  badge?: boolean;
   accentColor?: string;
   accessibilityLabel: string;
 }) {
@@ -147,11 +151,14 @@ export function IconButton({
       }
     >
       {pressed => (
-        <Icon
-          name={icon}
-          size={big ? 26 : iconSize.iconButton}
-          color={iconColor(pressed)}
-        />
+        <>
+          <Icon
+            name={icon}
+            size={big ? 26 : iconSize.iconButton}
+            color={iconColor(pressed)}
+          />
+          {badge && !big && <NotificationBadge style={styles.badge} />}
+        </>
       )}
     </PressableBase>
   );
@@ -172,6 +179,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  badge: { position: 'absolute', top: u(-2), right: u(-2) },
   outline: {
     width: u(27),
     height: u(27),
