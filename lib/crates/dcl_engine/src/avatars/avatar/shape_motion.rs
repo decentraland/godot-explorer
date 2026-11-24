@@ -68,7 +68,8 @@ impl DclAvatar {
         let speed = if self.emote.playing_single || self.emote.playing_mixed {
             0.0
         } else {
-            // The gait fits the body: a 3x avatar covers 3x the ground per stride.
+            // The gait fits the body. Height, not footprint: stride length follows leg length, so a
+            // (3, 1, 1) NPC is a wide body on 1x legs.
             world_speed / transform.basis.get_scale().y.abs().max(0.01)
         };
         self.classify_locomotion(speed);

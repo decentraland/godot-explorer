@@ -239,10 +239,12 @@ impl DclAvatar {
         if !event.is_action_pressed("ia_pointer") {
             return;
         }
-        // Only the selected avatar, when it is not blocked or hidden.
+        // Only the selected player avatar, when it is not blocked or hidden: a scene NPC has no
+        // profile, whatever its id.
         let selected = DclGlobal::singleton().bind_mut().get_selected_avatar();
         let me = self.base().instance_id();
         if selected.map(|s| s.instance_id()) != Some(me)
+            || self.is_avatar_shape
             || self.avatar_id.is_empty()
             || self.hidden
             || self.passport_disabled

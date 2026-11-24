@@ -122,7 +122,7 @@ async fn image_for(avatar: &Gd<DclAvatar>) -> Option<Gd<Image>> {
             avatar.instance_id().to_i64(),
         )
     };
-    if avatar_id.starts_with("0x") {
+    if crate::avatars::exclude_ids::is_eth_address(&avatar_id) {
         let promise = globals::content_provider()
             .bind_mut()
             .fetch_avatar_body_texture(avatar_id.as_str().into());

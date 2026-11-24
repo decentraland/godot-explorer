@@ -1,0 +1,31 @@
+{
+  "ecs7": true,
+  "runtimeVersion": "7",
+  "display": {
+    "title": "Avatar Shape Motion Unit Test",
+    "description": "Scene-moved AvatarShape gait (#3340) and AvatarModifierArea excludeIds for plain ids (#3338)",
+    "navmapThumbnail": "images/scene-thumbnail.png",
+    "favicon": "favicon_asset"
+  },
+  "owner": "",
+  "contact": {
+    "name": "",
+    "email": ""
+  },
+  "main": "bin/game.js",
+  "tags": [],
+  "scene": {
+    "parcels": ["56,-53", "57,-53", "56,-52", "57,-52"],
+    "base": "56,-53"
+  },
+  "spawnPoints": [
+    {
+      "name": "spawn1",
+      "position": { "x": 16, "y": 0, "z": 1 },
+      "cameraTarget": { "x": 16, "y": 1.5, "z": 16 },
+      "default": true
+    }
+  ],
+  "requiredPermissions": ["ALLOW_TO_MOVE_PLAYER_INSIDE_SCENE"],
+  "featureToggles": {}
+}

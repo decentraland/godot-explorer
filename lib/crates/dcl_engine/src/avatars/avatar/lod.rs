@@ -325,7 +325,7 @@ impl DclAvatar {
         use sha2::{Digest, Sha256};
         let data = self.avatar_data.bind();
         let mut id = self.avatar_id.to_string().to_lowercase();
-        if !(id.len() == 42 && id.starts_with("0x")) {
+        if !crate::avatars::exclude_ids::is_eth_address(&id) {
             id.clear();
         }
         let mut parts: Vec<String> = vec![id, data.get_body_shape().to_string()];
