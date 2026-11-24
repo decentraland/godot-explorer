@@ -3,7 +3,7 @@
 
 use godot::prelude::*;
 
-use crate::godot_classes::dcl_avatar::DclAvatar;
+use crate::godot_classes::dcl_avatar::{DclAvatar, IDLE_SPEED_FLOOR};
 
 /// Unity DISTANCE_EPSILON: below it the avatar has not moved.
 const STEP_EPSILON: f32 = 0.0001;
@@ -72,6 +72,12 @@ impl DclAvatar {
             world_speed / transform.basis.get_scale().y.abs().max(0.01)
         };
         self.classify_locomotion(speed);
+        // The idle floor is about ground covered, so it reads the world speed: a 9x body at
+        // 3 m/s is 0.33 m/s for its size, a slow walk rather than an idle slide.
+        let gait = self.walk || self.jog || self.run;
+        if !gait && speed > 0.0 && world_speed > IDLE_SPEED_FLOOR {
+            self.walk = true;
+        }
     }
 }
 

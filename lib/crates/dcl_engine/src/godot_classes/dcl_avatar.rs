@@ -93,6 +93,8 @@ struct AnimState {
 }
 
 const PACKET_BUFFER_CAPACITY: usize = 8;
+/// Horizontal m/s below which the walk anim plays with no visible displacement.
+pub(crate) const IDLE_SPEED_FLOOR: f32 = 0.5;
 
 impl LerpState {
     /// Arrival interval in seconds; defaults to the LiveKit 10 Hz cadence
@@ -671,10 +673,8 @@ impl DclAvatar {
         }
     }
 
-    /// Classify walk/jog/run from horizontal speed (m/s). Idle floor 0.5:
-    /// below it the anim plays with no visible displacement.
+    /// Classify walk/jog/run from horizontal speed (m/s), idle below `IDLE_SPEED_FLOOR`.
     pub(crate) fn classify_locomotion(&mut self, speed: f32) {
-        const IDLE_SPEED_FLOOR: f32 = 0.5;
         self.movement_speed = speed;
         self.walk = speed < 4.0 && speed > IDLE_SPEED_FLOOR;
         self.run = speed >= 6.5;

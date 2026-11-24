@@ -24,6 +24,16 @@ impl IArea3D for AvatarModifierAreaDetector {
         base.signals()
             .area_exited()
             .connect_other(&this, |this: &mut Self, area| this.on_area_exited(area));
+        // Areas only count in the avatar's scene, which a scene NPC learns ~0.1 s after the
+        // overlap. Deferred: the signal fires while the avatar is bound.
+        if let Some(avatar) = self.avatar() {
+            avatar.signals().change_scene_id().connect_other(
+                &this,
+                |this: &mut Self, _new: i32, _prev: i32| {
+                    this.run_deferred(|this| this.reevaluate())
+                },
+            );
+        }
         // Arbitrary order.
         for area in self.base().get_overlapping_areas().iter_shared() {
             self.track(area);
