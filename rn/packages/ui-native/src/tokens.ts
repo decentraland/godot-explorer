@@ -131,6 +131,7 @@ export const alpha = {
   'shadow-70': 'rgba(22,21,24,0.7)',
   'shadow-90': 'rgba(22,21,24,0.9)',
   'midnight-90': 'rgba(26,9,37,0.9)',
+  'midnight-violet-90': 'rgba(37,26,59,0.9)',
 } as const;
 
 /** The Figma "Color" collection (Design System Mobile, Colors page 1:154) by its own names: `text/link`
@@ -195,6 +196,7 @@ export const color = {
     secondary: colors.pearl,
     disabled: colors.textDisabled,
     danger: colors.danger,
+    hud: colors.iconHud,
   },
 } as const;
 
