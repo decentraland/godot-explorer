@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import {
+  AppText,
   BrandBackground,
+  Button,
   ButtonProfileLink,
   ButtonSeeMore,
   IconProfile,
@@ -146,21 +148,33 @@ registerPreview('extra/ds-figma-additions', {
 registerPreview('extra/ds-modal-special', {
   title: 'DS: Modal/Special',
   orientation: 'portrait',
-  render: () => (
+  notes: 'state=custom: Type=Custom with a caller-built layout',
+  render: state => (
     <View style={styles.page}>
       <BrandBackground />
-      <ModalSpecial
-        visible
-        media={<Image source={media} style={styles.media} />}
-        title="Unlock the full experience"
-        body="Add email to unlock Decentraland across devices and claim an"
-        highlight="exclusive Wearable."
-        primaryLabel="Add email"
-        onPrimary={noop}
-        secondaryLabel="Maybe later"
-        onSecondary={noop}
-        onRequestClose={noop}
-      />
+      {state === 'custom' ? (
+        <ModalSpecial type="custom" visible onRequestClose={noop}>
+          <View style={styles.custom}>
+            <AppText variant="Modal/Special Title" style={styles.customTitle}>
+              Season Pass is live
+            </AppText>
+            <Button label="See rewards" onPress={noop} fullWidth />
+          </View>
+        </ModalSpecial>
+      ) : (
+        <ModalSpecial
+          visible
+          media={<Image source={media} style={styles.media} />}
+          title="Unlock the full experience"
+          body="Add email to unlock Decentraland across devices and claim an"
+          highlight="exclusive Wearable."
+          primaryLabel="Add email"
+          onPrimary={noop}
+          secondaryLabel="Maybe later"
+          onSecondary={noop}
+          onRequestClose={noop}
+        />
+      )}
     </View>
   ),
 });
@@ -186,4 +200,12 @@ const styles = StyleSheet.create({
     backgroundColor: color.action.selected,
   },
   media: { width: u(344), height: u(274), marginTop: -u(9.5) },
+  custom: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    gap: space['54'],
+    paddingHorizontal: space['50'],
+    paddingBottom: space['40'],
+  },
+  customTitle: { color: color.text.primary, textAlign: 'center' },
 });
