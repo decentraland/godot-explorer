@@ -104,6 +104,10 @@ func _ready():
 	Global.upgrade_to_otp.connect(_on_upgrade_to_otp)
 
 	if not is_in_game:
+		# The standalone menu is the lobby's, however it was reached (sign-in, back from a world):
+		# its track plays here, not whatever the world left on.
+		if Global.music_player.get_current_music() != MusicPlayer.LOBBY_MUSIC:
+			Global.music_player.play(MusicPlayer.LOBBY_MUSIC)
 		open.call_deferred()
 
 	# If the app was cold-started via a deep link, the deep_link_received signal
