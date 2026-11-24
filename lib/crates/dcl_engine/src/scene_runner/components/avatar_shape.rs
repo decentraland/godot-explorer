@@ -148,12 +148,12 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let new_avatar_data = DclAvatarWireFormat::from_gd(new_avatar_data);
 
                 let mut avatar_shape_config = AvatarShapeConfig::default();
-                // Forward the AvatarShape.id when it looks like an eth address: the impostor
-                // capture then takes the catalyst body-texture endpoint (cheap, pre-baked)
-                // instead of an off-screen avatar render (heavy, ~1 frame each).
-                if new_value.id.starts_with("0x") && new_value.id.len() == 42 {
-                    avatar_shape_config.id = new_value.id.clone();
-                }
+                // Always forward the AvatarShape.id: AvatarModifierArea.excludeIds matching
+                // (DclAvatar::avatar_id) needs it for every id shape, not only eth addresses.
+                // When it also looks like an eth address, build.rs additionally routes the
+                // impostor capture through the catalyst body-texture endpoint (cheap,
+                // pre-baked) instead of an off-screen avatar render (heavy, ~1 frame each).
+                avatar_shape_config.id = new_value.id.clone();
                 if let Some(expression_trigger_id) = &new_value.expression_trigger_id {
                     // Check if this is a scene emote (GLB/GLTF path)
                     let is_scene_emote = expression_trigger_id.contains(".glb")
