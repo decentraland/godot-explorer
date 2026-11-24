@@ -128,7 +128,7 @@ type ReactTrack = ReactElement;
 const THUMB = u(32);
 
 /** Hue / saturation / brightness sliders (Figma "Hair color" panel).
- * Figma Control/ColorSlider: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=964-188
+ * Figma Control/ColorSliderLabeled: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=966-16646
  */
 export function HsvSliders({
   value,
