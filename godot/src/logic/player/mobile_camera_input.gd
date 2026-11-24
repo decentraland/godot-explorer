@@ -25,8 +25,8 @@ const LOOK_DEADZONE := 8.0
 # a pinch and zoomed the camera while walking.
 #
 # The spread/commit math lives in PinchGestureHelpers (unit-tested headless):
-# opening the fingers past COMMIT_SPREAD commits (zoom in), while closing them
-# only commits once they end up together, and the same closure ends the gesture.
+# opening or closing the fingers past COMMIT_SPREAD commits, bringing them together
+# ends the gesture.
 
 var _player: Player = null
 var _chat_panel: Control = null
@@ -57,6 +57,9 @@ var _touches: Dictionary = {}
 # release.
 var _free_touches: Dictionary = {}
 var _pinch_active: bool = false
+# Fingers that ended a pinch and have not lifted yet: excluded from candidates so a
+# gesture cannot re-form from the same fingers while they come off the screen.
+var _spent_pinch: Dictionary = {}
 var _pinch_a: int = -1
 var _pinch_b: int = -1
 # Candidate start positions (seeded when the count reaches two) — the baseline the
@@ -95,6 +98,7 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		_touches.clear()
 		_free_touches.clear()
+		_spent_pinch.clear()
 		_look_index = -1
 		_look_engaged = false
 		_js_look_index = -1
@@ -130,6 +134,7 @@ func _input(event: InputEvent) -> void:
 		)
 		_touches.erase(event.index)
 		_free_touches.erase(event.index)
+		_spent_pinch.erase(event.index)
 		if event.index == _look_index:
 			_look_index = -1
 			_look_engaged = false
@@ -207,27 +212,41 @@ func _on_touch_count_changed() -> void:
 func _free_pinch_candidates() -> Array:
 	var eligible: Array = []
 	for idx in _free_touches:
-		if _touches.has(idx):
+		if _touches.has(idx) and not _spent_pinch.has(idx):
 			eligible.append(idx)
 	if _joystick and not _joystick.is_pressed and not _look_engaged:
 		var js_rect := _joystick.get_active_area_global_rect()
 		for idx in _touches:
-			if not _free_touches.has(idx) and js_rect.has_point(_touches[idx]):
+			if (
+				not _free_touches.has(idx)
+				and not _spent_pinch.has(idx)
+				and js_rect.has_point(_touches[idx])
+			):
 				eligible.append(idx)
 	var zone := _pinch_zone()
 	if zone.is_empty():
 		return []
 	var viewport_size: Vector2 = get_viewport_rect().size
+	# The pair whose fingers sit closest to the avatar wins, so an idling joystick
+	# thumb plus two free fingers resolves to the pinch on the avatar instead of
+	# whichever pair the dictionary happens to hand out first.
+	var best: Array = []
+	var best_score: float = INF
 	for a in eligible:
 		for b in eligible:
 			if a == b:
 				continue
-			var has_member := PinchGestureHelpers.pair_has_zone_member(
+			if not PinchGestureHelpers.pair_has_zone_member(
 				_touches[a], _touches[b], zone["center"], zone["half_size"], viewport_size
+			):
+				continue
+			var score: float = PinchGestureHelpers.pair_score(
+				_touches[a], _touches[b], zone["center"]
 			)
-			if has_member:
-				return [a, b]
-	return []
+			if score < best_score:
+				best = [a, b]
+				best_score = score
+	return best
 
 
 # Pinch zone in screen pixels: a box centred on the avatar's on-screen position,
@@ -322,10 +341,9 @@ func _commit_pinch(a: Vector2, b: Vector2) -> void:
 		_joystick.cancel()
 	if _player:
 		_player.begin_pinch_zoom()
-		# The travel that committed the gesture counts toward the 1p<->3p toggle. A
-		# closing pinch commits only once the fingers are already together, so
-		# starting the accumulator at zero would leave almost no room to reach
-		# MODE_TOGGLE_SPREAD and zoom out would never fire.
+		# The travel that committed the gesture seeds the accumulator; without it a
+		# closing pinch would spend its start spread reaching the commit threshold and
+		# have ~16 px less room to reach the toggle.
 		_player.apply_pinch_zoom(distance - start_distance)
 
 
@@ -359,6 +377,9 @@ func _update_pinch() -> void:
 
 
 func _end_pinch() -> void:
+	for idx in [_pinch_a, _pinch_b]:
+		if _touches.has(idx):
+			_spent_pinch[idx] = true
 	_pinch_active = false
 	_pinch_a = -1
 	_pinch_b = -1

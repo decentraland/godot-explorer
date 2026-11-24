@@ -13,7 +13,7 @@ const COMMIT_SPREAD := 16.0
 # team decision: two fixed camera positions, no continuous zoom curve). Large
 # enough to be a deliberate gesture, small enough that a slow pinch doesn't feel
 # dead — device-QA tunable.
-const MODE_TOGGLE_SPREAD := 80.0
+const MODE_TOGGLE_SPREAD_FRACTION := 0.075
 
 # Spread at which the pinching fingers count as brought together, as a fraction of
 # the screen's shorter side (~162 px on a 1080x2340 phone). Absolute pixels do not
@@ -111,13 +111,26 @@ static func pair_has_zone_member(
 	)
 
 
-# Net spread direction once the accumulated delta passes MODE_TOGGLE_SPREAD:
-# 1 = spreading (fingers opening), -1 = closing (fingers together), 0 = below
-# the toggle threshold. The caller maps direction to camera mode (Roblox-style:
-# opening zooms in toward first person, closing zooms out toward third person).
-static func toggle_direction(accumulated_delta: float) -> int:
-	if accumulated_delta >= MODE_TOGGLE_SPREAD:
+# Selection score for a candidate pair: the further both fingers are from the zone
+# centre, the worse. Used to pick the intended pair when three fingers are eligible
+# (idle-joystick thumb plus two free ones): the two on the avatar win over the thumb.
+static func pair_score(a: Vector2, b: Vector2, center: Vector2) -> float:
+	return a.distance_to(center) + b.distance_to(center)
+
+
+# Accumulated spread that swaps camera mode, as a fraction of the screen's shorter
+# side (~81 px on a 1080-wide phone) so it scales with the end spacing below.
+static func toggle_spread(viewport_size: Vector2) -> float:
+	return minf(viewport_size.x, viewport_size.y) * MODE_TOGGLE_SPREAD_FRACTION
+
+
+# Net spread direction once the accumulated delta passes `threshold` (see
+# toggle_spread): 1 = spreading (fingers opening), -1 = closing (fingers
+# together), 0 = below it. The caller maps direction to camera mode
+# (Roblox-style: opening zooms in toward first person, closing zooms out).
+static func toggle_direction(accumulated_delta: float, threshold: float) -> int:
+	if accumulated_delta >= threshold:
 		return 1
-	if accumulated_delta <= -MODE_TOGGLE_SPREAD:
+	if accumulated_delta <= -threshold:
 		return -1
 	return 0

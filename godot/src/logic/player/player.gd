@@ -226,7 +226,7 @@ var _edge_slip_cast: ShapeCast3D = null
 # --- Pinch-to-zoom (mobile, issue #2709) -------------------------------------
 # Team decision: two fixed camera positions (1p/3p, same as prod) — no continuous
 # zoom curve. The pinch accumulates the finger-spread change and swaps mode once
-# it passes PinchGestureHelpers.MODE_TOGGLE_SPREAD.
+# it passes PinchGestureHelpers.toggle_spread().
 var _pinch_accumulated_delta: float = 0.0
 # Camera mode when the active pinch started (analytics reports the net direction).
 var _pinch_start_mode: Global.CameraMode = Global.CameraMode.THIRD_PERSON
@@ -529,7 +529,8 @@ func apply_pinch_zoom(pixel_delta: float) -> void:
 		return
 	_pinch_accumulated_delta += pixel_delta
 	var mode: Global.CameraMode = camera.get_camera_mode() as Global.CameraMode
-	match PinchGestureHelpers.toggle_direction(_pinch_accumulated_delta):
+	var toggle: float = PinchGestureHelpers.toggle_spread(get_viewport().get_visible_rect().size)
+	match PinchGestureHelpers.toggle_direction(_pinch_accumulated_delta, toggle):
 		1:
 			if mode == Global.CameraMode.THIRD_PERSON:
 				Global.set_camera_mode(Global.CameraMode.FIRST_PERSON)

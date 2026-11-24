@@ -24,17 +24,16 @@ func _initialize() -> void:
 	_test_zone_bounds()
 	_test_pair_needs_zone_member()
 	_test_horizontal_pinch_pair()
+	_test_pair_selection_prefers_avatar()
 	_test_side_deadzone()
 	_test_issue_3317_pair()
 	_finish()
 
 
-# Opening commits past COMMIT_SPREAD; closing only commits once the fingers END
-# UP together (under the screen's end spacing), so a concentric drag that stops
-# half way does nothing.
+# Opening and closing commit on the same COMMIT_SPREAD of spread change from where
+# the pair formed; bringing the fingers together ends the gesture, it does not
+# commit it.
 func _test_commit_threshold() -> void:
-	if not is_equal_approx(Pinch.end_spread(VIEWPORT), 1080.0 * Pinch.END_SPREAD_FRACTION):
-		_fail("end spacing is not a fraction of the short side")
 	if Pinch.should_commit(100.0, 100.0 + Pinch.COMMIT_SPREAD - 0.5):
 		_fail("opening committed below the threshold")
 	if not Pinch.should_commit(100.0, 100.0 + Pinch.COMMIT_SPREAD):
@@ -144,6 +143,19 @@ func _test_horizontal_pinch_pair() -> void:
 		_fail("wide diagonal pair accepted by the midpoint rule")
 
 
+# Three eligible fingers (idle-joystick thumb plus two free ones) must resolve to
+# the two on the avatar, not to the thumb plus one of them.
+func _test_pair_selection_prefers_avatar() -> void:
+	var center := Vector2(540, 1200)
+	var thumb := Vector2(150, 2050)  # resting in the joystick rect, far from the avatar
+	var on_avatar := Vector2(520, 1180)
+	var also_on_avatar := Vector2(380, 900)
+	var with_thumb: float = Pinch.pair_score(thumb, on_avatar, center)
+	var on_the_avatar: float = Pinch.pair_score(on_avatar, also_on_avatar, center)
+	if on_the_avatar >= with_thumb:
+		_fail("closest-pair rule does not prefer the fingers on the avatar over the thumb")
+
+
 # The side bands are excluded even for a finger that is geometrically inside the
 # zone, so a pinch can never be anchored next to the joystick or the opposite
 # edge (the joystick's own rect already claims the left band for movement/look).
@@ -198,17 +210,28 @@ func _test_end_on_close() -> void:
 		_fail("pair started slightly open and closed did not end")
 
 
-# A closing pinch commits only when the fingers are already together, so that
-# travel has to count toward the 1p<->3p toggle: from a normal spread the closing
-# gesture must be able to reach MODE_TOGGLE_SPREAD on its own.
+# A closing pinch can accumulate at most start_spread - end_spread, so pairs that
+# form closer than end_spread + toggle_spread apart commit, end, and toggle
+# nothing. Pin both sides of that boundary.
 func _test_closing_gesture_can_toggle() -> void:
-	var start := 420.0
 	var near: float = Pinch.end_spread(VIEWPORT)
-	# The commit fires COMMIT_SPREAD in; the travel left before the fingers are
-	# together still has to reach the 1p<->3p toggle.
-	var acc := near - (start - Pinch.COMMIT_SPREAD)
-	if Pinch.toggle_direction(acc) != -1:
+	var toggle: float = Pinch.toggle_spread(VIEWPORT)
+	if not is_equal_approx(near, 1080.0 * Pinch.END_SPREAD_FRACTION):
+		_fail("end spacing is not a fraction of the short side")
+	if not is_equal_approx(toggle, 1080.0 * Pinch.MODE_TOGGLE_SPREAD_FRACTION):
+		_fail("toggle spread is not a fraction of the short side")
+	var too_close: float = near + toggle - 1.0
+	if Pinch.toggle_direction(near - too_close, toggle) != 0:
+		_fail("a pair forming inside the dead band toggled (no zoom expected)")
+	var just_enough: float = near + toggle + 1.0
+	if Pinch.toggle_direction(near - just_enough, toggle) != -1:
+		_fail("a pair forming just outside the dead band did not zoom out")
+	var start := 420.0
+	if Pinch.toggle_direction(near - (start - Pinch.COMMIT_SPREAD), toggle) != -1:
 		_fail("closing travel left after the commit does not reach the toggle")
+	var seed: float = near - (start - Pinch.COMMIT_SPREAD) + Pinch.COMMIT_SPREAD
+	if Pinch.toggle_direction(seed, toggle) != -1:
+		_fail("the committing travel is not counted toward the toggle")
 
 
 func _fail(msg: String) -> void:
