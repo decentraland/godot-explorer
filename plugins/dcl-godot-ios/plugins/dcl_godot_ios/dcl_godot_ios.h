@@ -73,6 +73,20 @@ public:
     // Remote push (APNs). push_service.mm requests the token on every launch; it lands
     // asynchronously, so connect to apns_token_ready and then read the cached value.
     String get_apns_token();
+
+    // Tenjin MMP (tenjin_service.mm). No-ops until the SDK is in the build; same contract as
+    // the Android plugin. tenjin_get_attribution() returns {status: pending|ok|error, ...}.
+    bool tenjin_start(String sdk_key, String user_id);
+    bool tenjin_event(String name, int value);
+    Dictionary tenjin_get_attribution();
+    String tenjin_get_analytics_installation_id();
+
+    // App Tracking Transparency (tracking_service.mm). The ids are "" when unavailable: the
+    // IDFA needs an `authorized` status. The prompt's answer lands on tracking_authorization_result.
+    String get_tracking_authorization_status();
+    void request_tracking_authorization();
+    String get_advertising_id();
+    String get_vendor_id();
     bool schedule_local_notification(String notification_id, String title, String body, int delay_seconds);
     bool cancel_local_notification(String notification_id);
     bool cancel_all_local_notifications();
@@ -142,6 +156,7 @@ public:
     static void emit_apns_token_ready(String token);
     // Called from the requestAuthorization completion, marshalled to the main thread.
     static void emit_notification_permission_result(bool granted);
+    static void emit_tracking_authorization_result(String status);
 
     // Called from DCAppAttestService completion handlers (always marshalled
     // to the main thread first). `key_id` is Apple's base64-encoded keyId.

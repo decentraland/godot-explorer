@@ -21,6 +21,9 @@ pub struct SegmentMetricEventBody {
     // `sentAt`, corrects device clock skew into the canonical `timestamp` column.
     timestamp: String,
     properties: serde_json::Value,
+    // Segment's `context.device`, only on the events that carry device identifiers (#3272).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    context: Option<serde_json::Value>,
 }
 
 /// A Segment `identify` call.
@@ -125,6 +128,182 @@ pub fn build_segment_identify_body(
     }
 }
 
+/// Marketing device identifiers (#3272): the keys Tenjin and Google Ads join installs on.
+///
+/// Read from the platform when a batch is built, not when the event is queued, so an event
+/// queued before the ATT answer still ships the IDFA the player then allowed. Every id is
+/// optional: the IDFA only exists once ATT is authorized, the GAID not at all once the player
+/// deleted it, Tenjin's id only once Tenjin started.
+#[derive(Clone, Debug, PartialEq)]
+pub enum DeviceIdentifiers {
+    Ios {
+        idfv: Option<String>,
+        idfa: Option<String>,
+        // "authorized" | "denied" | "restricted" | "not_determined"
+        att_status: String,
+        tenjin_analytics_installation_id: Option<String>,
+    },
+    Android {
+        gaid: Option<String>,
+        app_set_id: Option<String>,
+        limit_ad_tracking: bool,
+        tenjin_analytics_installation_id: Option<String>,
+    },
+}
+
+/// Which identifiers an event carries (#3272 placement). `session_id` joins everything else.
+#[derive(Clone, Copy)]
+enum IdentifierSet {
+    /// `identify` and `System Info Report`.
+    All,
+    /// `App Opened`: re-read on every open, which is where a change in Settings shows up.
+    AdTracking,
+    /// `ATT Prompt`: the first IDFA without waiting for the next open.
+    AttPrompt,
+    /// `Install Attribution` (Android): the install-level join with the Play referrer.
+    InstallAttribution,
+}
+
+impl IdentifierSet {
+    fn keys(self) -> &'static [&'static str] {
+        match self {
+            IdentifierSet::All => &[
+                "idfv",
+                "idfa",
+                "att_status",
+                "gaid",
+                "app_set_id",
+                "limit_ad_tracking",
+                "tenjin_analytics_installation_id",
+            ],
+            IdentifierSet::AdTracking => &["idfa", "gaid", "att_status", "limit_ad_tracking"],
+            IdentifierSet::AttPrompt => &["idfv", "idfa", "att_status"],
+            IdentifierSet::InstallAttribution => &["gaid", "app_set_id"],
+        }
+    }
+
+    fn for_event(event: &SegmentEvent) -> Option<Self> {
+        match event {
+            SegmentEvent::SystemInfoReport(_) => Some(IdentifierSet::All),
+            SegmentEvent::AppOpened(_) => Some(IdentifierSet::AdTracking),
+            SegmentEvent::AttPrompt(_) => Some(IdentifierSet::AttPrompt),
+            SegmentEvent::InstallAttribution(_) => Some(IdentifierSet::InstallAttribution),
+            _ => None,
+        }
+    }
+}
+
+const ZERO_ID: &str = "00000000-0000-0000-0000-000000000000";
+
+/// An id as the platform reported it, or `None` when it is empty or all zeros — the value iOS
+/// and Android hand out in place of an ad id the player withheld.
+pub fn non_zero_id(value: Option<String>) -> Option<String> {
+    value.filter(|v| !v.is_empty() && v != ZERO_ID)
+}
+
+impl DeviceIdentifiers {
+    /// iOS: tracking not authorized. Android: the ads ID was deleted or the player opted out.
+    fn limit_ad_tracking(&self) -> bool {
+        match self {
+            DeviceIdentifiers::Ios { att_status, .. } => att_status != "authorized",
+            DeviceIdentifiers::Android {
+                limit_ad_tracking, ..
+            } => *limit_ad_tracking,
+        }
+    }
+
+    /// This platform's identifiers within `set`. A missing id is an explicit `null`, so the
+    /// warehouse column stays typed; the other platform's keys are left out.
+    fn properties(&self, set: IdentifierSet) -> serde_json::Map<String, serde_json::Value> {
+        let mut all = serde_json::Map::new();
+        let limit_ad_tracking = self.limit_ad_tracking();
+        match self {
+            DeviceIdentifiers::Ios {
+                idfv,
+                idfa,
+                att_status,
+                tenjin_analytics_installation_id,
+            } => {
+                all.insert("idfv".into(), idfv.clone().into());
+                all.insert("idfa".into(), idfa.clone().into());
+                all.insert("att_status".into(), att_status.clone().into());
+                all.insert(
+                    "tenjin_analytics_installation_id".into(),
+                    tenjin_analytics_installation_id.clone().into(),
+                );
+            }
+            DeviceIdentifiers::Android {
+                gaid,
+                app_set_id,
+                tenjin_analytics_installation_id,
+                ..
+            } => {
+                all.insert("gaid".into(), gaid.clone().into());
+                all.insert("app_set_id".into(), app_set_id.clone().into());
+                all.insert(
+                    "tenjin_analytics_installation_id".into(),
+                    tenjin_analytics_installation_id.clone().into(),
+                );
+            }
+        }
+        all.insert("limit_ad_tracking".into(), limit_ad_tracking.into());
+        all.retain(|key, _| set.keys().contains(&key.as_str()));
+        all
+    }
+
+    /// Segment's standard `context.device` fields, which its destinations read the ad id from.
+    /// Whatever goes here can reach ad destinations, so the IDFV only rides along once tracking
+    /// is authorized, and the App Set ID never (Google bars it from ads measurement). Both stay
+    /// in the properties and traits for our own warehouse.
+    fn segment_context(&self) -> serde_json::Value {
+        let (device_type, id, advertising_id) = match self {
+            DeviceIdentifiers::Ios {
+                idfv,
+                idfa,
+                att_status,
+                ..
+            } => {
+                let idfv = idfv.as_ref().filter(|_| att_status == "authorized");
+                ("ios", idfv, idfa.as_ref())
+            }
+            DeviceIdentifiers::Android { gaid, .. } => ("android", None, gaid.as_ref()),
+        };
+        let mut device = serde_json::json!({
+            "type": device_type,
+            "adTrackingEnabled": !self.limit_ad_tracking(),
+        });
+        if let Some(id) = id {
+            device["id"] = id.clone().into();
+        }
+        if let Some(advertising_id) = advertising_id {
+            device["advertisingId"] = advertising_id.clone().into();
+        }
+        serde_json::json!({ "device": device })
+    }
+}
+
+/// The device-identifier `identify` (#3272): one row per install in the warehouse `users` table
+/// with the latest ids. Separate from the push identify, which only goes out under its flag.
+pub fn build_segment_device_identify_body(
+    user_id: String,
+    ids: &DeviceIdentifiers,
+    created_at: DateTime<Utc>,
+    message_id: String,
+) -> SegmentIdentifyBody {
+    let iso_ts = created_at.to_rfc3339_opts(SecondsFormat::Millis, true);
+    let mut traits = ids.properties(IdentifierSet::All);
+    traits.insert("client_timestamp".into(), iso_ts.clone().into());
+
+    SegmentIdentifyBody {
+        r#type: "identify".to_string(),
+        user_id,
+        message_id,
+        timestamp: iso_ts,
+        traits: serde_json::Value::Object(traits),
+        context: ids.segment_context(),
+    }
+}
+
 #[derive(Serialize)]
 // Same for all events sent from the explorer
 pub struct SegmentEventCommonExplorerFields {
@@ -194,6 +373,7 @@ pub enum SegmentEvent {
     Unfriend(SegmentEventUnfriend),
     InstallAttribution(SegmentEventInstallAttribution),
     FirebaseInit(SegmentEventFirebaseInit),
+    AttributionInit(SegmentEventAttributionInit),
     AttestationAttempt(SegmentEventAttestationAttempt),
     AttestationSessionCacheLoaded(SegmentEventAttestationSessionCacheLoaded),
     IosStoreKitEnvironment(SegmentEventIosStoreKitEnvironment),
@@ -209,6 +389,7 @@ pub enum SegmentEvent {
     SceneLocaleRequested(SegmentEventSceneLocaleRequested),
     PushOpened(SegmentEventPushOpened),
     AppOpened(SegmentEventAppOpened),
+    AttPrompt(SegmentEventAttPrompt),
 }
 
 /// SCENE_LOCALE_REQUESTED (#2707): a scene subscribed to the player's language.
@@ -231,6 +412,29 @@ pub struct SegmentEventSceneLocaleRequested {
 pub struct SegmentEventFirebaseInit {
     // Firebase Analytics app instance id (ga_pseudo_user_id). Guaranteed non-empty at queue time.
     pub firebase_user_id: String,
+}
+
+/// Tenjin's view of the install, queued once when its attribution info settles. `userId` on
+/// the envelope is the Tenjin customer user id, so Snowflake joins it to the rest of the
+/// session without a separate id.
+#[derive(Serialize, Clone)]
+pub struct SegmentEventAttributionInit {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ad_network: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub campaign_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub campaign_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub click_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub creative_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deferred_deeplink_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub analytics_installation_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub campaign_token: Option<String>,
 }
 
 #[derive(Serialize, Clone)]
@@ -895,6 +1099,15 @@ pub struct SegmentEventAppOpened {
     pub seconds_since_last_seen: i64,
 }
 
+/// The iOS App Tracking Transparency prompt (#3183): `shown` when iOS is asked to display it,
+/// then `allowed` or `denied` with the answer. The `att_status` attached at send time tells a
+/// refusal from a prompt iOS never displayed, which answers `denied` with `not_determined`.
+#[derive(Serialize, Clone)]
+pub struct SegmentEventAttPrompt {
+    // "shown" | "allowed" | "denied"
+    pub result: String,
+}
+
 #[derive(Serialize, Clone)]
 pub struct SegmentEventGuestWalletCreation {
     // "success" | "failure".
@@ -956,7 +1169,10 @@ pub fn build_segment_event_batch_item(
     // Stable per-event id generated at queue time. Reused verbatim across retries so Segment
     // can deduplicate re-sends.
     message_id: String,
+    // Current marketing identifiers; only the events in `IdentifierSet::for_event` carry them.
+    device_ids: Option<&DeviceIdentifiers>,
 ) -> SegmentMetricEventBody {
+    let identifier_set = IdentifierSet::for_event(&event_data);
     let (event_name, event_properties, override_position) = match event_data {
         SegmentEvent::PerformanceMetrics(event) => (
             "Performance Metrics".to_string(),
@@ -1048,6 +1264,11 @@ pub fn build_segment_event_batch_item(
             serde_json::to_value(event).unwrap(),
             None,
         ),
+        SegmentEvent::AttributionInit(event) => (
+            "Attribution Init".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
         SegmentEvent::AttestationAttempt(event) => (
             "Attestation Attempt".to_string(),
             serde_json::to_value(event).unwrap(),
@@ -1088,6 +1309,11 @@ pub fn build_segment_event_batch_item(
             serde_json::to_value(event).unwrap(),
             None,
         ),
+        SegmentEvent::AttPrompt(event) => (
+            "ATT Prompt".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
     };
 
     let mut properties = serde_json::to_value(common).unwrap();
@@ -1098,6 +1324,14 @@ pub fn build_segment_event_batch_item(
 
     if let Some(position) = override_position {
         properties["position"] = serde_json::Value::String(position);
+    }
+
+    let mut context = None;
+    if let (Some(set), Some(ids)) = (identifier_set, device_ids) {
+        for (k, v) in ids.properties(set) {
+            properties[k.as_str()] = v;
+        }
+        context = Some(ids.segment_context());
     }
 
     // ISO-8601 UTC with millisecond precision, e.g. "2026-07-02T13:38:08.243Z".
@@ -1115,6 +1349,7 @@ pub fn build_segment_event_batch_item(
         message_id,
         timestamp: iso_ts,
         properties,
+        context,
     }
 }
 
@@ -1161,6 +1396,7 @@ mod tests {
             event,
             Utc::now(),
             "message".into(),
+            None,
         );
         let props = body.properties.as_object().unwrap();
 
@@ -1182,5 +1418,201 @@ mod tests {
         ] {
             assert!(props[key].is_null(), "{key} must be an explicit null");
         }
+    }
+
+    fn ios_ids(att_status: &str, idfa: Option<&str>) -> DeviceIdentifiers {
+        DeviceIdentifiers::Ios {
+            idfv: Some("IDFV".into()),
+            idfa: idfa.map(Into::into),
+            att_status: att_status.into(),
+            tenjin_analytics_installation_id: Some("TENJIN".into()),
+        }
+    }
+
+    fn android_ids(gaid: Option<&str>, limit_ad_tracking: bool) -> DeviceIdentifiers {
+        DeviceIdentifiers::Android {
+            gaid: gaid.map(Into::into),
+            app_set_id: Some("APPSET".into()),
+            limit_ad_tracking,
+            tenjin_analytics_installation_id: None,
+        }
+    }
+
+    fn app_opened() -> SegmentEvent {
+        SegmentEvent::AppOpened(SegmentEventAppOpened {
+            start_kind: "cold".into(),
+            trigger: "icon".into(),
+            prev_session_id: String::new(),
+            seconds_since_last_seen: -1,
+        })
+    }
+
+    fn batch_item(event: SegmentEvent, ids: Option<&DeviceIdentifiers>) -> SegmentMetricEventBody {
+        build_segment_event_batch_item(
+            "user".into(),
+            &common(),
+            event,
+            Utc::now(),
+            "message".into(),
+            ids,
+        )
+    }
+
+    // #3272: a withheld ad id reaches us as all zeros, which must never be stored as an id.
+    #[test]
+    fn all_zero_and_empty_ids_are_dropped() {
+        assert_eq!(non_zero_id(Some(ZERO_ID.into())), None);
+        assert_eq!(non_zero_id(Some(String::new())), None);
+        assert_eq!(non_zero_id(None), None);
+        assert_eq!(non_zero_id(Some("ABC".into())), Some("ABC".into()));
+    }
+
+    #[test]
+    fn ios_app_opened_carries_the_ad_id_and_tracking_state() {
+        let ids = ios_ids("authorized", Some("IDFA"));
+        let body = batch_item(app_opened(), Some(&ids));
+        let props = body.properties.as_object().unwrap();
+
+        assert_eq!(props["idfa"], "IDFA");
+        assert_eq!(props["att_status"], "authorized");
+        assert_eq!(props["limit_ad_tracking"], false);
+        for key in [
+            "idfv",
+            "gaid",
+            "app_set_id",
+            "tenjin_analytics_installation_id",
+        ] {
+            assert!(!props.contains_key(key), "{key} is not part of App Opened");
+        }
+        let context = body.context.unwrap();
+        let device = &context["device"];
+        assert_eq!(device["type"], "ios");
+        assert_eq!(device["id"], "IDFV");
+        assert_eq!(device["advertisingId"], "IDFA");
+        assert_eq!(device["adTrackingEnabled"], true);
+    }
+
+    #[test]
+    fn ios_without_tracking_sends_no_idfa() {
+        let ids = ios_ids("denied", None);
+        let body = batch_item(app_opened(), Some(&ids));
+        let props = body.properties.as_object().unwrap();
+
+        assert!(props["idfa"].is_null());
+        assert_eq!(props["att_status"], "denied");
+        assert_eq!(props["limit_ad_tracking"], true);
+        let context = body.context.unwrap();
+        let device = &context["device"];
+        assert!(device.get("advertisingId").is_none());
+        assert!(device.get("id").is_none(), "no IDFV in context without ATT");
+        assert_eq!(device["adTrackingEnabled"], false);
+    }
+
+    #[test]
+    fn system_info_report_carries_every_platform_id() {
+        let event = SegmentEvent::SystemInfoReport(SegmentEventSystemInfoReport {
+            device_brand: None,
+            device_model: None,
+            os_version: None,
+            soc_manufacturer: None,
+            soc_model: None,
+            processor_type: None,
+            processor_count: None,
+            processor_max_freq_mhz: None,
+            graphics_device_name: None,
+            graphics_device_vendor: None,
+            graphics_api_version: None,
+            system_memory_size_mb: None,
+            device_support: "not_checked".into(),
+        });
+        let ids = android_ids(Some("GAID"), false);
+        let body = batch_item(event, Some(&ids));
+        let props = body.properties.as_object().unwrap();
+
+        assert_eq!(props["gaid"], "GAID");
+        assert_eq!(props["app_set_id"], "APPSET");
+        assert_eq!(props["limit_ad_tracking"], false);
+        assert!(props["tenjin_analytics_installation_id"].is_null());
+        for key in ["idfv", "idfa", "att_status"] {
+            assert!(!props.contains_key(key), "{key} is iOS only");
+        }
+        let context = body.context.unwrap();
+        let device = &context["device"];
+        assert_eq!(device["advertisingId"], "GAID");
+        assert!(
+            device.get("id").is_none(),
+            "App Set ID never goes in context"
+        );
+    }
+
+    #[test]
+    fn att_prompt_and_install_attribution_carry_their_subset() {
+        let ios = ios_ids("authorized", Some("IDFA"));
+        let att = SegmentEvent::AttPrompt(SegmentEventAttPrompt {
+            result: "allowed".into(),
+        });
+        let body = batch_item(att, Some(&ios));
+        let props = body.properties.as_object().unwrap();
+        assert_eq!(body.event, "ATT Prompt");
+        assert_eq!(props["idfv"], "IDFV");
+        assert_eq!(props["idfa"], "IDFA");
+        assert!(!props.contains_key("limit_ad_tracking"));
+
+        let android = android_ids(None, true);
+        let referrer = SegmentEvent::InstallAttribution(SegmentEventInstallAttribution {
+            referrer: String::new(),
+            utm_source: None,
+            utm_medium: None,
+            utm_campaign: None,
+            utm_content: None,
+            utm_term: None,
+            click_timestamp: 0,
+            install_timestamp: 0,
+            google_play_instant: false,
+            attribution_source: "none".into(),
+            campaign_token: None,
+            deferred_deep_link: None,
+            referrer_settled: false,
+        });
+        let body = batch_item(referrer, Some(&android));
+        let props = body.properties.as_object().unwrap();
+        assert!(props["gaid"].is_null());
+        assert_eq!(props["app_set_id"], "APPSET");
+        assert!(!props.contains_key("limit_ad_tracking"));
+    }
+
+    #[test]
+    fn other_events_and_desktop_carry_no_ids() {
+        let ids = ios_ids("authorized", Some("IDFA"));
+        let click = SegmentEvent::ClickButton(SegmentEventClickButton {
+            button_text: "x".into(),
+            screen_name: "y".into(),
+            extra_properties: None,
+        });
+        let body = batch_item(click, Some(&ids));
+        assert!(body.context.is_none());
+        assert!(!body.properties.as_object().unwrap().contains_key("idfa"));
+
+        let body = batch_item(app_opened(), None);
+        assert!(body.context.is_none());
+        assert!(!body
+            .properties
+            .as_object()
+            .unwrap()
+            .contains_key("att_status"));
+    }
+
+    #[test]
+    fn device_identify_holds_every_id_as_traits() {
+        let ids = ios_ids("authorized", Some("IDFA"));
+        let body =
+            build_segment_device_identify_body("user".into(), &ids, Utc::now(), "message".into());
+        assert_eq!(body.r#type, "identify");
+        assert_eq!(body.traits["idfv"], "IDFV");
+        assert_eq!(body.traits["idfa"], "IDFA");
+        assert_eq!(body.traits["att_status"], "authorized");
+        assert_eq!(body.traits["limit_ad_tracking"], false);
+        assert_eq!(body.traits["tenjin_analytics_installation_id"], "TENJIN");
+        assert_eq!(body.context["device"]["advertisingId"], "IDFA");
     }
 }
