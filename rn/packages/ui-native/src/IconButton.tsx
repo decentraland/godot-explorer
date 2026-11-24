@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
 import { Icon, IconName } from './Icon';
 import { PressableBase } from './internal/PressableBase';
-import { border, colors, iconSize } from './tokens';
+import { alpha, border, colors, iconSize } from './tokens';
 import { u } from './scale';
 
 /** Figma's icon-only button family — `variant="filled"` covers both `Button/Discover` (`big`,
@@ -128,7 +128,7 @@ export function IconButton({
                 backgroundColor: disabled
                   ? colors.glass20
                   : selected
-                  ? 'rgba(105,31,169,0.7)'
+                  ? alpha['purple-70']
                   : pressed
                   ? colors.glassPressed
                   : colors.glass,

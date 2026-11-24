@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     bottom: u(2.5),
   },
   bgBorder: { borderColor: colors.snow },
-  emptyBg: { borderColor: '#000000', backgroundColor: colors.black40 },
+  emptyBg: { borderColor: colors.black, backgroundColor: colors.black40 },
   emptySelectedBg: { backgroundColor: colors.black60 },
   emptyDisabled: { opacity: 0.6 },
   disabledBg: { opacity: 0.8 },

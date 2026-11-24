@@ -66,9 +66,9 @@ function SelectedIndicator({ landscape }: { landscape: boolean }) {
           x2={landscape ? 0 : 1}
           y2={landscape ? 1 : 0}
         >
-          <Stop offset={0.096} stopColor="#E8B9FF" stopOpacity={0} />
-          <Stop offset={0.495} stopColor="#E8B9FF" />
-          <Stop offset={0.899} stopColor="#E8B9FF" stopOpacity={0} />
+          <Stop offset={0.096} stopColor={colors.lavender} stopOpacity={0} />
+          <Stop offset={0.495} stopColor={colors.lavender} />
+          <Stop offset={0.899} stopColor={colors.lavender} stopOpacity={0} />
         </LinearGradient>
       </Defs>
       <Ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="url(#navGlow)" />

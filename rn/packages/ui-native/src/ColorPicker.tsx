@@ -177,7 +177,7 @@ export function HsvSliders({
           <LinearFill
             angle={90}
             stops={[
-              { offset: 0, color: '#000000' },
+              { offset: 0, color: colors.black },
               { offset: 1, color: hsvToHex({ h: hsv.h, s: hsv.s, v: 1 }) },
             ]}
           />
