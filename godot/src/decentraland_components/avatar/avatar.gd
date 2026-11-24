@@ -505,7 +505,7 @@ func _get_impostor_cache_key() -> String:
 	if avatar_data == null:
 		return ""
 	var parts := PackedStringArray()
-	var is_address := avatar_id.length() == 42 and avatar_id.begins_with("0x")
+	var is_address := AvatarExcludeIdMatcher.is_address(avatar_id)
 	parts.append(avatar_id.to_lower() if is_address else "")
 	parts.append(avatar_data.get_body_shape())
 	var wearables = avatar_data.get_wearables()

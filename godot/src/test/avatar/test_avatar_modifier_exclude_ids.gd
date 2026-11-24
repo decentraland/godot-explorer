@@ -62,6 +62,17 @@ func _init() -> void:
 	# Bug #3338: a scene AvatarShape id is a plain string, not an address.
 	_expect("plain scene id matches", failures, "npc-1", ["npc-1"], true)
 	_expect("plain scene id vs another", failures, "npc-1", ["npc-2"], false)
+	# Desktop lowercases both sides too, but never adds a `0x` prefix.
+	_expect("plain scene id ignores case", failures, "NPC-1", ["npc-1"], true)
+	_expect("plain scene id gains no 0x prefix", failures, "npc-1", ["0xnpc-1"], false)
+
+	# Only `0x` and 40 hex digits is an address (impostor cache key, catalyst fetch).
+	for id in [ADDR_LOWER, ADDR_CHECKSUM]:
+		if not MATCHER.is_address(id):
+			failures.append("is_address(%s) should be true" % id)
+	for id in [ADDR_NO_PREFIX, "0x1234", "npc-1", "", "0x" + "g".repeat(40)]:
+		if MATCHER.is_address(id):
+			failures.append("is_address(%s) should be false" % id)
 
 	# Multi-entry list: one of several entries matches with mixed casing.
 	_expect(
@@ -73,7 +84,7 @@ func _init() -> void:
 	)
 
 	if failures.is_empty():
-		print("[test_avatar_modifier_exclude_ids] PASS (all 9 cases)")
+		print("[test_avatar_modifier_exclude_ids] PASS (all 11 cases, is_address)")
 		quit(0)
 		return
 
