@@ -268,14 +268,9 @@ static func update(avatar) -> void:
 			if scene_tag_gated:
 				scene_tag.scale = ui.scale
 				var tag_size: Vector2 = scene_tag.size * scale_f
-				var tag_pos := Vector2(
-					pos.x + (screen_size.x - tag_size.x) * 0.5,
-					pos.y - tag_size.y - PLATE_GAP * scale_f,
+				var tag_pos: Vector2 = _scene_tag_position(
+					ui.panel.get_global_rect(), tag_size, scale_f, avatar._nametag_gate_visible
 				)
-				if not avatar._nametag_gate_visible:
-					# No name to sit above (nameless NPC): the plate takes the name's
-					# slot, as the Unity reference does.
-					tag_pos.y = pos.y + screen_size.y - tag_size.y
 				tag_pos.y = maxf(tag_pos.y, 0.0)
 				scene_tag.position = tag_pos
 				scene_tag.z_index = ui.z_index + 1
@@ -306,6 +301,20 @@ static func update(avatar) -> void:
 			scene_tag.modulate.a, scene_tag_target_a * (1.0 - hold), delta * FADE_SPEED
 		)
 		scene_tag.visible = scene_tag.modulate.a > 0.01
+
+
+## Where a scene tag is drawn for the nametag's `pill` (its drawn rect, already scaled
+## into layer space) and a tag drawn at `tag_size`. With a nametag the tag floats one
+## PLATE_GAP above it; without one it fills the pill's slot — the name's vertical
+## position, and with it the name's distance to the avatar — instead of reserving room
+## for a nametag that is not drawn (nameless NPC, own nametag off).
+static func _scene_tag_position(
+	pill: Rect2, tag_size: Vector2, scale_f: float, has_nametag: bool
+) -> Vector2:
+	var x: float = pill.position.x + (pill.size.x - tag_size.x) * 0.5
+	if has_nametag:
+		return Vector2(x, pill.position.y - tag_size.y - PLATE_GAP * scale_f)
+	return Vector2(x, pill.get_center().y - tag_size.y * 0.5)
 
 
 ## Hide the scene plate now (gate closed, avatar out of tree) and zero its alpha so

@@ -32,6 +32,7 @@ script = ExtResource("1_stx67")
 message_container_scene = ExtResource("2_cu2t2")
 
 [node name="Panel" type="Panel" parent="." unique_id=1209667483]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_wgo06")
 
