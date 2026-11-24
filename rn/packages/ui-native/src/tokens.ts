@@ -93,6 +93,8 @@ export const colors = {
   success300: '#34CE77',
   /** Figma `color/mint` (end of the Trending tag gradient). */
   mint: '#34C070',
+  /** Figma `color/orchid`: the NavBar selected-item glow. */
+  orchid: '#DF9CFF',
 } as const;
 
 /** The Figma `alpha/*` primitives by name: `alpha/white-30` is `alpha['white-30']`. */
@@ -134,6 +136,7 @@ export const alpha = {
   'shadow-90': 'rgba(22,21,24,0.9)',
   'midnight-90': 'rgba(26,9,37,0.9)',
   'midnight-violet-90': 'rgba(37,26,59,0.9)',
+  'mauve-0': 'rgba(134,94,153,0)',
 } as const;
 
 /** The Figma "Color" collection (Design System Mobile, Colors page 1:154) by its own names: `text/link`
