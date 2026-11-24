@@ -23,6 +23,7 @@ export { InputUsername } from './InputUsername';
 export type { UsernameTab } from './InputUsername';
 export { MenuNavItem } from './MenuNavItem';
 export { ModalSpecial } from './ModalSpecial';
+export type { ModalSpecialProps } from './ModalSpecial';
 export { ProfileAttribute } from './ProfileAttribute';
 export { ScrollFade } from './ScrollFade';
 export { SettingsRow } from './SettingsRow';

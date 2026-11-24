@@ -202,4 +202,13 @@ describe('Figma components added to the DS', () => {
     expect(onPrimary).toHaveBeenCalled();
     expect(onSecondary).toHaveBeenCalled();
   });
+
+  it('ModalSpecial custom renders only the caller content', () => {
+    const tree = render(
+      <ModalSpecial type="custom" visible onRequestClose={jest.fn()}>
+        <Text>campaign</Text>
+      </ModalSpecial>,
+    );
+    expect(texts(tree.root)).toEqual(['campaign']);
+  });
 });
