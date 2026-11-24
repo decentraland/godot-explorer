@@ -47,6 +47,10 @@ a technique that only lives in one session's transcript doesn't compound.
   through, treat that as the priority source and re-verify against it with §5 rather than assuming
   whatever was already fetched is close enough — don't guess which page is "more right," ask or let
   a linked node settle it.
+- **Implement only frames marked Ready for dev.** The status is not in `get_metadata`; read it with a
+  read-only `use_figma` (`node.devStatus?.type === 'READY_FOR_DEV'` on the page's top-level frames).
+  On the Backpack file the gallery pointed at an older page with no frame marked, while a newer page held
+  the 14 ready ones. Frames under review change while you work: re-screenshot before measuring.
 - Figma MCP: `create_session` once per file, reuse the `sessionId` for every subsequent call.
 - `get_metadata` on a node for its resolved tree (ids, names, `x/y/width/height` — **absolute
   ground truth for position and size**, unlike CSS classes which can be ambiguous).

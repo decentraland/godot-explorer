@@ -2,6 +2,7 @@ import { ReactElement } from 'react';
 import { Dimensions } from 'react-native';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { LinkButton } from '@dcl/ui-native';
 import { setCoreForTests } from '../src/core';
 import type { CoreApi } from '../src/core';
 import { createMockCore } from '../src/core/mock';
@@ -201,9 +202,7 @@ describe('Backpack wearables', () => {
     expect(out).toContain(expected);
     expect(out.includes('Shop')).toBe(copy === 'shop');
     if (copy === 'marketplace_link') {
-      act(() =>
-        tree.root.findByProps({ accessibilityRole: 'link' }).props.onPress(),
-      );
+      act(() => tree.root.findByType(LinkButton).props.onPress());
       expect(api.marketplaceOpens).toBe(1);
     }
   });

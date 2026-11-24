@@ -396,6 +396,61 @@ const PORTRAIT_ROWS: [string, string, Spec][] = [
     'Sheet: full, skin empty',
     { initial: { ...body('skin'), sheet: 'full' }, copy: 'shop' },
   ],
+  // Hi-Fi new page (1779:16411): the frames marked Ready for dev.
+  [
+    'backpack__all__1779-16911',
+    'All (ready)',
+    { api: { avatar: { wearables: SIX_WORN } } },
+  ],
+  ['backpack__body__1779-16777', 'Body (ready)', { initial: body('shape') }],
+  [
+    'backpack__body-empty__1779-16841',
+    'Body: skin empty (ready)',
+    { initial: body('skin'), copy: 'shop' },
+  ],
+  ['backpack__face__1779-16668', 'Face (ready)', { initial: face('hair') }],
+  [
+    'backpack__face-color__1802-27932',
+    'Face: colour presets (ready)',
+    { initial: face('hair') },
+  ],
+  [
+    'backpack__color-picker__1802-28210',
+    'Hair colour picker (ready)',
+    { initial: editor(face('hair'), 'hair') },
+  ],
+  [
+    'backpack__clothing__1779-16450',
+    'Clothing (ready)',
+    { initial: clothing() },
+  ],
+  ['backpack__extra__1779-16556', 'Extras (ready)', { initial: extras('hat') }],
+  [
+    'backpack__full__1779-17079',
+    'Sheet: full (ready)',
+    { initial: { ...clothing(), sheet: 'full' } },
+  ],
+  [
+    'backpack__full-empty__1779-17159',
+    'Sheet: full, skin empty (ready)',
+    { initial: { ...body('skin'), sheet: 'full' }, copy: 'shop' },
+  ],
+  [
+    'backpack__full-avatar__1779-17004',
+    'Sheet: collapsed (ready)',
+    { initial: { sheet: 'peek' } },
+  ],
+  [
+    'backpack__filter-menu__1802-26864',
+    'Filter menu (ready)',
+    { initial: { ...extras('hat'), filterMenuOpen: true } },
+  ],
+  [
+    'backpack__filter-badge__1816-31466',
+    'Filter: collectibles (ready)',
+    { initial: { ...extras('hat'), filter: 'collectibles' } },
+  ],
+  ['backpack__emotes__1812-30105', 'Emotes (ready)', { initial: emotes() }],
 ];
 
 export const PORTRAIT = withPills(PORTRAIT_ROWS);

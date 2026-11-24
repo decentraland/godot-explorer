@@ -5,6 +5,7 @@ import {
   SlotTile,
   Tabs,
   layout,
+  space,
   u,
 } from '@dcl/ui-native';
 import type { AvatarState } from '../core/native';
@@ -68,11 +69,11 @@ export function WearablesPanel(props: WearablesPanelProps) {
     props;
   const items = catalog ? gridItems(tab, slot, catalog, avatar, filter) : [];
   const pills = props.subRow === 'pills';
-  // The pill generation also colours the body shape, and drops the row when the list is empty.
+  // The pill generation also colours the body shape; with nothing to show the swatch row goes too.
   const color =
     slot?.color ??
     (pills && slot?.key === 'shape' ? ('skin' as ColorTarget) : undefined);
-  const showSwatches = !pills || !catalog || items.length > 0;
+  const showSwatches = !catalog || items.length > 0;
   const palette = color ? PALETTES[colorKey(color)] : [];
   const value = color && avatar ? avatar[colorKey(color)] : '';
 
@@ -112,7 +113,6 @@ export function WearablesPanel(props: WearablesPanelProps) {
               <SlotTile
                 key={entry.key}
                 label={t(entry.label)}
-                size={56}
                 thumbnail={worn?.thumbnail}
                 art={
                   worn ? (
@@ -159,7 +159,7 @@ export function WearablesPanel(props: WearablesPanelProps) {
         empty={
           catalog ? (
             <EmptyBlock
-              icon="wearables"
+              icon="search"
               copy={props.copy}
               onMarketplace={props.onMarketplace}
             />
@@ -194,17 +194,20 @@ export function WearablesPanel(props: WearablesPanelProps) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  /** `Header`: 8 px above the tabs, 32 px down to the slots or the grid. */
   tabs: {
     paddingHorizontal: layout.gutter,
-    paddingBottom: u(12),
+    paddingTop: space.xs,
+    paddingBottom: space.xl,
   },
   slotsScroll: { flexGrow: 0 },
   slots: {
-    paddingHorizontal: layout.gutter - 3,
-    gap: u(16),
-    paddingBottom: u(12),
+    paddingHorizontal: layout.gutter,
+    gap: space.xl,
+    paddingBottom: space.xl,
   },
-  swatches: { paddingBottom: u(12) },
+  /** `Presets` sits 32 px under the slots and 54 px above the grid; the strip pads its rings. */
+  swatches: { marginTop: -space['2xs'], paddingBottom: space['54'] - space['2xs'] },
   busy: { opacity: 0.55 },
   pills: {
     paddingHorizontal: layout.gutter,

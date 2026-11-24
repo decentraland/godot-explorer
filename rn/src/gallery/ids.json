@@ -325,6 +325,76 @@
     "orientation": "portrait"
   },
   {
+    "id": "backpack__all__1779-16911",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__body__1779-16777",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__body-empty__1779-16841",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__face__1779-16668",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__face-color__1802-27932",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__color-picker__1802-28210",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__clothing__1779-16450",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__extra__1779-16556",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__full__1779-17079",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__full-empty__1779-17159",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__full-avatar__1779-17004",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__filter-menu__1802-26864",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__filter-badge__1816-31466",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__emotes__1812-30105",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
     "id": "backpack__wearables__226-12623",
     "source": "backpack",
     "orientation": "landscape"

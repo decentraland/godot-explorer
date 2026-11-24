@@ -1,5 +1,6 @@
 import { ReactElement, useMemo, useRef, useState } from 'react';
 import {
+  Image,
   PanResponder,
   Pressable,
   ScrollView,
@@ -9,7 +10,7 @@ import {
 import { AppText } from './AppText';
 import { hexToHsv, Hsv, hsvToHex } from './colorMath';
 import { LinearFill } from './Gradient';
-import { colors } from './tokens';
+import { color, colors, elevation, minTouchTarget, radius, space } from './tokens';
 import { u } from './scale';
 import { t } from './i18n';
 
@@ -18,27 +19,61 @@ const HUE_STOPS = [0, 60, 120, 180, 240, 300, 360].map((hue, index) => ({
   color: hsvToHex({ h: hue, s: 1, v: 1 }),
 }));
 
+const SWATCH = u(40);
+const RING_OUTSET = u(2.5);
+const RING_WIDTH = u(1.5);
+
+/** `Color-Swatch` Type=Picker: a blurred colour wheel react-native-svg cannot draw, exported as PNG. */
+const pickerImage = require('../assets/color-picker.png');
+
 /**
+ * `Color-Swatch` (40dp): `color` for Type=Solid, `picker` for the wheel that opens the sliders.
+ * Selected = 1.5dp `border/accent` ring 2.5dp outside; Pressed = swatch inset 2.5dp inside a Lavender ring.
  * Figma Color-Swatch: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=962-16569
  */
 export function Swatch({
-  color,
+  color: fill,
+  picker = false,
   selected,
+  disabled,
+  accessibilityLabel,
   onPress,
 }: {
-  color: string;
+  color?: string;
+  picker?: boolean;
   selected: boolean;
+  disabled?: boolean;
+  accessibilityLabel?: string;
   onPress: () => void;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={color}
-      accessibilityState={{ selected }}
+      accessibilityLabel={accessibilityLabel ?? fill}
+      accessibilityState={{ selected, disabled }}
+      disabled={disabled}
       onPress={onPress}
-      style={[styles.swatchRing, selected && styles.swatchRingOn]}
+      hitSlop={Math.max(0, (minTouchTarget - SWATCH) / 2)}
+      style={styles.swatch}
     >
-      <View style={[styles.swatch, { backgroundColor: color }]} />
+      {({ pressed }) => (
+        <>
+          <View style={[styles.swatchFill, pressed && styles.swatchInset]}>
+            {picker ? (
+              <Image source={pickerImage} style={styles.swatchImage} />
+            ) : (
+              <View
+                style={[styles.swatchImage, { backgroundColor: fill }]}
+              />
+            )}
+          </View>
+          {pressed ? (
+            <View style={[styles.swatchRing, styles.swatchRingPressed]} />
+          ) : selected ? (
+            <View style={[styles.swatchRing, styles.swatchRingSelected]} />
+          ) : null}
+        </>
+      )}
     </Pressable>
   );
 }
@@ -59,12 +94,12 @@ export function SwatchRow({
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.row}
     >
-      {palette.map(color => (
+      {palette.map(preset => (
         <Swatch
-          key={color}
-          color={color}
-          selected={color.toLowerCase() === value.toLowerCase()}
-          onPress={() => onChange(color)}
+          key={preset}
+          color={preset}
+          selected={preset.toLowerCase() === value.toLowerCase()}
+          onPress={() => onChange(preset)}
         />
       ))}
     </ScrollView>
@@ -76,13 +111,11 @@ function Slider({
   value,
   track,
   onChange,
-  thumbColor,
 }: {
   label: string;
   value: number;
   track: ReactTrack;
   onChange: (next: number) => void;
-  thumbColor: string;
 }) {
   const [width, setWidth] = useState(0);
   const widthRef = useRef(0);
@@ -102,7 +135,9 @@ function Slider({
   }, [onChange]);
   return (
     <View style={styles.sliderBlock}>
-      <AppText variant="label">{label}</AppText>
+      <AppText variant="Tags" style={styles.sliderLabel}>
+        {label}
+      </AppText>
       <View
         style={styles.track}
         onLayout={event => {
@@ -116,7 +151,7 @@ function Slider({
           pointerEvents="none"
           style={[
             styles.thumb,
-            { left: value * width - THUMB / 2, backgroundColor: thumbColor },
+            { left: value * width - THUMB / 2 },
           ]}
         />
       </View>
@@ -143,20 +178,17 @@ export function HsvSliders({
     setHsv(next);
     onChange(hsvToHex(next));
   };
-  const hueOnly = hsvToHex({ h: hsv.h, s: 1, v: 1 });
   return (
-    <View>
+    <View style={styles.sliders}>
       <Slider
         label={t('APP_COLOR_HUE')}
         value={hsv.h / 360}
-        thumbColor={hueOnly}
         onChange={next => update({ h: next * 360 })}
         track={<LinearFill angle={90} stops={HUE_STOPS} />}
       />
       <Slider
         label={t('APP_COLOR_SATURATION')}
         value={hsv.s}
-        thumbColor={hsvToHex({ h: hsv.h, s: hsv.s, v: 1 })}
         onChange={next => update({ s: next })}
         track={
           <LinearFill
@@ -171,7 +203,6 @@ export function HsvSliders({
       <Slider
         label={t('APP_COLOR_BRIGHTNESS')}
         value={hsv.v}
-        thumbColor={hsvToHex({ h: 0, s: 0, v: hsv.v })}
         onChange={next => update({ v: next })}
         track={
           <LinearFill
@@ -188,38 +219,51 @@ export function HsvSliders({
 }
 
 const styles = StyleSheet.create({
-  row: { gap: u(10), paddingVertical: u(4) },
+  /** `Presets` row: swatches 30 px apart, the selected ring drawn into the gap. */
+  row: { gap: space['30'], paddingVertical: RING_OUTSET },
+  swatch: { width: SWATCH, height: SWATCH },
+  swatchFill: { flex: 1, borderRadius: radius.pill, overflow: 'hidden' },
+  swatchInset: { margin: RING_OUTSET },
+  swatchImage: { width: '100%', height: '100%' },
   swatchRing: {
-    width: u(44),
-    height: u(44),
-    borderRadius: u(22),
-    borderWidth: 2,
-    borderColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
+    position: 'absolute',
+    borderRadius: radius.pill,
+    borderWidth: RING_WIDTH,
   },
-  swatchRingOn: { borderColor: colors.ruby },
-  swatch: {
-    width: u(38),
-    height: u(38),
-    borderRadius: u(19),
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.45)',
+  swatchRingSelected: {
+    top: -RING_OUTSET,
+    left: -RING_OUTSET,
+    right: -RING_OUTSET,
+    bottom: -RING_OUTSET,
+    borderColor: color.border.accent,
   },
-  sliderBlock: { marginTop: u(25) },
+  swatchRingPressed: {
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderColor: color.action.selected,
+  },
+  /** `Control/ColorSliderLabeled` stack: 56 px apart; label, 8 px, then the 64 px slider box. */
+  sliders: { gap: space['56'] },
+  sliderBlock: { gap: space.xs },
+  sliderLabel: { color: color.text.primary },
+  /** `Slider`: 48 px track centred in the 64 px box the thumb fills. */
   track: {
     height: u(24),
-    marginTop: u(8),
-    borderRadius: u(4),
+    marginVertical: space.xs,
+    borderRadius: radius.sm,
     justifyContent: 'center',
   },
+  /** No fill: the track under it shows the picked colour. */
   thumb: {
     position: 'absolute',
-    top: u(-4),
+    top: -space.xs,
     width: THUMB,
-    height: u(32),
-    borderRadius: u(4),
-    borderWidth: u(4),
-    borderColor: '#EAEAEA',
+    height: THUMB,
+    borderRadius: radius.sm,
+    borderWidth: space.xs,
+    borderColor: colors.pearl,
+    ...elevation.down,
   },
 });

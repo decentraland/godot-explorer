@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BottomSheet, colors, snapHeights, u } from '@dcl/ui-native';
+import { BottomSheet, colors, snapHeights, space, u } from '@dcl/ui-native';
 import type { SnapConfig } from '@dcl/ui-native';
 import { AvatarHole, StageBackground } from './AvatarStage';
 import {
@@ -19,7 +19,10 @@ import { SheetContent } from './SheetContent';
 /** `peek` is Figma `Sheet` Height=Collapsed: 54 px, the handle alone. */
 const WEARABLES_SNAPS: SnapConfig = { peek: u(27), half: 0.514, full: 0.863 };
 const EMOTES_SNAPS: SnapConfig = { peek: u(27), half: 0.427, full: 0.863 };
-const SLOTS_GAP = u(12);
+/** Figma `Emote Wheel`: 16 px above the sheet, half of it the row's own ring padding. */
+const SLOTS_GAP = space.xs;
+/** Figma `Header Content`: 68 px from the Emotes pill to the filter button (no token yet). */
+const FILTER_GAP = 34;
 
 export function PortraitLayout({
   controller,
@@ -48,7 +51,7 @@ export function PortraitLayout({
           {onBack ? (
             <BackButton onPress={onBack} style={{ left: u(18), top }} />
           ) : null}
-          <HeaderRow controller={controller} />
+          <HeaderRow controller={controller} filterGap={FILTER_GAP} />
         </View>
         {covered ? (
           <View style={styles.hole} />
@@ -107,7 +110,8 @@ const styles = StyleSheet.create({
   root: { ...StyleSheet.absoluteFill, backgroundColor: colors.purple500 },
   /** Clipped so the sheet stops at the nav bar instead of running under it. */
   area: { flex: 1, overflow: 'hidden' },
-  header: { paddingLeft: u(80), paddingRight: u(24) },
+  /** Figma `Header`: right-aligned, 48 px from the edge. */
+  header: { paddingHorizontal: space['2xl'], alignItems: 'flex-end' },
   hole: { flex: 1 },
   slots: { position: 'absolute', left: 0, right: 0 },
 });
