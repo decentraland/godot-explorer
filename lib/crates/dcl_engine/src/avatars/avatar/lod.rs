@@ -320,14 +320,15 @@ impl DclAvatar {
 
     /// Key of the disk-backed impostor texture cache: the address for cross-session stability,
     /// plus body, wearables and colors so a new outfit captures fresh instead of pulling stale
-    /// pixels. NPCs share an entry when they look the same.
+    /// pixels. NPCs share an entry when they look the same: a scene id like "npc-1" is left out.
     pub fn get_impostor_cache_key(&self) -> String {
         use sha2::{Digest, Sha256};
         let data = self.avatar_data.bind();
-        let mut parts: Vec<String> = vec![
-            self.avatar_id.to_string().to_lowercase(),
-            data.get_body_shape().to_string(),
-        ];
+        let mut id = self.avatar_id.to_string().to_lowercase();
+        if !(id.len() == 42 && id.starts_with("0x")) {
+            id.clear();
+        }
+        let mut parts: Vec<String> = vec![id, data.get_body_shape().to_string()];
         let mut wearables: Vec<String> = data
             .get_wearables()
             .as_slice()

@@ -44,4 +44,10 @@ mod tests {
         assert!(!is_excluded(LOWER, &[OTHER]));
         assert!(!is_excluded("", &[LOWER]));
     }
+
+    #[test]
+    fn matches_scene_avatar_shape_ids() {
+        assert!(is_excluded("npc-1", &["npc-1"]));
+        assert!(!is_excluded("npc-1", &["npc-2"]));
+    }
 }
