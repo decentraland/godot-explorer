@@ -213,8 +213,9 @@ func _apply_texture(texture: Texture2D) -> void:
 	if sky_resource == null:
 		return
 
-	# Reflections come from the sky itself (`Environment.reflected_light_source` is
-	# SKY), so a panorama sky also feeds the reflection map — no separate probe.
+	# Only the visible sky: `game_environment.tres` uses a custom reflection source, so
+	# reflective surfaces keep mirroring the default environment (reflection map
+	# follow-up: #3350).
 	if sky_resource.sky_material == null:
 		push_warning("PBSkybox.skybox_texture: the sky has no material to replace")
 		return
