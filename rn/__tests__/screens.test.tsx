@@ -1,5 +1,5 @@
 import { ReactElement } from 'react';
-import { NativeModules, Platform } from 'react-native';
+import { Keyboard, NativeModules, Platform } from 'react-native';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { HomeTabs } from '../src/app/HomeTabs';
@@ -113,5 +113,57 @@ describe('screens render', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  describe('from Sign In', () => {
+    const os = Platform.OS;
+    let tree: ReactTestRenderer;
+    const press = (label: string) =>
+      act(async () =>
+        tree.root.findByProps({ accessibilityLabel: label }).props.onPress(),
+      );
+
+    beforeEach(async () => {
+      if (core().state().tag !== 'SignedOut') {
+        act(() => core().signOut());
+      }
+      jest.useFakeTimers();
+      tree = mount(<EntryFlow onDone={() => {}} />);
+      await act(async () => {
+        jest.advanceTimersByTime(1500);
+      });
+      await act(async () => {});
+      await press('SIGN IN');
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+      jest.restoreAllMocks();
+      Platform.OS = os;
+      act(() => core().cancelSignIn());
+    });
+
+    it('closes the keyboard before Back leaves a screen', async () => {
+      const dismiss = jest.spyOn(Keyboard, 'dismiss');
+      await press('Continue with email');
+      await press('Back');
+      expect(dismiss).toHaveBeenCalled();
+    });
+
+    it('releases the email field before the code dialog opens on Android', async () => {
+      Platform.OS = 'android';
+      const dismiss = jest.spyOn(Keyboard, 'dismiss');
+      await press('Continue with email');
+      const field = tree.root.findByProps({ placeholder: 'name@email.com' });
+      act(() => field.props.onChangeText('qa@example.com'));
+      await press('NEXT');
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(dismiss).toHaveBeenCalledTimes(1);
+      expect(JSON.stringify(tree.toJSON())).toContain(
+        'Enter verification code',
+      );
+    });
   });
 });

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { BackHandler, Keyboard } from 'react-native';
+import { BackHandler, Keyboard, Platform } from 'react-native';
 import {
   acceptTerms,
   alreadySignedIn,
@@ -160,19 +160,27 @@ export function EntryFlow({
     };
   }, [step, provider]);
 
-  const submitEmail = useCallback(async (email: string) => {
-    setBusy(true);
-    setEmailError(null);
-    try {
-      await sendEmailCode(email);
-      setResendAt(Date.now() + RESEND_WAIT_MS);
-      dispatch({ type: 'emailSent', email });
-    } catch {
-      setEmailError(t('FLOW_EMAIL_SEND_FAILED'));
-    } finally {
-      setBusy(false);
-    }
-  }, []);
+  const submitEmail = useCallback(
+    async (email: string) => {
+      setBusy(true);
+      setEmailError(null);
+      try {
+        await sendEmailCode(email);
+        setResendAt(Date.now() + RESEND_WAIT_MS);
+        // Android opens the code dialog in its own window, where the email field below keeps its
+        // focus unseen by RN and takes the keyboard back on close: release it first.
+        if (step === 'auth_otp_start' && Platform.OS === 'android') {
+          Keyboard.dismiss();
+        }
+        dispatch({ type: 'emailSent', email });
+      } catch {
+        setEmailError(t('FLOW_EMAIL_SEND_FAILED'));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [step],
+  );
 
   const resend = useCallback(async () => {
     setResending(true);
@@ -213,6 +221,9 @@ export function EntryFlow({
   );
 
   const back = useCallback(() => {
+    // Before the screen unmounts: on Android a focused field that goes away hands its focus, and
+    // the open keyboard, to the engine's hidden EditText.
+    Keyboard.dismiss();
     // These return to the avatar, where the session must stay. The others leave a sign-in:
     // cancelled while it runs, signed out once it is done (a guest, or an account to name).
     if (step !== 'avatar_customize' && step !== 'avatar_naming') {
