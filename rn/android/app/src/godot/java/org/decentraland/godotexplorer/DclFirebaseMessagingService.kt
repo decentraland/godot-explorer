@@ -15,9 +15,8 @@ import com.google.firebase.messaging.RemoteMessage
  * Firebase console composer does not exercise this path: the composer always sends a
  * `notification` block.
  *
- * FCM starts this service on its own, so there is frequently no Godot process alive here.
- * Nothing in this file may assume one: state goes to [PushTokenStore], and the plugin is only
- * ever *offered* the news through a hook that no-ops when it isn't running.
+ * FCM starts this service on its own, often with neither React Native nor the engine running:
+ * nothing here may assume them, and state goes to [PushTokenStore].
  *
  * Expected data payload:
  * ```
@@ -36,13 +35,12 @@ class DclFirebaseMessagingService : FirebaseMessagingService() {
 
     /**
      * Called when FCM mints a token — first run after install, and on rotation. It does NOT
-     * fire on an ordinary launch, so the plugin also asks for the token explicitly at startup;
-     * this only covers the case where it changes while we are not looking.
+     * fire on an ordinary launch, so `DclPushModule.getToken` also asks for it at startup; this
+     * only covers the case where it changes while we are not looking.
      */
     override fun onNewToken(token: String) {
         Log.i(TAG, "FCM token refreshed (len=${token.length})")
         PushTokenStore.saveToken(applicationContext, token)
-        GodotAndroidPlugin.notifyFcmTokenRefreshed(token)
     }
 
     override fun onMessageReceived(message: RemoteMessage) {

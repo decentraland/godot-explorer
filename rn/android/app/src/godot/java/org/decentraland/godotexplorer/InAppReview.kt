@@ -7,14 +7,6 @@ import android.util.Log
  * Google Play In-App Review binding (issue #2739) — the native 1-5 star card, rendered in-process
  * by Play.
  *
- * WHY THIS IS ITS OWN CLASS, and why no Play Core type may appear in a signature here or on
- * GodotAndroidPlugin: at registration `GodotPlugin.onRegisterPluginWithGodotNative` calls
- * `getDeclaredMethods()` on the plugin class, which resolves the parameter types of EVERY declared
- * method — private ones included. A single unresolvable type there throws NoClassDefFoundError on
- * the Vulkan thread and kills the app at boot, before any of our code runs. Keeping Play Core
- * inside method BODIES (and behind the catch below) means a missing or stripped dependency
- * degrades to "review unavailable" instead of a fatal crash.
- *
  * Play never reports whether the card appeared or what the user did. Over the (undocumented,
  * roughly monthly) per-user quota it renders nothing, returns no error, and still completes — so
  * the caller must treat the launch itself as the event, and must never put its own UI or a

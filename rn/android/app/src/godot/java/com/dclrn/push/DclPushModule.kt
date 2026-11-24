@@ -27,8 +27,8 @@ import org.decentraland.godotexplorer.PushTokenStore
 
 /**
  * The OS side of push for the shell: the FCM token, the notification permission and local
- * reminders. The remote pushes themselves are drawn by the plugin's DclFirebaseMessagingService,
- * which runs with no JS and no engine; local reminders fire through the plugin's NotificationReceiver.
+ * reminders. The remote pushes themselves are drawn by DclFirebaseMessagingService, which runs with
+ * no JS and no engine; local reminders fire through NotificationReceiver.
  */
 class DclPushModule(private val context: ReactApplicationContext) :
     ReactContextBaseJavaModule(context) {

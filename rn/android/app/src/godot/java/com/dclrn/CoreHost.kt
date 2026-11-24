@@ -3,10 +3,16 @@ package com.dclrn
 import android.app.Application
 import android.provider.Settings
 import android.util.Log
+import com.dclrn.platform.AndroidDevice
+import com.dclrn.platform.AndroidMarketing
+import com.dclrn.video.ExoVideoBackend
 import org.decentraland.core.host.HostListener
 import org.decentraland.core.host.HostPlatform
 import org.decentraland.core.host.addHostListener
 import org.decentraland.core.host.installAttestation
+import org.decentraland.core.host.installDeviceService
+import org.decentraland.core.host.installMarketingService
+import org.decentraland.core.host.installVideoBackend
 import org.decentraland.core.host.install as installCore
 
 /**
@@ -53,6 +59,9 @@ object CoreHost {
     )
     addHostListener(listener)
     installAttestation(PlayIntegrityAttestation(app))
+    installDeviceService(AndroidDevice(app))
+    installMarketingService(AndroidMarketing(app))
+    installVideoBackend(ExoVideoBackend(app))
     Log.i(TAG, "core installed")
   }
 }

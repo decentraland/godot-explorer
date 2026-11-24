@@ -22,11 +22,6 @@ class NotificationReceiver : BroadcastReceiver() {
         const val EXTRA_BODY = "body"
         const val EXTRA_IMAGE_BLOB = "image_blob"
         const val EXTRA_DEEP_LINK = "deep_link"
-
-        // Kept as aliases so existing call sites (GodotAndroidPlugin.createNotificationChannel,
-        // NotificationsManager.gd) keep compiling; the channel itself is owned by the builder.
-        const val DEFAULT_CHANNEL_ID = PushNotificationBuilder.LOCAL_CHANNEL_ID
-        const val DEFAULT_CHANNEL_NAME = PushNotificationBuilder.LOCAL_CHANNEL_NAME
     }
 
     override fun onReceive(context: Context, intent: Intent) {

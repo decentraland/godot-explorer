@@ -6,13 +6,8 @@ import android.util.Log
 /**
  * Small persistent store for the push subsystem, backed by SharedPreferences.
  *
- * Deliberately NOT [NotificationDatabase]: that table is the local reminder queue, which
- * GDScript reconciles against the scheduled alarms (`osGetScheduledIds()` reads it with
- * `is_scheduled = 1`). Writing push rows there would make the queue believe it owns
- * notifications it never scheduled and cannot cancel.
- *
- * Both readers can run with no Godot process alive — [DclFirebaseMessagingService] is started
- * by FCM on its own — so nothing here may touch the plugin instance or the Godot runtime.
+ * Both readers can run with neither React Native nor the engine alive — [DclFirebaseMessagingService]
+ * is started by FCM on its own — so nothing here may assume them.
  */
 object PushTokenStore {
 

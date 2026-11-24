@@ -1,4 +1,4 @@
-package org.decentraland.godotexplorer
+package com.dclrn.video
 
 import android.content.Context
 import android.graphics.ImageFormat
@@ -25,12 +25,12 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * ExoPlayer wrapper for Godot integration.
+ * ExoPlayer wrapper behind [ExoVideoBackend], the engine's scene video on Android.
  *
  * This class decodes video using hardware acceleration via ImageReader.
  *
  * GPU Mode (API 29+): Uses HardwareBuffer for zero-copy GPU texture sharing.
- *    The HardwareBuffer is passed directly to Godot's Vulkan renderer.
+ *    The HardwareBuffer is passed directly to the engine's Vulkan renderer.
  *
  * Architecture:
  * - ExoPlayer runs on the main thread (Android requirement)
@@ -411,21 +411,8 @@ class ExoPlayerWrapper(private val context: Context, private val playerId: Int) 
     }
 
 
-    /**
-     * Native method to get the AHardwareBuffer* pointer from a HardwareBuffer.
-     * Implemented in the native library.
-     */
+    /** The AHardwareBuffer* behind [buffer]; in libdclgodot, which `CoreHost` loads at launch. */
     private external fun nativeGetHardwareBufferPtr(buffer: HardwareBuffer): Long
-
-    companion object {
-        init {
-            try {
-                System.loadLibrary("exoplayer_hwbuffer")
-            } catch (e: UnsatisfiedLinkError) {
-                Log.w("ExoPlayerWrapper", "Native library not loaded, GPU mode will use fallback: ${e.message}")
-            }
-        }
-    }
 
     fun setSourceUrl(url: String): Boolean {
         return runOnMainThreadSync {
