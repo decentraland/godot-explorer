@@ -31,7 +31,6 @@ export { Chip } from './Chip';
 export { CodeSlots } from './CodeSlots';
 export type { ButtonTone } from './Button';
 export { indexFromOffset, PageDots, SnapCarousel } from './Carousel';
-export { CollapsibleSection } from './CollapsibleSection';
 export { HsvSliders, Swatch, SwatchRow } from './ColorPicker';
 export { ClaimDialog } from './ClaimDialog';
 export type { ClaimState } from './ClaimDialog';

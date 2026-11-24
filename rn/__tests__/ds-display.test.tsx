@@ -10,7 +10,6 @@ import {
   DiscoverCardSkeleton,
   Header,
   Chip,
-  CollapsibleSection,
   EmptyState,
   HudCircleButton,
   Icon,
@@ -280,26 +279,6 @@ describe('Skeleton and EmptyState', () => {
   });
 });
 
-describe('CollapsibleSection', () => {
-  it('hides children until open and toggles', () => {
-    const onToggle = jest.fn();
-    const closed = render(
-      <CollapsibleSection title="Links" open={false} onToggle={onToggle}>
-        <Text>inner</Text>
-      </CollapsibleSection>,
-    );
-    expect(text(closed)).not.toContain('inner');
-    act(() => pressable(closed, 'Links').props.onPress());
-    expect(onToggle).toHaveBeenCalled();
-    const open = render(
-      <CollapsibleSection title="Links" open onToggle={onToggle}>
-        <Text>inner</Text>
-      </CollapsibleSection>,
-    );
-    expect(text(open)).toContain('inner');
-  });
-});
-
 describe('LinkRow and WarningBanner', () => {
   it('LinkRow presses and marks selection', () => {
     const onPress = jest.fn();
@@ -394,7 +373,7 @@ describe('demo props', () => {
       'Header',
       'Chip',
       'ProgressBar',
-      'CollapsibleSection',
+      'SectionCollapsible',
       'LinkRow',
       'WarningBanner',
       'PageDots',
