@@ -26,6 +26,17 @@ const SRGB_ENCODED_LUTS := [
 	"tint_color_cycle_bottom", "tint_color_cycle_top", "tint_color_cycle_nadir"
 ]
 
+# Uniforms written outside `SKY_COLOR_LUTS`. `SkyBase` captures the startup value of every
+# name in `override_param_names()`, so this is the single list to extend with a new one.
+const SCALAR_PARAMS := [
+	"clouds_color_cycle",
+	"cloud_opacity",
+	"clouds_scroll_speed",
+	"stars_energy",
+	"stars_override",
+	"sun_color_cycle",
+]
+
 var _sky: Node
 var _active := false
 var _config := {}
@@ -43,6 +54,12 @@ var _has_sun_basis := false
 # the same environment and material. Only the instance that took the last config may
 # restore: a stale teardown would erase the sky its successor just applied.
 static var _owner: SceneSkybox = null
+
+
+## Every sky uniform a scene override can write. `SkyBase` captures these as the defaults
+## to restore, and the test suite checks each one has a stored default in `assets/sky.tres`.
+static func override_param_names() -> Array:
+	return SKY_COLOR_LUTS.values() + SCALAR_PARAMS
 
 
 func _init(sky: Node) -> void:
@@ -340,10 +357,10 @@ static func sun_basis_for(direction: Vector3) -> Basis:
 	return Basis.looking_at(forward, up)
 
 
-func _pristine_param(param: String) -> Variant:
-	if _sky != null and _sky.has_method("pristine_param"):
-		return _sky.pristine_param(param)
-	return null
+func _pristine_params() -> Dictionary:
+	if _sky != null and _sky.has_method("pristine_params"):
+		return _sky.pristine_params()
+	return {}
 
 
 func _pristine_sky_material() -> Material:
@@ -380,10 +397,9 @@ func _set_param(param: String, value: Variant) -> void:
 	if not material is ShaderMaterial:
 		return
 	if not _saved_params.has(param):
-		var pristine: Variant = _pristine_param(param)
-		_saved_params[param] = (
-			pristine if pristine != null else material.get_shader_parameter(param)
-		)
+		# Presence, not value: an unset uniform captures as `null`, and restoring it as
+		# `null` is what clears the override so the shader default applies again.
+		_saved_params[param] = _pristine_params().get(param)
 	_params_material = material
 	material.set_shader_parameter(param, value)
 

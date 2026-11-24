@@ -18,6 +18,7 @@ func run() -> bool:
 	_test_make_lut()
 	_test_equirectangular_check()
 	_test_sun_basis()
+	_test_override_param_defaults()
 	execution_time_seconds = (Time.get_ticks_usec() - start) / 1_000_000.0
 	return errors.is_empty()
 
@@ -141,4 +142,25 @@ func _test_sun_basis() -> void:
 	_expect(
 		is_equal_approx(west.determinant(), 1.0),
 		"west sun basis is a rotation (det=%s)" % west.determinant()
+	)
+
+
+func _test_override_param_defaults() -> void:
+	# A uniform with no stored default captures as `null` and then falls back to the live,
+	# already-overridden value on a sky swap, so the scene sky leaks into the defaults.
+	var sky := load("res://assets/sky.tres") as Sky
+	var material := sky.sky_material as ShaderMaterial
+	_expect(material != null, "assets/sky.tres holds a ShaderMaterial")
+
+	var names: Array = SceneSkyboxScript.override_param_names()
+	_expect(names.size() == 10, "ten override uniforms (%d)" % names.size())
+	for name in names:
+		_expect(
+			material.get_shader_parameter(name) != null,
+			"assets/sky.tres stores a default for %s" % name
+		)
+
+	_expect(
+		is_equal_approx(float(material.get_shader_parameter("stars_override")), 0.0),
+		"stars_override defaults to 0, so the default look keeps its night-only fade"
 	)

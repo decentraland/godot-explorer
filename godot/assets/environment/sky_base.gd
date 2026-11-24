@@ -1,21 +1,6 @@
 class_name SkyBase
 extends Node
 
-# Sky shader uniforms a scene override can write. Their startup values are the defaults a
-# scene has to leave behind.
-const OVERRIDE_PARAMS := [
-	"tint_color_cycle_bottom",
-	"tint_color_cycle_top",
-	"tint_color_cycle_nadir",
-	"rim_color_cycle",
-	"clouds_color_cycle",
-	"cloud_opacity",
-	"clouds_scroll_speed",
-	"stars_energy",
-	"stars_override",
-	"sun_color_cycle",
-]
-
 # External gradient resources for time-of-day lighting
 @export var directional_light_gradient: Gradient
 @export var ambient_light_gradient: Gradient
@@ -242,7 +227,9 @@ func _process(_delta: float) -> void:
 func _capture_pristine() -> void:
 	var material: Material = sky_material
 	if material is ShaderMaterial:
-		for param in OVERRIDE_PARAMS:
+		# The names live on SceneSkybox so the two cannot drift: a uniform it writes and this
+		# capture misses would silently restore the live, already-overridden value.
+		for param in SceneSkybox.override_param_names():
 			_pristine_params[param] = material.get_shader_parameter(param)
 
 	var environment := world_environment.environment
@@ -255,8 +242,8 @@ func _capture_pristine() -> void:
 		_pristine_sky_material = sky_resource.sky_material
 
 
-func pristine_param(param: String) -> Variant:
-	return _pristine_params.get(param)
+func pristine_params() -> Dictionary:
+	return _pristine_params
 
 
 func pristine_fog() -> Dictionary:
