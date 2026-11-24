@@ -73,6 +73,7 @@ const figmaStyles = {
   },
   'Nametag/Name': { fontFamily: fonts.medium, fontSize: u(10) },
   'Tag/Count': { fontFamily: fonts.medium, fontSize: u(10) },
+  'Tab/Count': { fontFamily: fonts.regular, fontSize: u(14) },
   'Tab/Label': {
     fontFamily: fonts.semibold,
     fontSize: u(14),
