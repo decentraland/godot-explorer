@@ -49,8 +49,10 @@ const FAR_SKIP_DISTANCE := FADE_END + 5.0
 # Small gap above the computed bounds top (clearance already covers head/hat
 # volume — see Avatar.get_bounds_top_y).
 const NAMETAG_MARGIN := 0.1
-# Screen-space gap between the native nametag and a scene-authored plate (#2811).
-const PLATE_GAP := 6.0
+# Gap between the nametag's pill and a scene-authored plate (#2811): the design's 6 px
+# as DRAWN, not 6 nickname_ui units — the layer draws the tag scaled by SCALE, and 6.0
+# units would draw under 2 px, while the design reads as a visible 6 px.
+const PLATE_GAP := 6.0 / SCALE
 # Debug: set true at runtime (e.g. the scene-inspector `eval` command, non-production) to bypass
 # the occlusion raycast entirely so tags fade by distance only — confirms whether a
 # vanishing tag is an occlusion artifact. `NameplateLayer.debug_disable_occlusion = true`.
