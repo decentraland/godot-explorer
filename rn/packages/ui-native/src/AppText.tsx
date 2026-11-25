@@ -129,6 +129,7 @@ const figmaStyles = {
     fontSize: u(9),
     lineHeight: u(12),
   },
+  'Alert/Body': { fontFamily: fonts.regular, fontSize: u(13) },
 } satisfies Record<string, TextStyle>;
 
 export type FigmaTextStyle = keyof typeof figmaStyles;

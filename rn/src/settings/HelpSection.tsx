@@ -1,5 +1,5 @@
 import { Linking, View } from 'react-native';
-import { LinkRow, WarningBanner } from '@dcl/ui-native';
+import { Alert, LinkRow } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { DISCORD_URL, helpUrl, legalLinks } from './links';
 import { Group, SectionCaption } from './rows';
@@ -17,8 +17,8 @@ export function HelpSection({
     <View>
       {env.deviceUnsupported && (
         <Group>
-          <WarningBanner
-            outlined
+          <Alert
+            background="translucent"
             message={t('MODAL_END_OF_DEVICE_SUPPORT_TITLE')}
           />
         </Group>
