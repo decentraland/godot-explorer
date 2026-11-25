@@ -175,6 +175,8 @@ var _stop_generation: int = 0
 # newest request that needs loading while another load is in flight.
 var _play_seq: int = 0
 var _next_load: Array = []
+# [urn, mask, owner_scene_id] of a looping emote stop_for_far() set aside for resume_after_far().
+var _far_stopped_loop: Array = []
 
 # Track prop visibility nodes that need to be hidden on idle
 # This avoids modifying idle_anim at runtime which can crash the mixer
@@ -249,6 +251,30 @@ func stop_emote():
 	playing_loop = false
 	_stop_generation += 1
 	_next_load = []
+	_far_stopped_loop = []
+
+
+## At FAR LOD the AnimationTree stops, so a running emote never ends on its own: stop it,
+## reporting it interrupted. keep_loop sets a looping one aside for resume_after_far().
+func stop_for_far(keep_loop: bool) -> void:
+	if not is_playing():
+		return
+	var looping := [current_emote_urn, current_emote_mask, current_emote_scene_id]
+	var keep := keep_loop and playing_loop and current_emote_urn != ""
+	stop_emote()
+	if keep:
+		_far_stopped_loop = looping
+
+
+func resume_after_far() -> void:
+	if _far_stopped_loop.is_empty():
+		return
+	var looping := _far_stopped_loop
+	_far_stopped_loop = []
+	_last_emote_time = 0.0  # Not a new request: the anti-spam cooldown must not drop it.
+	# Deferred: the LOD change runs mid-_process, after this frame's gait was read, so
+	# a moving NPC would cancel the emote in the same frame it starts.
+	async_play_emote.call_deferred(looping[0], looping[1], looping[2])
 
 
 ## Hand back the emote still mid-playback (if any) and clear it, so nothing reports
@@ -321,6 +347,7 @@ func play_emote(id: String, mask: int = -1, owner_scene_id: int = -1):
 		triggered = _play_loaded_emote(id, mask, owner_scene_id)
 
 	if triggered:
+		_far_stopped_loop = []
 		# A still-playing emote is being superseded: report its interruption first.
 		_emit_emote_finished(true)
 		current_emote_urn = id

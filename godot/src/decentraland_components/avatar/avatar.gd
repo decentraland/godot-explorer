@@ -428,7 +428,7 @@ func _input(event):
 	if event.is_action_pressed("ia_pointer"):
 		# Only handle input if this avatar is currently selected and not blocked/hidden
 		var selected = Global.get_selected_avatar()
-		if selected and selected == self and avatar_id and not hidden and not passport_disabled:
+		if selected and selected == self and has_profile() and not hidden and not passport_disabled:
 			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 				var explorer = Global.get_explorer()
 				if (
@@ -442,6 +442,25 @@ func _input(event):
 
 func try_show():
 	avatar_modifier_area_detector.check_areas()
+
+
+## Whether tapping this avatar can open a passport. A scene NPC only has one when its
+## AvatarShape.id is a real address: a scene id like "npc-1" is not a profile.
+func has_profile() -> bool:
+	if avatar_id.is_empty():
+		return false
+	return not is_avatar_shape or AvatarExcludeIdMatcher.is_address(avatar_id)
+
+
+## The scene's AvatarShape.id. It drives AvatarModifierArea.excludeIds; an eth-address
+## id also takes the impostor from the catalyst body texture instead of an off-screen render.
+## A cleared id is applied too, or excludeIds would keep matching the old one.
+func _apply_shape_id(shape_id: String) -> void:
+	if avatar_id != shape_id:
+		avatar_id = shape_id
+		if click_area:
+			click_area.set_meta("avatar_id", avatar_id)
+		try_show()
 
 
 func _on_set_avatar_modifier_area(areas: Array):
@@ -499,14 +518,14 @@ func _hide_impostor_render() -> void:
 # Stable identity key for the disk-backed impostor texture cache. The hash
 # combines eth address (for cross-session stability) with the visual identity
 # (body + wearables + colors), so a user that changes outfit gets a fresh
-# capture instead of pulling stale pixels from the previous look's PNG. NPCs
-# fall through the same path with an empty eth segment, so visually-identical
-# NPCs share a cache entry.
+# capture instead of pulling stale pixels from the previous look's PNG. A scene
+# NPC id like "npc-1" is left out, so visually-identical NPCs share a cache entry.
 func _get_impostor_cache_key() -> String:
 	if avatar_data == null:
 		return ""
 	var parts := PackedStringArray()
-	parts.append(avatar_id.to_lower() if avatar_id != "" else "")
+	var is_address := AvatarExcludeIdMatcher.is_address(avatar_id)
+	parts.append(avatar_id.to_lower() if is_address else "")
 	parts.append(avatar_data.get_body_shape())
 	var wearables = avatar_data.get_wearables()
 	if wearables is Array:
@@ -573,16 +592,8 @@ func async_update_avatar(
 	# Handle AvatarShape-specific config (NPCs from scene SDK)
 	is_avatar_shape = avatar_shape_config.get("is_avatar_shape", false)
 
-	# Adopt the AvatarShape.id when it's an eth address so the impostor capturer
-	# can route through the catalyst body-texture path
-	# (`avatar_id.begins_with("0x")`) instead of an off-screen render.
 	if is_avatar_shape:
-		var shape_id: String = avatar_shape_config.get("id", "")
-		if shape_id.begins_with("0x") and avatar_id != shape_id:
-			avatar_id = shape_id
-			if click_area:
-				click_area.set_meta("avatar_id", avatar_id)
-			try_show()
+		_apply_shape_id(avatar_shape_config.get("id", ""))
 
 	# Update metadata for raycast detection
 	if click_area:
@@ -1410,16 +1421,18 @@ func _release_impostor() -> void:
 	_impostor_layer = -1
 
 
-func _on_lod_state_changed(new_state: int, _prev_state: int) -> void:
+func _on_lod_state_changed(new_state: int, prev_state: int) -> void:
 	# A spawn reveal owns mesh visibility while it runs; leaving FULL LOD hands
 	# rendering to the impostor — abort the reveal cleanly.
 	if not _spawn_reveal.is_idle() and new_state != LODState.FULL:
 		_spawn_reveal.end()
-	# At FAR the avatar is an impostor and its AnimationTree stops advancing, so a
-	# running emote would never reach its natural end and the scene would wait
-	# forever for a terminal EmoteState. Report it as interrupted now.
-	if new_state == LODState.FAR and emote_controller != null and emote_controller.is_playing():
-		emote_controller.stop_emote()
+	# An NPC's looping emote comes back when it does: its scene sends the trigger only once,
+	# while a remote player re-announces a loop on its own.
+	if emote_controller != null:
+		if new_state == LODState.FAR:
+			emote_controller.stop_for_far(is_avatar_shape)
+		elif prev_state == LODState.FAR:
+			emote_controller.resume_after_far()
 
 	var full: bool = new_state == LODState.FULL
 	AvatarAnimHelpers.set_meshes_visible(self, new_state != LODState.FAR)
@@ -1475,6 +1488,10 @@ func _process(delta):
 	_spawn_reveal.tick(delta)
 	# TODO: maybe a gdext crate bug? when process implement the INode3D, super(delta) doesn't work :/
 	self.process(delta)
+	if is_avatar_shape:
+		shape_motion_process(
+			delta, emote_controller.playing_single or emote_controller.playing_mixed
+		)
 
 	if _use_2d_nameplate:
 		NameplateLayer.update(self)

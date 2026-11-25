@@ -49,7 +49,7 @@ func _async_process_next() -> void:
 
 # gdlint:ignore = async-function-name
 func _async_get_image_for(avatar: Avatar) -> Image:
-	if avatar.avatar_id != "" and avatar.avatar_id.begins_with("0x"):
+	if AvatarExcludeIdMatcher.is_address(avatar.avatar_id):
 		var image := await _async_fetch_catalyst_body(avatar.avatar_id)
 		if image != null:
 			return image

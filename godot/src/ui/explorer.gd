@@ -1270,6 +1270,9 @@ func _async_open_profile_by_avatar(avatar: DclAvatar):
 	if avatar is Avatar:
 		var avatar_instance = avatar as Avatar
 		var avatar_id = avatar_instance.avatar_id
+		# Both tap paths end here: a scene NPC with a plain id has no profile.
+		if avatar_instance.is_avatar_shape and not avatar_instance.has_profile():
+			return
 		if not avatar_id.is_empty():
 			# Don't open profile for blocked users
 			if Global.social_blacklist.is_blocked(avatar_id):
