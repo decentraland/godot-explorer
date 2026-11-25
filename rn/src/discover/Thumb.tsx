@@ -52,11 +52,14 @@ export function Thumb({
   width,
   height,
   radius = 4,
+  bordered = true,
 }: {
   uri: string;
   width: Size;
   height: Size;
   radius?: number;
+  /** Off when the caller draws its own frame around the image. */
+  bordered?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
   const mock = uri.startsWith('mock:') ? uri.slice(5) : null;
@@ -69,6 +72,7 @@ export function Thumb({
         styles.frame,
         { width, height, borderRadius: u(radius) },
         broken && styles.broken,
+        !bordered && styles.unframed,
       ]}
     >
       {broken ? (
@@ -107,6 +111,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(232,185,255,0.7)',
     backgroundColor: colors.purple450,
   },
+  unframed: { borderWidth: 0 },
   fill: { width: '100%', height: '100%' },
   broken: {
     borderWidth: u(0.3),
