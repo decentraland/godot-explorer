@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { IconButton, PillButton, u } from '@dcl/ui-native';
+import { IconButton, PillButton, space, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { Mode } from './backpackState';
 
@@ -10,7 +10,7 @@ export function BackpackHeader({
   filtered = false,
   onMode,
   onFilter,
-  filterGap = 22,
+  filterGap = u(22),
 }: {
   mode: Mode;
   menuOpen: boolean;
@@ -18,7 +18,7 @@ export function BackpackHeader({
   filtered?: boolean;
   onMode: (mode: Mode) => void;
   onFilter: () => void;
-  /** Space before the filter button (dp): wider in portrait than in landscape. */
+  /** Space from the Emotes pill to the filter button: wider in portrait than in landscape. */
   filterGap?: number;
 }) {
   return (
@@ -39,7 +39,7 @@ export function BackpackHeader({
         selected={mode === 'emotes'}
         onPress={() => onMode('emotes')}
       />
-      <View style={{ marginLeft: u(filterGap - 12) }}>
+      <View style={{ marginLeft: filterGap - space.lg }}>
         <IconButton
           icon="filter"
           accessibilityLabel={t('BACKPACK_FILTER')}
@@ -53,5 +53,5 @@ export function BackpackHeader({
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: u(12) },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space.lg },
 });

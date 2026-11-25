@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
 import { ItemCard } from './ItemCard';
-import { color, fonts, space } from './tokens';
+import { color, space } from './tokens';
 import { u } from './scale';
 
 /** `Cards-Wearables` is drawn at 96 dp; the slot rows scale it to 62. */
@@ -10,7 +10,7 @@ const CARD = 96;
 /** The slot rows' selected outline: 3 px, centred on the card edge. */
 const SLOT_RING = u(1.5);
 
-/** Backpack category slot: a `Cards-Wearables` at 124 px (what is worn, or the empty "+") and
+/** Figma `Card/SlotEquipped`: a `Cards-Wearables` at 124 px (what is worn, or the empty "+") and
  * its label 4 px below, which may run wider than the card. */
 export function SlotTile({
   label,
@@ -42,7 +42,11 @@ export function SlotTile({
         onPress={onPress}
         style={{ width: size }}
       />
-      <AppText numberOfLines={1} style={styles.label}>
+      <AppText
+        variant="Card/Body"
+        numberOfLines={1}
+        style={[styles.label, selected && styles.labelSelected]}
+      >
         {label}
       </AppText>
     </View>
@@ -51,14 +55,13 @@ export function SlotTile({
 
 const styles = StyleSheet.create({
   slot: { alignItems: 'center', overflow: 'visible' },
-  /** `SecondaryCTA-03`: Inter Medium 24 px, Snow, py 8 px. */
+  /** Figma `Card/SlotEquipped` label: `Card/Body`, `text/secondary`, `text/primary` when selected. */
   label: {
     marginTop: space['3xs'],
     paddingVertical: space.xs,
-    fontFamily: fonts.medium,
-    fontSize: u(12),
-    color: color.text.primary,
+    color: color.text.secondary,
     textAlign: 'center',
     width: u(88),
   },
+  labelSelected: { color: color.text.primary },
 });

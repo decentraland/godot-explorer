@@ -13,7 +13,7 @@ import { SheetContent } from './SheetContent';
 
 const PANEL_WIDTH = 312 + 48;
 const FILTER_RIGHT = 349;
-const FILTER_GAP = 19;
+const FILTER_GAP = u(19);
 
 /** Avatar on the left, tabs / slots / grid on the right; no sheet and no bottom navigation. */
 export function LandscapeLayout({

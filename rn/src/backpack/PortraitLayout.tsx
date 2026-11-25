@@ -28,8 +28,8 @@ const WEARABLES_SNAPS: SnapConfig = { peek: u(27), half: 0.514, full: 0.863 };
 const EMOTES_SNAPS: SnapConfig = { peek: u(27), half: 0.427, full: 0.863 };
 /** Figma `Emote Wheel`: 16 px above the sheet, half of it the row's own ring padding. */
 const SLOTS_GAP = space.xs;
-/** Figma `Header Content`: 68 px from the Emotes pill to the filter button (no token yet). */
-const FILTER_GAP = 34;
+/** Figma `Header Content` gap: from the Emotes pill to the filter button. */
+const FILTER_GAP = space['64'];
 
 export function PortraitLayout({
   controller,
@@ -114,7 +114,11 @@ export function PortraitLayout({
         </BottomSheet>
         <FilterOverlay
           controller={controller}
-          position={{ top: top + u(36), right: u(24) }}
+          position={{
+            // 8 px under the filter button, centred on the pill row.
+            top: top + (control['pill-lg'] + control.sm) / 2 + space.xs,
+            right: space['2xl'],
+          }}
         />
       </View>
       {footer}

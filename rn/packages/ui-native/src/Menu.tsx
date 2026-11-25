@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { AppText } from './AppText';
 import { Icon, IconName } from './Icon';
-import { colors, elevation } from './tokens';
+import { colors, elevation, space } from './tokens';
 import { u } from './scale';
 
 export type MenuItem<K extends string> = {
@@ -73,8 +73,7 @@ export function Menu<K extends string>({
 const styles = StyleSheet.create({
   menu: {
     width: u(160),
-    paddingHorizontal: u(12),
-    paddingVertical: u(8),
+    padding: space.md,
     gap: u(13),
     borderRadius: u(6),
     borderWidth: u(0.5),
@@ -84,7 +83,7 @@ const styles = StyleSheet.create({
   },
   row: {
     height: u(32),
-    paddingHorizontal: u(8),
+    paddingHorizontal: space.xs,
     gap: u(5),
     borderRadius: u(6),
     flexDirection: 'row',

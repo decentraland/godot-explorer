@@ -6,6 +6,7 @@ import {
   SkeletonCard,
   layout,
   space,
+  u,
 } from '@dcl/ui-native';
 import { t } from '../i18n';
 import type { EmptyCopy } from './platformPolicy';
@@ -69,6 +70,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.gutter,
     gap: layout.gap,
   },
-  /** 42 px under the slot row in `Cards` (no 21dp token: `space['40']`). */
-  empty: { alignItems: 'center', paddingTop: space['40'] },
+  /** Figma `Cards`: fills the visible sheet under the header and centres the empty state. The
+   * 72 px bottom padding has no token. */
+  empty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: space['40'],
+    paddingBottom: u(36),
+  },
 });

@@ -47,10 +47,10 @@ export function ItemGrid<T>({
       ListHeaderComponent={header}
       ListEmptyComponent={empty}
       style={{ marginTop: -overhang }}
-      contentContainerStyle={{
-        paddingTop: overhang,
-        paddingBottom: bottomInset + 16,
-      }}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: overhang, paddingBottom: bottomInset + 16 },
+      ]}
       columnWrapperStyle={styles.row}
       showsVerticalScrollIndicator={false}
       initialNumToRender={12}
@@ -65,6 +65,8 @@ export function ItemGrid<T>({
 }
 
 const styles = StyleSheet.create({
+  /** Lets an empty state fill the visible sheet. */
+  content: { flexGrow: 1 },
   row: {
     paddingHorizontal: layout.gutter,
     gap: layout.gap,
