@@ -9,8 +9,7 @@ extends RefCounted
 
 enum Kind { GENESIS, WORLD, PREVIEW, CUSTOM_REALM }
 
-## BLOCKED: kept out of the iOS app by the content policy (#3224).
-enum State { RESOLVING, READY, NEEDS_PASSWORD, NOT_ALLOWED, FAILED, BLOCKED }
+enum State { RESOLVING, READY, NEEDS_PASSWORD, NOT_ALLOWED, FAILED }
 
 enum Failure {
 	NONE,
@@ -188,12 +187,6 @@ func resolved_needs_password() -> Destination:
 func resolved_not_allowed() -> Destination:
 	var dest := _copy()
 	dest.state = State.NOT_ALLOWED
-	return dest
-
-
-func resolved_blocked() -> Destination:
-	var dest := _copy()
-	dest.state = State.BLOCKED
 	return dest
 
 

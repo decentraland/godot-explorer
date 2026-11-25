@@ -6,9 +6,6 @@ class_name Navigator
 ## real, which turns a black screen over a discarded scene into a modal over the one the
 ## player is still standing in. Every resolver state leaves through here.
 
-## Where a boot refused by the iOS block list lands instead.
-const PLAZA := Vector2i.ZERO
-
 
 ## `when` is the loading-funnel bucket the dashboards index on. Returns true only when
 ## the player actually went somewhere.
@@ -36,10 +33,6 @@ static func async_go(dest: Destination, when: String) -> bool:
 		Destination.State.NEEDS_PASSWORD:
 			# Backed out of the password prompt: they stay exactly where they were.
 			return _abandon("cancelled")
-		Destination.State.BLOCKED:
-			Global.modal_manager.async_show_blocked_content_modal(resolved)
-			_recover_from_block(resolved)
-			return _abandon("blocked_content")
 		_:
 			Global.modal_manager.async_show_invalid_destination_modal(resolved.failure)
 			Global.scene_runner.loading_realm_change_failed(
@@ -67,19 +60,6 @@ static func recover_from_refusal(realm_string: String) -> void:
 		Navigator.async_go.call_deferred(
 			Destination.restore(DclUrls.main_realm()), "on_explorer_ready"
 		)
-
-
-## Refused from inside a world, the player just stays. A refused boot has nowhere to stand, and
-## a restore lands on the saved position, which is the blocked place itself: go to the Plaza.
-static func _recover_from_block(dest: Destination) -> void:
-	if is_instance_valid(Global.realm) and Global.realm.has_realm():
-		return
-	_clear_boot_realm_if(dest.realm_string)
-	# A ban on the Plaza itself would bounce between this and the modal forever.
-	if dest.kind == Destination.Kind.GENESIS and dest.target_parcel == PLAZA:
-		return
-	if is_instance_valid(Global.get_explorer()):
-		Navigator.async_go.call_deferred(Destination.genesis(PLAZA), "on_explorer_ready")
 
 
 ## Compares canonical urls, not world names: a dead preview server is just as capable of

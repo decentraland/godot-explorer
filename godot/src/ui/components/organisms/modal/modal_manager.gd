@@ -93,10 +93,6 @@ static var invalid_destination_title := TranslationKey.new("MODAL_INVALID_DESTIN
 static var invalid_destination_body := TranslationKey.new("MODAL_INVALID_DESTINATION_BODY")
 static var invalid_destination_primary := TranslationKey.new("MODAL_INVALID_DESTINATION_PRIMARY")
 
-static var blocked_content_title := TranslationKey.new("MODAL_BLOCKED_CONTENT_TITLE")
-static var blocked_content_body := TranslationKey.new("MODAL_BLOCKED_CONTENT_BODY")
-static var blocked_content_primary := TranslationKey.new("MODAL_BLOCKED_CONTENT_PRIMARY")
-
 static var preview_unreachable_title := TranslationKey.new("MODAL_PREVIEW_UNREACHABLE_TITLE")
 static var preview_unreachable_body := TranslationKey.new("MODAL_PREVIEW_UNREACHABLE_BODY")
 
@@ -527,27 +523,6 @@ func async_show_invalid_destination_modal(failure: Destination.Failure) -> void:
 		Global.metrics.track_screen_viewed(
 			"INVALID_DESTINATION_MODAL_SHOW",
 			JSON.stringify({"failure_reason": Destination.failure_name(failure)})
-		)
-
-
-## A place the iOS block list keeps out (#3224): casino, adult or restricted content, or a
-## place tagged `banned_ios` in the backoffice.
-func async_show_blocked_content_modal(dest: Destination) -> void:
-	_force_hide_loading_screen()
-	await _async_show_simple_modal(
-		blocked_content_title,
-		blocked_content_body,
-		blocked_content_primary,
-		Modal.MODAL_BLOCK_ICON,
-		close_current_modal
-	)
-
-	if Global.metrics != null:
-		var place := dest.realm_string
-		if dest.kind == Destination.Kind.GENESIS:
-			place = "%d,%d" % [dest.target_parcel.x, dest.target_parcel.y]
-		Global.metrics.track_screen_viewed(
-			"BLOCKED_CONTENT_MODAL_SHOW", JSON.stringify({"place": place})
 		)
 
 
