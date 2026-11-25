@@ -70,9 +70,22 @@ func _init() -> void:
 	for id in [ADDR_LOWER, ADDR_CHECKSUM]:
 		if not MATCHER.is_address(id):
 			failures.append("is_address(%s) should be true" % id)
-	for id in [ADDR_NO_PREFIX, "0x1234", "npc-1", "", "0x" + "g".repeat(40)]:
+	# A sign is not a hex digit, although String.is_valid_hex_number() accepts one.
+	var signed_minus := "0x-" + "a".repeat(39)
+	var signed_plus := "0x+" + "a".repeat(39)
+	for id in [
+		ADDR_NO_PREFIX, "0x1234", "npc-1", "", "0x" + "g".repeat(40), signed_minus, signed_plus
+	]:
 		if MATCHER.is_address(id):
 			failures.append("is_address(%s) should be false" % id)
+	# Nor does a signed 40-character id gain the `0x` prefix an address does.
+	_expect(
+		"signed id is not an unprefixed address",
+		failures,
+		signed_minus,
+		["-" + "a".repeat(39)],
+		false
+	)
 
 	# Multi-entry list: one of several entries matches with mixed casing.
 	_expect(
@@ -84,7 +97,7 @@ func _init() -> void:
 	)
 
 	if failures.is_empty():
-		print("[test_avatar_modifier_exclude_ids] PASS (all 11 cases, is_address)")
+		print("[test_avatar_modifier_exclude_ids] PASS (all 12 cases, is_address)")
 		quit(0)
 		return
 

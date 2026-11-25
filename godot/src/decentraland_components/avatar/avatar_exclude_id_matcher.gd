@@ -1,5 +1,9 @@
 class_name AvatarExcludeIdMatcher
 
+# Hex digits only: String.is_valid_hex_number() also accepts a leading sign.
+static var _address_re := RegEx.create_from_string("^0x[0-9a-f]{40}$")
+static var _unprefixed_re := RegEx.create_from_string("^[0-9a-f]{40}$")
+
 
 # Decides whether `avatar_id` is present in `exclude_ids` for the purposes of
 # AvatarModifierArea visibility. Ids compare case-insensitively, as on desktop
@@ -17,14 +21,12 @@ static func is_excluded(avatar_id: String, exclude_ids) -> bool:
 
 ## Whether `id` is an Ethereum address: `0x` and 40 hex digits, any casing.
 static func is_address(id: String) -> bool:
-	return (
-		id.length() == 42 and id.to_lower().begins_with("0x") and id.substr(2).is_valid_hex_number()
-	)
+	return _address_re.search(id.to_lower()) != null
 
 
 static func _normalize(id: String) -> String:
 	var lower := id.to_lower()
 	# Only an address gains the prefix: a scene id like "npc-1" is compared as sent.
-	if lower.length() == 40 and lower.is_valid_hex_number():
+	if _unprefixed_re.search(lower) != null:
 		return "0x" + lower
 	return lower
