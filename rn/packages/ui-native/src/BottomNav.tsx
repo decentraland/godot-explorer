@@ -9,7 +9,7 @@ import Svg, {
 } from 'react-native-svg';
 import { Icon, IconName } from './Icon';
 import { NotificationBadge } from './NotificationBadge';
-import { colors } from './tokens';
+import { alpha, colors } from './tokens';
 import { u } from './scale';
 
 export type NavKey = 'explore' | 'backpack' | 'settings' | 'profile';
@@ -54,10 +54,10 @@ function SelectedIndicator({ landscape }: { landscape: boolean }) {
           rx={rx}
           ry={ry}
         >
-          <Stop offset={0} stopColor="#DF9CFF" stopOpacity={0.6} />
-          <Stop offset={0.35} stopColor="#DF9CFF" stopOpacity={0.35} />
+          <Stop offset={0} stopColor={colors.orchid} stopOpacity={0.6} />
+          <Stop offset={0.35} stopColor={colors.orchid} stopOpacity={0.35} />
           <Stop offset={0.65} stopColor="#B07BD0" stopOpacity={0.12} />
-          <Stop offset={1} stopColor="#865E99" stopOpacity={0} />
+          <Stop offset={1} stopColor={alpha['mauve-0']} stopOpacity={0} />
         </RadialGradient>
         <LinearGradient
           id="navLine"
@@ -66,9 +66,9 @@ function SelectedIndicator({ landscape }: { landscape: boolean }) {
           x2={landscape ? 0 : 1}
           y2={landscape ? 1 : 0}
         >
-          <Stop offset={0.096} stopColor="#E8B9FF" stopOpacity={0} />
-          <Stop offset={0.495} stopColor="#E8B9FF" />
-          <Stop offset={0.899} stopColor="#E8B9FF" stopOpacity={0} />
+          <Stop offset={0.096} stopColor={colors.lavender} stopOpacity={0} />
+          <Stop offset={0.495} stopColor={colors.lavender} />
+          <Stop offset={0.899} stopColor={colors.lavender} stopOpacity={0} />
         </LinearGradient>
       </Defs>
       <Ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="url(#navGlow)" />

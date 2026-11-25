@@ -7,36 +7,39 @@ import { t } from './i18n';
 import { color, colors, radius, space } from './tokens';
 import { u } from './scale';
 
-/** Marketing modal for campaigns, rewards and launches, over the scrim: the campaign `media` on top
- * (312x225, may bleed under the text), the title and body (`highlight` in bold Lavender Light at the
- * end), Button/Primary and, unless `secondaryButton` is off, Button/Secondary to dismiss.
- * Figma Modal/Special: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=904-649
+type ModalSpecialBase = { visible: boolean; onRequestClose: () => void };
+
+export type ModalSpecialProps = ModalSpecialBase &
+  (
+    | {
+        type?: 'default';
+        media?: ReactNode;
+        title: string;
+        body: string;
+        highlight?: string;
+        primaryLabel: string;
+        onPrimary: () => void;
+        secondaryButton?: boolean;
+        secondaryLabel?: string;
+        onSecondary?: () => void;
+      }
+    | {
+        /** Figma `Type=Custom`: only the background, border and glow; `children` fill the card. */
+        type: 'custom';
+        children: ReactNode;
+        /** Card height in dp; Figma's frame is 503. */
+        height?: number;
+      }
+  );
+
+/** Marketing modal for campaigns, rewards and launches, over the scrim. `Default`: the campaign
+ * `media` on top (312x225, may bleed under the text), the title and body (`highlight` in bold
+ * Lavender Light at the end), Button/Primary and, unless `secondaryButton` is off,
+ * Button/Secondary to dismiss. `Custom`: the same card with the caller's own layout.
+ * Figma Modal/Special: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=1122-421
  */
-export function ModalSpecial({
-  visible,
-  media,
-  title,
-  body,
-  highlight,
-  primaryLabel,
-  onPrimary,
-  secondaryButton = true,
-  secondaryLabel,
-  onSecondary,
-  onRequestClose,
-}: {
-  visible: boolean;
-  media?: ReactNode;
-  title: string;
-  body: string;
-  highlight?: string;
-  primaryLabel: string;
-  onPrimary: () => void;
-  secondaryButton?: boolean;
-  secondaryLabel?: string;
-  onSecondary?: () => void;
-  onRequestClose: () => void;
-}) {
+export function ModalSpecial(props: ModalSpecialProps) {
+  const { visible, onRequestClose } = props;
   return (
     <Modal
       visible={visible}
@@ -80,39 +83,60 @@ export function ModalSpecial({
               ]}
             />
           </View>
-          <View style={styles.media}>{media}</View>
-          <View style={styles.content}>
-            <View style={styles.texts}>
-              <AppText variant="Modal/Special Title" style={styles.title}>
-                {title}
-              </AppText>
-              <AppText variant="Modal/Special Body" style={styles.body}>
-                {body}
-                {highlight ? (
-                  <AppText
-                    variant="Modal/Special Body"
-                    style={styles.highlight}
-                  >
-                    {` ${highlight}`}
-                  </AppText>
-                ) : null}
-              </AppText>
+          {props.type === 'custom' ? (
+            <View style={{ height: props.height ?? u(503) }}>
+              {props.children}
             </View>
-            <View style={styles.ctas}>
-              <Button label={primaryLabel} onPress={onPrimary} fullWidth />
-              {secondaryButton && secondaryLabel && onSecondary ? (
-                <Button
-                  label={secondaryLabel}
-                  onPress={onSecondary}
-                  tone="secondary"
-                  fullWidth
-                />
-              ) : null}
-            </View>
-          </View>
+          ) : (
+            <DefaultContent {...props} />
+          )}
         </View>
       </View>
     </Modal>
+  );
+}
+
+function DefaultContent({
+  media,
+  title,
+  body,
+  highlight,
+  primaryLabel,
+  onPrimary,
+  secondaryButton = true,
+  secondaryLabel,
+  onSecondary,
+}: Extract<ModalSpecialProps, { title: string }>) {
+  return (
+    <>
+      <View style={styles.media}>{media}</View>
+      <View style={styles.content}>
+        <View style={styles.texts}>
+          <AppText variant="Modal/Special Title" style={styles.title}>
+            {title}
+          </AppText>
+          <AppText variant="Modal/Special Body" style={styles.body}>
+            {body}
+            {highlight ? (
+              <AppText variant="Modal/Special Body" style={styles.highlight}>
+                {` ${highlight}`}
+              </AppText>
+            ) : null}
+          </AppText>
+        </View>
+        <View style={styles.ctas}>
+          <Button label={primaryLabel} onPress={onPrimary} fullWidth />
+          {secondaryButton && secondaryLabel && onSecondary ? (
+            <Button
+              label={secondaryLabel}
+              onPress={onSecondary}
+              tone="secondary"
+              fullWidth
+            />
+          ) : null}
+        </View>
+      </View>
+    </>
   );
 }
 

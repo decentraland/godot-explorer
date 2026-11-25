@@ -1,4 +1,5 @@
 export { AvatarCard } from './AvatarCard';
+export { AvatarBackground } from './AvatarBackground';
 export { BrandBackground } from './BrandBackground';
 export {
   DetailRow,
@@ -23,6 +24,7 @@ export { InputUsername } from './InputUsername';
 export type { UsernameTab } from './InputUsername';
 export { MenuNavItem } from './MenuNavItem';
 export { ModalSpecial } from './ModalSpecial';
+export type { ModalSpecialProps } from './ModalSpecial';
 export { ProfileAttribute } from './ProfileAttribute';
 export { ScrollFade } from './ScrollFade';
 export { SettingsRow } from './SettingsRow';
@@ -31,7 +33,6 @@ export { Chip } from './Chip';
 export { CodeSlots } from './CodeSlots';
 export type { ButtonTone } from './Button';
 export { indexFromOffset, PageDots, SnapCarousel } from './Carousel';
-export { CollapsibleSection } from './CollapsibleSection';
 export { HsvSliders, Swatch, SwatchRow } from './ColorPicker';
 export { ClaimDialog } from './ClaimDialog';
 export type { ClaimState } from './ClaimDialog';
@@ -42,6 +43,7 @@ export type { DialogButton, DialogIcon } from './Dialog';
 export { Dropdown } from './Dropdown';
 export type { DropdownOption } from './Dropdown';
 export { EmptyState } from './EmptyState';
+export { ImageNotFound } from './ImageNotFound';
 export { GradientView, LinearFill, RadialFill } from './Gradient';
 export { Header } from './Header';
 export { HudCircleButton } from './HudCircleButton';
@@ -69,6 +71,7 @@ export type { Snap, SnapConfig, SnapHeights } from './sheetMath';
 export { Skeleton } from './Skeleton';
 export { SlotTile } from './SlotTile';
 export { Slider, sliderValueFromX } from './Slider';
+export { LogoLoader } from './LogoLoader';
 export { Spinner } from './Spinner';
 export { Switch } from './Switch';
 export { Tabs } from './Tabs';
@@ -78,7 +81,19 @@ export type { CategoryType } from './TagCategory';
 export type { EventTimeKind } from './Tags';
 export { counterLabel, TextField } from './TextField';
 export { ToastBubble, ToastProvider, toastReducer, useToast } from './Toast';
+export { Tooltip } from './Tooltip';
+export type { TooltipArrow } from './Tooltip';
 export { WarningBanner } from './WarningBanner';
+export { BugReportDialog, BUG_DESCRIPTION_MAX } from './BugReportDialog';
+export { FriendRow } from './FriendRow';
+export type { FriendAction } from './FriendRow';
+export { MenuDrawer } from './MenuDrawer';
+export { NotificationRow } from './NotificationRow';
+export type { NotificationKind } from './NotificationRow';
+export { PlaceModalLandscape } from './PlaceModalLandscape';
+export type { PlaceModalAction } from './PlaceModalLandscape';
+export { ScreenshotCard } from './ScreenshotCard';
+export { SectionCollapsible } from './SectionCollapsible';
 export { SCALE, u } from './scale';
 export {
   alpha,

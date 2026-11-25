@@ -1,8 +1,10 @@
 import { ReactElement } from 'react';
 import { act, create, ReactTestInstance } from 'react-test-renderer';
 import { Text } from 'react-native';
+import { Path } from 'react-native-svg';
 import {
   ActionSquareButton,
+  AvatarBackground,
   AvatarCard,
   Badge,
   DetailRow,
@@ -10,10 +12,13 @@ import {
   DiscoverCardSkeleton,
   Header,
   Chip,
-  CollapsibleSection,
   EmptyState,
   HudCircleButton,
   Icon,
+  IconButton,
+  ImageNotFound,
+  LogoLoader,
+  NotificationBadge,
   LinkRow,
   Menu,
   PageDots,
@@ -26,6 +31,7 @@ import {
   EventBadge,
   EventTimeTag,
   Tabs,
+  Tooltip,
   WarningBanner,
   colors,
   SCALE,
@@ -172,6 +178,23 @@ describe('Badge, IconButton, Tabs, HudCircleButton', () => {
     expect(text(tree)).toContain('4');
   });
 
+  it('IconButton Filter shows the red dot only with badge', () => {
+    const icon = (badge: boolean) => (
+      <IconButton
+        icon="filter"
+        badge={badge}
+        accessibilityLabel="Filter"
+        onPress={() => {}}
+      />
+    );
+    expect(
+      render(icon(true)).root.findAllByType(NotificationBadge),
+    ).toHaveLength(1);
+    expect(
+      render(icon(false)).root.findAllByType(NotificationBadge),
+    ).toHaveLength(0);
+  });
+
   it('HudCircleButton presses and shows its badge', () => {
     const onPress = jest.fn();
     const tree = render(
@@ -280,26 +303,6 @@ describe('Skeleton and EmptyState', () => {
   });
 });
 
-describe('CollapsibleSection', () => {
-  it('hides children until open and toggles', () => {
-    const onToggle = jest.fn();
-    const closed = render(
-      <CollapsibleSection title="Links" open={false} onToggle={onToggle}>
-        <Text>inner</Text>
-      </CollapsibleSection>,
-    );
-    expect(text(closed)).not.toContain('inner');
-    act(() => pressable(closed, 'Links').props.onPress());
-    expect(onToggle).toHaveBeenCalled();
-    const open = render(
-      <CollapsibleSection title="Links" open onToggle={onToggle}>
-        <Text>inner</Text>
-      </CollapsibleSection>,
-    );
-    expect(text(open)).toContain('inner');
-  });
-});
-
 describe('LinkRow and WarningBanner', () => {
   it('LinkRow presses and marks selection', () => {
     const onPress = jest.fn();
@@ -394,7 +397,7 @@ describe('demo props', () => {
       'Header',
       'Chip',
       'ProgressBar',
-      'CollapsibleSection',
+      'SectionCollapsible',
       'LinkRow',
       'WarningBanner',
       'PageDots',
@@ -444,6 +447,46 @@ describe('Sheet', () => {
       tree.update(<Sheet height="collapsed" footer={<Text>Next</Text>} />),
     );
     expect(JSON.stringify(tree.toJSON())).not.toContain('Next');
+    act(() => tree.unmount());
+  });
+});
+
+describe('Tooltip', () => {
+  it('draws the arrow, on one line, only when a side is given', () => {
+    const plain = render(<Tooltip text="Tap Chat to talk with others" />);
+    expect(text(plain)).toContain('Tap Chat to talk with others');
+    expect(plain.root.findAllByType(Path)).toHaveLength(0);
+    act(() => plain.unmount());
+    const left = render(<Tooltip arrow="left" text="Chat" />);
+    expect(left.root.findAllByType(Path)).toHaveLength(1);
+    expect(left.root.findByType(Text).props.numberOfLines).toBe(1);
+    act(() => left.unmount());
+  });
+});
+
+describe('DS image pieces', () => {
+  it('ImageNotFound draws the crossed-image glyph at the given size', () => {
+    const tree = render(<ImageNotFound iconSize={20} />);
+    const icon = tree.root.findByType(Icon);
+    expect(icon.props.name).toBe('imageOff');
+    expect(icon.props.size).toBe(20);
+    act(() => tree.unmount());
+  });
+
+  it('LogoLoader is a labelled progressbar', () => {
+    const tree = render(<LogoLoader accessibilityLabel="Loading" />);
+    expect(
+      tree.root.findAllByProps({
+        accessibilityRole: 'progressbar',
+        accessibilityLabel: 'Loading',
+      }).length,
+    ).toBeGreaterThan(0);
+    act(() => tree.unmount());
+  });
+
+  it('AvatarBackground renders the spotlight image', () => {
+    const tree = render(<AvatarBackground />);
+    expect(text(tree)).toContain('avatar-background');
     act(() => tree.unmount());
   });
 });

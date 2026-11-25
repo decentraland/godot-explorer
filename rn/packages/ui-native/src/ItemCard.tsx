@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
   },
-  emptyBg: { borderColor: '#000000', backgroundColor: colors.black40 },
+  emptyBg: { borderColor: colors.black, backgroundColor: colors.black40 },
   emptySelectedBg: { backgroundColor: colors.black60 },
   emptyDisabled: { opacity: 0.6 },
   disabledBg: { opacity: 0.8 },

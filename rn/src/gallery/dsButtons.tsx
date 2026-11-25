@@ -393,6 +393,19 @@ function DsButtons() {
                 />
               ),
             },
+            {
+              label: 'Badge=True',
+              render: s => (
+                <IconButton
+                  icon="filter"
+                  badge
+                  selected={on(s)}
+                  disabled={off(s)}
+                  accessibilityLabel="Filter"
+                  onPress={noop}
+                />
+              ),
+            },
           ]}
         />
         <Block

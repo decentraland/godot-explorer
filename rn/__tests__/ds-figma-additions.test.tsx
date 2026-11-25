@@ -9,6 +9,7 @@ import {
   InputUsername,
   MenuNavItem,
   ModalSpecial,
+  NotificationBadge,
   ProfileAttribute,
   ScrollFade,
   SettingsRow,
@@ -107,6 +108,15 @@ describe('Figma components added to the DS', () => {
     expect(label.fontFamily).toBe('Inter-Bold');
   });
 
+  it('MenuNavItem shows the notification dot only with badge', () => {
+    const plain = render(<MenuNavItem label="Account" onPress={jest.fn()} />);
+    expect(plain.root.findAllByType(NotificationBadge)).toHaveLength(0);
+    const flagged = render(
+      <MenuNavItem label="Account" badge onPress={jest.fn()} />,
+    );
+    expect(flagged.root.findByType(NotificationBadge).props.size).toBe(8);
+  });
+
   it('TagCategory shows the category icon unless icon is false', () => {
     const withIcon = render(<TagCategory type="art" label="Art" />);
     expect(texts(withIcon.root)).toContain('Art');
@@ -191,5 +201,14 @@ describe('Figma components added to the DS', () => {
     act(() => tree.root.findByProps({ label: 'Maybe later' }).props.onPress());
     expect(onPrimary).toHaveBeenCalled();
     expect(onSecondary).toHaveBeenCalled();
+  });
+
+  it('ModalSpecial custom renders only the caller content', () => {
+    const tree = render(
+      <ModalSpecial type="custom" visible onRequestClose={jest.fn()}>
+        <Text>campaign</Text>
+      </ModalSpecial>,
+    );
+    expect(texts(tree.root)).toEqual(['campaign']);
   });
 });

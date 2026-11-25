@@ -7,7 +7,6 @@ import {
   EventBadge,
   EventTimeTag,
   Header,
-  CollapsibleSection,
   Dialog,
   Dropdown,
   EmptyState,
@@ -17,6 +16,7 @@ import {
   SnapCarousel,
   ProgressBar,
   SearchField,
+  SectionCollapsible,
   Skeleton,
   Slider,
   Switch,
@@ -124,11 +124,12 @@ export const demos = {
     value: 0.5,
     label: 'Current Cache Size',
   } satisfies ComponentProps<typeof ProgressBar>,
-  CollapsibleSection: {
-    title: 'LINKS',
-    open: false,
+  SectionCollapsible: {
+    title: 'ONLINE',
+    count: 2,
+    expanded: false,
     onToggle: noop,
-  } satisfies ComponentProps<typeof CollapsibleSection>,
+  } satisfies ComponentProps<typeof SectionCollapsible>,
   LinkRow: {
     label: 'Privacy Policy',
     external: true,

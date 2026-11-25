@@ -40,6 +40,7 @@ import {
   wearablesSvg,
 } from './iconSvgs';
 import { u } from './scale';
+import { colors } from './tokens';
 
 const sources = {
   credits: creditsSvg,
@@ -216,7 +217,7 @@ export function Icon({
       : requested;
   if (name in monos) {
     const mono = monos[name];
-    const paint = color ?? mono.fill ?? '#FCFCFC';
+    const paint = color ?? mono.fill ?? colors.snow;
     const xml = `<svg viewBox="${mono.viewBox}" color="${paint}">${mono.inner}</svg>`;
     return <SvgXml xml={xml} width={size} height={size} />;
   }
@@ -224,7 +225,7 @@ export function Icon({
     const xml = `<svg viewBox="0 0 24 24" fill="none"><path d="${
       strokes[name]
     }" fill="${fill ?? 'none'}" fill-rule="evenodd" stroke="${
-      color ?? '#FCFCFC'
+      color ?? colors.snow
     }" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     return <SvgXml xml={xml} width={size} height={size} />;
   }

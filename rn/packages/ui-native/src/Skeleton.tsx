@@ -12,7 +12,7 @@ const band = (color: string) => [
   { offset: 0.484, color, opacity: 0.08 },
   { offset: 1, color, opacity: 0 },
 ];
-const BAND = { dark: band('#FFFFFF'), light: band('#000000') };
+const BAND = { dark: band(colors.white), light: band(colors.black) };
 
 /** Figma `Skeleton`: an 8% block (White on dark surfaces, Black on light ones). Wave sweeps a
  * half-width highlight across it in 1 s ease-out; Pulse fades it to 4% and back, 0.75 s each way.
