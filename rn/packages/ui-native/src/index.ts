@@ -1,4 +1,5 @@
 export { AvatarCard } from './AvatarCard';
+export { AvatarBackground } from './AvatarBackground';
 export { BrandBackground } from './BrandBackground';
 export {
   DetailRow,
@@ -42,6 +43,7 @@ export type { DialogButton, DialogIcon } from './Dialog';
 export { Dropdown } from './Dropdown';
 export type { DropdownOption } from './Dropdown';
 export { EmptyState } from './EmptyState';
+export { ImageNotFound } from './ImageNotFound';
 export { GradientView, LinearFill, RadialFill } from './Gradient';
 export { Header } from './Header';
 export { HudCircleButton } from './HudCircleButton';
@@ -69,6 +71,7 @@ export type { Snap, SnapConfig, SnapHeights } from './sheetMath';
 export { Skeleton } from './Skeleton';
 export { SlotTile } from './SlotTile';
 export { Slider, sliderValueFromX } from './Slider';
+export { LogoLoader } from './LogoLoader';
 export { Spinner } from './Spinner';
 export { Switch } from './Switch';
 export { Tabs } from './Tabs';
