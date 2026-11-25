@@ -29,6 +29,7 @@ extends Node
 @export var min_sun_elevation_degrees: float = 12.0
 
 var _moon_smooth_dir := Vector3(0.0, 1.0, 0.0)
+var _scene_skybox: SceneSkybox
 
 @onready var world_environment: WorldEnvironment = $WorldEnvironment
 @onready var main_light: DirectionalLight3D = $SkyLights/MainLight
@@ -37,15 +38,37 @@ var _moon_smooth_dir := Vector3(0.0, 1.0, 0.0)
 @onready var initial_sun_energy = main_light.light_energy
 @onready var sky_material = world_environment.environment.sky.sky_material
 
+static var _pristine_params := {}
+static var _pristine_fog := {}
+static var _pristine_sky_material: Material = null
+
 
 func _ready():
 	# Set up animation: play, sample at position, stop
 	anim_player.play("light_cycle")
 	anim_player.pause()
 
+	# Capture the defaults once, before any scene override ran: a sky swap (quality
+	# setting) rebuilds this node while overrides are live, so reading the live material
+	# there would record the scene's values as the defaults to restore later.
+	if _pristine_params.is_empty():
+		_capture_pristine()
+
+	_scene_skybox = SceneSkybox.new(self)
+	Global.sdk_skybox_changed.connect(_on_sdk_skybox_changed)
+	_scene_skybox.apply_config(Global.sdk_skybox_config, Global.sdk_skybox_scene_id)
+
 	if Global.is_xr():
 		Global.loading_started.connect(self._on_loading_started)
 		Global.loading_finished.connect(self._on_loading_finished)
+
+
+func _exit_tree() -> void:
+	_scene_skybox.restore()
+
+
+func _on_sdk_skybox_changed(config_json: String, scene_id: int) -> void:
+	_scene_skybox.apply_config(config_json, scene_id)
 
 
 func on_scene_runner_child_entered_tree(node: Node3D):
@@ -195,3 +218,37 @@ func _process(_delta: float) -> void:
 		)
 	if fog_color_gradient:
 		world_environment.environment.fog_light_color = fog_color_gradient.sample(skybox_time)
+
+	# Scene overrides run last: they replace whichever time-of-day value the cycle just
+	# wrote (sun color/position, ambient, fog, sky LUTs) and never touch the light gate.
+	_scene_skybox.apply_frame(skybox_time)
+
+
+func _capture_pristine() -> void:
+	var material: Material = sky_material
+	if material is ShaderMaterial:
+		# The names live on SceneSkybox so the two cannot drift: a uniform it writes and this
+		# capture misses would silently restore the live, already-overridden value.
+		for param in SceneSkybox.override_param_names():
+			_pristine_params[param] = material.get_shader_parameter(param)
+
+	var environment := world_environment.environment
+	_pristine_fog = {
+		"mode": environment.fog_mode,
+		"density": environment.fog_density,
+	}
+	var sky_resource: Sky = environment.sky
+	if sky_resource != null:
+		_pristine_sky_material = sky_resource.sky_material
+
+
+func pristine_params() -> Dictionary:
+	return _pristine_params
+
+
+func pristine_fog() -> Dictionary:
+	return _pristine_fog
+
+
+func pristine_sky_material() -> Material:
+	return _pristine_sky_material
