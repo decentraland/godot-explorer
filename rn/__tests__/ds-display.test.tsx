@@ -1,6 +1,7 @@
 import { ReactElement } from 'react';
 import { act, create, ReactTestInstance } from 'react-test-renderer';
 import { Text } from 'react-native';
+import { Path } from 'react-native-svg';
 import {
   ActionSquareButton,
   AvatarBackground,
@@ -30,6 +31,7 @@ import {
   EventBadge,
   EventTimeTag,
   Tabs,
+  Tooltip,
   WarningBanner,
   colors,
   SCALE,
@@ -446,6 +448,19 @@ describe('Sheet', () => {
     );
     expect(JSON.stringify(tree.toJSON())).not.toContain('Next');
     act(() => tree.unmount());
+  });
+});
+
+describe('Tooltip', () => {
+  it('draws the arrow, on one line, only when a side is given', () => {
+    const plain = render(<Tooltip text="Tap Chat to talk with others" />);
+    expect(text(plain)).toContain('Tap Chat to talk with others');
+    expect(plain.root.findAllByType(Path)).toHaveLength(0);
+    act(() => plain.unmount());
+    const left = render(<Tooltip arrow="left" text="Chat" />);
+    expect(left.root.findAllByType(Path)).toHaveLength(1);
+    expect(left.root.findByType(Text).props.numberOfLines).toBe(1);
+    act(() => left.unmount());
   });
 });
 

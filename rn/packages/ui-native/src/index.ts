@@ -81,6 +81,8 @@ export type { CategoryType } from './TagCategory';
 export type { EventTimeKind } from './Tags';
 export { counterLabel, TextField } from './TextField';
 export { ToastBubble, ToastProvider, toastReducer, useToast } from './Toast';
+export { Tooltip } from './Tooltip';
+export type { TooltipArrow } from './Tooltip';
 export { WarningBanner } from './WarningBanner';
 export { BugReportDialog, BUG_DESCRIPTION_MAX } from './BugReportDialog';
 export { FriendRow } from './FriendRow';

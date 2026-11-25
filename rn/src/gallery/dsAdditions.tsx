@@ -1,6 +1,6 @@
 // Design System Mobile components added on 2026-11-17: Button/SeeMore, Button/ProfileLink,
 // Profile/Attribute, Icon/Profile, Menu/NavItem, Settings/Row, Input/Username and Modal/Special;
-// Loader/Logo, Image Not Found and Background/Avatar on 2026-11-25.
+// Loader/Logo, Image Not Found, Background/Avatar and Tooltip on 2026-11-25.
 import { useState } from 'react';
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import {
@@ -25,6 +25,7 @@ import {
   color,
   space,
   Switch,
+  Tooltip,
   u,
 } from '@dcl/ui-native';
 import { registerPreview } from './registry';
@@ -192,6 +193,25 @@ registerPreview('extra/ds-modal-special', {
   ),
 });
 
+registerPreview('extra/ds-tooltip', {
+  title: 'DS: Tooltip',
+  orientation: 'portrait',
+  render: () => (
+    <ScrollView
+      style={styles.tooltipPage}
+      contentContainerStyle={styles.tooltips}
+    >
+      <Tooltip text="Tap Chat to talk with others" />
+      <Tooltip text="Hold the jump button longer to jump higher, and tap it again in the air to double jump." />
+      <Tooltip arrow="left" text="Chat" style={styles.tooltipLeft} />
+      <Tooltip arrow="top" text="Menu" />
+      <Tooltip arrow="right" text="Emotes" />
+      <Tooltip arrow="bottom" text="Map" />
+      <Tooltip text="Open the backpack to change what you wear" />
+    </ScrollView>
+  ),
+});
+
 const styles = StyleSheet.create({
   page: { flex: 1 },
   content: {
@@ -223,4 +243,7 @@ const styles = StyleSheet.create({
     paddingBottom: space['40'],
   },
   customTitle: { color: color.text.primary, textAlign: 'center' },
+  tooltipPage: { flex: 1, backgroundColor: color.background.elevated },
+  tooltips: { padding: space['2xl'], gap: space['2xl'] },
+  tooltipLeft: { marginLeft: space.lg },
 });

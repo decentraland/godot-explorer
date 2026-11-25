@@ -123,6 +123,12 @@ const figmaStyles = {
   'Badge/Date': { fontFamily: fonts.medium, fontSize: u(9) },
   'Badge/Progress': { fontFamily: fonts.bold, fontSize: u(8) },
   'Badge/Progress Total': { fontFamily: fonts.regular, fontSize: u(8) },
+  'Tooltip/Short': { fontFamily: fonts.medium, fontSize: u(13) },
+  'Tooltip/Long': {
+    fontFamily: fonts.semibold,
+    fontSize: u(9),
+    lineHeight: u(12),
+  },
 } satisfies Record<string, TextStyle>;
 
 export type FigmaTextStyle = keyof typeof figmaStyles;
