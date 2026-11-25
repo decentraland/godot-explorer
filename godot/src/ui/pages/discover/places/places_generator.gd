@@ -74,6 +74,8 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 	var last_places: Array[Dictionary] = Global.get_config().get_last_places()
 	last_places = last_places.slice(0, JUMP_BACK_IN_MAX_ITEMS)
 	var seen: Dictionary = {}
+	var places_data: Array[Dictionary] = []
+	var older_visits: Array[Dictionary] = []
 	var index = 0
 	for place in last_places:
 		place["index"] = index
@@ -109,17 +111,29 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 		if dedup_key.is_empty():
 			dedup_key = data.get("world_name", "")
 		if not dedup_key.is_empty() and seen.has(dedup_key):
+			# Only a real place id proves it is the same place, not the fallback keys.
+			if data.has("id"):
+				older_visits.append(place)
 			continue
 		if not dedup_key.is_empty():
 			seen[dedup_key] = true
+		places_data.append(data)
 
-		# Re-checked every iteration: this loop awaits, so the page can go away mid-loop.
-		if not can_populate():
-			return
+	if not older_visits.is_empty():
+		Global.get_config().remove_last_places(older_visits)
 
+	# The loop awaits, so the page can go away mid-load.
+	if not can_populate():
+		_loading = false
+		return
+
+	# Discover's re-show calls this directly, without on_request's clean_items(): start from an
+	# empty row or every re-show appends a second copy of each card (#3071).
+	clean_items()
+	for place_data in places_data:
 		var item = DISCOVER_CARROUSEL_ITEM.instantiate()
 		item_container.add_child(item)
-		item.set_data(data)
+		item.set_data(place_data)
 		# Relay through the generator's own signal so a host without a `discover` reference (e.g.
 		# the landscape DiscoverPanel) can still react to a tap; `discover`, when set, keeps
 		# routing straight to the full Discover screen's own SidePanelWrapper flow.
@@ -127,7 +141,7 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 		if is_instance_valid(discover):
 			item.item_pressed.connect(discover.on_item_pressed.bind(item))
 
-	if last_places.size() > 0:
+	if places_data.size() > 0:
 		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS)
 	else:
 		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITHOUT_RESULTS)
