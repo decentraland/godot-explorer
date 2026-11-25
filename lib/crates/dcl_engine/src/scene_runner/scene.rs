@@ -35,7 +35,8 @@ use crate::{
 use super::{
     components::{
         asset_load::AssetLoadState, gltf_node_modifiers::GltfNodeModifierState,
-        particle_system::ParticleSystemItem, trigger_area::TriggerAreaState, tween::Tween,
+        particle_system::ParticleSystemItem, post_processing::PostProcessing,
+        trigger_area::TriggerAreaState, tween::Tween,
     },
     godot_dcl_scene::GodotDclScene,
 };
@@ -132,6 +133,7 @@ pub enum SceneUpdateState {
     SkyboxTime,
     TriggerArea,
     VirtualCameras,
+    PostProcessing,
     AudioSource,
     ParticleSystem,
     ProcessRpcs,
@@ -177,7 +179,8 @@ impl SceneUpdateState {
             Self::TouchScreenControls => Self::SkyboxTime,
             Self::SkyboxTime => Self::TriggerArea,
             Self::TriggerArea => Self::VirtualCameras,
-            Self::VirtualCameras => Self::AudioSource,
+            Self::VirtualCameras => Self::PostProcessing,
+            Self::PostProcessing => Self::AudioSource,
             Self::AudioSource => Self::ParticleSystem,
             Self::ParticleSystem => Self::AvatarAttach,
             Self::AvatarAttach => Self::SceneUi,
@@ -300,6 +303,8 @@ pub struct Scene {
     pub last_player_scene_id: SceneId,
 
     pub virtual_camera: Gd<DclVirtualCamera>,
+    /// `PBPostProcessing` of each entity that has it.
+    pub post_processing: HashMap<SceneEntityId, PostProcessing>,
 
     pub locomotion_settings: Gd<DclLocomotionSettings>,
 
@@ -439,6 +444,7 @@ impl Scene {
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
+            post_processing: HashMap::new(),
             locomotion_settings: Default::default(),
             active_external_force: Vector3::ZERO,
             pending_impulses: Vec::new(),
@@ -548,6 +554,7 @@ impl Scene {
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
+            post_processing: HashMap::new(),
             locomotion_settings: Default::default(),
             active_external_force: Vector3::ZERO,
             pending_impulses: Vec::new(),

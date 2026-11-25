@@ -88,7 +88,10 @@ fn get_component_id_and_name(file_path: &str) -> Component {
 
     let id = get_component_id(&contents).unwrap();
 
-    let snake_name = &file_path[COMPONENT_BASE_DIR.len()..file_path.len() - 6];
+    let snake_name = Path::new(file_path)
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .expect("proto file name");
     let pascal_name = snake_to_pascal(snake_name);
 
     Component {
@@ -413,6 +416,12 @@ fn main() -> io::Result<()> {
             }
         }
     }
+    for file in PENDING_COMPONENT_PROTOS {
+        if let Some(path) = pending_component_proto(file) {
+            proto_components.push(get_component_id_and_name(path.to_str().unwrap()));
+            proto_files.push(path);
+        }
+    }
 
     proto_files.push(
         format!("{PROTO_FILES_BASE_DIR}decentraland/kernel/comms/rfc5/ws_comms.proto").into(),
@@ -668,6 +677,24 @@ fn patched_font_src_proto(path: &Path, message: &str, field: &str) -> std::path:
     fs::create_dir_all(dest.parent().unwrap()).expect("create proto_patched dir");
     fs::write(&dest, source).unwrap_or_else(|_| panic!("write patched {file}"));
     dest
+}
+
+/// Components the pinned @dcl/protocol build does not ship yet: `PBPostProcessing` (id 1226,
+/// decentraland/dcl-one#2348). Compiled from the copy in `proto_pending/` until the pin carries
+/// the file; then the npm copy wins and this entry can go.
+const PENDING_COMPONENT_PROTOS: &[&str] = &["post_processing.proto"];
+
+fn pending_component_proto(file: &str) -> Option<std::path::PathBuf> {
+    if Path::new(COMPONENT_BASE_DIR).join(file).exists() {
+        return None;
+    }
+    let rel = format!("decentraland/sdk/components/{file}");
+    let source = format!("proto_pending/{rel}");
+    println!("cargo:rerun-if-changed={source}");
+    let dest = patched_proto_root().join(&rel);
+    fs::create_dir_all(dest.parent().unwrap()).expect("create proto_patched dir");
+    fs::copy(&source, &dest).unwrap_or_else(|_| panic!("copy {source}"));
+    Some(dest)
 }
 
 fn insert_fields_before_message_close(source: &str, marker: &str, fields: &str) -> String {

@@ -21,6 +21,7 @@ pub mod nft_shape;
 pub mod particle_system;
 pub mod physics_combined;
 pub mod pointer_events;
+pub mod post_processing;
 pub mod raycast;
 pub mod realm_info;
 pub mod skybox_time;

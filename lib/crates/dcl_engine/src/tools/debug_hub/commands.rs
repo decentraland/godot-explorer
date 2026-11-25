@@ -101,6 +101,7 @@ pub fn run(
         "scenes" => Ok(collector::scenes_summary()),
         "avatars" => Ok(collector::avatars()),
         "state" => Ok(state()),
+        "post_processing" => Ok(crate::sky::post_processing::debug_reading()),
         "scene" => {
             let id = arg_i64(args, "scene_id").unwrap_or(-1);
             checked(collector::scene(id, &filters(args)))

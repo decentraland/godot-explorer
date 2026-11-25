@@ -3,5 +3,6 @@
 
 pub mod cycle_math;
 pub mod environment_selector;
+pub mod post_processing;
 pub mod sky_base;
 pub mod skybox_time;
