@@ -161,6 +161,9 @@ func _ready():
 
 	Global.set_orientation_landscape()
 	UiSounds.install_audio_recusirve(self)
+	# A world never starts with Discover's hold on (it would keep the scenes muted): the screen
+	# that left releases it, this is the safety net.
+	Global.music_player.exit_discover()
 	Global.music_player.stop()
 
 	# Connect notification bell button

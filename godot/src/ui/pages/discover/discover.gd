@@ -294,6 +294,8 @@ func _on_visibility_changed():
 		if Global.get_explorer():
 			if button_back_to_explorer:
 				button_back_to_explorer.show()
+		# Before the seasonal swap, which keeps the lobby track as the one to restore.
+		Global.music_player.enter_discover()
 		# Fire-and-forget, no-op after the first call — see async_request_assets().
 		Global.seasonal_skin_manager.async_request_assets()
 		_apply_seasonal_skin()
@@ -307,6 +309,19 @@ func _on_visibility_changed():
 			else:
 				Global.music_player.play(_music_before_seasonal)
 			_music_before_seasonal = ""
+		Global.music_player.exit_discover()
+
+
+# Shown on arrival (the standalone menu adds it visible, so no visibility change fires) and gone
+# with the tree (a jump-in or a return to Discover frees it while showing).
+func _enter_tree() -> void:
+	if is_visible_in_tree() and is_instance_valid(Global.music_player):
+		Global.music_player.enter_discover()
+
+
+func _exit_tree() -> void:
+	if is_instance_valid(Global.music_player):
+		Global.music_player.exit_discover()
 
 
 ## Shows/hides the seasonal overlay and swaps Discover's music, per SeasonalSkinManager
