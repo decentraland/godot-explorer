@@ -1,5 +1,4 @@
-import { Pressable, StyleSheet, View } from 'react-native';
-import { AppText, colors, Icon, u } from '@dcl/ui-native';
+import { Menu } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { ItemFilter } from './selection';
 
@@ -11,7 +10,7 @@ const OPTIONS: {
   { key: 'collectibles', label: 'BACKPACK_COLLECTIBLES' },
 ];
 
-/** Dropdown under the filter button (Figma "Menu"). */
+/** Dropdown under the filter button: the DS `Menu` with a check on the active filter. */
 export function FilterMenu({
   value,
   onChange,
@@ -20,47 +19,14 @@ export function FilterMenu({
   onChange: (next: ItemFilter) => void;
 }) {
   return (
-    <View style={styles.menu}>
-      {OPTIONS.map(option => {
-        const selected = option.key === value;
-        return (
-          <Pressable
-            key={option.key}
-            accessibilityRole="menuitem"
-            accessibilityState={{ selected }}
-            onPress={() => onChange(option.key)}
-            style={[styles.row, selected && styles.rowOn]}
-          >
-            <AppText variant="body" style={styles.label}>
-              {t(option.label)}
-            </AppText>
-            {selected && (
-              <Icon name="check" size={18} color={colors.lavender} />
-            )}
-          </Pressable>
-        );
-      })}
-    </View>
+    <Menu
+      items={OPTIONS.map(option => ({
+        key: option.key,
+        label: t(option.label),
+        selected: option.key === value,
+        check: option.key === value,
+      }))}
+      onSelect={onChange}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  menu: {
-    width: u(164),
-    padding: u(6),
-    borderRadius: u(8),
-    borderWidth: 1,
-    borderColor: 'rgba(232,185,255,0.45)',
-    backgroundColor: colors.purple550,
-  },
-  row: {
-    height: u(38),
-    paddingHorizontal: u(8),
-    borderRadius: u(6),
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  rowOn: { backgroundColor: 'rgba(0,0,0,0.35)' },
-  label: { fontSize: u(16), color: colors.lavender },
-});

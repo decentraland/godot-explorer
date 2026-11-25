@@ -7,12 +7,15 @@ import { Mode } from './backpackState';
 export function BackpackHeader({
   mode,
   menuOpen,
+  filtered = false,
   onMode,
   onFilter,
   filterGap = 22,
 }: {
   mode: Mode;
   menuOpen: boolean;
+  /** A filter other than All is applied: the DS filter button's badge dot. */
+  filtered?: boolean;
   onMode: (mode: Mode) => void;
   onFilter: () => void;
   /** Space before the filter button (dp): wider in portrait than in landscape. */
@@ -41,6 +44,7 @@ export function BackpackHeader({
           icon="filter"
           accessibilityLabel={t('BACKPACK_FILTER')}
           selected={menuOpen}
+          badge={filtered}
           onPress={onFilter}
         />
       </View>

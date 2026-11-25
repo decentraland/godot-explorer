@@ -100,8 +100,9 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
     gap: space.xs,
-    paddingHorizontal: layout.gutter,
+    marginHorizontal: layout.gutter,
   },
   title: { color: theme.text.primary },
   swatches: { marginTop: space.lg },

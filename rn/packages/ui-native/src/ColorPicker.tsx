@@ -10,7 +10,15 @@ import {
 import { AppText } from './AppText';
 import { hexToHsv, Hsv, hsvToHex } from './colorMath';
 import { LinearFill } from './Gradient';
-import { color, colors, elevation, minTouchTarget, radius, space } from './tokens';
+import { AngularStroke, AngularStop } from './internal/AngularStroke';
+import {
+  color,
+  colors,
+  elevation,
+  minTouchTarget,
+  radius,
+  space,
+} from './tokens';
 import { u } from './scale';
 import { t } from './i18n';
 
@@ -22,6 +30,13 @@ const HUE_STOPS = [0, 60, 120, 180, 240, 300, 360].map((hue, index) => ({
 const SWATCH = u(40);
 const RING_OUTSET = u(2.5);
 const RING_WIDTH = u(1.5);
+/** `Color-Swatch` rim: Snow, angular gradient lit upper-left and lower-right, at 70%. */
+const SWATCH_RIM: AngularStop[] = [
+  [0.15, 0],
+  [0.35, 1],
+  [0.65, 0],
+  [0.85, 1],
+];
 
 /** `Color-Swatch` Type=Picker: a blurred colour wheel react-native-svg cannot draw, exported as PNG. */
 const pickerImage = require('../assets/color-picker.png');
@@ -62,9 +77,16 @@ export function Swatch({
             {picker ? (
               <Image source={pickerImage} style={styles.swatchImage} />
             ) : (
-              <View
-                style={[styles.swatchImage, { backgroundColor: fill }]}
-              />
+              <View style={[styles.swatchImage, { backgroundColor: fill }]}>
+                <AngularStroke
+                  size={40}
+                  radius={20}
+                  width={1}
+                  stops={SWATCH_RIM}
+                  color={color.border.default}
+                  opacity={0.7}
+                />
+              </View>
             )}
           </View>
           {pressed ? (
@@ -149,10 +171,7 @@ function Slider({
         {track}
         <View
           pointerEvents="none"
-          style={[
-            styles.thumb,
-            { left: value * width - THUMB / 2 },
-          ]}
+          style={[styles.thumb, { left: value * width - THUMB / 2 }]}
         />
       </View>
     </View>

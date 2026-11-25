@@ -1,16 +1,30 @@
 import { ComponentRef, ReactNode, useCallback, useEffect, useRef } from 'react';
 import {
+  Image,
   PixelRatio,
   StyleSheet,
   View,
   ViewStyle,
   StyleProp,
 } from 'react-native';
-import { colors, RadialFill } from '@dcl/ui-native';
+import { BrandBackground, colors, RadialFill } from '@dcl/ui-native';
 import { core } from '../core';
 import { CameraFocus, Control } from '../core/native';
 
 const REPORT_INTERVAL_MS = 50;
+/** Figma `Background/Avatar` as drawn in the portrait frames (720 x 1114 from the top): noise, blend
+ * modes and blur that React Native cannot render, exported as an image as its description asks. */
+const spotlight = require('../assets/backpack-avatar-spotlight.webp');
+
+/** Portrait stage: the `Background` Glow (DS `BrandBackground`) and the avatar spotlight over it. */
+export function PortraitStage() {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <BrandBackground glow />
+      <Image source={spotlight} style={styles.spotlight} resizeMode="stretch" />
+    </View>
+  );
+}
 
 /** Purple stage: a glow centred on the avatar window (everything above `bottom`) and a floor halo at its feet. */
 export function StageBackground({ bottom = 0 }: { bottom?: number }) {
@@ -116,3 +130,13 @@ export function AvatarHole({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  spotlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    aspectRatio: 720 / 1114,
+  },
+});

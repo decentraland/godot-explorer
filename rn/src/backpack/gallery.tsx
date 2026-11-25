@@ -1,12 +1,14 @@
 // Backpack previews, one per manifest id; see docs/rn-ui-spec/reports/backpack-{a,b}.md.
 import { useMemo } from 'react';
-import { BottomNav } from '@dcl/ui-native';
+import { BottomNav, u } from '@dcl/ui-native';
 import { registerPreview } from '../gallery/registry';
 import { BackpackScreen } from './BackpackScreen';
 import { LANDSCAPE, PORTRAIT, Spec } from './gallerySpecs';
 import { createMockApi } from './mockApi';
 
 const noop = () => {};
+/** The Figma frames draw the nav bar 180 px tall: 154 px of bar plus the phone's bottom safe area. */
+const FIGMA_BOTTOM_INSET = u(13);
 
 function Preview({ spec, landscape }: { spec: Spec; landscape: boolean }) {
   const api = useMemo(() => createMockApi(spec.api), [spec.api]);
@@ -19,7 +21,11 @@ function Preview({ spec, landscape }: { spec: Spec; landscape: boolean }) {
       onBack={landscape ? noop : undefined}
       footer={
         landscape ? null : (
-          <BottomNav active="backpack" bottomInset={0} onChange={noop} />
+          <BottomNav
+            active="backpack"
+            bottomInset={FIGMA_BOTTOM_INSET}
+            onChange={noop}
+          />
         )
       }
     />

@@ -1,9 +1,16 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BottomSheet, colors, snapHeights, space, u } from '@dcl/ui-native';
+import {
+  BottomSheet,
+  color,
+  control,
+  snapHeights,
+  space,
+  u,
+} from '@dcl/ui-native';
 import type { SnapConfig } from '@dcl/ui-native';
-import { AvatarHole, StageBackground } from './AvatarStage';
+import { AvatarHole, PortraitStage } from './AvatarStage';
 import {
   BackButton,
   FilterOverlay,
@@ -35,10 +42,17 @@ export function PortraitLayout({
   const [area, setArea] = useState(0);
   const { state, dispatch, catalog } = controller;
   const emotes = state.mode === 'emotes';
-  const config = emotes ? EMOTES_SNAPS : WEARABLES_SNAPS;
-  const heights = snapHeights(area, config);
   const covered = state.sheet === 'full';
   const top = Math.max(insets.top + u(4), u(43));
+  // Figma `Full`: the open sheet starts right under the header (pills row + 30 px).
+  const headerBottom = top + control['pill-lg'] + space['30'];
+  const config = useMemo(() => {
+    const base = emotes ? EMOTES_SNAPS : WEARABLES_SNAPS;
+    return area > headerBottom
+      ? { ...base, full: (area - headerBottom) / area }
+      : base;
+  }, [emotes, area, headerBottom]);
+  const heights = snapHeights(area, config);
 
   return (
     <View style={styles.root}>
@@ -46,7 +60,7 @@ export function PortraitLayout({
         style={styles.area}
         onLayout={event => setArea(event.nativeEvent.layout.height)}
       >
-        <StageBackground bottom={heights[state.sheet]} />
+        <PortraitStage />
         <View style={[styles.header, { paddingTop: top }]}>
           {onBack ? (
             <BackButton onPress={onBack} style={{ left: u(18), top }} />
@@ -88,12 +102,14 @@ export function PortraitLayout({
           onSnapChange={sheet => dispatch({ type: 'sheet', sheet })}
           containerHeight={area || undefined}
           config={config}
+          handle={!emotes}
         >
           <SheetContent
             controller={controller}
             copy={copy}
             subRow={subRow}
             bottomInset={heights.full - heights[state.sheet]}
+            flushTop={emotes}
           />
         </BottomSheet>
         <FilterOverlay
@@ -107,7 +123,7 @@ export function PortraitLayout({
 }
 
 const styles = StyleSheet.create({
-  root: { ...StyleSheet.absoluteFill, backgroundColor: colors.purple500 },
+  root: { ...StyleSheet.absoluteFill, backgroundColor: color.background.brand },
   /** Clipped so the sheet stops at the nav bar instead of running under it. */
   area: { flex: 1, overflow: 'hidden' },
   /** Figma `Header`: right-aligned, 48 px from the edge. */

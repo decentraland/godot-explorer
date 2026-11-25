@@ -5,6 +5,11 @@ import { ItemCard } from './ItemCard';
 import { color, fonts, space } from './tokens';
 import { u } from './scale';
 
+/** `Cards-Wearables` is drawn at 96 dp; the slot rows scale it to 62. */
+const CARD = 96;
+/** The slot rows' selected outline: 3 px, centred on the card edge. */
+const SLOT_RING = u(1.5);
+
 /** Backpack category slot: a `Cards-Wearables` at 124 px (what is worn, or the empty "+") and
  * its label 4 px below, which may run wider than the card. */
 export function SlotTile({
@@ -31,7 +36,9 @@ export function SlotTile({
         thumbnail={thumbnail}
         art={art}
         empty={!thumbnail && !art}
-        state={selected ? 'detail' : 'default'}
+        state={selected ? 'selected' : 'default'}
+        ringWidth={SLOT_RING}
+        scale={designSize / CARD}
         onPress={onPress}
         style={{ width: size }}
       />

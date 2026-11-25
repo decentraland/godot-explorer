@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { ItemCard, u } from '@dcl/ui-native';
+import { ItemCard, space, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { EmoteArt } from './ItemArt';
 import { emoteStrip } from './emoteLogic';
@@ -17,6 +17,7 @@ export function EmotesGrid({
   columns,
   bottomInset,
   copy,
+  flushTop = false,
   onPress,
   onMarketplace,
 }: {
@@ -27,6 +28,8 @@ export function EmotesGrid({
   columns?: number;
   bottomInset?: number;
   copy: EmptyCopy;
+  /** The portrait sheet already spaces the grid (`Handle=Off`). */
+  flushTop?: boolean;
   onPress: (emote: Emote) => void;
   onMarketplace: () => void;
 }) {
@@ -36,7 +39,8 @@ export function EmotesGrid({
       keyOf={emote => emote.id}
       columns={columns}
       bottomInset={bottomInset}
-      header={<View style={styles.top} />}
+      header={flushTop ? undefined : <View style={styles.top} />}
+      overhang={flushTop ? space['2xs'] : 0}
       empty={
         <EmptyBlock icon="emotes" copy={copy} onMarketplace={onMarketplace} />
       }

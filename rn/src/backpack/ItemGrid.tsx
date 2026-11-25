@@ -21,6 +21,7 @@ export function ItemGrid<T>({
   empty,
   columns = layout.columns,
   bottomInset = 0,
+  overhang = 0,
 }: {
   items: T[];
   keyOf: (item: T) => string;
@@ -29,6 +30,9 @@ export function ItemGrid<T>({
   empty?: ReactElement;
   columns?: number;
   bottomInset?: number;
+  /** Room above the first row for card rings drawn outside the card; the list moves up by the
+   * same amount so the cards stay in place. */
+  overhang?: number;
 }) {
   const cells = padToColumns(items, columns);
   return (
@@ -42,7 +46,11 @@ export function ItemGrid<T>({
       }
       ListHeaderComponent={header}
       ListEmptyComponent={empty}
-      contentContainerStyle={{ paddingBottom: bottomInset + 16 }}
+      style={{ marginTop: -overhang }}
+      contentContainerStyle={{
+        paddingTop: overhang,
+        paddingBottom: bottomInset + 16,
+      }}
       columnWrapperStyle={styles.row}
       showsVerticalScrollIndicator={false}
       initialNumToRender={12}

@@ -16,12 +16,15 @@ export function SheetContent({
   subRow,
   columns,
   bottomInset = 0,
+  flushTop = false,
 }: {
   controller: BackpackController;
   copy: EmptyCopy;
   subRow?: SubRow;
   columns?: number;
   bottomInset?: number;
+  /** Portrait emotes: the sheet has no handle and already spaces the grid. */
+  flushTop?: boolean;
 }) {
   const { state, dispatch, catalog, avatar, slot } = controller;
   const target = state.colorTarget;
@@ -52,6 +55,7 @@ export function SheetContent({
         columns={columns}
         bottomInset={bottomInset}
         copy={copy}
+        flushTop={flushTop}
         onPress={controller.pressEmote}
         onMarketplace={controller.openMarketplace}
       />

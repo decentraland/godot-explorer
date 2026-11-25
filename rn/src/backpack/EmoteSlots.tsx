@@ -4,6 +4,8 @@ import { t } from '../i18n';
 import { Emote, emoteIdOf } from './emotes';
 import { EmoteArt } from './ItemArt';
 
+/** `Cards-Wearables` is drawn at 96 dp; the wheel scales it to 56. */
+const CARD = 96;
 const SLOT = 56;
 /** Landscape tiles are smaller so the ten slots fit a 360dp-high viewport in two columns of five. */
 const SLOT_COMPACT = 44;
@@ -55,6 +57,7 @@ export function EmoteSlots({
         art={emote ? <EmoteArt id={emote.id} /> : undefined}
         empty={!emote}
         state={on ? (flash ? 'equipped' : 'selected') : 'default'}
+        scale={(vertical ? SLOT_COMPACT : SLOT) / CARD}
         onPress={() => onSelect(index)}
         style={vertical ? styles.slotCompact : styles.slot}
       />

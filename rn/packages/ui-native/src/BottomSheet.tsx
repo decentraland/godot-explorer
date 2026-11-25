@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { SheetGlow } from './Sheet';
-import { colors, elevation, radius } from './tokens';
+import { colors, elevation, radius, space } from './tokens';
 import {
   DEFAULT_SNAP_CONFIG,
   nearestSnap,
@@ -34,6 +34,7 @@ export function BottomSheet({
   onSnapChange,
   containerHeight,
   config = DEFAULT_SNAP_CONFIG,
+  handle = true,
   header,
   children,
 }: {
@@ -41,6 +42,8 @@ export function BottomSheet({
   onSnapChange: (snap: Snap) => void;
   containerHeight?: number;
   config?: SnapConfig;
+  /** `Handle=Off`: no bar, the content starts 20 dp down; that strip still drags and toggles. */
+  handle?: boolean;
   header?: ReactNode;
   children?: ReactNode;
 }) {
@@ -118,9 +121,9 @@ export function BottomSheet({
           accessibilityLabel={expanded ? 'Collapse sheet' : 'Expand sheet'}
           hitSlop={12}
           onPress={() => onSnapChange(target)}
-          style={styles.handleArea}
+          style={handle ? styles.handleArea : styles.handleOff}
         >
-          <View style={styles.handle} />
+          {handle && <View style={styles.handle} />}
         </Pressable>
         {header}
       </View>
@@ -151,6 +154,7 @@ const styles = StyleSheet.create({
     paddingTop: u(8),
     paddingBottom: u(20),
   },
+  handleOff: { height: space['40'] },
   handle: {
     width: u(100),
     height: u(4),

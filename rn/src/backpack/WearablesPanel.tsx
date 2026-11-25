@@ -143,7 +143,9 @@ export function WearablesPanel(props: WearablesPanelProps) {
 
   return (
     <View style={styles.fill}>
-      <View style={styles.tabs}>
+      <View
+        style={[styles.tabs, tab !== 'all' && !pills && styles.tabsAboveSlots]}
+      >
         <Tabs
           items={TABS.map(entry => ({ key: entry.key, label: t(entry.label) }))}
           active={tab}
@@ -200,14 +202,21 @@ const styles = StyleSheet.create({
     paddingTop: space.xs,
     paddingBottom: space.xl,
   },
+  /** The slot row scrolls and would clip the selected ring drawn outside the card: it gets 3 dp
+   * of room on top, taken from the tabs' gap. */
+  tabsAboveSlots: { paddingBottom: space['26'] },
   slotsScroll: { flexGrow: 0 },
   slots: {
     paddingHorizontal: layout.gutter,
     gap: space.xl,
+    paddingTop: space['2xs'],
     paddingBottom: space.xl,
   },
   /** `Presets` sits 32 px under the slots and 54 px above the grid; the strip pads its rings. */
-  swatches: { marginTop: -space['2xs'], paddingBottom: space['54'] - space['2xs'] },
+  swatches: {
+    marginTop: -space['2xs'],
+    paddingBottom: space['54'] - space['2xs'],
+  },
   busy: { opacity: 0.55 },
   pills: {
     paddingHorizontal: layout.gutter,
