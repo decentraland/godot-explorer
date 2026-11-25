@@ -3,6 +3,7 @@ import { act, create, ReactTestInstance } from 'react-test-renderer';
 import { Text } from 'react-native';
 import {
   ActionSquareButton,
+  AvatarBackground,
   AvatarCard,
   Badge,
   DetailRow,
@@ -14,6 +15,8 @@ import {
   HudCircleButton,
   Icon,
   IconButton,
+  ImageNotFound,
+  LogoLoader,
   NotificationBadge,
   LinkRow,
   Menu,
@@ -442,6 +445,33 @@ describe('Sheet', () => {
       tree.update(<Sheet height="collapsed" footer={<Text>Next</Text>} />),
     );
     expect(JSON.stringify(tree.toJSON())).not.toContain('Next');
+    act(() => tree.unmount());
+  });
+});
+
+describe('DS image pieces', () => {
+  it('ImageNotFound draws the crossed-image glyph at the given size', () => {
+    const tree = render(<ImageNotFound iconSize={20} />);
+    const icon = tree.root.findByType(Icon);
+    expect(icon.props.name).toBe('imageOff');
+    expect(icon.props.size).toBe(20);
+    act(() => tree.unmount());
+  });
+
+  it('LogoLoader is a labelled progressbar', () => {
+    const tree = render(<LogoLoader accessibilityLabel="Loading" />);
+    expect(
+      tree.root.findAllByProps({
+        accessibilityRole: 'progressbar',
+        accessibilityLabel: 'Loading',
+      }).length,
+    ).toBeGreaterThan(0);
+    act(() => tree.unmount());
+  });
+
+  it('AvatarBackground renders the spotlight image', () => {
+    const tree = render(<AvatarBackground />);
+    expect(text(tree)).toContain('avatar-background');
     act(() => tree.unmount());
   });
 });
