@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ComponentRef, useCallback, useRef, useState } from 'react';
+import { PixelRatio, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheet, colors, snapHeights, u } from '@dcl/ui-native';
 import type { SnapConfig } from '@dcl/ui-native';
@@ -14,10 +14,12 @@ import { EmoteChip } from './EmoteChip';
 import { EmoteSlots } from './EmoteSlots';
 import { chipName } from './emoteLogic';
 import { SheetContent } from './SheetContent';
+import { core } from '../core';
+import { Control } from '../core/native';
 
 /** Sheet heights as fractions of the area above the footer (Figma 720x1600 frames). */
 /** `peek` is Figma `Sheet` Height=Collapsed: 54 px, the handle alone. */
-const WEARABLES_SNAPS: SnapConfig = { peek: u(27), half: 0.514, full: 0.863 };
+const WEARABLES_SNAPS: SnapConfig = { peek: u(27), half: 0.531, full: 0.863 };
 const EMOTES_SNAPS: SnapConfig = { peek: u(27), half: 0.427, full: 0.863 };
 const SLOTS_GAP = u(12);
 
@@ -27,35 +29,75 @@ export function PortraitLayout({
   subRow,
   footer,
   onBack,
+  tools = true,
 }: LayoutProps) {
   const insets = useSafeAreaInsets();
   const [area, setArea] = useState(0);
+  const areaRef = useRef<ComponentRef<typeof View>>(null);
+  const areaTop = useRef(0);
   const { state, dispatch, catalog } = controller;
+  // The avatar window is sized for the snap the sheet rests at, not for the one it is heading to:
+  // it keeps its size while the sheet slides over it.
+  const [rest, setRest] = useState(state.sheet);
+  const heading = useRef(state.sheet);
+  heading.current = state.sheet;
   const emotes = state.mode === 'emotes';
   const config = emotes ? EMOTES_SNAPS : WEARABLES_SNAPS;
   const heights = snapHeights(area, config);
-  const covered = state.sheet === 'full';
+  const covered = rest === 'full';
   const top = Math.max(insets.top + u(4), u(43));
+
+  // The avatar window is above every RN view: the engine cuts it at the sheet's top edge, so the
+  // sheet covers the avatar while it moves, instead of the avatar showing over the sheet.
+  const clip = useCallback(
+    (visible: number) => {
+      if (!area) {
+        return;
+      }
+      try {
+        core().control(
+          new Control.PreviewClip({
+            bottom: Math.round(
+              (areaTop.current + area - visible) * PixelRatio.get(),
+            ),
+          }),
+        );
+      } catch {
+        // The window is not open (yet): there is nothing to cut.
+      }
+    },
+    [area],
+  );
 
   return (
     <View style={styles.root}>
       <View
+        ref={areaRef}
         style={styles.area}
-        onLayout={event => setArea(event.nativeEvent.layout.height)}
+        onLayout={event => {
+          setArea(event.nativeEvent.layout.height);
+          areaRef.current?.measureInWindow((_x, y) => {
+            areaTop.current = y;
+          });
+        }}
       >
-        <StageBackground bottom={heights[state.sheet]} />
+        <StageBackground bottom={heights.peek} />
         <View style={[styles.header, { paddingTop: top }]}>
           {onBack ? (
-            <BackButton onPress={onBack} style={{ left: u(18), top }} />
+            // The same arrow, size and place as the avatar screen it follows: the box is 1 dp
+            // larger on each side than the 30 dp arrow.
+            <BackButton
+              onPress={onBack}
+              size={30}
+              style={{ left: u(23), top: top - u(1) }}
+            />
           ) : null}
-          <HeaderRow controller={controller} />
+          {tools ? <HeaderRow controller={controller} /> : null}
         </View>
         {covered ? (
           <View style={styles.hole} />
         ) : (
-          <AvatarHole
-            style={[styles.hole, { marginBottom: heights[state.sheet] }]}
-          />
+          <AvatarHole style={[styles.hole, { marginBottom: heights[rest] }]} />
         )}
         {emotes && catalog.status === 'ready' && !covered && (
           <View
@@ -85,18 +127,27 @@ export function PortraitLayout({
           onSnapChange={sheet => dispatch({ type: 'sheet', sheet })}
           containerHeight={area || undefined}
           config={config}
+          onMovingChange={moving => {
+            if (!moving) {
+              setRest(heading.current);
+            }
+          }}
+          onVisibleChange={clip}
         >
           <SheetContent
             controller={controller}
             copy={copy}
             subRow={subRow}
             bottomInset={heights.full - heights[state.sheet]}
+            entry={!tools}
           />
         </BottomSheet>
-        <FilterOverlay
-          controller={controller}
-          position={{ top: top + u(36), right: u(24) }}
-        />
+        {tools ? (
+          <FilterOverlay
+            controller={controller}
+            position={{ top: top + u(36), right: u(24) }}
+          />
+        ) : null}
       </View>
       {footer}
     </View>

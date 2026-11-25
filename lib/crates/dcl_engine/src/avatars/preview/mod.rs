@@ -2,6 +2,9 @@
 //! an orthographic camera, rotated and zoomed by touch or mouse, and captured to images.
 
 pub mod fit;
+mod spinner;
+
+pub use spinner::PreviewSpinner;
 
 use std::collections::HashMap;
 
@@ -19,8 +22,8 @@ use godot::signal::ConnectHandle;
 
 use self::fit::{
     aabb_endpoint, fit_camera, fit_limits, fit_to_overall, focus_extra_margin, focus_for_category,
-    mesh_category, pan_limits, stable_aabb, symmetrize_aabb_x, Aabbs, CameraTarget, FitView,
-    OverallFit, MAX_CAMERA_SIZE, MIN_CAMERA_SIZE_PART,
+    focus_top_space, mesh_category, pan_limits, stable_aabb, symmetrize_aabb_x, Aabbs,
+    CameraTarget, FitView, OverallFit, MAX_CAMERA_SIZE, MIN_CAMERA_SIZE_PART,
 };
 use crate::engine::local_task::{next_frame, spawn_local};
 use crate::fetcher::globals;
@@ -28,8 +31,8 @@ use crate::godot_classes::dcl_avatar::DclAvatar;
 use crate::godot_classes::promise::Promise;
 use crate::player::outline_system::OutlineSystem;
 
-const CAMERA_PAN_SMOOTH: f32 = 2.0;
-const CAMERA_ZOOM_SMOOTH: f32 = 2.0;
+const CAMERA_PAN_SMOOTH: f32 = 10.0;
+const CAMERA_ZOOM_SMOOTH: f32 = 10.0;
 const AVATAR_ROTATION_SMOOTH: f32 = 15.0;
 
 // Camera of the profile snapshots.
@@ -461,12 +464,15 @@ impl AvatarPreview {
     }
 
     fn view(&self) -> FitView {
+        let size = self.base().get_size();
+        let (top, bottom) = (self.effective_margin_top(), self.effective_margin_bottom());
+        let available = (size.y - top - bottom).max(0.0);
         FitView {
-            size: self.base().get_size(),
+            size,
             margin_left: self.preview_margin_left as f32,
             margin_right: self.preview_margin_right as f32,
-            top: self.effective_margin_top(),
-            bottom: self.effective_margin_bottom(),
+            top: top + available * focus_top_space(&self.camera_focus),
+            bottom,
         }
     }
 
@@ -610,23 +616,29 @@ impl AvatarPreview {
         }
         self.last_fit_stable = Some(stable);
         self.last_fit_extra_margin = capped_extra;
-        let target = fit_camera(
-            stable,
-            aabb,
-            capped_extra,
-            view,
-            self.avatar_transform(),
-            self.fitted_camera_size,
-            MIN_CAMERA_SIZE_PART,
-        );
-        self.apply_target(target);
+        if self.fit_avatar && self.camera_focus == "overall" {
+            // The full-body frame is the one the resize keeps live: the same fit here, or the
+            // two disagree on the size floor and the avatar jumps by a few percent.
+            self.fit_to_overall();
+        } else {
+            self.apply_target(fit_camera(
+                stable,
+                aabb,
+                capped_extra,
+                view,
+                self.avatar_transform(),
+                self.fitted_camera_size,
+                MIN_CAMERA_SIZE_PART,
+            ));
+        }
         if instant && !self.lerp_paused {
+            let (size, center_y) = (self.target_camera_size, self.target_camera_center_y);
             if let Some(camera) = self.camera_3d.as_mut() {
-                camera.set_size(target.size);
+                camera.set_size(size);
             }
             if let Some(center) = self.camera_center.as_mut() {
                 let mut position = center.get_position();
-                position.y = target.center_y;
+                position.y = center_y;
                 center.set_position(position);
             }
         }
