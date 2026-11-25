@@ -21,6 +21,10 @@ export function setEmptyCopy(policy: EmptyCopy | null): void {
 
 export const getEmptyCopy = (): EmptyCopy => current ?? defaultEmptyCopy();
 
+/** Figma `IAP-IOS-Portrait`: iOS shows the credits balance (bought in-app) over the avatar. */
+export const showsCredits = (os: string = Platform.OS): boolean =>
+  os === 'ios';
+
 /** The storefront's wearables listing, in the environment the core runs in. */
 export const marketplaceUrl = (): string =>
   core().marketplaceBrowseUrl('wearables');

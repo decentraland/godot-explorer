@@ -2,7 +2,7 @@ import { ReactElement } from 'react';
 import { Dimensions } from 'react-native';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { LinkButton } from '@dcl/ui-native';
+import { CreditsBadge, LinkButton } from '@dcl/ui-native';
 import { setCoreForTests } from '../src/core';
 import type { CoreApi } from '../src/core';
 import { createMockCore } from '../src/core/mock';
@@ -16,7 +16,7 @@ import {
   MockApiOptions,
 } from '../src/backpack/mockApi';
 import { MOCK_CATALOG, MOCK_WEARABLES } from '../src/backpack/mockCatalog';
-import { EmptyCopy } from '../src/backpack/platformPolicy';
+import { EmptyCopy, showsCredits } from '../src/backpack/platformPolicy';
 
 const mockCore = {
   ...createMockCore(),
@@ -41,6 +41,7 @@ async function mount(
     copy?: EmptyCopy;
     footer?: ReactElement | null;
     subRow?: 'tiles' | 'pills';
+    credits?: boolean;
   } = {},
 ): Promise<{ tree: ReactTestRenderer; api: MockApi }> {
   const api = createMockApi(options.api);
@@ -53,6 +54,7 @@ async function mount(
           initial={options.initial}
           emptyCopy={options.copy ?? 'marketplace_link'}
           subRow={options.subRow}
+          credits={options.credits ?? false}
           footer={options.footer === undefined ? null : options.footer}
         />
       </SafeAreaProvider>,
@@ -292,5 +294,18 @@ describe('Backpack layouts', () => {
       const { tree } = await mount({ initial: { sheet } });
       expect(tree.toJSON()).not.toBeNull();
     }
+  });
+
+  it('shows the credits balance over the avatar on iOS, wearables only', async () => {
+    expect(showsCredits('ios')).toBe(true);
+    expect(showsCredits('android')).toBe(false);
+    const { tree } = await mount({ api: { credits: 120 }, credits: true });
+    expect(tree.root.findByType(CreditsBadge).props.amount).toBe(120);
+    const off = await mount({ api: { credits: 120 } });
+    expect(off.tree.root.findAllByType(CreditsBadge)).toHaveLength(0);
+    const full = await mount({ credits: true, initial: { sheet: 'full' } });
+    expect(full.tree.root.findAllByType(CreditsBadge)).toHaveLength(0);
+    const emotes = await mount({ credits: true, initial: { mode: 'emotes' } });
+    expect(emotes.tree.root.findAllByType(CreditsBadge)).toHaveLength(0);
   });
 });

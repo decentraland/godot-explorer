@@ -8,6 +8,7 @@ export type MockApiOptions = {
   /** `'loading'` never resolves and `'error'` rejects, for the skeleton and Connection lost states. */
   catalog?: Catalog | 'loading' | 'error';
   avatar?: Partial<AvatarState>;
+  credits?: number;
 };
 
 export type MockApi = BackpackApi & {
@@ -18,7 +19,7 @@ export type MockApi = BackpackApi & {
 
 /** In-memory backpack: the avatar reacts to commands, so previews and tests are interactive. */
 export function createMockApi(options: MockApiOptions = {}): MockApi {
-  const { catalog = MOCK_CATALOG } = options;
+  const { catalog = MOCK_CATALOG, credits = 0 } = options;
   const resolved = typeof catalog === 'object' ? catalog : MOCK_CATALOG;
   const avatar = createMockAvatar({
     initial: { ...MOCK_AVATAR, ...options.avatar },
@@ -46,6 +47,7 @@ export function createMockApi(options: MockApiOptions = {}): MockApi {
     openMarketplace: () => {
       api.marketplaceOpens += 1;
     },
+    loadCredits: () => Promise.resolve(credits),
   };
   return api;
 }

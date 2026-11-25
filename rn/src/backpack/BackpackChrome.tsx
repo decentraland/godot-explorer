@@ -13,6 +13,8 @@ export type LayoutProps = {
   subRow?: SubRow;
   controller: BackpackController;
   copy: EmptyCopy;
+  /** Credits balance to show over the avatar, or null for none. */
+  credits?: number | null;
   /** Portrait only: the app's bottom navigation, or the entry flow's Continue button. */
   footer?: ReactNode;
   onBack?: () => void;

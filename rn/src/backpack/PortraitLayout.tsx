@@ -5,6 +5,7 @@ import {
   BottomSheet,
   color,
   control,
+  CreditsBadge,
   snapHeights,
   space,
   u,
@@ -28,6 +29,8 @@ const WEARABLES_SNAPS: SnapConfig = { peek: u(27), half: 0.514, full: 0.863 };
 const EMOTES_SNAPS: SnapConfig = { peek: u(27), half: 0.427, full: 0.863 };
 /** Figma `Emote Wheel`: 16 px above the sheet, half of it the row's own ring padding. */
 const SLOTS_GAP = space.xs;
+/** Figma `IAP-IOS-Portrait`: `Badge/Credits` 33 px above the sheet (no token). */
+const CREDITS_GAP = u(16.5);
 /** Figma `Header Content` gap: from the Emotes pill to the filter button. */
 const FILTER_GAP = space['64'];
 
@@ -35,6 +38,7 @@ export function PortraitLayout({
   controller,
   copy,
   subRow,
+  credits,
   footer,
   onBack,
 }: LayoutProps) {
@@ -72,6 +76,15 @@ export function PortraitLayout({
         ) : (
           <AvatarHole
             style={[styles.hole, { marginBottom: heights[state.sheet] }]}
+          />
+        )}
+        {credits != null && !emotes && !covered && (
+          <CreditsBadge
+            amount={credits}
+            style={[
+              styles.credits,
+              { bottom: heights[state.sheet] + CREDITS_GAP },
+            ]}
           />
         )}
         {emotes && catalog.status === 'ready' && !covered && (
@@ -134,4 +147,5 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: space['2xl'], alignItems: 'flex-end' },
   hole: { flex: 1 },
   slots: { position: 'absolute', left: 0, right: 0 },
+  credits: { position: 'absolute', left: space['2xl'] },
 });

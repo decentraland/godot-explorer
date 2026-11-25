@@ -10,6 +10,8 @@ export type Spec = {
   initial?: Partial<BackpackState>;
   copy?: EmptyCopy;
   subRow?: SubRow;
+  /** Shows the credits badge (iOS store policy); off unless set. */
+  credits?: boolean;
 };
 
 const idOf = (name: string) =>
@@ -451,6 +453,11 @@ const PORTRAIT_ROWS: [string, string, Spec][] = [
     { initial: { ...extras('hat'), filter: 'collectibles' } },
   ],
   ['backpack__emotes__1812-30105', 'Emotes (ready)', { initial: emotes() }],
+  [
+    'backpack__iap-portrait__1875-18202',
+    'iOS: credits balance (ready)',
+    { initial: face('hair'), credits: true },
+  ],
 ];
 
 export const PORTRAIT = withPills(PORTRAIT_ROWS);

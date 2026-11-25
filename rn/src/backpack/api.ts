@@ -12,6 +12,8 @@ export interface BackpackApi {
   /** Latest equipped avatar, or null until the core reports it. */
   useAvatar(): AvatarState | null;
   openMarketplace(): void;
+  /** The user's credits balance, for the iOS in-app purchase badge. */
+  loadCredits(): Promise<number>;
 }
 
 let active: BackpackApi = liveApi;

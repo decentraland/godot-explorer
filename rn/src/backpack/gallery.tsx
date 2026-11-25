@@ -18,6 +18,7 @@ function Preview({ spec, landscape }: { spec: Spec; landscape: boolean }) {
       initial={spec.initial}
       emptyCopy={spec.copy ?? 'marketplace_link'}
       subRow={spec.subRow}
+      credits={spec.credits ?? false}
       onBack={landscape ? noop : undefined}
       footer={
         landscape ? null : (

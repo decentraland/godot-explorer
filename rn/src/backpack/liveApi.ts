@@ -29,4 +29,8 @@ export const liveApi: BackpackApi = {
   openMarketplace: () => {
     Linking.openURL(marketplaceUrl()).catch(() => {});
   },
+  loadCredits: () =>
+    core()
+      .creditsBalance()
+      .then(balance => Number(balance.credits)),
 };

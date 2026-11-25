@@ -46,6 +46,7 @@ export { EmptyState } from './EmptyState';
 export { ImageNotFound } from './ImageNotFound';
 export { GradientView, LinearFill, RadialFill } from './Gradient';
 export { Header } from './Header';
+export { CreditsBadge } from './CreditsBadge';
 export { HudCircleButton } from './HudCircleButton';
 export { Icon } from './Icon';
 export type { IconName } from './Icon';

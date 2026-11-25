@@ -96,7 +96,7 @@ describe('gallery specs', () => {
           (screen.seq >= 104 && screen.seq <= 175) ||
           screen.seq === 304 ||
           screen.seq === 305 ||
-          (screen.seq >= 343 && screen.seq <= 356),
+          (screen.seq >= 343 && screen.seq <= 357),
       )
       .map(screen => screen.id)
       .sort();
