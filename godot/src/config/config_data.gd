@@ -354,7 +354,7 @@ var _legacy_last_places: Array = []
 ## Removes earlier visits to the same parcel of Genesis City (whichever DAO realm url reached it)
 ## or to the same world (however its name was spelled).
 func fix_last_places_duplicates(place_dict: Dictionary, _last_places: Array):
-	var realm: String = place_dict.get("realm")
+	var realm: String = place_dict.get("realm", "")
 	var position = place_dict.get("position")
 	var is_genesis := Realm.is_genesis_city(realm)
 	var to_remove: Array = []

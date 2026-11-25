@@ -72,12 +72,14 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 	_loading = true
 
 	var last_places: Array[Dictionary] = Global.get_config().get_last_places()
-	last_places = last_places.slice(0, JUMP_BACK_IN_MAX_ITEMS)
 	var seen: Dictionary = {}
 	var places_data: Array[Dictionary] = []
 	var older_visits: Array[Dictionary] = []
 	var index = 0
 	for place in last_places:
+		# Reads past the row's size only to replace skipped visits, so the row still fills up.
+		if places_data.size() >= JUMP_BACK_IN_MAX_ITEMS:
+			break
 		place["index"] = index
 		index += 1
 
@@ -112,7 +114,8 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 			dedup_key = data.get("world_name", "")
 		if not dedup_key.is_empty() and seen.has(dedup_key):
 			# Only a real place id proves it is the same place, not the fallback keys.
-			if data.has("id"):
+			if not str(data.get("id", "")).is_empty():
+				print("[Discover] Jump back in: dropping ", place, ", same place as a newer visit")
 				older_visits.append(place)
 			continue
 		if not dedup_key.is_empty():
