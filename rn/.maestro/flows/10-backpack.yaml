@@ -1,46 +1,55 @@
 appId: org.decentraland.godotexplorer
 name: Backpack
 ---
-# The wearables and emotes are the fixed mock, so each slot is checked for the item it must list. The 3D
+# The wearables and emotes are the fixed mock, so each slot is checked for the items it must list. The 3D
 # avatar is a placeholder here: only the React Native side (tabs, slots, selection) is covered.
 - runFlow: ../subflows/ensure-home.yaml
 - tapOn: "backpack"
 - assertVisible: "Wearables"
 - assertVisible: "Emotes"
 
-# ALL: the equipped items of the mock avatar.
+# ALL: lists what the avatar wears first; the body shape is always worn.
 - tapOn: "ALL"
-- assertVisible: "green_hoodie"
-- assertVisible: "brown_pants"
-- assertVisible: "sneakers"
-- assertVisible: "short_hair"
+- assertVisible: "Base(Male|Female)"
 
-# BODY: shape is a pair of exclusive options; end on the second one.
+# BODY: shape is a pair of exclusive options and a required part, so tapping the worn one keeps it.
 - tapOn: "BODY"
 - assertVisible: "Shape"
 - assertVisible: "Skin"
 - runFlow:
-    when:
-      notVisible:
-        text: "BaseFemale"
-        selected: true
-    commands:
-      - tapOn: "BaseFemale"
-- assertVisible:
-    text: "BaseFemale"
-    selected: true
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "BaseFemale"
 - runFlow:
-    when:
-      notVisible:
-        text: "BaseMale"
-        selected: true
-    commands:
-      - tapOn: "BaseMale"
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "BaseMale"
+- tapOn: "BaseMale"
 - assertVisible:
     text: "BaseMale"
     selected: true
 
-# FACE: Hair slot, the fixed palette and the hair item.
+# Skin: its own palette, then the custom colour editor, which replaces the tabs until its header is tapped.
+- tapOn: "Skin"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "#ffe4c6"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "#6b3f28"
+- tapOn: "Custom color"
+- assertVisible: "Skin color"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "#a56f4a"
+# The editor's header (title and arrow) is its Back button; "Back" alone would match the screen's own.
+- tapOn: "Skin color"
+- assertVisible: "BODY"
+
+# FACE: the slots, the hair palette and the hair items.
 - tapOn: "FACE"
 - assertVisible: "Hair"
 - assertVisible: "Facial Hair"
@@ -50,61 +59,420 @@ name: Backpack
 - assertVisible: "short_hair"
 - assertVisible: "Custom color"
 - runFlow:
-    when:
-      notVisible:
-        text: "#1c1c1c"
-        selected: true
-    commands:
-      - tapOn: "#1c1c1c"
-- assertVisible:
-    text: "#1c1c1c"
-    selected: true
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "#1c1c1c"
 - runFlow:
-    when:
-      notVisible:
-        text: "#5a3410"
-        selected: true
-    commands:
-      - tapOn: "#5a3410"
-- assertVisible:
-    text: "#5a3410"
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "#5a3410"
+
+# Hair is optional: equipping another item replaces the one worn, and tapping the worn one takes it off.
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "short_hair"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "long_hair"
+- assertNotVisible:
+    text: "short_hair"
+    selected: true
+- tapOn: "long_hair"
+- assertNotVisible:
+    text: "long_hair"
     selected: true
 
-# CLOTHING
+# Facial hair shares the hair palette; its colour is checked while one is worn.
+- tapOn: "Facial Hair"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "goatee"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "full_beard"
+- assertNotVisible:
+    text: "goatee"
+    selected: true
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "#e0952c"
+- tapOn: "full_beard"
+- assertNotVisible:
+    text: "full_beard"
+    selected: true
+
+# Eyes, eyebrows and mouth are required: choosing another item swaps it and the worn one cannot be removed.
+- tapOn: "Eye"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "eyes_01"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "eyes_02"
+- assertNotVisible:
+    text: "eyes_01"
+    selected: true
+- tapOn: "eyes_02"
+- assertVisible:
+    text: "eyes_02"
+    selected: true
+# Eye colour has its own palette.
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "#2f6fb0"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "#6b4a2e"
+- tapOn: "Eyebrows"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "eyebrows_01"
+- tapOn: "eyebrows_01"
+- assertVisible:
+    text: "eyebrows_01"
+    selected: true
+# Eyebrows share the hair palette.
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "#8a2515"
+- tapOn: "Mouth"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "mouth_01"
+- tapOn: "mouth_01"
+- assertVisible:
+    text: "mouth_01"
+    selected: true
+
+# CLOTHING: each slot swaps its item; the grid starts on Chest.
 - tapOn: "CLOTHING"
 - assertVisible: "Chest"
 - assertVisible: "Legs"
 - assertVisible: "Feet"
 - assertVisible: "Hand"
 - assertVisible: "green_hoodie"
+- tapOn: "Chest"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "red_jacket"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "blue_tshirt"
+- assertNotVisible:
+    text: "red_jacket"
+    selected: true
+- tapOn: "Legs"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "brown_pants"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "black_shorts"
+- assertNotVisible:
+    text: "brown_pants"
+    selected: true
+- tapOn: "Feet"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "boots"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "sneakers"
+- assertNotVisible:
+    text: "boots"
+    selected: true
+- tapOn: "Hand"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "leather_gloves"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "fingerless_gloves"
+- assertNotVisible:
+    text: "leather_gloves"
+    selected: true
+# Optional items come off when tapped again.
+- tapOn: "fingerless_gloves"
+- assertNotVisible:
+    text: "fingerless_gloves"
+    selected: true
 
-# EXTRAS: the guest owns nothing here, so the slots list and the empty state shows.
+# Filter on wearables: Collectibles keeps only the collectible items of the slot, All brings the rest back.
+- tapOn: "Chest"
+- tapOn: "Filter"
+- tapOn: "Collectibles"
+- assertVisible: "neon_jacket"
+- assertNotVisible: "green_hoodie"
+- assertNotVisible: "blue_tshirt"
+- tapOn: "Filter"
+- assertVisible:
+    text: "Collectibles"
+    selected: true
+# "All" is also a tab label in another case; the menu entry is the one above the tabs.
+- tapOn:
+    text: "All"
+    above: "BODY"
+- assertVisible: "blue_tshirt"
+
+# EXTRAS: every slot has items except Mask, which shows the empty state.
 - tapOn: "EXTRAS"
 - assertVisible: "Hat"
 - assertVisible: "Helmets"
 - assertVisible: "Tiaras"
 - assertVisible: "Glasses"
 - assertVisible: "Mask"
+- tapOn: "Hat"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "cap"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "beanie"
+- assertNotVisible:
+    text: "cap"
+    selected: true
+- tapOn: "beanie"
+- assertNotVisible:
+    text: "beanie"
+    selected: true
+- tapOn: "Helmets"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "bike_helmet"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "knight_helmet"
+- assertNotVisible:
+    text: "bike_helmet"
+    selected: true
+- tapOn: "Tiaras"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "silver_tiara"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "crystal_tiara"
+- assertNotVisible:
+    text: "silver_tiara"
+    selected: true
+- tapOn: "Glasses"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "sunglasses"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "round_glasses"
+- assertNotVisible:
+    text: "sunglasses"
+    selected: true
+# Earrings is the sixth slot and starts off screen.
+- swipe:
+    from:
+      text: "Glasses"
+    direction: LEFT
+- tapOn: "Earrings"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "hoop_earrings"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "stud_earrings"
+- assertNotVisible:
+    text: "hoop_earrings"
+    selected: true
+- tapOn: "Mask"
 - assertVisible: "Nothing here yet"
 
-# Emotes: twelve emotes and six slots.
+# Leaving the Backpack and coming back keeps what was equipped (the mock holds it in memory).
+- tapOn: "explore"
+- assertVisible: "Popular"
+- tapOn: "backpack"
+- tapOn: "FACE"
+- tapOn: "Eye"
+- assertVisible:
+    text: "eyes_02"
+    selected: true
+- assertVisible:
+    text: "#6b4a2e"
+    selected: true
+- tapOn: "CLOTHING"
+- tapOn: "Chest"
+- assertVisible:
+    text: "blue_tshirt"
+    selected: true
+- tapOn: "EXTRAS"
+- tapOn: "Tiaras"
+- assertVisible:
+    text: "crystal_tiara"
+    selected: true
+
+# Emotes: twelve emotes and ten slots; the first six slots are on screen.
 - tapOn: "Emotes"
 - assertVisible: "Wave"
 - assertVisible: "Dance"
 - assertVisible: "Clap"
-- assertVisible: "Dab"
 - assertVisible: "Emote slot 1"
 - assertVisible: "Emote slot 6"
 
-# Filter menu: All and Collectibles.
+# Assign: pick a slot, the first tap on an emote previews it and arms Equip, the second equips it (the
+# "Equipped" chip is too brief to assert, so the tile's selected state is checked).
+# `below` skips the name chip above the slots, which repeats the emote's name.
+- tapOn: "Emote slot 1"
+- assertVisible:
+    text: "Emote slot 1"
+    selected: true
+- tapOn:
+    text: "Wave"
+    below: "Emote slot 1"
+- assertVisible: "Equip"
+- tapOn:
+    text: "Wave"
+    below: "Emote slot 1"
+- assertVisible:
+    text: "Wave"
+    selected: true
+    below: "Emote slot 1"
+# A second slot takes another emote; Wave stays worn and is marked as such.
+- tapOn: "Emote slot 2"
+- tapOn:
+    text: "Dance"
+    below: "Emote slot 1"
+- assertVisible: "Equip"
+- tapOn:
+    text: "Dance"
+    below: "Emote slot 1"
+- assertVisible:
+    text: "Dance"
+    selected: true
+    below: "Emote slot 1"
+- assertVisible:
+    text: "Wave"
+    selected: true
+    below: "Emote slot 1"
+# Unequip empties the selected slot's emote.
+- tapOn:
+    text: "Dance"
+    below: "Emote slot 1"
+- assertNotVisible:
+    text: "Dance"
+    selected: true
+- assertVisible:
+    text: "Wave"
+    selected: true
+    below: "Emote slot 1"
+
+# Replace: an emote assigned to an occupied slot takes its place. Selecting a slot shows its emote's name in
+# the chip above the slots, so `above` reads which emote a slot holds.
+- tapOn: "Emote slot 1"
+- tapOn:
+    text: "Clap"
+    below: "Emote slot 1"
+- tapOn:
+    text: "Clap"
+    below: "Emote slot 1"
+- tapOn: "Emote slot 1"
+- assertVisible:
+    text: "Clap"
+    above: "Emote slot 1"
+- assertNotVisible:
+    text: "Wave"
+    selected: true
+
+# Move: an emote worn in another slot leaves it when assigned to the selected one.
+- tapOn: "Emote slot 2"
+- tapOn:
+    text: "Clap"
+    below: "Emote slot 1"
+- tapOn:
+    text: "Clap"
+    below: "Emote slot 1"
+- tapOn: "Emote slot 2"
+- assertVisible:
+    text: "Clap"
+    above: "Emote slot 1"
+- tapOn: "Emote slot 1"
+- assertNotVisible:
+    text: "Clap"
+    above: "Emote slot 1"
+
+# Slots 7 to 10 start off screen: scroll the row to reach them.
+- swipe:
+    from:
+      text: "Emote slot 4"
+    direction: LEFT
+- swipe:
+    from:
+      text: "Emote slot 6"
+    direction: LEFT
+- assertVisible: "Emote slot 10"
+- tapOn: "Emote slot 9"
+- tapOn:
+    text: "Raise Hand"
+    below: "Emote slot 10"
+- tapOn:
+    text: "Raise Hand"
+    below: "Emote slot 10"
+- tapOn: "Emote slot 9"
+- assertVisible:
+    text: "Raise Hand"
+    above: "Emote slot 10"
+
+# The sheet opens collapsed and lists only the first rows; the last emote needs it expanded.
+- tapOn: "Expand sheet"
+- assertVisible: "Dab"
+
+# Filter on emotes: the mock has no collectible emotes, so Collectibles shows the empty state.
 - tapOn: "Filter"
 - assertVisible: "Collectibles"
 - tapOn: "Collectibles"
+- assertVisible: "Nothing here yet"
+- assertNotVisible: "Dab"
 - tapOn: "Filter"
 - assertVisible:
     text: "Collectibles"
     selected: true
 - tapOn: "All"
+- assertVisible: "Dab"
+
+# The assigned emotes survive leaving the Backpack.
+- tapOn: "explore"
+- assertVisible: "Popular"
+- tapOn: "backpack"
+- tapOn: "Emotes"
+- tapOn: "Emote slot 2"
+- assertVisible:
+    text: "Clap"
+    above: "Emote slot 1"
 
 # Back to Wearables.
 - tapOn: "Wearables"
