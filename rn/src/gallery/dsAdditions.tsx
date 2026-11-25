@@ -1,16 +1,19 @@
 // Design System Mobile components added on 2026-11-17: Button/SeeMore, Button/ProfileLink,
 // Profile/Attribute, Icon/Profile, Menu/NavItem, Settings/Row, Input/Username and Modal/Special;
-// Tooltip on 2026-11-25.
+// Loader/Logo, Image Not Found, Background/Avatar and Tooltip on 2026-11-25.
 import { useState } from 'react';
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import {
   AppText,
+  AvatarBackground,
   BrandBackground,
   Button,
   ButtonProfileLink,
   ButtonSeeMore,
   IconProfile,
+  ImageNotFound,
   InputUsername,
+  LogoLoader,
   MenuNavItem,
   ModalSpecial,
   ProfileAttribute,
@@ -132,6 +135,15 @@ function Additions() {
         suffix="#1234"
         maxLength={15}
       />
+      <View style={styles.row}>
+        <LogoLoader accessibilityLabel="Loading" />
+        <View style={styles.notFound}>
+          <ImageNotFound />
+        </View>
+        <View style={styles.spotlight}>
+          <AvatarBackground />
+        </View>
+      </View>
     </ScrollView>
   );
 }
@@ -214,6 +226,8 @@ const styles = StyleSheet.create({
     gap: space.lg,
   },
   fadeRow: { gap: space.xs },
+  notFound: { width: u(147), height: u(78) },
+  spotlight: { width: u(160), height: u(172) },
   tile: {
     width: u(40),
     height: u(40),
