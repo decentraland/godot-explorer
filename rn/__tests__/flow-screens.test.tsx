@@ -1,8 +1,9 @@
 import { ReactElement } from 'react';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, StyleSheet } from 'react-native';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AccountScreen, SplashScreen } from '../src/flow/screens';
+import { colors } from '@dcl/ui-native';
+import { AccountScreen, NamingScreen, SplashScreen } from '../src/flow/screens';
 
 const metrics = {
   frame: { x: 0, y: 0, width: 400, height: 900 },
@@ -66,6 +67,26 @@ describe('entry flow Figma screens', () => {
     expect(onSignIn).toHaveBeenCalledTimes(2);
     press(tree, 'Play as guest');
     expect(onGuest).toHaveBeenCalledTimes(1);
+  });
+
+  it('naming screen accepts an accented name (#3078)', () => {
+    const onSubmit = jest.fn();
+    const tree = mount(
+      <NamingScreen
+        initial="Ñoqui"
+        preview={null}
+        onSubmit={onSubmit}
+        onBack={jest.fn()}
+      />,
+    );
+    const hint = tree.root.findByProps({
+      children: '3 to 15 letters or numbers',
+    });
+    expect(StyleSheet.flatten(hint.props.style).color).not.toBe(colors.ruby);
+    const go = tree.root.findByProps({ accessibilityLabel: "Let's go" });
+    expect(go.props.disabled).toBe(false);
+    press(tree, "Let's go");
+    expect(onSubmit).toHaveBeenCalledWith('Ñoqui');
   });
 });
 
