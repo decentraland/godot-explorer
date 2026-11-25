@@ -210,13 +210,13 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
 
-      # Build the iOS dylib against the iOS 26 SDK (matches ios_r2_artifact.yml). On a WarpBuild
-      # macOS image Xcode lives at /Applications/Xcode_26*.app; on a personal Mac it's the default
-      # /Applications/Xcode.app — so prefer a versioned app, else accept the selected Xcode if ≥ 26.
-      - name: Select Xcode 26 (iOS 26 SDK)
+      # Build the iOS dylib against the iOS 27 SDK (matches ios_r2_artifact.yml). On a WarpBuild
+      # macOS image Xcode lives at /Applications/Xcode_27*.app; on a personal Mac it's the default
+      # /Applications/Xcode.app — so prefer a versioned app, else accept the selected Xcode if ≥ 27.
+      - name: Select Xcode 27 (iOS 27 SDK)
         run: |
           set -eu
-          XCODE_APP="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)"
+          XCODE_APP="$(ls -d /Applications/Xcode_27*.app 2>/dev/null | grep -vi beta | sort -V | tail -1 || true)"
           if [ -n "$XCODE_APP" ] && [ -d "$XCODE_APP" ]; then
             echo "Using $XCODE_APP"
             echo "DEVELOPER_DIR=$XCODE_APP/Contents/Developer" >> "$GITHUB_ENV"
@@ -227,13 +227,13 @@ jobs:
           CUR="$(xcode-select -p 2>/dev/null || true)"
           VER="$(xcodebuild -version 2>/dev/null | awk '/^Xcode/{print $2}')"
           MAJOR="${VER%%.*}"
-          if [ -n "${MAJOR:-}" ] && [ "$MAJOR" -ge 26 ] 2>/dev/null; then
+          if [ -n "${MAJOR:-}" ] && [ "$MAJOR" -ge 27 ] 2>/dev/null; then
             echo "Using selected Xcode $VER at $CUR"
             echo "DEVELOPER_DIR=$CUR" >> "$GITHUB_ENV"
             xcodebuild -version
             exit 0
           fi
-          echo "❌ No Xcode >= 26 found on the runner. Installed Xcodes:"
+          echo "❌ No Xcode >= 27 found on the runner. Installed Xcodes:"
           ls -d /Applications/Xcode*.app 2>/dev/null || true
           exit 1
 
@@ -286,13 +286,13 @@ jobs:
         uses: ./.github/actions/import-assets
 
       # The iOS export bakes shaders (export_presets.cfg `shader_baker/enabled=true`): Godot compiles them
-      # to .metallib through `xcrun metal`, which Xcode 26 ships as a separately downloaded component.
+      # to .metallib through `xcrun metal`, which Xcode ships as a separately downloaded component.
       # Without it the baker silently falls back to SPIR-V only and the device compiles every shader on
       # its main thread at first draw. `cargo run -- export` fails the build if that happens.
       - name: Ensure Metal toolchain (shader baker)
         run: |
           if ! xcrun -sdk iphoneos metal --version >/dev/null 2>&1; then
-            echo "Metal toolchain missing — downloading the Xcode 26 component…"
+            echo "Metal toolchain missing — downloading the Xcode component…"
             xcodebuild -downloadComponent MetalToolchain
           fi
           xcrun -sdk iphoneos metal --version

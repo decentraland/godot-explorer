@@ -62,9 +62,11 @@ runs:
           exit 1
         fi
         SAFE_BRANCH=$(echo "$REF" | tr '/' '-')
+        # xcode=27 archives on Xcode 27 (iOS 27 SDK); without it asc-deploy keeps Xcode 26 for the 1.x line.
         gh workflow run deploy_testflight.yml \
           --repo decentraland/godot-asc-deploy --ref main \
           -f branch="$SAFE_BRANCH" -f sha="$SHA" -f whats_new="$WHATS_NEW" \
           -f pr_number="$PR_NUMBER" -f slack_ts="$TS" \
-          -f build_version="$BUILD_VERSION" -f build_number="$BUILD_NUMBER" -f triggered_by="$TRIGGERED_BY"
+          -f build_version="$BUILD_VERSION" -f build_number="$BUILD_NUMBER" -f triggered_by="$TRIGGERED_BY" \
+          -f xcode=27
         echo "✅ Dispatched godot-asc-deploy for ${SAFE_BRANCH}@${SHA}"
