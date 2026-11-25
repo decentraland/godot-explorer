@@ -14,12 +14,12 @@ extends Control
 ##   DISCOVER_FTUE       -> %DiscoverFtue            (first time user experience)
 ##
 ## Auth flow (Create Account / Sign In only changes the label):
-##   EULA -> ACCOUNT_HOME -> AUTH_HOME -> (auth)
-##     - profile exists  -> COMEBACK (Welcome Back) -> Explorer
-##     - no profile      -> AVATAR_CREATE -> AVATAR_NAMING -> FTUE -> Explorer
+##   ATT (iOS) -> EULA -> ACCOUNT_HOME -> AUTH_HOME -> (auth)
+##     - profile exists  -> COMEBACK (Welcome Back) + push prompt -> Explorer
+##     - no profile      -> AVATAR_CREATE -> AVATAR_NAMING + push prompt -> FTUE -> Explorer
 ##
 ## Returning user (has session):
-##   EULA check -> Explorer (direct, no Welcome Back)
+##   ATT (iOS) -> EULA check -> push prompt -> Explorer (direct, no Welcome Back)
 
 signal change_scene(new_scene_path: String)
 
@@ -173,6 +173,7 @@ func show_comeback_screen():
 	show_panel(control_comeback)
 	avatar_preview.reparent(avatar_preview_container_comeback)
 	_restore_avatar_preview_defaults()
+	_request_notification_permission_if_needed()
 
 
 # gdlint:ignore = async-function-name
@@ -180,6 +181,7 @@ func show_avatar_naming_screen():
 	track_lobby_screen("AVATAR_NAMING")
 	button_back.show()
 	show_panel(control_avatar_naming)
+	_request_notification_permission_if_needed()
 	avatar_preview.reparent(avatar_preview_container_avatar_naming)
 	_restore_avatar_preview_defaults()
 	_set_random_name()
@@ -232,10 +234,10 @@ func show_account_home_loading_screen():
 func _request_notification_permission_if_needed():
 	if not Global.is_mobile() or Global.is_virtual_mobile():
 		return
-	# Triggered only from the explicit Play-as-Guest / Sign-In taps (the user's
-	# commit point), so the EULA-timing gate that previously guarded this is no
-	# longer needed. NotificationsManager enforces the has-permission + cooldown
-	# guards (and skips the spurious-reject re-prompt loop on Android).
+	# Shown over the Let's Go screens (#3183): Avatar Naming for a new player, Welcome Back
+	# for a returning one, and on restore for a saved session, which skips both.
+	# NotificationsManager enforces the has-permission + cooldown guards (and skips the
+	# spurious-reject re-prompt loop on Android).
 	if NotificationsManager.has_local_notification_permission():
 		return
 	NotificationsManager.request_local_notification_permission(current_screen_name)
@@ -539,7 +541,7 @@ func _ready():
 	# Menu/Explorer restore the default 10s when leaving the lobby.
 	Global.metrics.set_flush_interval(2.0)
 
-	Global.music_player.play.call_deferred("music_builder")
+	Global.music_player.play.call_deferred(MusicPlayer.LOBBY_MUSIC)
 
 	var login = %Login
 
@@ -569,6 +571,10 @@ func _ready():
 		if gate_decision == "hard":
 			# The overlay replaces the startup splash and blocks all interaction.
 			return
+
+	# iOS tracking prompt (#3183): over the splash, before login and before any other system
+	# prompt, so a returning player has answered it before Welcome Back as well.
+	await TrackingAuthorization.async_request_if_needed()
 
 	# Track startup metric for analytics
 	var startup_data := {"startup_time_ms": startup_time_ms, "platform": OS.get_name()}
@@ -889,11 +895,10 @@ func _on_wallet_connected(address: String, _chain_id: int, is_guest: bool) -> vo
 	# auth errors in this lobby are ordinary ones and must not trigger the recovery fallback.
 	_resumed_signin_from_deep_link = false
 	_accept_eula()
-	# Also surface the OS notification prompt on sign-in success, covering the paths
-	# that reach a wallet without a per-tap call (Play-as-Guest / go-to-Sign-In), such
-	# as a recovered session. NotificationsManager's has-permission + cooldown guards
-	# make this a no-op when it was already prompted this session.
-	_request_notification_permission_if_needed()
+	# A restored session goes straight to Discover without a Let's Go screen, so its
+	# notification prompt is asked here. Fresh logins get it on Avatar Naming / Welcome Back.
+	if loading_first_profile:
+		_request_notification_permission_if_needed()
 	Global.metrics.update_identity(address, is_guest)
 	# Play-as-Guest uses a thirdweb guest wallet whose `is_guest` arg is false; treat
 	# any guest session (disposable or non-upgraded thirdweb guest) as login_type "guest".
@@ -1011,7 +1016,6 @@ func _set_random_name():
 
 func _on_button_go_to_sign_in_pressed():
 	Global.metrics.track_click_button("SIGN_IN", "ACCOUNT_HOME", "")
-	_request_notification_permission_if_needed()
 	sign_in_title.text = tr("AUTH_SIGN_IN_TITLE")
 	is_creating_account = false
 	show_auth_home_screen()
@@ -1255,7 +1259,6 @@ func _get_device_anchor_id() -> String:
 func _on_button_play_as_guest_pressed():
 	Global.metrics.track_click_button("PLAY_GUEST", "ACCOUNT_HOME", "")
 	_accept_eula()
-	_request_notification_permission_if_needed()
 	show_account_home_loading_screen()
 
 	waiting_for_new_wallet = true

@@ -1844,7 +1844,6 @@ impl CommunicationManager {
                 timestamp: self.start_time.elapsed().as_secs_f32(),
                 is_stopping: None,
                 mask: crate::avatars::emote_mask::wire_mask_from_internal(mask),
-                ..Default::default()
             })),
             protocol_version: DEFAULT_PROTOCOL_VERSION,
         };

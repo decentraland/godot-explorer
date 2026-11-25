@@ -3351,9 +3351,21 @@ impl SceneManager {
             global_bind.reset_touch_controls();
             let was_skybox_active = global_bind.sdk_skybox_time_active;
             global_bind.reset_skybox_time();
+            let was_scene_skybox_active = global_bind.reset_skybox();
             drop(global_bind);
             if was_skybox_active {
                 global.emit_signal("sdk_skybox_time_active_changed", &[false.to_variant()]);
+            }
+            if was_scene_skybox_active {
+                // Deferred, and on DclGlobal (the signal's owner): a handler may resolve a
+                // sky texture, which calls back into this SceneManager.
+                let signal_args = [
+                    "sdk_skybox_changed".to_variant(),
+                    GString::new().to_variant(),
+                    (-1i32).to_variant(),
+                ];
+                let mut global_node = global.clone();
+                global_node.call_deferred("emit_signal", &signal_args);
             }
         }
 

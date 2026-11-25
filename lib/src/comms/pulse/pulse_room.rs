@@ -593,7 +593,6 @@ impl PulseRoom {
                                 timestamp: 0.0,
                                 is_stopping: Some(false),
                                 mask: mask.map(|m| m as u32),
-                                ..Default::default()
                             }),
                         );
                     }
