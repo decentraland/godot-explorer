@@ -195,7 +195,7 @@ registerPreview('extra/ds-tooltip', {
       <Tooltip arrow="top" text="Menu" />
       <Tooltip arrow="right" text="Emotes" />
       <Tooltip arrow="bottom" text="Map" />
-      <Tooltip arrow="top" text="Open the backpack to change what you wear" />
+      <Tooltip text="Open the backpack to change what you wear" />
     </ScrollView>
   ),
 });

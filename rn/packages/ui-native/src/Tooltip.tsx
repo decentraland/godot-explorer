@@ -63,8 +63,9 @@ const ARROW_POSITION: Record<Exclude<TooltipArrow, 'none'>, ViewStyle> = {
 };
 
 /** Figma `Tooltip`: `arrow="none"` is the plain style for long text (`Tooltip/Long`, 1px border;
- * the Figma background blur is not drawn); the other arrows point at a control and carry short text
- * (`Tooltip/Short`). The box hugs the text, is at least 48 high, grows with lines and wraps at 340.
+ * the Figma background blur is not drawn): it hugs the text, is at least 48 high, grows with lines
+ * and wraps at 340. The other arrows point at a control and take one line of `Tooltip/Short`, cut
+ * with an ellipsis at 340; longer text belongs in the plain style.
  * Figma Tooltip: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=1163-18
  */
 export function Tooltip({
@@ -94,6 +95,7 @@ export function Tooltip({
       )}
       <AppText
         variant={plain ? 'Tooltip/Long' : 'Tooltip/Short'}
+        numberOfLines={plain ? undefined : 1}
         style={!plain && styles.centred}
       >
         {text}

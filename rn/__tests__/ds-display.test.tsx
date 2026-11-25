@@ -449,13 +449,14 @@ describe('Sheet', () => {
 });
 
 describe('Tooltip', () => {
-  it('draws the arrow only when a side is given', () => {
+  it('draws the arrow, on one line, only when a side is given', () => {
     const plain = render(<Tooltip text="Tap Chat to talk with others" />);
     expect(text(plain)).toContain('Tap Chat to talk with others');
     expect(plain.root.findAllByType(Path)).toHaveLength(0);
     act(() => plain.unmount());
     const left = render(<Tooltip arrow="left" text="Chat" />);
     expect(left.root.findAllByType(Path)).toHaveLength(1);
+    expect(left.root.findByType(Text).props.numberOfLines).toBe(1);
     act(() => left.unmount());
   });
 });
