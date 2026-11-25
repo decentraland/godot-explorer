@@ -9,6 +9,7 @@ const BeforeSendFreedInstanceTest = preload(
 )
 const BeforeSendScrubTest = preload("res://src/test/sentry/before_send_scrub_test.gd")
 const ForceBackfaceCullingTest = preload("res://src/test/gltf/test_force_backface_culling.gd")
+const SceneSkyboxTest = preload("res://src/test/environment/test_scene_skybox.gd")
 
 
 func start():
@@ -19,6 +20,7 @@ func start():
 		BeforeSendFreedInstanceTest.new(),
 		BeforeSendScrubTest.new(),
 		ForceBackfaceCullingTest.new(),
+		SceneSkyboxTest.new(),
 	]
 	var success: bool = rust_test_runner.run_all_tests(gdscript_tests, 0, true, self)
 
