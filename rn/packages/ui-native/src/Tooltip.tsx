@@ -6,8 +6,6 @@ import { u } from './scale';
 
 export type TooltipArrow = 'none' | 'left' | 'top' | 'right' | 'bottom';
 
-// Purple 350 at 80%: the Figma fill has no alpha token of its own.
-const FILL = `${colors.purple350}CC`;
 // The outer half of an 18 px rounded diamond (3.46 corner), in dp.
 const DEPTH = u(11.46);
 const BASE = 2 * DEPTH;
@@ -90,7 +88,7 @@ export function Tooltip({
           height={shape.h}
           style={[styles.arrow, shape.position]}
         >
-          <Path d={shape.d} fill={FILL} />
+          <Path d={shape.d} fill={colors.purple350} />
         </Svg>
       )}
       <AppText
@@ -111,7 +109,7 @@ const styles = StyleSheet.create({
     minHeight: space['2xl'],
     justifyContent: 'center',
     borderRadius: radius.sm,
-    backgroundColor: FILL,
+    backgroundColor: colors.purple350,
   },
   plain: {
     paddingVertical: space.sm,
