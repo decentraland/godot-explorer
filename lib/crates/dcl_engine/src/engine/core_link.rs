@@ -201,6 +201,9 @@ impl DclEngine {
                     self.answer_scene_request(*id, *accepted);
                 }
                 EngineCommand::ApplyLink { url, cold } => {
+                    // Applying a link binds the engine again (`is_host_driven`, `set_setting`):
+                    // without this guard that bind panics and drops the rest of the batch.
+                    let _reentrant = self.base_mut();
                     crate::app::global_runtime::apply_launch_link(url, *cold);
                 }
                 _ => {}
