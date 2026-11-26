@@ -3,7 +3,10 @@
 use ethers_core::types::H160;
 
 use super::{
-    auth_identity::{create_ephemeral_from_external_signature, generate_ephemeral_for_signing},
+    auth_identity::{
+        create_ephemeral_from_external_signature, generate_ephemeral_for_signing,
+        AUTH_CHAIN_EXPIRATION_SECS,
+    },
     device_anchor,
     ephemeral_auth_chain::EphemeralAuthChain,
     thirdweb_guest,
@@ -39,7 +42,8 @@ pub async fn perform_thirdweb_guest_login(
 
     let session = thirdweb_guest::guest_login(&session_id).await?;
 
-    let (ephemeral_message, ephemeral_keys, expiration) = generate_ephemeral_for_signing();
+    let (ephemeral_message, ephemeral_keys, expiration) =
+        generate_ephemeral_for_signing(AUTH_CHAIN_EXPIRATION_SECS);
 
     // The wallet already exists server-side at this point; a signing failure
     // still fails the login, but under its own reason so the dashboard doesn't
@@ -150,7 +154,8 @@ pub async fn perform_email_login(
 ) -> Result<(H160, EphemeralAuthChain), anyhow::Error> {
     let (email_jwt, email_address) = thirdweb_guest::email_complete(&email, &code).await?;
 
-    let (ephemeral_message, ephemeral_keys, expiration) = generate_ephemeral_for_signing();
+    let (ephemeral_message, ephemeral_keys, expiration) =
+        generate_ephemeral_for_signing(AUTH_CHAIN_EXPIRATION_SECS);
 
     let signature_hex =
         thirdweb_guest::sign_message(&email_jwt, email_address, 1, &ephemeral_message).await?;

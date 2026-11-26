@@ -524,6 +524,13 @@ fn wallet_sign_in_signs_a_core_made_message_and_keeps_the_key_inside() {
         s.hub.with_session(|x| x.address_string()).to_lowercase(),
         format!("{:#x}", wallet.address())
     );
+    // As long as the auth site's mobile sign-in: about 90 days, not the 30 of other flows.
+    let lifetime = s
+        .hub
+        .with_session(|x| x.ephemeral_auth_chain().unwrap().expiration())
+        .duration_since(std::time::SystemTime::now())
+        .unwrap();
+    assert!(lifetime.as_secs() > 89 * 24 * 3600, "{lifetime:?}");
 }
 
 #[test]

@@ -20,7 +20,7 @@ use dcl_core::Core;
 
 use super::auth_identity::{
     complete_mobile_auth, create_ephemeral_from_external_signature, create_local_ephemeral,
-    generate_ephemeral_for_signing, start_mobile_auth,
+    generate_ephemeral_for_signing, start_mobile_auth, AUTH_CHAIN_EXPIRATION_SECS,
 };
 use super::decentraland_auth_server::{do_request, CreateRequest, IdentityStatusError};
 use super::ephemeral_auth_chain::EphemeralAuthChain;
@@ -925,7 +925,8 @@ impl DclPlayerIdentity {
     /// - "expiration_timestamp": Unix timestamp (seconds) when the auth expires
     #[func]
     fn generate_ephemeral_for_signing(&self) -> VarDictionary {
-        let (ephemeral_message, signing_key_bytes, expiration) = generate_ephemeral_for_signing();
+        let (ephemeral_message, signing_key_bytes, expiration) =
+            generate_ephemeral_for_signing(AUTH_CHAIN_EXPIRATION_SECS);
 
         let expiration_timestamp = expiration
             .duration_since(UNIX_EPOCH)
