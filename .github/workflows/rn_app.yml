@@ -60,9 +60,12 @@ jobs:
       # upstream; a critical one anywhere in the production tree fails the PR.
       - name: No critical advisory in the dependency tree
         run: npm audit --omit=dev --audit-level=critical
+      # Reown AppKit and WalletConnect ship under the WalletConnect Community License, accepted for
+      # wallet sign-in (#3385). Listed by exact version so a bump re-reads the licence.
       - name: Production npm licences are on the allow-list
         run: >-
           npx --yes license-checker@25.0.1 --production --excludePrivatePackages --summary
+          --excludePackages "@reown/appkit-common-react-native@2.0.6;@reown/appkit-core-react-native@2.0.6;@reown/appkit-ethers-react-native@2.0.6;@reown/appkit-react-native@2.0.6;@reown/appkit-ui-react-native@2.0.6;@walletconnect/core@2.21.10;@walletconnect/react-native-compat@2.21.10;@walletconnect/sign-client@2.21.10;@walletconnect/types@2.21.10;@walletconnect/universal-provider@2.21.10;@walletconnect/utils@2.21.10"
           --onlyAllow "MIT;ISC;BSD-3-Clause;BSD-2-Clause;Apache-2.0;BlueOak-1.0.0;FSL-1.1-MIT;MPL-2.0;Unlicense;CC0-1.0;CC-BY-4.0;Python-2.0;0BSD;(MIT OR CC0-1.0);(MIT OR Apache-2.0);(BSD-3-Clause OR GPL-2.0)"
       - name: Engine translations match the RN catalogue
         run: node scripts/i18n-engine.mjs --check

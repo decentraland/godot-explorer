@@ -55,7 +55,10 @@ engine-facing fix.
   (D-25, D-41), the core making the message to sign and receiving the signature (#3359). Written, not
   verified on a device: Android's MetaMask button opens MetaMask directly, iOS's Wallet Connect opens
   AppKit's wallet list; the auth page is no longer used for wallets. Google and Apple through Magic are
-  #3384.
+  #3384. AppKit and WalletConnect are under the WalletConnect Community License (accepted 26 Nov 2026):
+  before release the app shows "Portions © 2025 Reown, Inc. All Rights Reserved" and the licence text
+  (acknowledgements screen, moved here from 5b.7), and Foundation confirms the Reown commercial licence
+  (required above 500 wallet MAU or 2.5M RPC calls a month).
 - [ ] **6.8 Real sign-in on devices**. Complete a real email OTP, Google, Apple and wallet login on
   both platforms (none was completed in phase 3, only the screens and the hand-off), with the
   keyboard, cancel, close-the-browser and deep-link-return paths, and the sign-in resume cap.
