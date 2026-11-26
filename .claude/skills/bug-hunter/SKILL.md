@@ -39,6 +39,8 @@ For driving the engine, the `mobile-dev-debug-tool` skill.
    (`mobile-artifacts…/android/main/<sha>/`), prints the build number and installs it with `-r`.
    CI publishes ~35 min after the merge (`gh run list --branch main`, job "Build Android"). A PR
    branch build of the same code may already be on the phone: compare the sha in the version string.
+   PR branches get an APK only through the `build` label, which also ships a TestFlight build and
+   posts to the build board: ask before adding it.
 3. **Desktop client** (the engine on a desktop, phone window, debug hub attached). From an orca
    worktree:
    ```bash
@@ -56,6 +58,10 @@ For driving the engine, the `mobile-dev-debug-tool` skill.
    Launch through `open -n` (exec'ing `godot4_bin` from a background shell stalls on macOS). Check
    `lsof -nP -iTCP -sTCP:LISTEN | grep 923` first; another session may own the hub ports (then
    `debug-hub --device-port 9331 --consumer-port 9330` and `PORT=9330` for the helpers).
+   The process is then `Godot` (`…/Godot.app/Contents/MacOS/Godot`), not `godot4_bin`: stop it
+   with `pkill -f "$PWD/.bin/godot/Godot.app/Contents/MacOS/Godot"` and check with `ps`. Keep **one
+   client per hub**: a second client on the same port answers the same commands, and `state`,
+   `scenes` and `screenshot` then mix both.
 4. **iOS** when the iPhone shows as `available` in `xcrun devicectl list devices` (it drops off when
    asleep). TestFlight builds; same observation limits as Android CI builds.
 
@@ -69,7 +75,9 @@ What each target can observe:
 
 The hub cannot be attached to a **CI** build on 2.x: the `?scene-inspector=` deeplink reaches the
 engine but host-driven mode never re-emits `deep_link_received`, the only signal the bridge listens
-to. Observe CI builds through adb.
+to. Observe CI builds through adb. Once #3400 is merged, builds from then on attach with
+`adb reverse tcp:9231 tcp:9231` and `adb shell am start -a android.intent.action.VIEW -d
+"decentraland://open?scene-inspector=ws://127.0.0.1:9231"`; update this note then.
 
 ## 2. Hunting grounds — pick at least three per hunt, rotate between hunts
 
@@ -93,6 +101,11 @@ tester's own crashes from earlier in the day. Symbolize with
 `libdclgodot-android-release` artifact of that commit's CI run and checks the Build ID. Then
 reproduce: the tombstone's `Process uptime` and the surrounding `logcat` (ActivityManager,
 `CoreBackPreview` = Back pressed) usually give the trigger.
+
+Teardown crashes often reproduce on the desktop client too, which is faster to iterate on: launch it
+with `--quit-after 7200` (a clean quit through `Main::cleanup()` and `exit()` after ~2 min) and look
+for a new report in `~/Library/Logs/DiagnosticReports/` whose `"pid"` matches the client's. Earlier
+reports there (`godot4_bin-*.ips`, `Godot-*.ips`) are leads as well.
 
 ### 2.3 Fresh merges
 `git log origin/main --first-parent --since="5 days ago" | grep -v "chore(deps"`. Large or
@@ -134,6 +147,11 @@ Scene or explorer? A scene error alone is not our bug. Check:
 3. Does it depend on something our runtime does differently (`lib/crates/dcl_engine/src/dcl/js/js_modules/`,
    the ops behind them)? A local experiment settles it: patch, `xtask build`, relaunch, revisit, revert.
 4. Unity parity: does the place work for players on the Unity explorer? Unity is the reference.
+
+Arrive the way players do. A scene that reads the player's data at load sees `null` when the client
+spawns straight into it (the profile is not ready yet) and the real object when the player teleports
+in: Meta GamiMall only broke on the teleport. Reproduce, and verify a fix, by teleporting in after
+the client has loaded elsewhere.
 
 ### 2.6 Re-verify open bugs
 `gh issue list --label bug --state open`. Prefer issues without `ia-confirmed`, older than the last
