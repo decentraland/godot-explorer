@@ -6,6 +6,13 @@ import { HomeTabs } from '../src/app/HomeTabs';
 import { NavProvider } from '../src/app/NavProvider';
 import { EntryFlow } from '../src/flow/EntryFlow';
 import { core } from '../src/core';
+import { signInWithWallet, WalletError } from '../src/flow/wallet';
+
+jest.mock('../src/flow/wallet', () => ({
+  ...jest.requireActual('../src/flow/wallet'),
+  signInWithWallet: jest.fn(() => new Promise(() => {})),
+}));
+const walletSignIn = signInWithWallet as jest.Mock;
 
 const metrics = {
   frame: { x: 0, y: 0, width: 400, height: 900 },
@@ -143,10 +150,74 @@ describe('screens render', () => {
       act(() => core().cancelSignIn());
     });
 
-    it('opens the auth site on its wallet list from Wallet Connect', async () => {
+    const page = () => JSON.stringify(tree.toJSON());
+
+    it('signs in from the wallet list on Wallet Connect, without the auth site', async () => {
       const signInBrowser = jest.spyOn(core(), 'signInBrowser');
       await press('Wallet Connect');
-      expect(signInBrowser).toHaveBeenCalledWith('wallet_connect');
+      expect(walletSignIn).toHaveBeenLastCalledWith(
+        'wallet_connect',
+        expect.any(Function),
+      );
+      expect(signInBrowser).not.toHaveBeenCalled();
+      expect(page()).toContain('your Wallet...');
+      await act(async () => walletSignIn.mock.lastCall[1]('signing'));
+      expect(page()).toContain('Confirm in');
+    });
+
+    it('opens MetaMask straight from its own button on Android', async () => {
+      await press('Back');
+      Platform.OS = 'android';
+      await press('SIGN IN');
+      expect(page()).not.toContain('Wallet Connect');
+      await press('MetaMask');
+      expect(walletSignIn).toHaveBeenLastCalledWith(
+        'metamask',
+        expect.any(Function),
+      );
+      expect(page()).toContain('MetaMask...');
+    });
+
+    it('welcomes a returning account back once the wallet has signed', async () => {
+      walletSignIn.mockImplementationOnce(async () => {
+        core().signInWalletBegin();
+        core().signInWalletComplete('0xwallet', '0xsignature');
+      });
+      await press('Wallet Connect');
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(core().state().tag).toBe('SignedIn');
+      expect(page()).toContain('Welcome back');
+    });
+
+    it('shows the refusal on Sign In when the wallet rejects', async () => {
+      walletSignIn.mockImplementationOnce(() =>
+        Promise.reject(new WalletError('rejected')),
+      );
+      await press('Wallet Connect');
+      expect(page()).toContain('Sign in to Decentraland');
+      expect(page()).toContain('The request was rejected in your Wallet.');
+    });
+
+    it('tells the player MetaMask is missing', async () => {
+      walletSignIn.mockImplementationOnce(() =>
+        Promise.reject(new WalletError('not_installed')),
+      );
+      await press('Back');
+      Platform.OS = 'android';
+      await press('SIGN IN');
+      await press('MetaMask');
+      expect(page()).toContain('MetaMask is not installed.');
+    });
+
+    it('comes back to Sign In without an error when the wallet list is closed', async () => {
+      walletSignIn.mockImplementationOnce(() =>
+        Promise.reject(new WalletError('cancelled')),
+      );
+      await press('Wallet Connect');
+      expect(page()).toContain('Sign in to Decentraland');
+      expect(page()).not.toContain('Try again');
     });
 
     it('closes the keyboard before Back leaves a screen', async () => {

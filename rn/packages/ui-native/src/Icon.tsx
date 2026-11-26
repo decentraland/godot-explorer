@@ -36,6 +36,7 @@ import {
   categoryPaths,
   settingsPaths,
   strokePaths,
+  metamaskSvg,
   walletConnectSvg,
   wearablesSvg,
 } from './iconSvgs';
@@ -46,6 +47,7 @@ const sources = {
   credits: creditsSvg,
   discord: discordSvg,
   google: googleSvg,
+  metamask: metamaskSvg,
   menuBanMember: menuBanMemberSvg,
   menuClearChat: menuClearChatSvg,
   menuDemoteSpeaker: menuDemoteSpeakerSvg,

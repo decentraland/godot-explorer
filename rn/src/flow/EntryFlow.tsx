@@ -39,6 +39,8 @@ import {
   AuthVerify,
 } from './screens';
 import { t } from '../i18n';
+import { signInWithWallet, WalletError } from './wallet';
+import type { WalletPhase } from './wallet';
 
 const RESEND_WAIT_MS = 2 * 60 * 1000;
 
@@ -90,6 +92,7 @@ export function EntryFlow({
   // profile is read.
   const [returned, setReturned] = useState(false);
   useEffect(() => setReturned(false), [step]);
+  const [walletPhase, setWalletPhase] = useState<WalletPhase>('connecting');
 
   useEffect(() => {
     let cancelled = false;
@@ -116,10 +119,45 @@ export function EntryFlow({
       });
     if (
       step === 'auth_browser_open' &&
-      (provider === 'google' || provider === 'apple' || provider === 'wallet')
+      (provider === 'wallet' || provider === 'metamask')
+    ) {
+      const kind = provider === 'metamask' ? 'metamask' : 'wallet_connect';
+      setWalletPhase('connecting');
+      signInWithWallet(kind, setWalletPhase).then(
+        () => succeeded(),
+        error => {
+          if (cancelled) {
+            return;
+          }
+          // A recovered session landed while the user tapped: the core refused to begin.
+          if (alreadySignedIn()) {
+            succeeded();
+            return;
+          }
+          const code = error instanceof WalletError ? error.code : 'failed';
+          if (code === 'cancelled') {
+            // The wallet list was closed: back on Sign In, as CANCEL does.
+            dispatch({ type: 'back' });
+            return;
+          }
+          dispatch({
+            type: 'authFailed',
+            message: t(
+              code === 'rejected'
+                ? 'FLOW_WALLET_REJECTED'
+                : code === 'not_installed'
+                ? 'FLOW_METAMASK_NOT_INSTALLED'
+                : 'FLOW_SIGN_IN_FAILED',
+            ),
+          });
+        },
+      );
+    } else if (
+      step === 'auth_browser_open' &&
+      (provider === 'google' || provider === 'apple')
     ) {
       try {
-        startBrowserSignIn(provider === 'wallet' ? 'wallet_connect' : provider);
+        startBrowserSignIn(provider);
       } catch {
         // A recovered session can land while the user taps: the core refuses to begin a sign-in
         // when one is already done, and the flow simply moves on.
@@ -369,7 +407,23 @@ export function EntryFlow({
       );
     }
     case 'auth_browser_open':
-      return <AuthBrowserOpen loading={returned} onCancel={back} />;
+      return (
+        <AuthBrowserOpen
+          loading={returned}
+          waiting={
+            provider === 'metamask'
+              ? walletPhase === 'signing'
+                ? 'FLOW_AUTH_METAMASK_WAITING'
+                : 'FLOW_AUTH_METAMASK_OPENING'
+              : provider === 'wallet'
+              ? walletPhase === 'signing'
+                ? 'FLOW_AUTH_WALLET_WAITING'
+                : 'FLOW_AUTH_WALLET_CONNECTING'
+              : undefined
+          }
+          onCancel={back}
+        />
+      );
     case 'auth_verify':
       return <AuthVerify />;
     case 'account_guest_create':

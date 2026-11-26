@@ -11,6 +11,15 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-feature android:glEsVersion="0x00030000" android:required="true" />
 
+    <!-- Wallet apps the wallet sign-in can open. -->
+    <queries>
+        <package android:name="io.metamask" />
+        <package android:name="com.wallet.crypto.trustapp" />
+        <package android:name="io.gnosis.safe" />
+        <package android:name="me.rainbow" />
+        <package android:name="org.toshi" />
+    </queries>
+
     <application
       android:name=".MainApplication"
       android:label="@string/app_name"

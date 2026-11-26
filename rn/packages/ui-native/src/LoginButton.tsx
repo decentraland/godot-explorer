@@ -5,7 +5,12 @@ import { PressableBase } from './internal/PressableBase';
 import { colors, fonts, radii } from './tokens';
 import { u } from './scale';
 
-export type LoginProvider = 'google' | 'apple' | 'wallet' | 'email';
+export type LoginProvider =
+  | 'google'
+  | 'apple'
+  | 'wallet'
+  | 'metamask'
+  | 'email';
 
 /** Figma's `Button/Entry` family — the Sign In screen's provider buttons. One real component with
  * four `Type`s (Google/Apple/Wallet/Mail), not four bespoke buttons: Google/Apple/Wallet share the
@@ -76,7 +81,7 @@ export function LoginButton({
 const PROVIDER: Record<
   LoginProvider,
   {
-    icon: 'google' | 'apple' | 'mail' | 'wallet';
+    icon: 'google' | 'apple' | 'mail' | 'wallet' | 'metamask';
     iconSize: number;
     bg: string;
     pressedBg: string;
@@ -108,6 +113,16 @@ const PROVIDER: Record<
   },
   wallet: {
     icon: 'wallet',
+    iconSize: 18,
+    bg: colors.snow,
+    pressedBg: colors.white70,
+    disabledBg: colors.white10,
+    color: colors.shadow,
+    gap: u(5),
+  },
+  // Not in the Figma: 1.x's Android MetaMask button, drawn like Wallet.
+  metamask: {
+    icon: 'metamask',
     iconSize: 18,
     bg: colors.snow,
     pressedBg: colors.white70,

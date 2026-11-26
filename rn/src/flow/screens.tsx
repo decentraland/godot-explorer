@@ -119,9 +119,12 @@ export function AccountHome({
   );
 }
 
-const BRAND_PROVIDERS: { key: Provider; label: I18nKey }[] = [
+// Android opens MetaMask directly, iOS the wallet list, as 1.x did.
+const brandProviders = (): { key: Provider; label: I18nKey }[] => [
   { key: 'google', label: 'FLOW_PROVIDER_GOOGLE' },
-  { key: 'wallet', label: 'FLOW_PROVIDER_WALLET' },
+  Platform.OS === 'android'
+    ? { key: 'metamask', label: 'FLOW_PROVIDER_METAMASK' }
+    : { key: 'wallet', label: 'FLOW_PROVIDER_WALLET' },
   { key: 'apple', label: 'FLOW_PROVIDER_APPLE' },
 ];
 
@@ -152,7 +155,7 @@ export function AuthHome({
           </AppText>
         ) : null}
         <View style={styles.actions}>
-          {BRAND_PROVIDERS.map(provider => (
+          {brandProviders().map(provider => (
             <LoginButton
               key={provider.key}
               provider={provider.key}
@@ -200,12 +203,15 @@ const LOADING_ESCAPE_MS = 8000;
 
 export function AuthBrowserOpen({
   loading = false,
+  waiting = 'FLOW_AUTH_WAIT_TITLE',
   onCancel,
 }: {
   loading?: boolean;
+  /** What the player waits on: the browser, or the wallet app for a wallet sign-in. */
+  waiting?: I18nKey;
   onCancel?: () => void;
 }) {
-  const title = t(loading ? 'FLOW_AUTH_LOADING_TITLE' : 'FLOW_AUTH_WAIT_TITLE');
+  const title = t(loading ? 'FLOW_AUTH_LOADING_TITLE' : waiting);
   // Closing the browser without finishing sends no event: after a while Loading offers the way out.
   const [stuck, setStuck] = useState(false);
   useEffect(() => {

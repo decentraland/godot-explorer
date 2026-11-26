@@ -52,9 +52,10 @@ engine-facing fix.
   low-end Android through a 30-minute session; thermal and fps-cap behaviour; the deliberate crash
   test for symbolication (R-7) on both platforms.
 - [ ] **6.7 Native wallets (Reown AppKit)**. MetaMask and WalletConnect through Reown AppKit for RN
-  (D-25, D-41), the core making the message to sign and receiving the signature; iOS only if product
-  wants native WalletConnect in 2.0.0, otherwise the web flow stays. Until then wallets sign in through
-  the auth page.
+  (D-25, D-41), the core making the message to sign and receiving the signature (#3359). Written, not
+  verified on a device: Android's MetaMask button opens MetaMask directly, iOS's Wallet Connect opens
+  AppKit's wallet list; the auth page is no longer used for wallets. Google and Apple through Magic are
+  #3384.
 - [ ] **6.8 Real sign-in on devices**. Complete a real email OTP, Google, Apple and wallet login on
   both platforms (none was completed in phase 3, only the screens and the hand-off), with the
   keyboard, cancel, close-the-browser and deep-link-return paths, and the sign-in resume cap.
