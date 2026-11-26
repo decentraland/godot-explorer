@@ -49,7 +49,7 @@ pub enum PulseStatus {
 /// (`Pulse.Transport.DisconnectReason`), *not* a wire message: it arrives as the ENet disconnect
 /// event's `data` code. The driver maps that `u32` here so the protocol layer can decide whether a
 /// reconnect could plausibly help — several reasons are terminal by the server's design (bad auth,
-/// ban, eviction, flagged misbehaviour) and must not trigger a reconnect loop.
+/// ban, eviction) and must not trigger a reconnect loop.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PulseDisconnect {
     /// No reason supplied (e.g. a plain network timeout where the remote set no code).
@@ -116,18 +116,36 @@ impl PulseDisconnect {
         }
     }
 
-    /// Whether reconnecting could plausibly succeed. Only transient, server-side, or
-    /// too-slow-this-time reasons are retryable; auth/ban/eviction/misbehaviour reasons (and any
-    /// unrecognised code) are terminal — reconnecting against them just loops.
+    /// Whether reconnecting could plausibly succeed. Transient, server-side and client-fault
+    /// reasons are retryable; auth/ban/eviction reasons (and any unrecognised code) are terminal —
+    /// reconnecting against them just loops.
     pub fn should_retry(self) -> bool {
+        self.is_client_fault()
+            || matches!(
+                self,
+                Self::None
+                    | Self::Graceful
+                    | Self::AuthTimeout
+                    | Self::ServerFull
+                    | Self::PreAuthIpLimit
+                    | Self::PreAuthBudget
+            )
+    }
+
+    /// The server dropped the session for something this client sent, not for the account. A new
+    /// session starts with a fresh budget, so these are retried, with a backoff that keeps growing
+    /// across kicks so a client that keeps tripping the same check cannot loop on handshakes.
+    pub fn is_client_fault(self) -> bool {
         matches!(
             self,
-            Self::None
-                | Self::Graceful
-                | Self::AuthTimeout
-                | Self::ServerFull
-                | Self::PreAuthIpLimit
-                | Self::PreAuthBudget
+            Self::InputRateExceeded
+                | Self::DiscreteEventRateExceeded
+                | Self::InvalidInputField
+                | Self::InvalidEmoteField
+                | Self::InvalidTeleportField
+                | Self::HandshakeReplayRejected
+                | Self::InvalidHandshakeField
+                | Self::PacketCorrupted
         )
     }
 }

@@ -27,6 +27,9 @@ assignment arrives, including when gatekeeper still sees a closing participant.
   (Sign in / Exit). Pulse `Banned` shows a terminal ban modal
   (Sign in / Exit), separate from scene-ban navigation. Other terminal Pulse failures require
   explicit Retry rather than an automatic loop.
+- Client-fault kicks (input/event rate caps, malformed messages, handshake replay) reconnect
+  like a transport drop, so the modal appears only after the 10-second outage. Their backoff
+  keeps growing across re-establishment until a session ends for another reason.
 - Resume grace lasts 30 seconds and permits one Pulse session reclaim. Repeated duplicate
   eviction cannot continuously reclaim the account during that window.
 - Cleanup replaces the scene-room result channel, invalidating pending requests from the
