@@ -9,6 +9,7 @@ pub enum PropertyValue {
     Int { value: i64 },
     Float { value: f64 },
     Bool { value: bool },
+    Null,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -28,6 +29,7 @@ impl PropertyValue {
                 .map(Value::Number)
                 .unwrap_or(Value::Null),
             Self::Bool { value } => Value::Bool(*value),
+            Self::Null => Value::Null,
         }
     }
 }
@@ -74,6 +76,12 @@ mod tests {
         ]);
         assert!(object["nan"].is_null());
         assert_eq!(object.len(), 1);
+    }
+
+    #[test]
+    fn a_null_value_keeps_its_key() {
+        let object = to_object(&[prop("position", PropertyValue::Null)]);
+        assert!(object.contains_key("position") && object["position"].is_null());
     }
 
     #[test]

@@ -123,7 +123,7 @@ export function FeatureBanners({
 }: {
   banners: Banner[] | null;
   loading: boolean;
-  onOpen: (banner: Banner) => void;
+  onOpen: (banner: Banner, index: number) => void;
   onJump: (banner: Banner) => void;
   initialIndex?: number;
 }) {
@@ -157,7 +157,7 @@ export function FeatureBanners({
             banner={banner}
             position={position}
             active={i === index}
-            onOpen={() => onOpen(banner)}
+            onOpen={() => onOpen(banner, i)}
             onJump={() => onJump(banner)}
           />
         )}

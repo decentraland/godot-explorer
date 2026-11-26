@@ -107,7 +107,10 @@ describe('DiscoverScreen', () => {
     await act(async () => card.props.onPress());
     expect(nav.route).toEqual({
       name: 'placeDetail',
-      params: { placeId: 'butterfly' },
+      params: {
+        placeId: 'butterfly',
+        origin: { carousel: 'most_active', position: 2 },
+      },
     });
   });
 

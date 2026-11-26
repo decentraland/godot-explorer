@@ -11,6 +11,7 @@ import { PlaceSkeleton } from './MoreCards';
 import { useRail } from './rails';
 import { SEARCH_DEBOUNCE_MS } from './search';
 import type { Category } from './types';
+import { UNTRACKED } from './metrics';
 import { useOpeners } from './useOpeners';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -100,7 +101,10 @@ export function CategoryScreen({
           onEndReachedThreshold={0.5}
           renderItem={({ item }) =>
             item ? (
-              <PlaceCard place={item} onPress={() => open.place(item)} />
+              <PlaceCard
+                place={item}
+                onPress={() => open.place(item, UNTRACKED)}
+              />
             ) : (
               <PlaceSkeleton />
             )

@@ -455,6 +455,17 @@ interface NativeModuleInterface {
     props: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
+  ubrn_uniffi_dcl_core_fn_func_track_click(
+    button: Uint8Array,
+    screen: Uint8Array,
+    props: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_track_discover(
+    location: Uint8Array,
+    carousels: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
   ubrn_uniffi_dcl_core_fn_func_track_ftue_bypass(
     placeId: Uint8Array,
     booted: number,
@@ -675,6 +686,8 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_terms_accepted_version(): number;
   ubrn_uniffi_dcl_core_checksum_func_terms_version(): number;
   ubrn_uniffi_dcl_core_checksum_func_track(): number;
+  ubrn_uniffi_dcl_core_checksum_func_track_click(): number;
+  ubrn_uniffi_dcl_core_checksum_func_track_discover(): number;
   ubrn_uniffi_dcl_core_checksum_func_track_ftue_bypass(): number;
   ubrn_uniffi_dcl_core_checksum_func_track_screen(): number;
   ubrn_uniffi_dcl_core_checksum_func_tutorial_completed(): number;

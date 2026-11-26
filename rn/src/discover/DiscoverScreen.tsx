@@ -112,7 +112,9 @@ export function DiscoverScreen({
           lastPlayed={recent}
           idleContent={home}
           onBack={() => setSearching(false)}
-          onPlace={open.place}
+          onPlace={(place, position) =>
+            open.place(place, { carousel: 'search', position })
+          }
           onEvent={open.event}
         />
       );

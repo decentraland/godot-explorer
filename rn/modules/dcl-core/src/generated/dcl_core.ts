@@ -2683,6 +2683,58 @@ export function track(event: string, props: Array<Property>): void /*throws*/ {
 }
 
 /**
+ * Queues a "Click Button" for `button` on `screen`.
+ */
+export function trackClick(
+  button: string,
+  screen: string,
+  props: Array<Property>,
+): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_track_click(
+        FfiConverterString.lower(button, nativeModule().rustbuffer_alloc),
+        FfiConverterString.lower(screen, nativeModule().rustbuffer_alloc),
+        FfiConverterSequenceTypeProperty.lower(
+          props,
+          nativeModule().rustbuffer_alloc,
+        ),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * Queues the `DISCOVER` screen view listing what each carousel shows.
+ */
+export function trackDiscover(
+  location: string,
+  carousels: Array<DiscoverCarousel>,
+): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_track_discover(
+        FfiConverterString.lower(location, nativeModule().rustbuffer_alloc),
+        FfiConverterSequenceTypeDiscoverCarousel.lower(
+          carousels,
+          nativeModule().rustbuffer_alloc,
+        ),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
  * The first-run flow skipped the FTUE carousel and jumped into its only place (#3022): a
  * `DISCOVER_FTUE_BYPASS` screen view with the place, whether the boot went ahead and the
  * campaign context, as 1.x reports it.
@@ -4089,6 +4141,106 @@ const FfiConverterTypeDeviceSupport = (() => {
   return new FFIConverter();
 })();
 
+export type DiscoverCarouselItem = {
+  id: string;
+  world: boolean;
+};
+
+/**
+ * Generated factory for {@link DiscoverCarouselItem} record objects.
+ */
+export const DiscoverCarouselItem = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<
+      DiscoverCarouselItem,
+      ReturnType<typeof defaults>
+    >(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<DiscoverCarouselItem>,
+  });
+})();
+
+const FfiConverterTypeDiscoverCarouselItem = (() => {
+  type TypeName = DiscoverCarouselItem;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        id: FfiConverterString.readFromCursor(c),
+        world: FfiConverterBool.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.id, c);
+      FfiConverterBool.writeIntoCursor(value.world, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.id) +
+        FfiConverterBool.allocationSize(value.world)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * One Discover carousel as it shows; an item's index is its `position`.
+ */
+export type DiscoverCarousel = {
+  /**
+   * The key the place sheet also logs as `carousel` (`featured`, `most_active`, ...).
+   */
+  key: string;
+  items: Array<DiscoverCarouselItem>;
+};
+
+/**
+ * Generated factory for {@link DiscoverCarousel} record objects.
+ */
+export const DiscoverCarousel = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<DiscoverCarousel, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<DiscoverCarousel>,
+  });
+})();
+
+const FfiConverterTypeDiscoverCarousel = (() => {
+  type TypeName = DiscoverCarousel;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        key: FfiConverterString.readFromCursor(c),
+        items: FfiConverterSequenceTypeDiscoverCarouselItem.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.key, c);
+      FfiConverterSequenceTypeDiscoverCarouselItem.writeIntoCursor(
+        value.items,
+        c,
+      );
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.key) +
+        FfiConverterSequenceTypeDiscoverCarouselItem.allocationSize(value.items)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
 /**
  * The remote tunables of both, already clamped to what 1.x accepted.
  */
@@ -5425,6 +5577,7 @@ export enum PropertyValue_Tags {
   Int = 'Int',
   Float = 'Float',
   Bool = 'Bool',
+  Null = 'Null',
 }
 export const PropertyValue = (() => {
   type Text__interface = {
@@ -5531,6 +5684,29 @@ export const PropertyValue = (() => {
     }
   }
 
+  type Null__interface = {
+    tag: PropertyValue_Tags.Null;
+  };
+  class Null_ extends UniffiEnum implements Null__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'PropertyValue';
+    readonly tag = PropertyValue_Tags.Null;
+    constructor() {
+      super('PropertyValue', 'Null');
+    }
+
+    static new(): Null_ {
+      return new Null_();
+    }
+
+    static instanceOf(obj: any): obj is Null_ {
+      return obj.tag === PropertyValue_Tags.Null;
+    }
+  }
+
   function instanceOf(obj: any): obj is PropertyValue {
     return obj[uniffiTypeNameSymbol] === 'PropertyValue';
   }
@@ -5541,10 +5717,11 @@ export const PropertyValue = (() => {
     Int: Int_,
     Float: Float_,
     Bool: Bool_,
+    Null: Null_,
   });
 })();
 export type PropertyValue = InstanceType<
-  (typeof PropertyValue)['Text' | 'Int' | 'Float' | 'Bool']
+  (typeof PropertyValue)['Text' | 'Int' | 'Float' | 'Bool' | 'Null']
 >;
 
 // FfiConverter for enum PropertyValue
@@ -5569,6 +5746,8 @@ const FfiConverterTypePropertyValue = (() => {
           return new PropertyValue.Bool({
             value: FfiConverterBool.readFromCursor(c),
           });
+        case 5:
+          return new PropertyValue.Null();
         default:
           throw new UniffiInternalError.UnexpectedEnumCase();
       }
@@ -5597,6 +5776,10 @@ const FfiConverterTypePropertyValue = (() => {
           c.writeI32(4);
           const inner = value.inner;
           FfiConverterBool.writeIntoCursor(inner.value, c);
+          return;
+        }
+        case PropertyValue_Tags.Null: {
+          c.writeI32(5);
           return;
         }
         default:
@@ -5629,6 +5812,9 @@ const FfiConverterTypePropertyValue = (() => {
           let size = 4;
           size += FfiConverterBool.allocationSize(inner.value);
           return size;
+        }
+        case PropertyValue_Tags.Null: {
+          return 4;
         }
         default:
           throw new UniffiInternalError.UnexpectedEnumCase();
@@ -13439,6 +13625,11 @@ const FfiConverterOptionalTypeSupportModal = new FfiConverterOptional(
   FfiConverterTypeSupportModal,
 );
 
+// FfiConverter for Array<DiscoverCarouselItem>
+const FfiConverterSequenceTypeDiscoverCarouselItem = new FfiConverterArray(
+  FfiConverterTypeDiscoverCarouselItem,
+);
+
 // FfiConverter for number | undefined
 const FfiConverterOptionalFloat64 = new FfiConverterOptional(
   FfiConverterFloat64,
@@ -13556,6 +13747,11 @@ const FfiConverterOptionalTypeSettingKey = new FfiConverterOptional(
 // FfiConverter for Array<Property>
 const FfiConverterSequenceTypeProperty = new FfiConverterArray(
   FfiConverterTypeProperty,
+);
+
+// FfiConverter for Array<DiscoverCarousel>
+const FfiConverterSequenceTypeDiscoverCarousel = new FfiConverterArray(
+  FfiConverterTypeDiscoverCarousel,
 );
 
 /**
@@ -14258,6 +14454,20 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_track_click() !== 48424
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_track_click',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_track_discover() !== 12015
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_track_discover',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_track_ftue_bypass() !==
     19711
   ) {
@@ -14509,6 +14719,8 @@ export default Object.freeze({
     FfiConverterTypeDeviceFacts,
     FfiConverterTypeDeviceSupport,
     FfiConverterTypeDisconnectReason,
+    FfiConverterTypeDiscoverCarousel,
+    FfiConverterTypeDiscoverCarouselItem,
     FfiConverterTypeEffect,
     FfiConverterTypeEngineNotice,
     FfiConverterTypeEntryRefusal,
