@@ -68,11 +68,12 @@ export function WearablesPanel(props: WearablesPanelProps) {
     props;
   const items = catalog ? gridItems(tab, slot, catalog, avatar, filter) : [];
   const pills = props.subRow === 'pills';
-  // The pill generation also colours the body shape; with nothing to show the swatch row goes too.
+  // The pill generation also colours the body shape; with nothing to show the swatch row goes too,
+  // except for skin, whose colour applies to the body even when no skin item is owned.
   const color =
     slot?.color ??
     (pills && slot?.key === 'shape' ? ('skin' as ColorTarget) : undefined);
-  const showSwatches = !catalog || items.length > 0;
+  const showSwatches = !catalog || items.length > 0 || color === 'skin';
   const palette = color ? PALETTES[colorKey(color)] : [];
   const value = color && avatar ? avatar[colorKey(color)] : '';
 

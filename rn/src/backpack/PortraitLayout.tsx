@@ -44,9 +44,11 @@ export function PortraitLayout({
 }: LayoutProps) {
   const insets = useSafeAreaInsets();
   const [area, setArea] = useState(0);
+  const [slotRow, setSlotRow] = useState(0);
   const { state, dispatch, catalog } = controller;
   const emotes = state.mode === 'emotes';
   const covered = state.sheet === 'full';
+  const showSlots = emotes && catalog.status === 'ready' && !covered;
   const top = Math.max(insets.top + u(4), u(43));
   // Figma `Full`: the open sheet starts right under the header (pills row + 30 px).
   const headerBottom = top + control['pill-lg'] + space['30'];
@@ -74,8 +76,15 @@ export function PortraitLayout({
         {covered ? (
           <View style={styles.hole} />
         ) : (
+          // The engine draws over RN here, so the avatar must end above the emote chip and slots.
           <AvatarHole
-            style={[styles.hole, { marginBottom: heights[state.sheet] }]}
+            style={[
+              styles.hole,
+              {
+                marginBottom:
+                  heights[state.sheet] + (showSlots ? slotRow + SLOTS_GAP : 0),
+              },
+            ]}
           />
         )}
         {credits != null && !emotes && !covered && (
@@ -87,10 +96,11 @@ export function PortraitLayout({
             ]}
           />
         )}
-        {emotes && catalog.status === 'ready' && !covered && (
+        {showSlots && (
           <View
             pointerEvents="box-none"
             style={[styles.slots, { bottom: heights[state.sheet] + SLOTS_GAP }]}
+            onLayout={event => setSlotRow(event.nativeEvent.layout.height)}
           >
             <EmoteChip
               name={chipName(

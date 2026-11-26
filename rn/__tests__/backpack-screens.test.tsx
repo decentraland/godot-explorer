@@ -175,13 +175,17 @@ describe('Backpack wearables', () => {
     ).toBeGreaterThan(0);
   });
 
-  it('drops the swatches when a pill list is empty', async () => {
-    const { tree } = await mount({
-      subRow: 'pills',
-      initial: { tab: 'body', slotByTab: { body: 'skin' } },
-    });
-    expect(find(tree, 'Custom color')).toBeUndefined();
-  });
+  it.each(['pills', 'tiles'] as const)(
+    'keeps the skin swatches when no skin item is owned (%s)',
+    async subRow => {
+      const { tree } = await mount({
+        subRow,
+        initial: { tab: 'body', slotByTab: { body: 'skin' } },
+      });
+      expect(text(tree)).toContain('Nothing here yet');
+      expect(find(tree, 'Custom color')).toBeDefined();
+    },
+  );
 
   it('sends the head zoom when the face tab opens', async () => {
     const { tree, api } = await mount();

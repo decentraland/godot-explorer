@@ -89,6 +89,9 @@ pub fn build_android(format: &str, release: bool, with_godot: bool) -> anyhow::R
         )?;
     }
     ensure_node_modules()?;
+    // RN caches autolinking by lockfile hashes only: after a no-engine build the cache omits
+    // dcl-core, and the engine build then silently runs on the mock core.
+    let _ = fs::remove_dir_all(rn_path("android/build/generated/autolinking"));
 
     let aab = format == "aab";
     let mut gradle = Command::new("./gradlew");

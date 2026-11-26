@@ -20,6 +20,7 @@ use meshopt::{simplify, SimplifyOptions, VertexDataAdapter};
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tokio::sync::Semaphore;
 
+use crate::content::godot_path::godot_path;
 use crate::content::texture::resize_image;
 
 use super::super::{
@@ -1345,8 +1346,8 @@ where
         // truthy value when it wants the placeholder branch.
         new_gltf_state.set_additional_data("placeholder_image", &Variant::nil());
 
-        let file_path_gstr = GString::from(absolute_file_path.as_str());
-        let base_path_gstr = GString::from(ctx.content_folder.as_str());
+        let file_path_gstr = godot_path(&absolute_file_path);
+        let base_path_gstr = godot_path(&ctx.content_folder);
         let err = new_gltf
             .append_from_file_ex(&file_path_gstr, &new_gltf_state.clone())
             .base_path(&base_path_gstr)

@@ -52,6 +52,10 @@ export function createMockControl(
     },
     showAvatarPreview: rect => {
       const state = bus.state();
+      // In world the core shows the preview as an overlay and the state stays InWorld.
+      if (state.tag === 'InWorld') {
+        return;
+      }
       if (state.tag !== 'SignedIn' && state.tag !== 'AvatarPreview') {
         throw invalid('show_avatar_preview', state);
       }

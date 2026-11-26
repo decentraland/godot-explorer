@@ -116,9 +116,15 @@ export function AvatarHole({
       if (timer.current) {
         clearTimeout(timer.current);
       }
-      // Entering a world already closes the preview; closing it again is an invalid call.
-      if (core().state().tag === 'AvatarPreview') {
-        core().hideAvatarPreview();
+      // In world the preview is an overlay the state does not show, so hide it there too. Entering
+      // a world from the preview already closed it, and closing it again is an invalid call.
+      const tag = core().state().tag;
+      if (tag === 'AvatarPreview' || (tag === 'InWorld' && opened.current)) {
+        try {
+          core().hideAvatarPreview();
+        } catch {
+          // Already closed by entering the world.
+        }
       }
     },
     [],
