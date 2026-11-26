@@ -33,6 +33,8 @@ pub struct App {
     engine: Option<Arc<dyn EngineSink>>,
     /// Commands issued while no engine is attached; flushed in order on attach.
     queued: Vec<EngineCommand>,
+    /// Links routed before the engine attached; sent ahead of `queued`, and they never start it.
+    pending_links: Vec<EngineCommand>,
     engine_requested: bool,
     policy: EngineStartPolicy,
     rendering_sent: Option<bool>,
@@ -51,6 +53,7 @@ impl App {
             events,
             engine: None,
             queued: Vec::new(),
+            pending_links: Vec::new(),
             engine_requested: false,
             policy: EngineStartPolicy::default(),
             rendering_sent: None,
@@ -291,11 +294,24 @@ impl App {
         }
     }
 
+    /// Hands a routed deep link to the engine, now or when it attaches.
+    pub fn engine_link(&mut self, url: &str, cold: bool) {
+        let command = EngineCommand::ApplyLink {
+            url: url.to_string(),
+            cold,
+        };
+        match &self.engine {
+            Some(engine) => engine.send(command),
+            None => self.pending_links.push(command),
+        }
+    }
+
     /// The engine started and registered itself: send what waited for it.
     pub fn engine_attach(&mut self, engine: Arc<dyn EngineSink>) {
         self.engine = Some(engine.clone());
         self.engine_requested = false;
-        for command in std::mem::take(&mut self.queued) {
+        let links = std::mem::take(&mut self.pending_links);
+        for command in links.into_iter().chain(std::mem::take(&mut self.queued)) {
             engine.send(command);
         }
         self.rendering_sent = None;

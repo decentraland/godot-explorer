@@ -138,6 +138,7 @@ pub struct DclVideoPlayer {
     last_effective_volume: f32,
     last_play_pause_ms: u64,
     /// -1 none, 0 pause, 1 play.
+    #[init(val = -1)]
     pending_play_state: i32,
     /// A valid frame was received: until then a native texture holds garbage.
     has_received_frame: bool,

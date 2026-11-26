@@ -827,3 +827,31 @@ fn other_notices_do_not_move_the_state() {
     assert!(matches!(app.state(), State::InWorld { .. }));
     assert_eq!(notices.seen.lock().unwrap().len(), 6);
 }
+
+#[test]
+fn links_wait_for_the_engine_without_starting_it_and_arrive_first() {
+    let (mut app, events) = signed_in();
+    app.engine_link("decentraland://open?skip-gltf=true", true);
+    assert_eq!(*events.engine_required.lock().unwrap(), 0);
+    app.enter_world(plaza()).unwrap();
+    let engine = Arc::new(FakeEngine::default());
+    app.engine_attach(engine.clone());
+    let commands = engine.take();
+    assert_eq!(
+        commands[0],
+        EngineCommand::ApplyLink {
+            url: "decentraland://open?skip-gltf=true".into(),
+            cold: true
+        }
+    );
+    assert_eq!(commands[1], EngineCommand::EnterWorld(plaza()));
+
+    app.engine_link("decentraland://open?kill-sky=true", false);
+    assert_eq!(
+        engine.take(),
+        vec![EngineCommand::ApplyLink {
+            url: "decentraland://open?kill-sky=true".into(),
+            cold: false
+        }]
+    );
+}

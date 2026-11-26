@@ -128,39 +128,6 @@ fn update_godot_lib(godot_engine_path: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Update dcl-godot-ios plugin
-fn update_plugin() -> anyhow::Result<()> {
-    let source = "plugins/dcl-godot-ios/bin/dcl_godot_ios-device.release_debug.a";
-    let target = format!(
-        "{}/{}/dylibs/ios/plugins/dcl_godot_ios/dcl_godot_ios.xcframework/ios-arm64/dcl_godot_ios-device.release_debug.a",
-        EXPORTS_FOLDER, IOS_EXPORT_NAME
-    );
-
-    if !Path::new(source).exists() {
-        print_message(
-            MessageType::Warning,
-            "Plugin library not found. Build it with:",
-        );
-        print_message(
-            MessageType::Info,
-            "  cd plugins/dcl-godot-ios && ./scripts/build.sh",
-        );
-        return Ok(());
-    }
-
-    let spinner = create_spinner("Updating dcl-godot-ios plugin...");
-    fs::copy(source, &target)?;
-    spinner.finish();
-
-    let size = fs::metadata(source)?.len();
-    print_message(
-        MessageType::Success,
-        &format!("dcl_godot_ios plugin ({:.1} KB)", size as f64 / 1024.0),
-    );
-
-    Ok(())
-}
-
 /// Update Rust library (libdclgodot)
 fn update_rust_lib() -> anyhow::Result<()> {
     let source = format!(
@@ -298,7 +265,6 @@ fn update_pck() -> anyhow::Result<()> {
 /// Main entry point for update-ios-xcode command
 pub fn update_ios_xcode(
     update_godot: bool,
-    update_plugin: bool,
     update_lib: bool,
     update_pck: bool,
 ) -> anyhow::Result<()> {
@@ -325,18 +291,13 @@ pub fn update_ios_xcode(
     }
 
     // Determine what to update (default: all)
-    let update_all = !update_godot && !update_plugin && !update_lib && !update_pck;
+    let update_all = !update_godot && !update_lib && !update_pck;
 
     // Update Godot library
     if update_all || update_godot {
         if let Some(godot_path) = get_godot_engine_path_for_ios()? {
             update_godot_lib(&godot_path)?;
         }
-    }
-
-    // Update plugin
-    if update_all || update_plugin {
-        self::update_plugin()?;
     }
 
     // Update Rust library

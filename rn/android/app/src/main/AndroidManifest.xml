@@ -6,6 +6,9 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-feature android:glEsVersion="0x00030000" android:required="true" />
 
     <application
@@ -74,8 +77,33 @@
         </intent-filter>
       </activity-alias>
 
-      <!-- The dcl-godot-android plugin manifest tweaks the Godot template's activity, which this
-           app does not have. -->
-      <activity android:name="com.godot.game.GodotApp" tools:node="remove" />
+      <!-- Event reminders and the Day 1 notification (DclPushModule schedules them). -->
+      <receiver
+        android:name="org.decentraland.godotexplorer.NotificationReceiver"
+        android:exported="false">
+        <intent-filter>
+          <action android:name="org.decentraland.godotexplorer.NOTIFICATION_ACTION" />
+        </intent-filter>
+      </receiver>
+
+      <!-- Remote push: data-only FCM messages reach this service in every app state, killed
+           included, and it draws the notification itself. -->
+      <service
+        android:name="org.decentraland.godotexplorer.DclFirebaseMessagingService"
+        android:exported="false">
+        <intent-filter>
+          <action android:name="com.google.firebase.MESSAGING_EVENT" />
+        </intent-filter>
+      </service>
+      <meta-data
+        android:name="com.google.firebase.messaging.default_notification_icon"
+        android:resource="@drawable/ic_notification" />
+      <meta-data
+        android:name="com.google.firebase.messaging.default_notification_channel_id"
+        android:value="dcl_liveops" />
+      <!-- GA4F writes the ad group's deferred deep link only with this flag (issue #2670). -->
+      <meta-data
+        android:name="google_analytics_deferred_deep_link_enabled"
+        android:value="true" />
     </application>
 </manifest>

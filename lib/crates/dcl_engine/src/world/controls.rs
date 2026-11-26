@@ -98,7 +98,7 @@ pub fn connect_identity(explorer: &Gd<Explorer>, identity: &Gd<DclPlayerIdentity
                 .get_address_str()
                 .is_empty()
             {
-                DclGlobal::open_url(url, false);
+                DclGlobal::open_url(url);
             }
         });
 }

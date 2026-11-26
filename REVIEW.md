@@ -14,10 +14,10 @@ These are blocking prerequisites. Resolve each one (or explicitly note its statu
 
 1. **Branch must be up to date with `main`.** Run `gh pr view <pr> --json mergeStateStatus,headRefOid,baseRefOid` (or check the PR page). If the PR is behind `main`, **request the author update the branch before a substantive review** — CI signals (especially Android/iOS artifacts) are not trustworthy on a stale base, and recently-merged fixes (autoload ordering, mouse-filter changes, skeleton recycling) frequently invalidate older diffs. A one-line "please rebase / merge `main` and I'll re-review" is the right output if the branch is stale.
 2. **iOS build must be present for platform-sensitive changes.** Mobile builds are gated on the `build` label (alias: `build-ios`) and skipped by default. Check the PR's **📱 Mobile build pipeline** comment (written by the mobile board's GitHub account once the `build` label has run a distribution) for a `🍏 iOS` row reading "✅ TestFlight build N". A row reading "❓ TestFlight result unknown" means CI could not confirm the outcome (the watch timed out or the API call failed), **not** that no build exists — check the linked `godot-asc-deploy` run or Slack before holding on it.
-   - If the PR touches: native iOS plugins (`plugins/dcl-godot-ios/**`), `OS.get_name() == "iOS"` branches, deeplinks, virtual keyboard / safe-area / `UIView` paths, audio/video/livekit interop, or anything under `lib/src/comms/` or `lib/src/av/` → **an iOS build is required**.
+   - If the PR touches: the iOS host (`rn/ios/**`), `OS.get_name() == "iOS"` branches, deeplinks, virtual keyboard / safe-area / `UIView` paths, audio/video/livekit interop, or anything under `lib/src/comms/` or `lib/src/av/` → **an iOS build is required**.
    - If no iOS artifact exists, output exactly: *"No iOS build on this PR — a maintainer can add the `build` label to trigger one. I will not approve platform-sensitive iOS changes without a green iOS build."* and hold approval.
    - If the PR is purely backend / Rust-with-no-platform-branch / docs, an iOS build is **not** required — call that out and proceed.
-3. **Submodule pointer drift.** If `git diff main...HEAD` shows changes under `plugins/dcl-godot-ios/godot` or any submodule and the PR description does not mention it, treat it as accidental and ask the author to confirm.
+3. **Submodule pointer drift.** If `git diff main...HEAD` shows changes to any submodule pointer and the PR description does not mention it, treat it as accidental and ask the author to confirm.
 4. **The description says what and why.** Read `## What` and `## Why`. If they are missing or do not tell you what changed and why in plain language, or it reads as raw AI output (see Section 4 → "PR description shape"), ask the author to rewrite it in their own words before a substantive review. The description is the author's statement of understanding; reverse-engineering it from the diff moves that work onto the reviewer.
 
 If any of (1) or (2) fail and you proceed anyway, say so explicitly in the review header.
@@ -69,7 +69,7 @@ godot/src/
 
 src/                    xtask commands (doctor, install, build, run, export, …)
 docs/                   Architecture notes — scene-architecture.md is the best starting point
-plugins/                Native iOS/Android plugins
+rn/android, rn/ios      The native host: push, scene video, device readings (no Godot plugins)
 ```
 
 A change inside `lib/src/scene_runner/components/*` almost always has a counterpart in `godot/src/decentraland_components/*` or vice versa. **If a PR changes one side only, ask whether the other side needs to follow** (and why it doesn't).
@@ -372,7 +372,7 @@ A reviewer should `grep` / eyeball the diff for these before reading logic:
 - Imports of `std::sync::Mutex` when a `parking_lot::Mutex` is already used elsewhere in the module → style drift.
 - `.unwrap()` / `.expect("…")` on `FromGodot` / `try_to` conversions inside the scene-thread hot path → will crash the scene instead of logging.
 - Any change to `rust-toolchain.toml`, `Cargo.lock` across the whole dependency tree, or the Godot version → escalate; these need a human-stakeholder call.
-- Modifications under `plugins/dcl-godot-ios/godot` or any submodule pointer → verify intentional and not a submodule-drift side-effect.
+- Modifications to any submodule pointer → verify intentional and not a submodule-drift side-effect.
 - `DclGlobal.is_ios()` / `is_android()` / `is_mobile()` in new GDScript → request `OS.get_name() == "iOS"` / `"Android"` to match the repo convention.
 - `OS.get_name()` checks that handle one mobile target but not the other (e.g. branches on `"Android"` but silently falls through on `"iOS"`) → ask which platforms were considered. Only `"Android"` / `"iOS"` need to be covered; desktop fall-through is fine (see Section 1).
 - `_process` doing physics-coupled work, or `_physics_process` doing UI work → see the pattern note in Section 5.

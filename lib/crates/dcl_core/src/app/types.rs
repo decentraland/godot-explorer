@@ -157,6 +157,12 @@ pub enum EngineCommand {
     /// A whole look from a preset: the engine shows the loading state, not the avatar it replaces.
     ApplyLook(super::AvatarState),
     Control(super::Control),
+    /// A deep link the core routed: the engine applies the engine settings it carries
+    /// (`skip-gltf`, `gp-benchmark`, comms and content overrides). `cold` when it launched the app.
+    ApplyLink {
+        url: String,
+        cold: bool,
+    },
 }
 
 /// Engine → core.

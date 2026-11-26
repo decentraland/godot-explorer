@@ -4,7 +4,7 @@ use godot::{
     prelude::*,
 };
 
-use crate::godot_classes::{dcl_android_plugin::DclAndroidPlugin, dcl_ios_plugin::DclIosPlugin};
+use crate::analytics::metrics::device_readings_with_memory;
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -232,23 +232,13 @@ impl MemoryDebugger {
     }
 
     fn print_mobile_metrics(&self) {
-        // Get metrics from the appropriate mobile plugin
-        let metrics_data = if DclIosPlugin::is_available() {
-            DclIosPlugin::get_mobile_metrics_internal()
-        } else if DclAndroidPlugin::is_available() {
-            DclAndroidPlugin::get_mobile_metrics_internal()
-        } else {
-            None
-        };
+        let metrics_data = device_readings_with_memory();
 
         if let Some(metrics) = metrics_data {
             godot_print!("┌─ Mobile Metrics ───────────────────────────────────────────┐");
-            godot_print!("│  Memory Usage:      {} MiB", metrics.memory_usage);
-            godot_print!(
-                "│  Temperature:       {}°C",
-                metrics.device_temperature_celsius
-            );
-            godot_print!("│  Thermal State:     {}", metrics.device_thermal_state);
+            godot_print!("│  Memory Usage:      {} MiB", metrics.memory_usage_mb);
+            godot_print!("│  Temperature:       {}°C", metrics.temperature_celsius);
+            godot_print!("│  Thermal State:     {}", metrics.thermal_state);
             godot_print!("│  Battery:           {}%", metrics.battery_percent);
             godot_print!("│  Charging:          {}", metrics.charging_state);
             godot_print!("└────────────────────────────────────────────────────────────┘");
@@ -509,13 +499,7 @@ impl MemoryDebugger {
     /// Print memory breakdown showing percentage of total memory used by each component
     fn print_mobile_memory_breakdown(&self) {
         // Get total memory from mobile metrics
-        let total_memory_mb = if DclIosPlugin::is_available() {
-            DclIosPlugin::get_mobile_metrics_internal().map(|m| m.memory_usage as f64)
-        } else if DclAndroidPlugin::is_available() {
-            DclAndroidPlugin::get_mobile_metrics_internal().map(|m| m.memory_usage as f64)
-        } else {
-            None
-        };
+        let total_memory_mb = device_readings_with_memory().map(|m| m.memory_usage_mb as f64);
 
         // Only show breakdown if we have total memory from mobile
         let Some(total_mb) = total_memory_mb else {
