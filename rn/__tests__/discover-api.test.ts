@@ -77,14 +77,17 @@ describe('public api', () => {
     ok: true,
     json: async () => ({
       data: url.includes('/events')
-        ? [{ id: 'e1', name: 'Party', x: 1, y: 2 }]
+        ? [{ id: 'e1', name: 'Party', x: 1, y: 2, approved: true }]
         : [place('a'), place('b')],
     }),
   })) as unknown as typeof fetch;
   const api = createPublicApi(fetchImpl);
 
   it('maps the public services', async () => {
-    expect((await api.banners())[0].place.id).toBe('a');
+    expect((await api.banners()).map(b => b.place.id).sort()).toEqual([
+      'a',
+      'b',
+    ]);
     expect((await api.events())[0].id).toBe('e1');
     expect((await api.places('popular', 0)).items).toHaveLength(2);
     expect((await api.places('favorites', 0)).items).toEqual([]);
@@ -154,6 +157,72 @@ describe('public api', () => {
     urls.length = 0;
     await respond([place('s')]).banners();
     expect(urls.every(u => !u.includes('tag=season'))).toBe(true);
+  });
+
+  it('lists everything through mobile-bff, tagged for its iOS block list', async () => {
+    const urls: string[] = [];
+    const bff = createPublicApi((async (url: string) => {
+      urls.push(url);
+      return { ok: true, json: async () => ({ data: [] }) };
+    }) as unknown as typeof fetch);
+    const run = async () => {
+      urls.length = 0;
+      await bff.banners();
+      await bff.events();
+      await bff.places('popular', 12);
+      await bff.categoryPlaces('game', 0, 'casa');
+      await bff.search('casa');
+      await bff.search('1,-2');
+      await bff.suggest('cas');
+      return [...urls];
+    };
+    const ios = await run();
+    expect(ios).toEqual([
+      'https://mobile-bff.decentraland.org/destinations/?offset=0&tag=featured&sdk=7&tag=allowed_ios',
+      'https://mobile-bff.decentraland.org/events/?sdk=7&tag=allowed_ios',
+      'https://mobile-bff.decentraland.org/destinations/?order_by=most_active&offset=12&limit=12&sdk=7&tag=allowed_ios',
+      'https://mobile-bff.decentraland.org/destinations/?categories=game&offset=0&search=casa&limit=12&sdk=7&tag=allowed_ios',
+      'https://mobile-bff.decentraland.org/destinations/?offset=0&search=casa&only_highlighted=true&limit=12&sdk=7&tag=allowed_ios',
+      'https://mobile-bff.decentraland.org/destinations/?offset=0&search=casa&order_by=most_active&limit=12&sdk=7&tag=allowed_ios',
+      'https://mobile-bff.decentraland.org/events/?sdk=7&tag=allowed_ios&search=casa',
+      'https://mobile-bff.decentraland.org/destinations/?only_places=true&pointer=1,-2&sdk=7&tag=allowed_ios',
+      'https://mobile-bff.decentraland.org/destinations/?search=cas&limit=8&sdk=7&tag=allowed_ios',
+    ]);
+    Platform.OS = 'android';
+    const android = await run();
+    Platform.OS = 'ios';
+    expect(android).toEqual(
+      ios.map(url => url.replace('&tag=allowed_ios', '')),
+    );
+  });
+
+  it('lists approved events only, live and trending first, then by next start', async () => {
+    const event = (id: string, extra = {}) => ({
+      id,
+      name: id,
+      approved: true,
+      ...extra,
+    });
+    const listed = createPublicApi((async () => ({
+      ok: true,
+      json: async () => ({
+        data: [
+          event('later', { next_start_at: '2026-12-02T10:00:00Z' }),
+          event('undated'),
+          event('hidden', { approved: false, live: true, trending: true }),
+          event('live', { live: true }),
+          event('soon', { next_start_at: '2026-12-01T10:00:00Z' }),
+          event('hot', { live: true, trending: true }),
+        ],
+      }),
+    })) as unknown as typeof fetch);
+    expect((await listed.events()).map(e => e.id)).toEqual([
+      'hot',
+      'live',
+      'soon',
+      'later',
+      'undated',
+    ]);
   });
 
   it('fails when the service does', async () => {

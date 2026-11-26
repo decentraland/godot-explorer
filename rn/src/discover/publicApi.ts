@@ -1,16 +1,14 @@
-import { Platform } from 'react-native';
 import {
-  destinationsApi,
+  bffEventsUrl,
+  destinationsUrl,
   DiscoverEvent,
   eventsApi,
-  featuredUrl,
   getJson,
-  liveEventsUrl,
   parseEvents,
+  parseListedEvents,
   parsePlaces,
   Place,
   placesApi,
-  upcomingEventsUrl,
 } from './api';
 import { recallEvent, recallFriend, recallPlace, remember } from './catalog';
 import { normalizeKeyword, parseCoordinates } from './search';
@@ -32,7 +30,9 @@ const toggle = (set: Set<string>, id: string, on: boolean) => {
   }
 };
 
-const placesUrl = (query: string) => `${placesApi()}?${query}&limit=${PAGE}`;
+const placesUrl = (query: string) => destinationsUrl(`${query}&limit=${PAGE}`);
+const pointerUrl = ({ x, y }: { x: number; y: number }) =>
+  destinationsUrl(`only_places=true&pointer=${x},${y}`);
 
 /**
  * Public places/events services. Friends, favorites, own places, votes and reminders need a signed
@@ -51,22 +51,22 @@ export function createPublicApi(
     remember({ places: found });
     return found;
   };
-  const events = async (url: string): Promise<DiscoverEvent[]> => {
-    const found = parseEvents(await get(url));
+  const events = async (
+    url: string,
+    parse: (payload: unknown) => DiscoverEvent[] = parseListedEvents,
+  ): Promise<DiscoverEvent[]> => {
+    const found = parse(await get(url));
     remember({ events: found });
     return found;
   };
 
   const railUrls: Partial<Record<PlaceRail, string>> = {
-    popular: 'order_by=most_active&order=desc',
+    popular: 'order_by=most_active',
     new: 'order_by=created_at&order=desc',
   };
 
   const taggedPlaces = async (tag: string) => {
-    const ios = Platform.OS === 'ios' ? '&tag=allowed_ios' : '';
-    const payload = await get(
-      `${destinationsApi()}/?offset=0&tag=${tag}&sdk=7${ios}`,
-    );
+    const payload = await get(destinationsUrl(`offset=0&tag=${tag}`));
     const found = parsePlaces(
       Array.isArray(payload) ? { data: payload } : payload,
     );
@@ -93,23 +93,12 @@ export function createPublicApi(
         ? await taggedPlaces('season').catch(() => [])
         : [];
       return toBanners(
-        seasonal.length > 0 ? seasonal : await places(featuredUrl()),
+        seasonal.length > 0 ? seasonal : await taggedPlaces('featured'),
       );
     },
     ftuePlaces: () => taggedPlaces('ftue'),
     friends: async () => [],
-    events: async () => {
-      const lists = await Promise.allSettled([
-        events(liveEventsUrl()),
-        events(upcomingEventsUrl()),
-      ]);
-      if (lists.every(list => list.status === 'rejected')) {
-        throw new Error('events unavailable');
-      }
-      return lists.flatMap(list =>
-        list.status === 'fulfilled' ? list.value : [],
-      );
-    },
+    events: () => events(bffEventsUrl()),
     places: async (rail, offset) => {
       const query = railUrls[rail];
       return query
@@ -136,15 +125,13 @@ export function createPublicApi(
       const [featured, mostActive, found] = await Promise.all([
         places(
           coords
-            ? placesUrl(`positions=${coords.x},${coords.y}`)
-            : placesUrl(`search=${term}&only_highlighted=true`),
+            ? pointerUrl(coords)
+            : placesUrl(`offset=0&search=${term}&only_highlighted=true`),
         ),
         coords
           ? []
-          : places(placesUrl(`search=${term}&order_by=most_active&order=desc`)),
-        coords
-          ? []
-          : events(`${eventsApi()}?search=${term}&limit=10`).catch(() => []),
+          : places(placesUrl(`offset=0&search=${term}&order_by=most_active`)),
+        coords ? [] : events(bffEventsUrl(`search=${term}`)).catch(() => []),
       ]);
       const seen = new Set(featured.map(p => p.id));
       return {
@@ -157,10 +144,12 @@ export function createPublicApi(
     suggest: async query => {
       const coords = parseCoordinates(query);
       const url = coords
-        ? placesUrl(`positions=${coords.x},${coords.y}`)
-        : `${placesApi()}?search=${encodeURIComponent(
-            normalizeKeyword(query),
-          )}&limit=${SUGGESTIONS}`;
+        ? pointerUrl(coords)
+        : destinationsUrl(
+            `search=${encodeURIComponent(
+              normalizeKeyword(query),
+            )}&limit=${SUGGESTIONS}`,
+          );
       const found = await places(url);
       const kind = coords ? ('coordinates' as const) : ('keyword' as const);
       return [...new Set(found.map(p => p.title))].map(text => ({
@@ -185,7 +174,9 @@ export function createPublicApi(
     eventDetail: async id => {
       const event =
         recallEvent(id) ??
-        (await events(`${eventsApi()}/${encodeURIComponent(id)}`))[0];
+        (
+          await events(`${eventsApi()}/${encodeURIComponent(id)}`, parseEvents)
+        )[0];
       if (!event) {
         throw new Error(`event ${id} not found`);
       }
