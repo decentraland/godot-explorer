@@ -118,11 +118,11 @@ describe('eventTime', () => {
     });
     expect(url).toContain('text=A%20b');
     expect(url).toContain('dates=20260101T100000Z%2F20260101T110000Z');
-    expect(placeJumpLink(place())).toContain('position=-3%2C-2');
-    expect(placeJumpLink(place({ world: true, location: 'a.eth' }))).toContain(
-      'realm=a.eth',
+    expect(placeJumpLink(place())).toMatch(/\/jump\/places\?position=-3,-2$/);
+    expect(placeJumpLink(place({ world: true, location: 'a.eth' }))).toMatch(
+      /\/jump\/places\?realm=a\.eth$/,
     );
-    expect(eventJumpLink('x')).toContain('id=x');
+    expect(eventJumpLink('x')).toMatch(/\/jump\/events\?id=x$/);
   });
 });
 

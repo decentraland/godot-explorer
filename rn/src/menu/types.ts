@@ -58,8 +58,8 @@ export type NotificationsResult =
 export type SceneInfo = {
   title: string;
   creator: string;
-  /** Link tail for Share: `position=x,y` or `realm=name`. */
-  linkQuery: string;
+  /** The web link Share sends (the core builds it). */
+  link: string;
 };
 
 export type DiscoverFeed = {

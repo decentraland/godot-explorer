@@ -199,6 +199,10 @@ pub fn jump_events() -> String {
         suffix(ServiceGroup::Events)
     )
 }
+/// Base of shared place/world links (`?position=x,y` or `?realm=<world>`).
+pub fn jump_places() -> String {
+    format!("{}/jump/places", host())
+}
 
 // Seasonal Discover assets: one folder per season key, the same on every environment.
 pub fn seasonal_assets() -> &'static str {
@@ -579,6 +583,7 @@ mod tests {
             terms_of_service(),
             content_policy(),
             jump_events(),
+            jump_places(),
             account_deletion(),
             intercom_tickets(),
             intercom_origin(),

@@ -238,12 +238,15 @@ describe('share', () => {
     await shareScene({
       title: 'Plaza',
       creator: '',
-      linkQuery: 'position=0,0',
+      link: 'https://decentraland.org/jump/places?position=0,0',
     });
     expect(spy.mock.calls[0][0].message).toContain('Join Me At Plaza');
+    expect(spy.mock.calls[0][0].message).toContain(
+      'https://decentraland.org/jump/places?position=0,0',
+    );
     spy.mockRejectedValueOnce(new Error('cancelled'));
     await expect(
-      shareScene({ title: 'Plaza', creator: '', linkQuery: 'position=0,0' }),
+      shareScene({ title: 'Plaza', creator: '', link: 'https://decentraland.org/jump/places?position=0,0' }),
     ).resolves.toBeUndefined();
   });
 });

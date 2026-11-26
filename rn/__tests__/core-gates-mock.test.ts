@@ -12,7 +12,6 @@ import {
 } from '../src/core/native';
 import { placeJumpLink, eventJumpLink } from '../src/discover/eventTime';
 import { mainRealm, worldRealm } from '../src/discover/api';
-import { linkQueryFor, sceneLink } from '../src/menu/api';
 import { marketplaceUrl } from '../src/backpack/platformPolicy';
 import { entitiesUrl } from '../src/backpack/catalog';
 
@@ -41,20 +40,22 @@ describe('mock gates: urls', () => {
       'https://decentraland.org/shop/item/0xabc/7',
     );
     expect(gates.jumpPositionUrl('-9,-9')).toMatch(
-      /\/jump\/\?position=-9%2C-9$/,
+      /\/jump\/places\?position=-9,-9$/,
     );
-    expect(gates.jumpRealmUrl('a b.dcl.eth')).toMatch(/realm=a%20b\.dcl\.eth$/);
-    expect(gates.eventUrl('x&y')).toMatch(/\/events\/event\/\?id=x%26y$/);
+    expect(gates.jumpRealmUrl('a b.dcl.eth')).toMatch(
+      /\/jump\/places\?realm=a%20b\.dcl\.eth$/,
+    );
+    expect(gates.eventUrl('x&y')).toMatch(/\/jump\/events\?id=x%26y$/);
   });
 
   it('links a scene by position in Genesis City and by name in a world', () => {
     const { mainRealm: main, worldsContentServer } = gates.urls();
     expect(gates.sceneLinkUrl(main, 3, -4)).toBe(
-      'https://mobile.dclexplorer.com/open?position=3,-4',
+      'https://decentraland.org/jump/places?position=3,-4',
     );
     expect(gates.sceneLinkUrl(`${main}/`, 3, -4)).toMatch(/position=3,-4$/);
     expect(gates.sceneLinkUrl(`${worldsContentServer}foo.dcl.eth`, 0, 0)).toBe(
-      'https://mobile.dclexplorer.com/open?realm=foo.dcl.eth',
+      'https://decentraland.org/jump/places?realm=foo.dcl.eth',
     );
   });
 });
@@ -66,15 +67,10 @@ describe('shell url helpers use the core', () => {
     expect(worldRealm('Foo.DCL.eth')).toBe(
       'https://worlds-content-server.decentraland.org/world/foo.dcl.eth',
     );
-    expect(linkQueryFor(mainRealm(), 1, 2)).toBe('position=1,2');
-    expect(linkQueryFor(worldRealm('a.dcl.eth'), 0, 0)).toBe('realm=a.dcl.eth');
-    expect(sceneLink('position=1,2')).toBe(
-      'https://mobile.dclexplorer.com/open?position=1,2',
-    );
     expect(placeJumpLink({ world: true, location: 'a.eth' } as never)).toMatch(
-      /\/jump\/\?realm=a\.eth$/,
+      /\/jump\/places\?realm=a\.eth$/,
     );
-    expect(eventJumpLink('e1')).toMatch(/\/events\/event\/\?id=e1$/);
+    expect(eventJumpLink('e1')).toMatch(/\/jump\/events\?id=e1$/);
     expect(marketplaceUrl()).toMatch(/\/items\?category=wearable$/);
     expect(entitiesUrl()).toBe(
       'https://peer.decentraland.org/content/entities/active',
@@ -86,15 +82,8 @@ describe('shell url helpers use the core', () => {
     setCoreForTests({
       ...base,
       urls: () => ({ ...base.urls(), mainRealm: 'https://x.test/main' }),
-      sceneLinkUrl: (realm, x, y) =>
-        base.sceneLinkUrl(
-          realm === 'https://x.test/main' ? base.urls().mainRealm : realm,
-          x,
-          y,
-        ),
     });
     expect(mainRealm()).toBe('https://x.test/main');
-    expect(linkQueryFor(mainRealm(), 5, 6)).toBe('position=5,6');
   });
 });
 

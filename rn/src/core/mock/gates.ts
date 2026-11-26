@@ -88,7 +88,9 @@ const trimSlash = (url: string): string => url.replace(/\/+$/, '');
 const sceneLink = (realm: string, x: number, y: number): string => {
   const genesis = trimSlash(realm) === trimSlash(MAIN_REALM);
   const name = trimSlash(realm).split('/').pop() ?? '';
-  return `${MOBILE_OPEN}?${genesis ? `position=${x},${y}` : `realm=${name}`}`;
+  return `${HOST}/jump/places?${
+    genesis ? `position=${x},${y}` : `realm=${name}`
+  }`;
 };
 
 type Intent = { realm: string; parcel?: Parcel };
@@ -230,9 +232,13 @@ export function createMockGates(): GatesApi {
     marketplaceBrowseUrl: section => `${MARKETPLACE}${browsePath(section)}`,
     marketplaceItemUrl: (contract, item) =>
       `${MARKETPLACE}/item/${contract}/${item}`,
-    jumpRealmUrl: realm => `${HOST}/jump/?realm=${encode(realm)}`,
-    jumpPositionUrl: position => `${HOST}/jump/?position=${encode(position)}`,
-    eventUrl: eventId => `${HOST}/events/event/?id=${encode(eventId)}`,
+    jumpRealmUrl: realm => `${HOST}/jump/places?realm=${encode(realm)}`,
+    jumpPositionUrl: position =>
+      `${HOST}/jump/places?position=${position
+        .split(',')
+        .map(encode)
+        .join(',')}`,
+    eventUrl: eventId => `${HOST}/jump/events?id=${encode(eventId)}`,
     sceneLinkUrl: sceneLink,
 
     versionGate: async () => ({

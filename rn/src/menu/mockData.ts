@@ -47,7 +47,7 @@ export const mockSocial: SocialData = {
 export const mockScene: SceneInfo = {
   title: 'Genesis Plaza PlazaPlaza',
   creator: 'Lazaro',
-  linkQuery: 'position=0,0',
+  link: 'https://decentraland.org/jump/places?position=0,0',
 };
 
 const place = (n: number, title: string): Place => ({

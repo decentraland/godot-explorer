@@ -147,17 +147,18 @@ pub fn marketplace_item(contract_address: &str, item_id: &str) -> String {
 
 /// Web link that opens the explorer in a world.
 pub fn jump_realm_link(realm_name: &str) -> String {
-    format!("{}/jump/?realm={}", urls::host(), encode(realm_name))
+    format!("{}?realm={}", urls::jump_places(), encode(realm_name))
 }
 
 /// Web link that opens the explorer at a Genesis City position (`"x,y"`).
 pub fn jump_position_link(position: &str) -> String {
-    format!("{}/jump/?position={}", urls::host(), encode(position))
+    let position: Vec<String> = position.split(',').map(encode).collect();
+    format!("{}?position={}", urls::jump_places(), position.join(","))
 }
 
-/// Web page of an event.
+/// Web link that opens an event's details in the explorer.
 pub fn event_link(event_id: &str) -> String {
-    format!("{}/events/event/?id={}", urls::host(), encode(event_id))
+    format!("{}?id={}", urls::jump_events(), encode(event_id))
 }
 
 /// Shareable link to a scene: `position=x,y` in Genesis City, `realm=<world>` otherwise.
@@ -174,7 +175,7 @@ pub fn scene_link(realm_url: &str, x: i32, y: i32) -> String {
             .unwrap_or_default();
         format!("realm={name}")
     };
-    format!("{MOBILE_OPEN}?{query}")
+    format!("{}?{query}", urls::jump_places())
 }
 
 #[cfg(test)]
@@ -229,16 +230,16 @@ mod tests {
 
     #[test]
     fn links_encode_their_parameter() {
-        assert!(jump_position_link("-9,-9").ends_with("/jump/?position=-9%2C-9"));
-        assert!(jump_realm_link("a b.dcl.eth").ends_with("/jump/?realm=a%20b.dcl.eth"));
-        assert!(event_link("x&y").ends_with("/events/event/?id=x%26y"));
+        assert!(jump_position_link("-9,-9").ends_with("/jump/places?position=-9,-9"));
+        assert!(jump_realm_link("a b.dcl.eth").ends_with("/jump/places?realm=a%20b.dcl.eth"));
+        assert!(event_link("x&y").ends_with("/jump/events?id=x%26y"));
     }
 
     #[test]
     fn scene_links_name_a_position_in_genesis_and_a_world_elsewhere() {
         assert_eq!(
             scene_link(&urls::main_realm(), 3, -4),
-            "https://mobile.dclexplorer.com/open?position=3,-4"
+            format!("{}/jump/places?position=3,-4", urls::host())
         );
         assert_eq!(
             scene_link(
@@ -246,7 +247,7 @@ mod tests {
                 0,
                 0
             ),
-            "https://mobile.dclexplorer.com/open?realm=foo.dcl.eth"
+            format!("{}/jump/places?realm=foo.dcl.eth", urls::host())
         );
     }
 }
