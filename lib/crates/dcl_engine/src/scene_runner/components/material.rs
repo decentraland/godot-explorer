@@ -539,11 +539,17 @@ fn is_valid_texture(texture: &Gd<Texture2D>) -> bool {
     texture.get_width() > 0 && texture.get_height() > 0
 }
 
+thread_local! {
+    static BLACK_TEXTURE: std::cell::RefCell<Option<Gd<ImageTexture>>> = const { std::cell::RefCell::new(None) };
+}
+
+/// At engine shutdown: see `crate::release_thread_local_engine_objects`.
+pub(crate) fn release_engine_objects() {
+    BLACK_TEXTURE.take();
+}
+
 /// Returns a cached 2x2 black opaque texture for use as a placeholder when no video is playing.
 fn get_black_placeholder_texture() -> Gd<ImageTexture> {
-    thread_local! {
-        static BLACK_TEXTURE: std::cell::RefCell<Option<Gd<ImageTexture>>> = const { std::cell::RefCell::new(None) };
-    }
     BLACK_TEXTURE.with(|cell| {
         let mut borrow = cell.borrow_mut();
         if let Some(tex) = borrow.as_ref() {

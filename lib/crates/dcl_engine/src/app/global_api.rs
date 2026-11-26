@@ -85,6 +85,16 @@ fn set_orientation(portrait: bool) {
     global().signals().orientation_changed().emit(portrait);
 }
 
+thread_local! {
+    static RESIZE_WATCH: std::cell::RefCell<Option<godot::signal::ConnectHandle>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// At engine shutdown: see `crate::release_thread_local_engine_objects`.
+pub(crate) fn release_engine_objects() {
+    RESIZE_WATCH.take();
+}
+
 /// The RN host owns the device orientation: mirror the window's shape into the layout state, and
 /// keep mirroring it as the window resizes.
 pub fn follow_host_orientation() {
@@ -92,10 +102,6 @@ pub fn follow_host_orientation() {
         return;
     };
     let mut me = global();
-    thread_local! {
-        static RESIZE_WATCH: std::cell::RefCell<Option<godot::signal::ConnectHandle>> =
-            const { std::cell::RefCell::new(None) };
-    }
     RESIZE_WATCH.with(|watch| {
         let mut watch = watch.borrow_mut();
         if watch.is_none() {

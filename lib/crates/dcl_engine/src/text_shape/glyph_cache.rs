@@ -34,6 +34,12 @@ thread_local! {
     static RESTORING: Cell<u32> = const { Cell::new(0) };
 }
 
+/// At engine shutdown, after the last `save_all` (pause / close request): see
+/// `crate::release_thread_local_engine_objects`.
+pub(crate) fn release_engine_objects() {
+    TRACKED.take();
+}
+
 fn server() -> Option<Gd<TextServer>> {
     TextServerManager::singleton().get_primary_interface()
 }

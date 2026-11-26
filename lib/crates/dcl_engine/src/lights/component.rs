@@ -63,6 +63,11 @@ thread_local! {
     }) };
 }
 
+/// At engine shutdown: see `crate::release_thread_local_engine_objects`.
+pub(crate) fn release_engine_objects() {
+    SHARED.with_borrow_mut(|s| s.projector_cache.clear());
+}
+
 pub fn settings() -> Settings {
     SHARED.with(|s| s.borrow().settings)
 }

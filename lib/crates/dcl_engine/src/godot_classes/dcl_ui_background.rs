@@ -65,6 +65,11 @@ thread_local! {
     static SHARED_ROUNDED_CLIP_SHADER: RefCell<Option<Gd<Shader>>> = const { RefCell::new(None) };
 }
 
+/// At engine shutdown: see `crate::release_thread_local_engine_objects`.
+pub(crate) fn release_engine_objects() {
+    SHARED_ROUNDED_CLIP_SHADER.take();
+}
+
 fn shared_rounded_clip_shader() -> Gd<Shader> {
     SHARED_ROUNDED_CLIP_SHADER.with(|cell| {
         let mut slot = cell.borrow_mut();
