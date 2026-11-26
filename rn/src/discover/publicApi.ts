@@ -11,6 +11,7 @@ import {
   placesApi,
 } from './api';
 import { recallEvent, recallFriend, recallPlace, remember } from './catalog';
+import { fetchNewInDecentraland } from './newInDecentraland';
 import { normalizeKeyword, parseCoordinates } from './search';
 import type { DiscoverApi, Page, PlaceRail, VoteState } from './types';
 
@@ -62,7 +63,6 @@ export function createPublicApi(
 
   const railUrls: Partial<Record<PlaceRail, string>> = {
     popular: 'order_by=most_active',
-    new: 'order_by=created_at&order=desc',
   };
 
   const taggedPlaces = async (tag: string) => {
@@ -100,6 +100,11 @@ export function createPublicApi(
     friends: async () => [],
     events: () => events(bffEventsUrl()),
     places: async (rail, offset) => {
+      if (rail === 'new') {
+        const found = await fetchNewInDecentraland(get);
+        remember({ places: found });
+        return { items: found, hasMore: false };
+      }
       const query = railUrls[rail];
       return query
         ? pageOf(await places(placesUrl(`${query}&offset=${offset}`)))

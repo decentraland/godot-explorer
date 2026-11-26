@@ -11,7 +11,7 @@ import { table as es } from '../src/i18n/es';
 import { table as ptBR } from '../src/i18n/pt_BR';
 
 // Untranslated-key ceiling per locale; lower it as keys get translated.
-const UNTRANSLATED_MAX = { es: 290, pt_BR: 290 };
+const UNTRANSLATED_MAX = { es: 287, pt_BR: 287 };
 // Keys in the catalogue with no caller yet; delete one here when it gets used or removed.
 const UNUSED_ALLOWED = [
   'BACKPACK_BACKPACK',

@@ -71,7 +71,7 @@ const num = (value: unknown, fallback = 0): number =>
   typeof value === 'number' && isFinite(value) ? value : fallback;
 
 type Raw = Record<string, unknown>;
-const rows = (payload: unknown): Raw[] => {
+export const rows = (payload: unknown): Raw[] => {
   const data = (payload as { data?: unknown } | null)?.data;
   return Array.isArray(data)
     ? (data.filter(item => typeof item === 'object' && item !== null) as Raw[])

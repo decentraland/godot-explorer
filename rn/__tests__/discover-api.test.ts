@@ -1,7 +1,12 @@
+import { createElement } from 'react';
 import { Platform } from 'react-native';
+import { act, create } from 'react-test-renderer';
 import { forgetAll, recallPlace } from '../src/discover/catalog';
 import { createMockApi } from '../src/discover/mockApi';
 import { createPublicApi } from '../src/discover/publicApi';
+import { fetchNewInDecentraland } from '../src/discover/newInDecentraland';
+import { recordPlayed, usePlayed } from '../src/discover/history';
+import { PLACES } from '../src/discover/mockData';
 
 beforeEach(forgetAll);
 
@@ -231,5 +236,129 @@ describe('public api', () => {
       status: 500,
     })) as unknown as typeof fetch);
     await expect(bad.banners()).rejects.toThrow();
+  });
+});
+
+describe('New in Decentraland', () => {
+  const NOW = Date.parse('2026-11-25T12:00:00Z');
+  const ago = (days: number) => new Date(NOW - days * 86400000).toISOString();
+  const row = (id: string, extra: Record<string, unknown> = {}) => ({
+    id,
+    title: id,
+    base_position: '0,0',
+    ...extra,
+  });
+
+  it('joins the 7-day window of the newest with the most active deployed in it', async () => {
+    const urls: string[] = [];
+    // A full first page: places then worlds, each newest first, so a stale place sits mid-page.
+    const first = [
+      ...Array.from({ length: 60 }, (_, i) =>
+        row(`p${i}`, { created_at: ago(1) }),
+      ),
+      row('old-place', { created_at: ago(30) }),
+      ...Array.from({ length: 39 }, (_, i) =>
+        row(`w${i}`, {
+          world: true,
+          world_name: `w${i}.dcl.eth`,
+          created_at: ago(2),
+        }),
+      ),
+    ];
+    const pages: Record<string, unknown[]> = {
+      'offset=0&order_by=created_at': first,
+      'offset=100&order_by=created_at': [
+        row('busy-new', { created_at: ago(6), user_count: 4 }),
+        row('stale', { created_at: ago(8), user_count: 50 }),
+      ],
+      'order_by=most_active': [
+        row('busy-new', {
+          created_at: ago(6),
+          deployed_at: ago(1),
+          user_count: 4,
+        }),
+        row('redeployed', {
+          created_at: ago(90),
+          deployed_at: ago(3),
+          user_count: 9,
+        }),
+        row('liked', {
+          created_at: ago(90),
+          deployed_at: ago(3),
+          user_count: 4,
+          like_score: 0.9,
+        }),
+        row('untouched', {
+          created_at: ago(90),
+          deployed_at: ago(40),
+          user_count: 99,
+        }),
+      ],
+    };
+    const found = await fetchNewInDecentraland(async url => {
+      urls.push(url);
+      const key = Object.keys(pages).find(k => url.includes(k));
+      return { data: key ? pages[key] : [] };
+    }, NOW);
+    expect(urls).toEqual([
+      'https://mobile-bff.decentraland.org/destinations/?offset=0&order_by=created_at&order=desc&limit=100&sdk=7&tag=allowed_ios',
+      'https://mobile-bff.decentraland.org/destinations/?offset=100&order_by=created_at&order=desc&limit=100&sdk=7&tag=allowed_ios',
+      'https://mobile-bff.decentraland.org/destinations/?offset=0&order_by=most_active&limit=100&sdk=7&tag=allowed_ios',
+    ]);
+    const ids = found.map(p => p.id);
+    expect(ids.slice(0, 3)).toEqual(['redeployed', 'liked', 'busy-new']);
+    expect(ids).toHaveLength(102);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).not.toContain('old-place');
+    expect(ids).not.toContain('stale');
+    expect(ids).not.toContain('untouched');
+    expect(ids).toContain('w38');
+  });
+
+  it('stops paging at a short page and fails with the service', async () => {
+    const urls: string[] = [];
+    await fetchNewInDecentraland(async url => {
+      urls.push(url);
+      return { data: [row('a', { created_at: ago(0) })] };
+    }, NOW);
+    expect(urls).toHaveLength(2);
+    await expect(
+      fetchNewInDecentraland(async () => {
+        throw new Error('down');
+      }, NOW),
+    ).rejects.toThrow('down');
+  });
+
+  it('is the whole window in one page of the public api', async () => {
+    const api = createPublicApi((async () => ({
+      ok: true,
+      json: async () => ({
+        data: [row('n', { created_at: new Date().toISOString() })],
+      }),
+    })) as unknown as typeof fetch);
+    const page = await api.places('new', 0);
+    expect(page).toEqual({
+      items: [expect.objectContaining({ id: 'n' })],
+      hasMore: false,
+    });
+    expect(recallPlace('n')).toBeDefined();
+  });
+});
+
+describe('Jump back in', () => {
+  it('keeps the six most recent places, newest first, once each', () => {
+    const place = (id: string) => ({ ...PLACES[0], id, title: id });
+    ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'a'].forEach(id =>
+      recordPlayed(place(id)),
+    );
+    let played: string[] = [];
+    function Probe() {
+      played = usePlayed().map(p => p.id);
+      return null;
+    }
+    act(() => {
+      create(createElement(Probe));
+    });
+    expect(played).toEqual(['a', 'g', 'f', 'e', 'd', 'c']);
   });
 });
