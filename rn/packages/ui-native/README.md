@@ -67,7 +67,7 @@ Grouped by what they are for; the doc comment in each file says which Figma comp
 - **Navigation**: `BottomNav`, `Tabs`, `MenuNavItem`, `MenuDrawer`, `Menu`, `SnapCarousel`, `PageDots`
 - **Dialogs and sheets**: `Dialog`, `ModalSpecial`, `ClaimDialog`, `OtpDialog`, `BugReportDialog`,
   `PlaceModalLandscape`, `Sheet`, `SheetFooter`, `BottomSheet`
-- **Feedback**: `ToastProvider` + `useToast`, `WarningBanner`, `EmptyState`, `ProgressBar`,
+- **Feedback**: `ToastProvider` + `useToast`, `Alert`, `Notification`, `EmptyState`, `ProgressBar`,
   `Skeleton`, `Spinner`
 
 ## Adding or changing a component
