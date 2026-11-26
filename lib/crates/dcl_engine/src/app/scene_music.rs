@@ -38,6 +38,20 @@ impl INode for SceneMusicChanger {
                 this.on_change_scene_id(scene_id)
             });
     }
+
+    /// The ambience is the world's and leaves with it, including a track that the parcel of a
+    /// dying scene started during the teardown.
+    fn exit_tree(&mut self) {
+        let Some(global) = DclGlobal::try_singleton() else {
+            return;
+        };
+        let music = global.bind().music_player.clone();
+        if let Some(mut music) = music {
+            if is_ambient(&music.bind().get_current_music().to_string()) {
+                music.bind_mut().stop();
+            }
+        }
+    }
 }
 
 impl SceneMusicChanger {
