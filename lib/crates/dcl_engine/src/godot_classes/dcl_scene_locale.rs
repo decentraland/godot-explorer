@@ -1,4 +1,5 @@
-//! Locale forwarded to SDK7 scenes (#2707): the client's resolved app locale, never the OS one.
+//! Locales forwarded to SDK7 scenes: the client's resolved app locale (#2707), and the raw OS
+//! locale, which the SDK exposes only through `getSystemLanguage()` (#3029).
 //!
 //! Set from `app::locale::apply_locale` via `DclGlobal.set_scene_locale`, read by the scene
 //! threads through `getExplorerInformation` and the `localeChanged` event. The version counter
@@ -16,6 +17,8 @@ const FALLBACK_LOCALE: &str = "en";
 // Empty means "never set", reported as FALLBACK_LOCALE.
 static SCENE_LOCALE: RwLock<String> = RwLock::new(String::new());
 static SCENE_LOCALE_VERSION: AtomicU64 = AtomicU64::new(0);
+// The device (OS) locale, for the SDK's getSystemLanguage(). Empty means "never set".
+static SYSTEM_LOCALE: RwLock<String> = RwLock::new(String::new());
 // ICU's default locale can only be set once the first JsRuntime has loaded the ICU data.
 #[cfg(feature = "use_deno")]
 static ICU_READY: AtomicBool = AtomicBool::new(false);
@@ -51,6 +54,19 @@ pub fn set_scene_locale(locale: &str) {
 
 pub fn get_scene_locale() -> String {
     let current = SCENE_LOCALE.read().unwrap_or_else(|e| e.into_inner());
+    if current.is_empty() {
+        FALLBACK_LOCALE.to_owned()
+    } else {
+        current.clone()
+    }
+}
+
+pub fn set_system_locale(locale: &str) {
+    *SYSTEM_LOCALE.write().unwrap_or_else(|e| e.into_inner()) = to_bcp47(locale);
+}
+
+pub fn get_system_locale() -> String {
+    let current = SYSTEM_LOCALE.read().unwrap_or_else(|e| e.into_inner());
     if current.is_empty() {
         FALLBACK_LOCALE.to_owned()
     } else {

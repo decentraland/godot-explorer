@@ -10,6 +10,7 @@ use godot::prelude::*;
 
 use crate::fetcher::globals;
 use crate::godot_classes::dcl_global::DclGlobal;
+use crate::godot_classes::dcl_scene_locale::set_system_locale;
 
 pub const SUPPORTED: [&str; 3] = ["en", "es", "pt_BR"];
 pub const FALLBACK: &str = "en";
@@ -76,16 +77,19 @@ pub fn apply_locale() {
         .unwrap_or_default();
     let os = Os::singleton();
     let pseudo_ok = pseudo_available();
+    let device_locale = os.get_locale().to_string();
     let locale = resolve_locale(
         &configured,
         pseudo_ok,
-        &os.get_locale().to_string(),
+        &device_locale,
         &os.get_locale_language().to_string(),
     );
     let mut server = TranslationServer::singleton();
     server.set_locale(locale);
     // Scenes get the same resolved locale as the UI (#2707), never the raw OS locale.
     DclGlobal::set_scene_locale(locale.into());
+    // The raw OS locale, for the SDK's getSystemLanguage() (#3029).
+    set_system_locale(&device_locale);
     server.set_pseudolocalization_enabled(configured == PSEUDO && pseudo_ok);
 }
 
