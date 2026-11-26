@@ -179,6 +179,7 @@ describe('screens render', () => {
     });
 
     it('welcomes a returning account back once the wallet has signed', async () => {
+      const trackScreen = jest.spyOn(core(), 'trackScreen');
       walletSignIn.mockImplementationOnce(async () => {
         core().signInWalletBegin();
         core().signInWalletComplete('0xwallet', '0xsignature');
@@ -189,6 +190,10 @@ describe('screens render', () => {
       });
       expect(core().state().tag).toBe('SignedIn');
       expect(page()).toContain('Welcome back');
+      const [name, props] = trackScreen.mock.lastCall ?? [];
+      expect(name).toBe('AUTH_SUCCESS');
+      expect(JSON.stringify(props)).toContain('wallet_connect');
+      expect(JSON.stringify(props)).toContain('fully_registered');
     });
 
     it('shows the refusal on Sign In when the wallet rejects', async () => {

@@ -1,3 +1,4 @@
+import { trackScreen } from '../analytics';
 import { core } from '../core';
 import { onCoreEvents } from '../core/events';
 import { Control, CoreError } from '../core/native';
@@ -53,6 +54,24 @@ export function whenSignedIn(): Promise<void> {
     if (core().state().tag === 'SignedIn') {
       done(resolve);
     }
+  });
+}
+
+/** How the player signed in, as `AUTH_SUCCESS` reports it. */
+export type AuthProvider =
+  | 'guest'
+  | 'email'
+  | 'google'
+  | 'apple'
+  | 'metamask'
+  | 'wallet_connect';
+
+/** 1.x's event, with the provider added; a guest is any account the core counts as one. */
+export function trackAuthSuccess(provider: AuthProvider) {
+  const guest = core().isGuest();
+  trackScreen('AUTH_SUCCESS', {
+    login_type: guest ? 'guest' : 'fully_registered',
+    provider,
   });
 }
 

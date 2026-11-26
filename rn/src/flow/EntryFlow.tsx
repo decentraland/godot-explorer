@@ -11,10 +11,12 @@ import {
   signOut,
   startBrowserSignIn,
   startGuest,
+  trackAuthSuccess,
   verifyEmailCode,
   welcome,
   whenSignedIn,
 } from './auth';
+import type { AuthProvider } from './auth';
 import { core } from '../core';
 import type { Place } from '../discover/api';
 import { useApi } from '../discover/ApiContext';
@@ -96,8 +98,11 @@ export function EntryFlow({
 
   useEffect(() => {
     let cancelled = false;
-    const succeeded = async () => {
+    const succeeded = async (method?: AuthProvider) => {
       acceptTerms().catch(() => {});
+      if (method) {
+        trackAuthSuccess(method);
+      }
       setReturned(true);
       try {
         const result = await welcome();
@@ -124,7 +129,7 @@ export function EntryFlow({
       const kind = provider === 'metamask' ? 'metamask' : 'wallet_connect';
       setWalletPhase('connecting');
       signInWithWallet(kind, setWalletPhase).then(
-        () => succeeded(),
+        () => succeeded(kind),
         error => {
           if (cancelled) {
             return;
@@ -168,7 +173,7 @@ export function EntryFlow({
           };
         }
       }
-      whenSignedIn().then(succeeded, failed);
+      whenSignedIn().then(() => succeeded(provider), failed);
     } else if (step === 'account_guest_create') {
       startGuest().then(
         // One guest per device: the core hands back the same account, and one that already has a
@@ -177,6 +182,7 @@ export function EntryFlow({
           if (cancelled) {
             return;
           }
+          trackAuthSuccess('guest');
           if (!previewLaunch.current) {
             const result = await welcome().catch(() => null);
             if (cancelled) {
@@ -249,6 +255,7 @@ export function EntryFlow({
       // The code was right: "Confirming login..." until the profile is read.
       dispatch({ type: 'codeAccepted' });
       acceptTerms().catch(() => {});
+      trackAuthSuccess('email');
       try {
         dispatch({ type: 'authSucceeded', ...(await welcome()) });
       } catch {
