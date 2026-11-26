@@ -245,7 +245,13 @@ export function EntryFlow({
     const subscription = BackHandler.addEventListener(
       'hardwareBackPress',
       () => {
-        if (step === 'dcl_splash' || step === 'account_home') {
+        // The first places come after the account is named: nothing to go back to, and `back` would
+        // sign it out. Android puts the app away, as on Account Home.
+        if (
+          step === 'dcl_splash' ||
+          step === 'account_home' ||
+          step === 'ftue'
+        ) {
           return false;
         }
         // A required update has nowhere to go back to.
