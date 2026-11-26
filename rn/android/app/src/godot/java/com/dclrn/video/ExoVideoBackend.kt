@@ -9,7 +9,10 @@ import android.os.Looper
 import android.util.Log
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.thread
 import org.decentraland.core.host.VideoBackend
 import org.decentraland.core.host.VideoSize
 
@@ -22,6 +25,7 @@ class ExoVideoBackend(private val app: Application) : VideoBackend {
   private val players = ConcurrentHashMap<Int, ExoPlayerWrapper>()
   private val nextId = AtomicInteger(1)
   private val mainHandler = Handler(Looper.getMainLooper())
+  private val failing = ConcurrentHashMap.newKeySet<Int>()
 
   // Main thread only.
   private val pausedInBackground = mutableSetOf<Int>()
@@ -47,86 +51,95 @@ class ExoVideoBackend(private val app: Application) : VideoBackend {
   }
 
   override fun create(): Int =
-      guard(-1) {
+      guard(NO_PLAYER, -1) {
         val id = nextId.getAndIncrement()
-        var player: ExoPlayerWrapper? = null
         // Built on the main thread, where ExoPlayer lives.
         if (Looper.myLooper() == Looper.getMainLooper()) {
-          player = ExoPlayerWrapper(app, id)
-        } else {
-          val built = CountDownLatch(1)
-          mainHandler.post {
-            try {
-              player = ExoPlayerWrapper(app, id)
-            } catch (e: Exception) {
-              Log.e(TAG, "Error creating ExoPlayer: ${e.message}", e)
-            } finally {
-              built.countDown()
-            }
-          }
-          built.await()
+          players[id] = ExoPlayerWrapper(app, id)
+          return@guard id
         }
-        val created = player ?: return@guard -1
-        players[id] = created
+        // Bounded: the main thread can itself be waiting on the engine's thread (a surface change).
+        // Whichever side claims `slot` first decides whether a late player is kept or released.
+        val slot = AtomicReference<Any?>(null)
+        val done = CountDownLatch(1)
+        mainHandler.post {
+          try {
+            val built = ExoPlayerWrapper(app, id)
+            // release() waits on the main thread, so a player the engine gave up on goes elsewhere.
+            if (!slot.compareAndSet(null, built)) thread { built.release() }
+          } catch (e: Exception) {
+            Log.e(TAG, "Error creating ExoPlayer: ${e.message}", e)
+          } finally {
+            done.countDown()
+          }
+        }
+        if (!done.await(CREATE_TIMEOUT_MS, TimeUnit.MILLISECONDS) &&
+            slot.compareAndSet(null, ABANDONED)) {
+          Log.e(TAG, "player $id not built within $CREATE_TIMEOUT_MS ms: the main thread is busy")
+          return@guard -1
+        }
+        val player = slot.get() as? ExoPlayerWrapper ?: return@guard -1
+        players[id] = player
         id
       }
 
   override fun initSurface(player: Int, width: Int, height: Int): Boolean =
-      guard(false) { (players[player]?.initializeSurface(width, height) ?: -1) > 0 }
+      guard(player, false) { (players[player]?.initializeSurface(width, height) ?: -1) > 0 }
 
   override fun setSource(player: Int, source: String, local: Boolean): Boolean =
-      guard(false) {
+      guard(player, false) {
         val p = players[player] ?: return@guard false
         if (local) p.setSourceLocal(source) else p.setSourceUrl(source)
       }
 
   override fun play(player: Int) {
-    guard(Unit) { players[player]?.play() }
+    guard(player, Unit) { players[player]?.play() }
   }
 
   override fun pause(player: Int) {
-    guard(Unit) { players[player]?.pause() }
+    guard(player, Unit) { players[player]?.pause() }
   }
 
   override fun stop(player: Int) {
-    guard(Unit) { players[player]?.stop() }
+    guard(player, Unit) { players[player]?.stop() }
   }
 
   override fun seek(player: Int, seconds: Double) {
-    guard(Unit) { players[player]?.setPosition((seconds * 1000.0).toLong()) }
+    guard(player, Unit) { players[player]?.setPosition((seconds * 1000.0).toLong()) }
   }
 
   override fun position(player: Int): Double =
-      guard(0.0) { (players[player]?.getPosition() ?: 0L) / 1000.0 }
+      guard(player, 0.0) { (players[player]?.getPosition() ?: 0L) / 1000.0 }
 
   override fun duration(player: Int): Double =
-      guard(0.0) { (players[player]?.getDuration() ?: 0L) / 1000.0 }
+      guard(player, 0.0) { (players[player]?.getDuration() ?: 0L) / 1000.0 }
 
-  override fun isPlaying(player: Int): Boolean = guard(false) { players[player]?.isPlaying() ?: false }
+  override fun isPlaying(player: Int): Boolean =
+      guard(player, false) { players[player]?.isPlaying() ?: false }
 
   override fun setVolume(player: Int, volume: Float) {
-    guard(Unit) { players[player]?.setVolume(volume) }
+    guard(player, Unit) { players[player]?.setVolume(volume) }
   }
 
   override fun setLooping(player: Int, looping: Boolean) {
-    guard(Unit) { players[player]?.setLooping(looping) }
+    guard(player, Unit) { players[player]?.setLooping(looping) }
   }
 
   override fun setRate(player: Int, rate: Float) {
-    guard(Unit) { players[player]?.setPlaybackRate(rate) }
+    guard(player, Unit) { players[player]?.setPlaybackRate(rate) }
   }
 
   override fun takeSizeChanged(player: Int): Boolean =
-      guard(false) { players[player]?.hasVideoSizeChanged() ?: false }
+      guard(player, false) { players[player]?.hasVideoSizeChanged() ?: false }
 
   override fun videoSize(player: Int): VideoSize =
-      guard(VideoSize(0, 0)) {
+      guard(player, VideoSize(0, 0)) {
         val p = players[player] ?: return@guard VideoSize(0, 0)
         VideoSize(p.getVideoWidth(), p.getVideoHeight())
       }
 
   override fun pollFrame(player: Int): ULong =
-      guard(0uL) {
+      guard(player, 0uL) {
         val p = players[player] ?: return@guard 0uL
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || !p.hasNewHardwareBuffer()) {
           0uL
@@ -136,7 +149,8 @@ class ExoVideoBackend(private val app: Application) : VideoBackend {
       }
 
   override fun release(player: Int) {
-    guard(Unit) { players.remove(player)?.release() }
+    guard(player, Unit) { players.remove(player)?.release() }
+    failing.remove(player)
   }
 
   private fun pauseForBackground() {
@@ -164,16 +178,23 @@ class ExoVideoBackend(private val app: Application) : VideoBackend {
     mainHandler.postDelayed(resume, RESUME_DEBOUNCE_MS)
   }
 
-  private inline fun <T> guard(fallback: T, block: () -> T): T =
+  // Several calls are polled every frame: a player that keeps throwing logs its first failure only.
+  private inline fun <T> guard(player: Int, fallback: T, block: () -> T): T =
       try {
         block()
       } catch (e: Throwable) {
-        Log.e(TAG, "video backend call failed: ${e.message}", e)
+        if (failing.add(player)) {
+          Log.e(TAG, "video backend call failed for player $player: ${e.message}", e)
+        }
         fallback
       }
 
   companion object {
     private const val TAG = "ExoVideoBackend"
     private const val RESUME_DEBOUNCE_MS = 500L
+    private const val CREATE_TIMEOUT_MS = 2000L
+    /** Never a player id (they start at 1): the key `create()` logs its failures under. */
+    private const val NO_PLAYER = 0
+    private val ABANDONED = Any()
   }
 }
