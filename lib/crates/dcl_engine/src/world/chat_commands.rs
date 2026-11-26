@@ -1,6 +1,6 @@
 //! The chat's `/command`s and the plain messages sent to the room.
 
-use godot::classes::{Engine, Os};
+use godot::classes::Os;
 use godot::prelude::*;
 
 use super::{chat, navigate, state};
@@ -23,7 +23,6 @@ const DEBUG_ONLY_COMMANDS: [&str; 7] = [
     "/stall",
 ];
 const DEBUG_BLOCK_MS: u32 = 8000;
-const ANDROID_PLUGIN: &str = "dcl-godot-android";
 
 pub fn submit_message(message: &str) {
     if message.is_empty() {
@@ -121,22 +120,15 @@ fn block_main_loop() {
 }
 
 /// On Android the main loop runs on the render thread, so blocking it never gives a system ANR;
-/// the plugin blocks the UI thread instead and the tester has to keep tapping so input dispatch
+/// the host blocks the UI thread instead and the tester has to keep tapping so input dispatch
 /// times out.
 fn block_ui_thread() {
-    if DclGlobal::singleton().bind().is_android {
-        // `memory_trim` marks the plugin revision that also ships `debugBlockUiThread`
-        // (`has_method` never sees JNISingleton methods).
-        if let Some(mut plugin) = Engine::singleton().get_singleton(ANDROID_PLUGIN) {
-            if plugin.has_signal("memory_trim") {
-                chat::say_dim(&format!(
-                    "Blocking the Android UI thread for {}s - keep tapping the screen",
-                    DEBUG_BLOCK_MS / 1000
-                ));
-                plugin.call("debugBlockUiThread", &[DEBUG_BLOCK_MS.to_variant()]);
-                return;
-            }
-        }
+    if dcl_core::platform::device().is_some_and(|device| device.block_ui_thread(DEBUG_BLOCK_MS)) {
+        chat::say_dim(&format!(
+            "Blocking the UI thread for {}s - keep tapping the screen",
+            DEBUG_BLOCK_MS / 1000
+        ));
+        return;
     }
     block_main_loop();
 }

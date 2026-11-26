@@ -126,4 +126,4 @@ clicks, and the favourite / thumbs clicks are not sent yet.
 ## Deferred on purpose
 
 IAP and credits shop (4.8, phase 6/7), native wallets and real logins (6.7, 6.8), friends (6.9), iOS builds of every new
-library (written, never built), `plugins/` deletion (5.11), emote wheel and avatar preview port (5.2).
+library (written, never built), emote wheel and avatar preview port (5.2). `plugins/` was deleted on 24 Nov 2026 (D-41).

@@ -15,11 +15,8 @@ use crate::engine::bootstrap;
 use crate::engine::local_task::{await_promise, spawn_local_now};
 use crate::fetcher::api::DclNavigator;
 use crate::fetcher::globals;
-use crate::godot_classes::dcl_android_plugin::DclAndroidPlugin;
 use crate::godot_classes::dcl_global::DclGlobal;
-use crate::godot_classes::dcl_ios_plugin::DclIosPlugin;
 use crate::godot_classes::dcl_parse_deep_link::DclParseDeepLink;
-use crate::godot_classes::dcl_swift_lib::DclSwiftLibPlugin;
 use crate::profile::profile_service::ProfileService;
 
 const GENERATED_BUILD_CONFIG: &str = "res://src/generated/build_config.cfg";
@@ -78,8 +75,6 @@ impl INode for GlobalBoot {
         let watcher = AppFocusWatcher::new_alloc();
         self.base_mut().add_child(&watcher);
         spawn_local_now(finish_boot(started));
-        // The launch intent (the tap that started the app).
-        check_launch_link(true);
     }
 }
 
@@ -111,35 +106,12 @@ impl INode for AppFocusWatcher {
             // would retry genuine evictions instead of surfacing the modal.
             globals::comms().bind_mut().notify_app_resumed();
         }
-        check_launch_link(false);
     }
 }
 
-/// Reads a link the platform plugin received, on a cold start (the launch intent) or a resume.
-fn check_launch_link(cold: bool) {
-    let (real_mobile, is_android) = {
-        let g = DclGlobal::singleton();
-        let g = g.bind();
-        (g.is_mobile && !g.is_virtual_mobile, g.is_android)
-    };
-    if !real_mobile {
-        return;
-    }
-    let args = if DclAndroidPlugin::is_available() {
-        DclAndroidPlugin::get_deeplink_args()
-    } else if DclIosPlugin::is_available() {
-        DclIosPlugin::get_deeplink_args()
-    } else {
-        return;
-    };
-    let _ = is_android;
-    let url = args
-        .get("data")
-        .and_then(|v| v.try_to::<GString>().ok())
-        .map(|s| s.to_string())
-        .unwrap_or_default();
-    // Only a new URL: overwriting the stored one with an empty one would clobber what the iOS signal
-    // path already set.
+/// Applies a deep link the core routed (`EngineCommand::ApplyLink`): on a cold start (the link
+/// launched the app) or later.
+pub(crate) fn apply_launch_link(url: &str, cold: bool) {
     if url.is_empty() {
         return;
     }
@@ -147,7 +119,7 @@ fn check_launch_link(cold: bool) {
         // On a cold start the environment comes from the link before it is processed, or the dclenv
         // change check would see the default "org" against the link's and sign out prematurely,
         // skipping the orientation and UI scale setup of the root.
-        let parsed = DclParseDeepLink::parse_decentraland_link(url.as_str().into());
+        let parsed = DclParseDeepLink::parse_decentraland_link(url.into());
         let env = parsed.bind().get_dclenv().to_string();
         if !env.is_empty() {
             DclGlobal::set_dcl_environment(env.as_str().into());
@@ -155,10 +127,9 @@ fn check_launch_link(cold: bool) {
         }
     }
     let mut router = DclGlobal::singleton().bind().deep_link_router.clone();
-    router.bind_mut().process_deep_link(
-        url.as_str().into(),
-        if cold { "cold" } else { "warm" }.into(),
-    );
+    router
+        .bind_mut()
+        .process_deep_link(url.into(), if cold { "cold" } else { "warm" }.into());
 }
 
 /// The synchronous part of the boot: the mobile and emulation flags, the startup deeplink and the
@@ -196,23 +167,6 @@ fn boot_services() {
 
     apply_startup_deeplink();
 
-    // iOS delivers a warm link through a plugin signal; the cold one is read at ready.
-    if DclIosPlugin::is_available() {
-        if let Some(mut ios) = Engine::singleton().get_singleton("DclGodotiOS") {
-            let mut router = global.bind().deep_link_router.clone();
-            // The plugin is not a class of this crate: its signal is connected by name.
-            ios.connect(
-                "deeplink_received",
-                &Callable::from_fn("deeplink_received", move |args| {
-                    if let Some(url) = args.first().and_then(|v| v.try_to::<GString>().ok()) {
-                        router.bind_mut().process_deep_link(url, "warm".into());
-                    }
-                    Variant::nil()
-                }),
-            );
-        }
-    }
-    smoke_test_swift_lib();
     // The services every boot needs (realm, identity, ...) are created in Rust.
     bootstrap::create_core_services(&mut global.clone());
 
@@ -250,18 +204,6 @@ fn apply_startup_deeplink() {
     godot_print!("[DEEPLINK] All params: {}", obj.bind().get_params());
     deep_link::apply_link_settings(&obj);
     godot_print!("[DEEPLINK] scene-stats={}", obj.bind().get_scene_stats());
-}
-
-/// A smoke test of the Swift extension, on iOS only where its class can be reached.
-fn smoke_test_swift_lib() {
-    if !DclSwiftLibPlugin::is_available() {
-        return;
-    }
-    godot_print!(
-        "[DclSwiftLib] ping() -> {} | version() -> {}",
-        DclSwiftLibPlugin::ping(),
-        DclSwiftLibPlugin::version()
-    );
 }
 
 /// The rest of the boot, after the content cache was cleared if needed.
