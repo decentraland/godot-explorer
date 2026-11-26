@@ -17,6 +17,7 @@ in phase 3 and not run again here. Rows marked "not done" are the work left befo
 | Device support / low-spec modals | `CoreModals` + `deviceFacts` | Not run | |
 | Guest upgrade nudge | Not done | | Waits for the real logins (6.8) |
 | Session chain, `App Opened` | `dcl_core::analytics::session` | Not run (events are queued) | Warehouse delivery unverified |
+| Tenjin install attribution, iOS tracking prompt (ATT), device and ad ids on Segment (1.x #3198, #3379, #3337) | Not done | | Host services on top of the plugins migration (#3360); 1.x users have it, so it is needed before 2.0.0 |
 
 ## Loading, discover, places, events (sections 2-3)
 
@@ -28,7 +29,9 @@ in phase 3 and not run again here. Rows marked "not done" are the work left befo
 | FTUE list (`ftue` tag) and single-place bypass, `DISCOVER_FTUE_BYPASS` (main #3047) | RN `discover/ftue.ts`, `flow/FtueStep` + core `track_ftue_bypass` | Not run | The ad-campaign bypass (#2788) is not wired in the RN entry flow, so it cannot win first yet |
 | Event reminders | Core `set_event_reminder` + OS reminder (`DclPush`) | Not run | Reminder delivery unverified |
 | Friends rows | Mock data (D-43) | | Real friends: 6.9 |
-| Last-visited list | Dropped with the GDScript discover | | Not in RN yet |
+| Jump back in (last visited, 6 places, one per place; 1.x #3320, #3374) | RN `discover/history.ts` | Not run (jest) | In memory only, lost on restart; a jump from an event records the event, not its place; the banner's JUMP IN is not recorded |
+| iOS Discover block list and global `banned` tag (1.x #3336) | RN Discover lists through mobile-bff `/destinations` and `/events`, `tag=allowed_ios` on iOS | Not run | Favorites still come from the places API (no BFF filter) |
+| New in Decentraland (7-day window, 1.x #3320) | RN `discover/newInDecentraland.ts` | Not run (jest) | |
 
 ## Backpack, emotes, avatar (section 4)
 
@@ -74,6 +77,7 @@ in phase 3 and not run again here. Rows marked "not done" are the work left befo
 | Controls overlay on first scene entry (main #3032) | RN `ftue/ControlsOverlay` + `dcl_core::ftue` | Not run (jest, gallery) | `ftue-overlay-tap-through` not honoured; device run |
 | Guided tutorial for new players (main #3041) | RN `ftue/TutorialLayer` + `dcl_core::ftue` | Not run (jest, gallery) | Reward card and claim (no rewards client on 2.x; guests need Add Email, 6.8); joystick resting-base redraw; device run of all 7 steps |
 | 7-day login streak (main #3067, #3018) | Not done | | Streak modal, claim and analytics (`LOGIN_STREAK_*`) not ported; 1.x users have it, so it is needed before 2.0.0 |
+| Video focus mode: crosshair prompt on a playing video, full-screen video with Nearby chat docked (1.x #3114) | Not done | | Needs an engine → core → RN request and an engine-drawn video under RN's chat; the pointer claim on playing screens comes with it |
 | Dev intent card (main #3108) | CLI flags parsed in `DclCli`, stdout only | Not run | The on-screen card has no home in RN yet (desktop has no product UI, D-4) |
 | Own nametag setting, distance-tiered nametags (main #3023) | Engine `nameplate_tiers` + RN `GameplaySection` toggle | Not run | Device run in a crowd |
 | Avatar tap opens a profile | Not done | | Needs a player-profile screen |
@@ -95,8 +99,13 @@ in phase 3 and not run again here. Rows marked "not done" are the work left befo
 | Legacy | Now | Android | Left |
 |---|---|---|---|
 | Base-eye iris tint (main #3106) | `avatars/eye_masks.rs` + `mask_material.gdshader` | Not run | Unity cannot show it, validate between two Godot clients |
-| Scene fonts `font_src` on UI text and TextShape (main #3132) | `content/font.rs`, `text_shape/{node,layout,fallbacks,glyph_prewarm,glyph_cache}.rs` | Not run | Emoji colour and CJK artefacts need the engine pin with godotengine#32 |
+| Scene fonts `font_src` on UI text and TextShape (main #3132) | `content/font.rs`, `text_shape/{node,layout,fallbacks,glyph_prewarm,glyph_cache}.rs` | Not run | Emoji colour and CJK artefacts: the pinned engine branch carries godotengine#32, check on a device |
 | Profile status on nameplates, Pulse-required island recovery (main #3065) | `comms/adapter/{island_session,profile_fetch}.rs`, `avatars/nameplate.rs` | Not run | Platform bans and island removal need backend-assisted QA |
+| Scene skybox, sun and fog (1.x #3349) | `scene_runner/components/skybox.rs`, `sky/scene_skybox.rs` | Not run | Panorama reflections (#3350); protocol fields the new pin adds and the engine ignores (#3352) |
+| One-sided GLTF colliders, `SDK_AVATAR_HIT` layer, 1 cm `Plane` box (1.x #3074) | `scene_runner/components/physics_layers.rs`, `godot_classes/gltf_container_load.rs` | Not run (itest, scene tests) | |
+| Pinch only inside a zone around the avatar (1.x #3353) | `player/pinch_zone.rs`, `player/mobile_input.rs` | Not run (unit, scene test) | iOS |
+| Loading screen waits for deferred scene content (1.x #3261) | `scene_runner/loading_session.rs` | Not run | |
+| Pulse client-fault kicks reconnect; movement at 10 Hz, Pulse input at most every 80 ms (1.x 14c146ac55, ea362e260d) | `comms/pulse/{pulse_room,transport}.rs`, `app/position_broadcaster.rs` | Not run | |
 
 ## Persisted keys
 
@@ -109,7 +118,10 @@ goes to the default).
 
 `App Opened`, `Push Opened`, `review_prompted` and the push identify now come from the core. The screen and button
 names of the deleted GDScript screens disappeared with them; the RN screens report through `trackScreen` and
-`track`. A full diff against the 106 legacy names was not done.
+`track`. A full diff against the 106 legacy names was not done. Discover sends 1.x's `DISCOVER` carousel snapshot,
+`PLACE_DETAILS` and `PLACE_DETAIL_CLICK` (`JUMP_IN`, `SHARE`) with the source carousel and slot (1.x #3212, #3226);
+the plain `DISCOVER` / `DISCOVER_IN_GAME` view, the search clicks and views, `DISCOVER_BANNER`, `EVENT_DETAILS` and its
+clicks, and the favourite / thumbs clicks are not sent yet.
 
 ## Deferred on purpose
 
