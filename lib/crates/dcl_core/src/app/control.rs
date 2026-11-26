@@ -111,6 +111,9 @@ pub enum Control {
     },
     /// Connects to the room again after a disconnect the player chose to retry.
     Reconnect,
+    /// Reloads the current place behind the loading screen, like `/reload`: the player lands on
+    /// the scene's spawn point.
+    ReloadScene,
     /// The password the player gave for a protected world, checked by the shell; the engine
     /// presents it when it connects to `realm`.
     SetWorldSecret {

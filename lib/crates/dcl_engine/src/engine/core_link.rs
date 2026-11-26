@@ -110,6 +110,7 @@ pub(super) fn control_payload(control: &Control) -> Option<(&'static str, VarDic
         }
         Control::SetName { name } => ("set_name", vdict! { "name" => name.clone() }),
         Control::Reconnect => ("reconnect", VarDictionary::new()),
+        Control::ReloadScene => ("reload_scene", VarDictionary::new()),
         Control::SetWorldSecret { realm, secret } => (
             "set_world_secret",
             vdict! { "realm" => realm.clone(), "secret" => secret.clone() },

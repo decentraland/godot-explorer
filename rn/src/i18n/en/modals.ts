@@ -35,6 +35,9 @@ export const modals = {
   MODAL_PRIVATE_WORLD_BODY: 'Only invited people can enter.',
   MODAL_PRIVATE_WORLD_PRIMARY: 'OK',
   MODAL_PRIVATE_WORLD_TITLE: '{world} is private',
+  MODAL_RELOAD_SCENE_BODY: 'Return to the starting point of this place.',
+  MODAL_RELOAD_SCENE_PRIMARY: 'RELOAD',
+  MODAL_RELOAD_SCENE_TITLE: 'Stuck somewhere?',
   MODAL_SCENE_CRASH_BODY:
     'This scene stopped working. Please reload or go back to discover.',
   MODAL_SCENE_CRASH_PRIMARY: 'RELOAD',

@@ -9767,6 +9767,7 @@ export enum Control_Tags {
   SetPreviewUrl = 'SetPreviewUrl',
   SetName = 'SetName',
   Reconnect = 'Reconnect',
+  ReloadScene = 'ReloadScene',
   SetWorldSecret = 'SetWorldSecret',
   AnswerSceneRequest = 'AnswerSceneRequest',
 }
@@ -10345,6 +10346,33 @@ export const Control = (() => {
     }
   }
 
+  type ReloadScene__interface = {
+    tag: Control_Tags.ReloadScene;
+  };
+  /**
+   * Reloads the current place behind the loading screen, like `/reload`: the player lands on
+   * the scene's spawn point.
+   */
+  class ReloadScene_ extends UniffiEnum implements ReloadScene__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.ReloadScene;
+    constructor() {
+      super('Control', 'ReloadScene');
+    }
+
+    static new(): ReloadScene_ {
+      return new ReloadScene_();
+    }
+
+    static instanceOf(obj: any): obj is ReloadScene_ {
+      return obj.tag === Control_Tags.ReloadScene;
+    }
+  }
+
   type SetWorldSecret__interface = {
     tag: Control_Tags.SetWorldSecret;
     inner: Readonly<{ realm: string; secret: string }>;
@@ -10436,6 +10464,7 @@ export const Control = (() => {
     SetPreviewUrl: SetPreviewUrl_,
     SetName: SetName_,
     Reconnect: Reconnect_,
+    ReloadScene: ReloadScene_,
     SetWorldSecret: SetWorldSecret_,
     AnswerSceneRequest: AnswerSceneRequest_,
   });
@@ -10467,6 +10496,7 @@ export type Control = InstanceType<
     | 'SetPreviewUrl'
     | 'SetName'
     | 'Reconnect'
+    | 'ReloadScene'
     | 'SetWorldSecret'
     | 'AnswerSceneRequest']
 >;
@@ -10560,11 +10590,13 @@ const FfiConverterTypeControl = (() => {
         case 20:
           return new Control.Reconnect();
         case 21:
+          return new Control.ReloadScene();
+        case 22:
           return new Control.SetWorldSecret({
             realm: FfiConverterString.readFromCursor(c),
             secret: FfiConverterString.readFromCursor(c),
           });
-        case 22:
+        case 23:
           return new Control.AnswerSceneRequest({
             id: FfiConverterUInt32.readFromCursor(c),
             accepted: FfiConverterBool.readFromCursor(c),
@@ -10697,15 +10729,19 @@ const FfiConverterTypeControl = (() => {
           c.writeI32(20);
           return;
         }
-        case Control_Tags.SetWorldSecret: {
+        case Control_Tags.ReloadScene: {
           c.writeI32(21);
+          return;
+        }
+        case Control_Tags.SetWorldSecret: {
+          c.writeI32(22);
           const inner = value.inner;
           FfiConverterString.writeIntoCursor(inner.realm, c);
           FfiConverterString.writeIntoCursor(inner.secret, c);
           return;
         }
         case Control_Tags.AnswerSceneRequest: {
-          c.writeI32(22);
+          c.writeI32(23);
           const inner = value.inner;
           FfiConverterUInt32.writeIntoCursor(inner.id, c);
           FfiConverterBool.writeIntoCursor(inner.accepted, c);
@@ -10836,6 +10872,9 @@ const FfiConverterTypeControl = (() => {
           return size;
         }
         case Control_Tags.Reconnect: {
+          return 4;
+        }
+        case Control_Tags.ReloadScene: {
           return 4;
         }
         case Control_Tags.SetWorldSecret: {

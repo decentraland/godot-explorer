@@ -36,6 +36,9 @@ export const modals: Partial<Record<keyof typeof en, string>> = {
   MODAL_PRIVATE_WORLD_BODY: 'Só os convidados podem entrar.',
   MODAL_PRIVATE_WORLD_PRIMARY: 'OK',
   MODAL_PRIVATE_WORLD_TITLE: '{world} é privado.',
+  MODAL_RELOAD_SCENE_BODY: 'Volte ao ponto de partida deste lugar.',
+  MODAL_RELOAD_SCENE_PRIMARY: 'RECARREGAR',
+  MODAL_RELOAD_SCENE_TITLE: 'Não consegue sair do lugar?',
   MODAL_SCENE_CRASH_BODY:
     'Esta cena parou de funcionar. Recarregue ou volte à aba Explorar.',
   MODAL_SCENE_CRASH_PRIMARY: 'RECARREGAR',

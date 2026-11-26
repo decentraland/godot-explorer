@@ -5,6 +5,9 @@ import { getPreview, previewIds } from '../src/gallery/registry';
 import '../src/menu/gallery';
 import { setCoreForTests } from '../src/core';
 import { createMockCore } from '../src/core/mock';
+import { Control_Tags, PropertyValue } from '../src/core/native';
+import { registerModalApi } from '../src/modals/bridge';
+import type { ModalSpec } from '../src/modals/ModalProvider';
 import { MenuDrawer } from '../src/menu/MenuDrawer';
 import { setMenuApi } from '../src/menu/api';
 import {
@@ -195,6 +198,38 @@ describe('MenuDrawer', () => {
     expect(json(tree)).toContain('Bug Report');
     press(tree, 'CANCEL');
     expect(json(tree)).not.toContain('Bug Report');
+  });
+
+  it('asks before reloading from the kebab and reloads the place on RELOAD', async () => {
+    const control = jest.fn();
+    const trackClick = jest.fn();
+    setCoreForTests({ ...createMockCore(), enterWorld, control, trackClick });
+    const show = jest.fn<void, [ModalSpec]>();
+    registerModalApi({
+      show,
+      dismiss: jest.fn(),
+      askPassword: jest.fn(),
+      isOpen: () => false,
+    });
+    const tree = mount(<MenuDrawer navigate={jest.fn()} />);
+    act(() => openMenu('discover'));
+    await settle();
+    press(tree, 'More options');
+    press(tree, 'Reload');
+    expect(json(tree)).not.toContain('Genesis Plaza PlazaPlaza');
+    const spec = show.mock.calls[0][0];
+    expect(spec.title).toBe('Stuck somewhere?');
+    expect(spec.buttons.map(button => button.label)).toEqual([
+      'CANCEL',
+      'RELOAD',
+    ]);
+    expect(control).not.toHaveBeenCalled();
+    act(() => spec.buttons[1].onPress?.());
+    expect(control.mock.calls[0][0].tag).toBe(Control_Tags.ReloadScene);
+    expect(trackClick).toHaveBeenCalledWith('reload', 'DISCOVER_IN_GAME', [
+      { key: 'details', value: new PropertyValue.Text({ value: 'reload' }) },
+    ]);
+    registerModalApi(null);
   });
 
   it('shows the portrait Discover from EXPLORE MORE', async () => {
