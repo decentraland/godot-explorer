@@ -113,6 +113,9 @@ object PushNotificationBuilder {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra(NotificationReceiver.EXTRA_NOTIFICATION_ID, trayId)
                 if (deepLink.isNotEmpty()) {
+                    // React Native's Linking reads a link only from a VIEW intent, cold or warm;
+                    // the launcher intent is MAIN, which would open the app without it.
+                    action = Intent.ACTION_VIEW
                     data = Uri.parse(deepLink)
                 }
             }
