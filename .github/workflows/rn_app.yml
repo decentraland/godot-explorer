@@ -124,7 +124,8 @@ jobs:
   ios-no-godot:
     name: iOS app without Godot (simulator)
     if: github.event_name == 'pull_request'
-    runs-on: macos-26
+    # Xcode 27, the toolchain godot-asc-deploy archives the TestFlight build with.
+    runs-on: xcode-27
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -141,7 +142,7 @@ jobs:
   ios-with-godot:
     name: iOS app with Godot (manual, no signing)
     if: github.event_name == 'workflow_dispatch'
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
