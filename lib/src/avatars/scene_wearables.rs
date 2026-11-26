@@ -41,6 +41,15 @@ fn category_from_path(path: &str) -> Option<WearableCategory> {
         .copied()
 }
 
+/// A scene GLB is one asset per path, not per file: the same model in another folder can have
+/// other textures. The path is hashed with FNV-1a, as the Unity explorer does.
+fn scene_asset_id(hash: &str, path: &str) -> String {
+    let path_hash = path.bytes().fold(2166136261u32, |hash, byte| {
+        (hash ^ u32::from(byte)).wrapping_mul(16777619)
+    });
+    format!("{}-{path_hash:08x}", hash.to_lowercase())
+}
+
 /// Scene GLB wearables registered by the scenes, looked up before the catalyst.
 /// An entry lives while its scene is loaded.
 #[derive(Default)]
@@ -51,6 +60,26 @@ pub struct SceneWearableRegistry {
 impl SceneWearableRegistry {
     pub fn get(&self, urn_lowercase: &str) -> Option<Arc<ItemEntityDefinition>> {
         self.by_urn.get(urn_lowercase).cloned()
+    }
+
+    /// The id the GLB at `path` is cached under when it is a scene wearable, `None` otherwise.
+    pub fn asset_id(
+        &self,
+        path: &str,
+        content_mapping: &ContentMappingAndUrlRef,
+    ) -> Option<String> {
+        let is_scene_wearable = self.by_urn.values().any(|definition| {
+            Arc::ptr_eq(&definition.content_mapping, content_mapping)
+                && definition.item.wearable_data.as_ref().is_some_and(|data| {
+                    data.representations
+                        .iter()
+                        .any(|representation| representation.main_file == path)
+                })
+        });
+        is_scene_wearable
+            .then(|| content_mapping.get_hash(path))
+            .flatten()
+            .map(|hash| scene_asset_id(hash, path))
     }
 
     pub fn forget_scene(&mut self, scene_entity_id: &str) {
@@ -136,7 +165,7 @@ pub fn resolve_scene_wearables(
                 tracing::warn!("Scene wearable {item} skipped: not in the scene content");
                 continue;
             };
-            let urn = format!("{own_prefix}{}", hash.to_lowercase());
+            let urn = format!("{own_prefix}{}", scene_asset_id(hash, &lowercase));
             registry.register(urn.clone(), category, &lowercase, content_mapping);
             resolved.push(ResolvedWearable {
                 urn,
@@ -186,5 +215,40 @@ mod tests {
         assert_eq!(slot("hat.glb"), None);
         assert_eq!(slot("blue_eyes.glb"), None);
         assert_eq!(slot("cap_hat.gltf"), None);
+    }
+
+    #[test]
+    fn one_glb_in_two_folders_is_two_wearables() {
+        use crate::{
+            content::content_mapping::ContentMappingAndUrl,
+            dcl::common::content_entity::TypedIpfsRef,
+        };
+        let file = |path: &str| TypedIpfsRef {
+            file: path.to_string(),
+            hash: "QmSameModel".to_string(),
+        };
+        let red = "red/Hoodie_upper_body.glb";
+        let blue = "blue/hoodie_upper_body.glb";
+        let mapping = Arc::new(ContentMappingAndUrl::from_base_url_and_content(
+            String::new(),
+            vec![file(red), file(blue)],
+        ));
+        let mut registry = SceneWearableRegistry::default();
+        let items = [red.to_string(), blue.to_string()];
+        let resolved = resolve_scene_wearables(&mut registry, "bafyScene", &mapping, &items);
+
+        assert_eq!(resolved.len(), 2);
+        assert_ne!(resolved[0].urn, resolved[1].urn);
+        let red_id = registry.asset_id(&red.to_lowercase(), &mapping);
+        let blue_id = registry.asset_id(blue, &mapping);
+        assert!(red_id.is_some() && blue_id.is_some() && red_id != blue_id);
+        assert!(resolved[0].urn.ends_with(red_id.as_deref().unwrap()));
+
+        // The same file loaded through another mapping is not a scene wearable.
+        let other = Arc::new(ContentMappingAndUrl::from_base_url_and_content(
+            String::new(),
+            vec![file(blue)],
+        ));
+        assert_eq!(registry.asset_id(blue, &other), None);
     }
 }

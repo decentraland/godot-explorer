@@ -17,6 +17,7 @@ const TOON_SHADER_ALPHA_CLIP_DOUBLE = preload(
 const TOON_SHADER_ALPHA_BLEND_DOUBLE = preload(
 	"res://assets/avatar/dcl_toon_alpha_blend_double.gdshader"
 )
+const HIDDEN_SURFACE_SHADER = preload("res://assets/avatar/dcl_hidden_surface.gdshader")
 
 # The avatar's base skeleton every wearable is merged onto.
 var _skeleton: Skeleton3D
@@ -42,6 +43,7 @@ var _gpu_gate := AvatarGpuReadyGate.new()
 # the whole scene. Skin/hair surfaces clone-on-write in apply_color_and_facial
 # so per-avatar tints don't leak.
 static var _toon_material_cache: Dictionary = {}
+static var _hidden_surface_material: ShaderMaterial = null
 
 # Issue #1945: matches a Blender-style `_<digits>$` duplicate-import suffix on a
 # bone name (e.g. `Avatar_Hips_2`). Compiled once and shared across instances.
@@ -248,6 +250,21 @@ func apply_toon_material(node_to_apply: Node) -> void:
 			cached = _convert_to_toon(mat)
 			_toon_material_cache[key] = cached
 		node_to_apply.set_surface_override_material(surface_idx, cached)
+
+
+## Show only wearables: hides every skin and hair surface, a wearable's as well as the body's,
+## found by material name as the skin and hair tint does (the Unity explorer's rule).
+func hide_skin_and_hair() -> void:
+	if _hidden_surface_material == null:
+		_hidden_surface_material = ShaderMaterial.new()
+		_hidden_surface_material.shader = HIDDEN_SURFACE_SHADER
+	for child in _skeleton.get_children():
+		if not (child is MeshInstance3D) or child.mesh == null:
+			continue
+		for i in range(child.mesh.get_surface_count()):
+			var mat_name: String = child.mesh.get("surface_" + str(i) + "/name").to_lower()
+			if mat_name.contains("skin") or mat_name.contains("hair"):
+				child.set_surface_override_material(i, _hidden_surface_material)
 
 
 func apply_toon_material_recursive(node: Node) -> void:

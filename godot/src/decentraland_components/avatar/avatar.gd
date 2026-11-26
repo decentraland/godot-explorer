@@ -1138,6 +1138,8 @@ func async_load_wearables():
 	AvatarBuildProfiler.mark("toon")
 
 	apply_color_and_facial()
+	if show_only_wearables:
+		_mesh_assembler.hide_skin_and_hair()
 
 	AvatarBuildProfiler.mark("color_facial")
 

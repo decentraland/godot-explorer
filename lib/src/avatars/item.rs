@@ -341,7 +341,11 @@ impl DclItemEntityDefinition {
                 // For GLTF wearables, check if cached on disk
                 // Note: Loading state is handled by the promise system - callers should
                 // use load_wearable_gltf() which returns cached promises for in-progress loads
-                content_provider.is_wearable_cached(GString::from(main_file_hash))
+                let cache_id = content_provider
+                    .scene_wearables
+                    .asset_id(&repr.main_file, &self.inner.content_mapping)
+                    .unwrap_or_else(|| main_file_hash.clone());
+                content_provider.is_wearable_cached(GString::from(&cache_id))
             }
         } else {
             true
