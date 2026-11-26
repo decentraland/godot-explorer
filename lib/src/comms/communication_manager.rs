@@ -8,6 +8,7 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 #[cfg(feature = "use_livekit")]
 use crate::comms::consts::DISABLE_ARCHIPELAGO;
+use crate::comms::redact_url_query;
 use crate::{auth::wallet, scene_runner::tokio_runtime::TokioRuntime};
 use crate::{
     comms::{
@@ -202,6 +203,9 @@ enum CommsConnection {
     #[allow(dead_code)]
     Connected(Box<dyn Adapter>),
 }
+
+// One token-free LiveKit room id per connection (see change_adapter).
+static LIVEKIT_ROOM_SEQ: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
 
 /// Main communication orchestrator for Decentraland Godot Explorer
 ///
@@ -1775,7 +1779,7 @@ impl CommunicationManager {
         #[cfg(feature = "use_pulse")]
         if pulse_established {
             if let Some(pulse_room) = &mut self.pulse_room {
-                pulse_room.send_movement(&uncompressed_movement);
+                pulse_room.send_movement(&uncompressed_movement, Instant::now());
                 message_sent = true;
             }
         }
@@ -1840,7 +1844,6 @@ impl CommunicationManager {
                 timestamp: self.start_time.elapsed().as_secs_f32(),
                 is_stopping: None,
                 mask: crate::avatars::emote_mask::wire_mask_from_internal(mask),
-                ..Default::default()
             })),
             protocol_version: DEFAULT_PROTOCOL_VERSION,
         };
@@ -2041,7 +2044,7 @@ impl CommunicationManager {
         tracing::debug!(
             "Comms protocol: {}, fixedAdapter: {:?}",
             comms_protocol,
-            comms_fixed_adapter
+            comms_fixed_adapter.as_deref().map(redact_url_query)
         );
 
         Some((comms_protocol, comms_fixed_adapter.map(|s| s.to_godot())))
@@ -2106,7 +2109,10 @@ impl CommunicationManager {
         let comms_fixed_adapter_str = comms_fixed_adapter_gstr.to_string();
         let Some((protocol, comms_address)) = comms_fixed_adapter_str.as_str().split_once(':')
         else {
-            tracing::warn!("unrecognised fixed adapter string: {comms_fixed_adapter_str}");
+            tracing::warn!(
+                "unrecognised fixed adapter string: {}",
+                redact_url_query(&comms_fixed_adapter_str)
+            );
             return;
         };
 
@@ -2126,7 +2132,7 @@ impl CommunicationManager {
         tracing::warn!(
             "🔌 Comms reconnection attempt - protocol: '{}', address: '{}'",
             protocol,
-            comms_address
+            redact_url_query(comms_address)
         );
 
         let current_ephemeral_auth_chain = player_identity
@@ -2193,9 +2199,12 @@ impl CommunicationManager {
 
                     // Create LiveKit room with shared message processor
                     // Main rooms use auto_subscribe: true (default) to automatically receive all peers
+                    // Token-free and still unique per connection: `Peer.room_activity` is
+                    // keyed by this id and a reconnect to the same host must not alias.
+                    let seq = LIVEKIT_ROOM_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                     let mut livekit_room = LivekitRoom::new(
                         comms_address.to_string(),
-                        format!("livekit-{}", comms_address),
+                        format!("livekit-{}#{}", redact_url_query(comms_address), seq),
                     );
                     livekit_room.set_message_processor_sender(processor_sender);
 

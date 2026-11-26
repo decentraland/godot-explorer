@@ -352,6 +352,7 @@ impl DclAndroidPlugin {
 
     /// Set the canonical Firebase Analytics user id. Auto-attached to every Firebase event.
     /// Pass an empty string to clear it.
+    /// Deprecated: superseded by Tenjin (`attribution.rs`); removed once Tenjin is validated.
     #[func]
     pub fn set_firebase_user_id(user_id: GString) -> bool {
         let Some(mut singleton) = Self::try_get_singleton() else {
@@ -363,6 +364,7 @@ impl DclAndroidPlugin {
 
     /// Set a Firebase Analytics user property. Auto-attached to every event fired afterward.
     /// Pass an empty string as the value to clear the property.
+    /// Deprecated: superseded by Tenjin (`attribution.rs`); removed once Tenjin is validated.
     #[func]
     pub fn set_firebase_user_property(name: GString, value: GString) -> bool {
         let Some(mut singleton) = Self::try_get_singleton() else {
@@ -378,6 +380,7 @@ impl DclAndroidPlugin {
 
     /// Log a custom Firebase Analytics event. `params_json` should be a JSON object string with
     /// primitive values (string/number/boolean); pass "" for no parameters.
+    /// Deprecated: superseded by Tenjin (`attribution.rs`); removed once Tenjin is validated.
     #[func]
     pub fn log_firebase_event(event_name: GString, params_json: GString) -> bool {
         let Some(mut singleton) = Self::try_get_singleton() else {
@@ -391,6 +394,74 @@ impl DclAndroidPlugin {
         // The Kotlin `Boolean` arrives as an INT Variant (see has_notification_permission);
         // `try_to::<bool>()` always failed, so one-shot events never saved their flag.
         result.booleanize()
+    }
+
+    /// Starts the Tenjin SDK (idempotent) and sets the customer user id.
+    #[func]
+    pub fn tenjin_start(sdk_key: GString, user_id: GString) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        let result = Self::timed_jni_call(
+            &mut singleton,
+            "tenjinStart",
+            &[sdk_key.to_variant(), user_id.to_variant()],
+        );
+        result.booleanize()
+    }
+
+    /// Sends a Tenjin custom event. `value` 0 sends the event without a value.
+    #[func]
+    pub fn tenjin_event(name: GString, value: i32) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        let result = Self::timed_jni_call(
+            &mut singleton,
+            "tenjinEvent",
+            &[name.to_variant(), value.to_variant()],
+        );
+        result.booleanize()
+    }
+
+    /// Tenjin attribution info. The first call starts the fetch and returns
+    /// `{status: "pending"}`; later calls return the cached `ok` / `error` result.
+    pub(crate) fn tenjin_get_attribution_internal() -> Option<VarDictionary> {
+        let mut singleton = Self::try_get_singleton()?;
+        let result = Self::timed_jni_call(&mut singleton, "tenjinGetAttribution", &[]);
+        result.try_to::<VarDictionary>().ok()
+    }
+
+    /// Whether the plugin binary exposes `method`. `has_method` cannot answer this: the Java
+    /// methods are not registered with ClassDB, so it is false for every one of them.
+    fn has_java_method(singleton: &mut Gd<Object>, method: &str) -> bool {
+        singleton
+            .call("has_java_method", &[StringName::from(method).to_variant()])
+            .booleanize()
+    }
+
+    /// Tenjin's per-install analytics id; `None` before Tenjin started or on an older plugin.
+    pub(crate) fn tenjin_get_analytics_installation_id() -> Option<String> {
+        let mut singleton = Self::try_get_singleton()?;
+        if !Self::has_java_method(&mut singleton, "tenjinGetAnalyticsInstallationId") {
+            return None;
+        }
+        let result = Self::timed_jni_call(&mut singleton, "tenjinGetAnalyticsInstallationId", &[]);
+        let id = result.try_to::<GString>().ok()?.to_string();
+        Some(id).filter(|v| !v.is_empty())
+    }
+
+    /// Google Advertising ID + App Set ID, read off the UI thread by the plugin:
+    /// `{status: "pending"}` until the first read finishes, then
+    /// `{status: "ok", gaid, limit_ad_tracking, app_set_id}` ("" for an unavailable id).
+    /// `None` on an older plugin binary.
+    pub(crate) fn get_advertising_ids_internal() -> Option<VarDictionary> {
+        let mut singleton = Self::try_get_singleton()?;
+        if !Self::has_java_method(&mut singleton, "getAdvertisingIds") {
+            return None;
+        }
+        let result = Self::timed_jni_call(&mut singleton, "getAdvertisingIds", &[]);
+        result.try_to::<VarDictionary>().ok()
     }
 
     /// Fetch install referrer data from Google Play.

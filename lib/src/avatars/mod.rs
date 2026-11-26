@@ -5,3 +5,4 @@ pub mod emote_mask;
 pub mod item;
 mod player_avatar_override;
 pub mod scene_emote;
+pub mod shape_motion;

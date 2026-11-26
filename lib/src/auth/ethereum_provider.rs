@@ -1,10 +1,13 @@
-use ethers_providers::{Provider, Ws};
-use tokio::sync::Mutex;
+use std::time::Duration;
 
 use crate::urls;
 
+const RPC_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// JSON-RPC client for the Ethereum node behind `urls::ethereum_rpc`, used by scenes'
+/// `sendAsync`. Each request is its own HTTPS POST, so scenes don't wait on each other.
 pub struct EthereumProvider {
-    provider: Mutex<Option<Provider<Ws>>>,
+    client: reqwest::Client,
 }
 
 impl Default for EthereumProvider {
@@ -15,9 +18,11 @@ impl Default for EthereumProvider {
 
 impl EthereumProvider {
     pub fn new() -> Self {
-        Self {
-            provider: Mutex::new(None),
-        }
+        let client = reqwest::Client::builder()
+            .timeout(RPC_TIMEOUT)
+            .build()
+            .expect("fail trying to build reqwest client");
+        Self { client }
     }
 
     pub async fn send_async(
@@ -25,24 +30,48 @@ impl EthereumProvider {
         method: &str,
         params: &[serde_json::Value],
     ) -> Result<serde_json::Value, anyhow::Error> {
-        let mut this_provider = self.provider.lock().await;
+        let body = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": method,
+            "params": params,
+        });
+        let response = self
+            .client
+            .post(urls::ethereum_rpc_with_project("kernel-local"))
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| {
+                if e.is_timeout() {
+                    anyhow::anyhow!("{method}: Ethereum RPC request timed out")
+                } else {
+                    anyhow::anyhow!("{method} failed: {e}")
+                }
+            })?;
+        let status = response.status();
+        let text = response.text().await?;
 
-        if this_provider.is_none() {
-            let provider_url = urls::ethereum_rpc_with_project("kernel-local");
-            let provider = Provider::<Ws>::connect(&provider_url).await?;
-            this_provider.replace(provider);
-        }
-
-        // TODO: check if the connection is missing
-        let provider = this_provider.as_ref().unwrap();
-        let result = provider.request(method, params).await;
-
-        match result {
-            Err(e) => {
-                this_provider.take();
-                Err(anyhow::Error::new(e))
+        let Ok(mut response) = serde_json::from_str::<serde_json::Value>(&text) else {
+            anyhow::bail!("{method} failed (HTTP {status}): {text}");
+        };
+        if let Some(error) = response.get("error").filter(|error| !error.is_null()) {
+            if !error.is_object() {
+                anyhow::bail!("{method} failed: {error}");
             }
-            Ok(result) => Ok(result),
+            let mut message = format!(
+                "{method} failed (code: {}, message: {}",
+                error["code"],
+                error["message"].as_str().unwrap_or_default()
+            );
+            if !error["data"].is_null() {
+                message.push_str(&format!(", data: {}", error["data"]));
+            }
+            anyhow::bail!("{message})");
+        }
+        match response.get_mut("result") {
+            Some(result) => Ok(result.take()),
+            None => anyhow::bail!("{method} failed (HTTP {status}): {text}"),
         }
     }
 }

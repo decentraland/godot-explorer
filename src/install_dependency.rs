@@ -38,15 +38,16 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
 // (e.g. PBBillboard.target_entity landed mid-RC and broke the billboard itest).
 // Bump the pin deliberately and update any affected generated-struct usages.
 //
-// Pinned to the npm `next` release built from protocol `main` commit 0ff6038
-// (PR #449 merged) — ships the decentraland/pulse protos + options.proto
-// (quantization FieldOptions) for the Pulse transport, plus PR #426
-// TouchscreenInputControls/UiInputBinding that godot main's components need.
-// It does NOT carry the `experimental`-only rfc4 fields (PlayerEmote.is_stopping
-// & co., Chat.forwarded_from) — those are re-added by the build-time patch in
-// lib/build.rs (`patched_rfc4_comms_proto`).
+// Pinned to the npm `next` release built from protocol `main` commit 694568d
+// (PR #495 merged) — the first build that ships `PBSkybox`/`PBSun`/
+// `PBEnvironmentFog` and `decentraland/common/gradient.proto` for scene sky
+// control. It also carries the decentraland/pulse protos + options.proto
+// (quantization FieldOptions), TouchscreenInputControls/UiInputBinding, the rfc4
+// `PlayerEmote` extension fields with `Chat.forwarded_from`, `font_src` on the
+// four text components and `PBAvatarEmoteCommand.state`, so the build-time
+// patches lib/build.rs keeps for those now no-op.
 const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some(
-    "https://registry.npmjs.org/@dcl/protocol/-/protocol-1.0.0-30827383791.commit-0ff6038.tgz",
+    "https://registry.npmjs.org/@dcl/protocol/-/protocol-1.0.0-40563911091.commit-694568d.tgz",
 );
 const PROTOCOL_NPM_DIST_TAG: &str = "next";
 
@@ -254,6 +255,44 @@ pub fn download_and_extract_zip(
 
     fs::remove_file("./tmp-file.zip")?;
 
+    Ok(())
+}
+
+/// Whether the Tenjin iOS SDK pinned by `TENJIN_IOS_VERSION` is already in the project.
+pub fn tenjin_ios_installed() -> bool {
+    fs::read_to_string(Path::new(TENJIN_IOS_FOLDER).join(".version"))
+        .map(|v| v.trim() == TENJIN_IOS_VERSION)
+        .unwrap_or(false)
+}
+
+/// Downloads the Tenjin xcframework the iOS plugin embeds (see `dcl_godot_ios.gdip`).
+pub fn install_tenjin_ios(use_cache: bool) -> Result<(), anyhow::Error> {
+    if tenjin_ios_installed() {
+        print_message(
+            MessageType::Success,
+            &format!("Tenjin iOS SDK {TENJIN_IOS_VERSION} already installed"),
+        );
+        return Ok(());
+    }
+
+    print_section("Installing Tenjin iOS SDK");
+
+    let folder = Path::new(TENJIN_IOS_FOLDER);
+    if folder.exists() {
+        fs::remove_dir_all(folder)?;
+    }
+
+    let url = format!(
+        "https://github.com/tenjin/tenjin-ios-sdk/releases/download/{TENJIN_IOS_VERSION}/TenjinSDK.xcframework.zip"
+    );
+    let cache_key = use_cache.then(|| format!("tenjin-ios-{TENJIN_IOS_VERSION}.zip"));
+    download_and_extract_zip(&url, TENJIN_IOS_FOLDER, cache_key)?;
+
+    fs::write(folder.join(".version"), TENJIN_IOS_VERSION)?;
+    print_message(
+        MessageType::Success,
+        &format!("Tenjin iOS SDK {TENJIN_IOS_VERSION} installed"),
+    );
     Ok(())
 }
 
@@ -763,6 +802,10 @@ pub fn install(
         }
         _ => (),
     };
+
+    if platforms.iter().any(|p| p == "ios") {
+        install_tenjin_ios(use_cache)?;
+    }
 
     if !skip_download_templates {
         prepare_templates(platforms, use_cache, strip_ios, branch)?;

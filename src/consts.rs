@@ -4,6 +4,11 @@ pub const BIN_FOLDER: &str = "./.bin/";
 pub const RUST_LIB_PROJECT_FOLDER: &str = "./lib/";
 pub const EXPORTS_FOLDER: &str = "./exports/";
 
+/// Tenjin iOS SDK release whose xcframework `dcl_godot_ios.gdip` embeds. Downloaded, not
+/// committed.
+pub const TENJIN_IOS_VERSION: &str = "1.20.1";
+pub const TENJIN_IOS_FOLDER: &str = "./godot/ios/plugins/dcl_godot_ios/tenjin";
+
 /// sentry-godot addon release. Bump both together: the installer replaces
 /// `godot/addons/sentry` whenever its `.version` marker differs from this.
 pub const SENTRY_ADDON_VERSION: &str = "2.1.1";
@@ -21,7 +26,7 @@ pub const GODOT_CURRENT_VERSION: &str = "4.6.2";
 /// (e.g. `4.6.2.stable.gh.6ddcadb64 - Protocol Squad`) and the SHA-tagged release path published
 /// by the godot-engine-releases pipeline. Bump it in lockstep with a new fork publish: it busts the
 /// local download cache (keys embed it) and pins the immutable per-SHA release URLs below.
-pub const GODOT_BUILD_SHA: &str = "a1a0b4f6f";
+pub const GODOT_BUILD_SHA: &str = "80061eff1";
 
 /// TEMPORARY per-checkout override to pull the Godot editor + export templates from a specific
 /// fork *branch* build (published by CI under `/branches/<slug>/`) instead of the pinned stable
@@ -30,11 +35,9 @@ pub const GODOT_BUILD_SHA: &str = "a1a0b4f6f";
 /// `None` = use the pinned stable build (`GODOT_BUILD_SHA`). `Some("<branch>")` = use that
 /// branch's CI build. An explicit `--branch` on the CLI still takes precedence over this.
 ///
-/// Reset to `None` once the branch is merged and `GODOT_BUILD_SHA` is bumped to the merge commit —
-/// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently set to
-/// the MSDF and Label3D colour-glyph fixes (decentraland/godotengine#32) until it merges; that
-/// branch is based on `GODOT_BUILD_SHA`.
-pub const GODOT_USE_BRANCH: Option<&str> = Some("fix/msdf-overlaps-label3d-color-glyphs");
+/// Keep `None` on release branches: a branch pinned here makes every dev/CI pull an unmerged
+/// engine build. Merge the engine PR into `4.6.2` and bump `GODOT_BUILD_SHA` instead.
+pub const GODOT_USE_BRANCH: Option<&str> = None;
 
 /// Release tag identifying a specific fork build — `<version>.stable.gh.<sha>`, mirroring the
 /// `--version` string. Single source for the release URL path segment, the on-disk template SHA

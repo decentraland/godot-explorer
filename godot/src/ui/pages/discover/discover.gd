@@ -30,6 +30,7 @@ var _showing_streak_modal: bool = false
 @onready var last_visited: VBoxContainer = %LastVisited
 @onready var places_featured: SnapCarousel = %PlacesFeatured
 @onready var places_most_active: VBoxContainer = %PlacesMostActive
+@onready var new_in_decentraland: VBoxContainer = %NewInDecentraland
 @onready var events: VBoxContainer = %Events
 @onready var places_favorites: VBoxContainer = %PlacesFavorites
 @onready var places_my_places: VBoxContainer = %PlacesMyPlaces
@@ -89,9 +90,17 @@ func _ready():
 	places_most_active.generator.report_loading_status.connect(
 		_on_report_loading_status.bind(places_most_active)
 	)
+	new_in_decentraland.generator.report_loading_status.connect(
+		_on_report_loading_status.bind(new_in_decentraland)
+	)
 	events.generator.report_loading_status.connect(_on_report_loading_status.bind(events))
 	places_favorites.generator.report_loading_status.connect(
 		_on_report_loading_status.bind(places_favorites)
+	)
+	# Not in _get_active_carousels(), so it doesn't change the messages; its report only re-sends
+	# the DISCOVER snapshot once My Places has loaded.
+	places_my_places.generator.report_loading_status.connect(
+		_on_report_loading_status.bind(places_my_places)
 	)
 
 
@@ -179,19 +188,27 @@ func on_friend_pressed(data, card: PlaceItem = null):
 	friend_jump_in.open_panel()
 
 
-# Keys and 0-based slots match the DISCOVER event's `carousels`; read back by the PLACE_DETAILS
-# and PLACE_DETAIL_CLICK tracking.
-func _set_card_origin(data: Dictionary, card: PlaceItem) -> void:
-	var container := card.get_parent()
+# Carousel node -> key, shared by the DISCOVER event's `carousels` and the `carousel` that
+# PLACE_DETAILS / PLACE_DETAIL_CLICK log, so the two always join. `featured` is a SnapCarousel
+# and is handled on its own.
+func _carousel_keys() -> Dictionary:
 	# search_param, not search_text: search_text follows keystrokes before a search is submitted.
 	var searching: bool = not places_most_active.generator.search_param.is_empty()
-	var carousel_keys := {
+	return {
+		friends_online: "friends",
 		last_visited: "last_visited",
 		places_most_active: "search" if searching else "most_active",
+		new_in_decentraland: "new_in_decentraland",
+		events: "events",
 		places_favorites: "favorites",
 		places_my_places: "my_places",
-		friends_online: "friends",
 	}
+
+
+# 0-based slots count PlaceItem siblings, the same way _collect_carousel_data() does.
+func _set_card_origin(data: Dictionary, card: PlaceItem) -> void:
+	var container := card.get_parent()
+	var carousel_keys := _carousel_keys()
 	# Both keys or neither: a slot without its carousel would read as a real position.
 	for carousel in carousel_keys:
 		if carousel.item_container == container:
@@ -253,7 +270,8 @@ func _on_jump_in_world(realm: String):
 	Global.async_join_world(realm)
 
 
-func _get_ui_location() -> String:
+# Shared with menu.gd so every DISCOVER event carries the same `location`.
+static func get_ui_location() -> String:
 	return "in_game" if Global.get_explorer() else "pre_game"
 
 
@@ -275,12 +293,14 @@ func _on_visibility_changed():
 		_show_device_support_modal_if_needed()
 		Global.set_orientation_portrait()
 		Global.metrics.track_screen_viewed(
-			"DISCOVER", JSON.stringify({"location": _get_ui_location()})
+			"DISCOVER", JSON.stringify({"location": get_ui_location()})
 		)
 		_show_low_spec_warning_if_needed()
 		if Global.get_explorer():
 			if button_back_to_explorer:
 				button_back_to_explorer.show()
+		# Before the seasonal swap, which keeps the lobby track as the one to restore.
+		Global.music_player.enter_discover()
 		# Fire-and-forget, no-op after the first call — see async_request_assets().
 		Global.seasonal_skin_manager.async_request_assets()
 		_apply_seasonal_skin()
@@ -294,6 +314,19 @@ func _on_visibility_changed():
 			else:
 				Global.music_player.play(_music_before_seasonal)
 			_music_before_seasonal = ""
+		Global.music_player.exit_discover()
+
+
+# Shown on arrival (the standalone menu adds it visible, so no visibility change fires) and gone
+# with the tree (a jump-in or a return to Discover frees it while showing).
+func _enter_tree() -> void:
+	if is_visible_in_tree() and is_instance_valid(Global.music_player):
+		Global.music_player.enter_discover()
+
+
+func _exit_tree() -> void:
+	if is_instance_valid(Global.music_player):
+		Global.music_player.exit_discover()
 
 
 ## Shows/hides the seasonal overlay and swaps Discover's music, per SeasonalSkinManager
@@ -475,7 +508,8 @@ func set_search_filter_text(new_text: String) -> void:
 		places_featured.show()
 		places_favorites.visible = places_favorites.has_items()
 		places_my_places.visible = places_my_places.has_items()
-		places_most_active.title = "DISCOVER_MOST_ACTIVES"
+		new_in_decentraland.visible = new_in_decentraland.has_items()
+		places_most_active.title = "DISCOVER_POPULAR"
 		if guest_upgrade_card:
 			# Don't force it visible — let the card re-evaluate its own upgrade state
 			# so already-upgraded users never see it flash (#2483).
@@ -488,6 +522,7 @@ func set_search_filter_text(new_text: String) -> void:
 		places_featured.hide()
 		places_favorites.hide()
 		places_my_places.hide()
+		new_in_decentraland.hide()
 		places_most_active.title = "DISCOVER_SCENES"
 		if guest_upgrade_card:
 			guest_upgrade_card.hide()
@@ -506,6 +541,7 @@ func _scroll_all_carousels_to_start() -> void:
 		events,
 		last_visited,
 		places_most_active,
+		new_in_decentraland,
 		places_favorites,
 		places_my_places
 	]:
@@ -591,7 +627,14 @@ func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus, contain
 
 func _get_active_carousels() -> Array:
 	if search_text.is_empty():
-		return [friends_online, last_visited, places_most_active, events, places_favorites]
+		return [
+			friends_online,
+			last_visited,
+			places_most_active,
+			new_in_decentraland,
+			events,
+			places_favorites,
+		]
 	return [places_most_active, events]
 
 
@@ -662,7 +705,7 @@ func _update_global_messages() -> void:
 				. metrics
 				. track_screen_viewed(
 					"DISCOVER",
-					JSON.stringify({"location": _get_ui_location(), "carousels": carousels_data}),
+					JSON.stringify({"location": get_ui_location(), "carousels": carousels_data}),
 				)
 			)
 
@@ -674,13 +717,9 @@ func _update_global_messages() -> void:
 
 func _collect_carousel_data() -> Dictionary:
 	var result := {}
-	var carousel_map := {
-		"most_active": places_most_active,
-		"events": events,
-		"last_visited": last_visited,
-	}
-	for key in carousel_map:
-		var carousel = carousel_map[key]
+	var carousel_keys := _carousel_keys()
+	for carousel in carousel_keys:
+		var key: String = carousel_keys[carousel]
 		if not carousel.visible:
 			continue
 		var items := []
