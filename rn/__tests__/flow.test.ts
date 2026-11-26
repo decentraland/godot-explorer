@@ -73,6 +73,32 @@ describe('entry flow', () => {
     expect(named.name).toBe('Mateo');
   });
 
+  it('back from the name returns to the editor when the look was finished there, keeping it', () => {
+    const avatar = run([
+      { type: 'booted' },
+      { type: 'playAsGuest' },
+      { type: 'guestReady' },
+    ]);
+    const edited = run(
+      [{ type: 'customizeAvatar' }, { type: 'avatarConfirmed' }],
+      avatar,
+    );
+    const backInEditor = reduceFlow(edited, { type: 'back' });
+    expect(backInEditor.step).toBe('avatar_customize');
+    expect(run([{ type: 'avatarConfirmed' }], backInEditor).step).toBe(
+      'avatar_naming',
+    );
+    // Discarding in the editor goes back to the presets, and a preset taken as is names from there.
+    const discarded = reduceFlow(backInEditor, { type: 'back' });
+    expect(discarded.step).toBe('avatar_create');
+    const preset = run([{ type: 'avatarConfirmed' }], discarded);
+    expect(reduceFlow(preset, { type: 'back' }).step).toBe('avatar_create');
+    expect(
+      reduceFlow(run([{ type: 'avatarConfirmed' }], avatar), { type: 'back' })
+        .step,
+    ).toBe('avatar_create');
+  });
+
   it('a preview launch with no account signs in as a guest and skips the avatar', () => {
     const waiting = run([{ type: 'previewGuest' }]);
     expect(waiting).toMatchObject({
