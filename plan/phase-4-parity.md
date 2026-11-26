@@ -89,6 +89,7 @@ in phase 3 and not run again here. Rows marked "not done" are the work left befo
 | Low memory | Engine notice + modal | Not run | |
 | Connection lost / poor connection | `dcl_core::connection` + `useConnectionQuality` | Not run | iOS buttonless second dialog dropped |
 | Review prompt | `dcl_core::review` + Play card | Not run | Wearable-claimed trigger not wired |
+| Reload in the Discover panel's ⋮ menu: "Stuck somewhere?", back to the scene's spawn point (1.x #3309) | RN `menu/KebabMenu.tsx`, `MenuDrawer.tsx` + core `Control::ReloadScene` (the engine's `/reload`) | Not run (jest) | No loading cover on an in-world reload (6.1); copy and icon wait for design; no portrait entry point (#3229) |
 | Back button leaves the world | `confirmLeave` | Ran: confirm shown, LEAVE returns to Discover, re-enter loads | |
 | Orientation (portrait menus, landscape world) | `setOrientation` per screen | Ran: world in landscape | |
 | Pulse outage and session-evicted modals, platform-ban SIGN IN / EXIT (main #3065) | `world/session_watch.rs` + `CoreModals` | Not run | Reset on sign-out and closing the ban modal on `loading_started` are not ported |
@@ -101,6 +102,7 @@ in phase 3 and not run again here. Rows marked "not done" are the work left befo
 | Base-eye iris tint (main #3106) | `avatars/eye_masks.rs` + `mask_material.gdshader` | Not run | Unity cannot show it, validate between two Godot clients |
 | Scene fonts `font_src` on UI text and TextShape (main #3132) | `content/font.rs`, `text_shape/{node,layout,fallbacks,glyph_prewarm,glyph_cache}.rs` | Not run | Emoji colour and CJK artefacts: the pinned engine branch carries godotengine#32, check on a device |
 | Profile status on nameplates, Pulse-required island recovery (main #3065) | `comms/adapter/{island_session,profile_fetch}.rs`, `avatars/nameplate.rs` | Not run | Platform bans and island removal need backend-assisted QA |
+| Scene camera zoom with `VirtualCamera.fov` (1.x #3372) | `player/camera_controller.rs`, `godot_classes/dcl_virtual_camera.rs` | Not run (scene test `52,-58-camera-mode`) | |
 | Scene skybox, sun and fog (1.x #3349) | `scene_runner/components/skybox.rs`, `sky/scene_skybox.rs` | Not run | Panorama reflections (#3350); protocol fields the new pin adds and the engine ignores (#3352) |
 | One-sided GLTF colliders, `SDK_AVATAR_HIT` layer, 1 cm `Plane` box (1.x #3074) | `scene_runner/components/physics_layers.rs`, `godot_classes/gltf_container_load.rs` | Not run (itest, scene tests) | |
 | Pinch only inside a zone around the avatar (1.x #3353) | `player/pinch_zone.rs`, `player/mobile_input.rs` | Not run (unit, scene test) | iOS |
