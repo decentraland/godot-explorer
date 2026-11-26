@@ -1,13 +1,19 @@
 // Design System Mobile components added on 2026-11-17: Button/SeeMore, Button/ProfileLink,
-// Profile/Attribute, Icon/Profile, Menu/NavItem, Settings/Row, Input/Username and Modal/Special.
+// Profile/Attribute, Icon/Profile, Menu/NavItem, Settings/Row, Input/Username and Modal/Special;
+// Loader/Logo, Image Not Found, Background/Avatar and Tooltip on 2026-11-25.
 import { useState } from 'react';
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import {
+  AppText,
+  AvatarBackground,
   BrandBackground,
+  Button,
   ButtonProfileLink,
   ButtonSeeMore,
   IconProfile,
+  ImageNotFound,
   InputUsername,
+  LogoLoader,
   MenuNavItem,
   ModalSpecial,
   ProfileAttribute,
@@ -19,6 +25,7 @@ import {
   color,
   space,
   Switch,
+  Tooltip,
   u,
 } from '@dcl/ui-native';
 import { registerPreview } from './registry';
@@ -128,6 +135,15 @@ function Additions() {
         suffix="#1234"
         maxLength={15}
       />
+      <View style={styles.row}>
+        <LogoLoader accessibilityLabel="Loading" />
+        <View style={styles.notFound}>
+          <ImageNotFound />
+        </View>
+        <View style={styles.spotlight}>
+          <AvatarBackground />
+        </View>
+      </View>
     </ScrollView>
   );
 }
@@ -146,22 +162,53 @@ registerPreview('extra/ds-figma-additions', {
 registerPreview('extra/ds-modal-special', {
   title: 'DS: Modal/Special',
   orientation: 'portrait',
-  render: () => (
+  notes: 'state=custom: Type=Custom with a caller-built layout',
+  render: state => (
     <View style={styles.page}>
       <BrandBackground />
-      <ModalSpecial
-        visible
-        media={<Image source={media} style={styles.media} />}
-        title="Unlock the full experience"
-        body="Add email to unlock Decentraland across devices and claim an"
-        highlight="exclusive Wearable."
-        primaryLabel="Add email"
-        onPrimary={noop}
-        secondaryLabel="Maybe later"
-        onSecondary={noop}
-        onRequestClose={noop}
-      />
+      {state === 'custom' ? (
+        <ModalSpecial type="custom" visible onRequestClose={noop}>
+          <View style={styles.custom}>
+            <AppText variant="Modal/Special Title" style={styles.customTitle}>
+              Season Pass is live
+            </AppText>
+            <Button label="See rewards" onPress={noop} fullWidth />
+          </View>
+        </ModalSpecial>
+      ) : (
+        <ModalSpecial
+          visible
+          media={<Image source={media} style={styles.media} />}
+          title="Unlock the full experience"
+          body="Add email to unlock Decentraland across devices and claim an"
+          highlight="exclusive Wearable."
+          primaryLabel="Add email"
+          onPrimary={noop}
+          secondaryLabel="Maybe later"
+          onSecondary={noop}
+          onRequestClose={noop}
+        />
+      )}
     </View>
+  ),
+});
+
+registerPreview('extra/ds-tooltip', {
+  title: 'DS: Tooltip',
+  orientation: 'portrait',
+  render: () => (
+    <ScrollView
+      style={styles.tooltipPage}
+      contentContainerStyle={styles.tooltips}
+    >
+      <Tooltip text="Tap Chat to talk with others" />
+      <Tooltip text="Hold the jump button longer to jump higher, and tap it again in the air to double jump." />
+      <Tooltip arrow="left" text="Chat" style={styles.tooltipLeft} />
+      <Tooltip arrow="top" text="Menu" />
+      <Tooltip arrow="right" text="Emotes" />
+      <Tooltip arrow="bottom" text="Map" />
+      <Tooltip text="Open the backpack to change what you wear" />
+    </ScrollView>
   ),
 });
 
@@ -179,6 +226,8 @@ const styles = StyleSheet.create({
     gap: space.lg,
   },
   fadeRow: { gap: space.xs },
+  notFound: { width: u(147), height: u(78) },
+  spotlight: { width: u(160), height: u(172) },
   tile: {
     width: u(40),
     height: u(40),
@@ -186,4 +235,15 @@ const styles = StyleSheet.create({
     backgroundColor: color.action.selected,
   },
   media: { width: u(344), height: u(274), marginTop: -u(9.5) },
+  custom: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    gap: space['54'],
+    paddingHorizontal: space['50'],
+    paddingBottom: space['40'],
+  },
+  customTitle: { color: color.text.primary, textAlign: 'center' },
+  tooltipPage: { flex: 1, backgroundColor: color.background.elevated },
+  tooltips: { padding: space['2xl'], gap: space['2xl'] },
+  tooltipLeft: { marginLeft: space.lg },
 });

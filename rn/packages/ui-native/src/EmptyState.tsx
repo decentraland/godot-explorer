@@ -2,12 +2,12 @@ import { StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
 import { Icon, IconName } from './Icon';
 import { Button } from './Button';
-import { colors, fonts, radius } from './tokens';
+import { color, colors, fonts, radius } from './tokens';
 import { u } from './scale';
 
-/** Figma `EmptyState` 866:372: an optional icon in an outlined Purple 100 badge over a title and body.
- * `lg` for full screens and sheet content, `sm` for side panels and landscape. `actionLabel` is a
- * code-only retry button under the text (the node has none).
+/** Figma `EmptyState` 866:372: an optional icon in a round `surface/inverse-disabled` badge over a
+ * title and body. `lg` for full screens and sheet content, `sm` for side panels and landscape.
+ * `actionLabel` is a code-only retry button under the text (the node has none).
  * Figma EmptyState: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=866-372
  */
 export function EmptyState({
@@ -30,7 +30,7 @@ export function EmptyState({
     <View style={[styles.root, small ? styles.rootSmall : styles.rootLarge]}>
       {icon && (
         <View style={styles.badge}>
-          <Icon name={icon} size={40} color={colors.purple100} />
+          <Icon name={icon} size={36} color={colors.purple100} />
         </View>
       )}
       <View style={[styles.text, small && styles.textSmall]}>
@@ -61,9 +61,8 @@ const styles = StyleSheet.create({
     height: u(60),
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: u(2),
-    borderColor: colors.purple100,
-    borderRadius: radius['2xl'],
+    borderRadius: radius.pill,
+    backgroundColor: color.surface['inverse-disabled'],
   },
   text: { alignSelf: 'stretch', gap: u(5) },
   textSmall: { gap: u(3) },

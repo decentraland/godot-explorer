@@ -22,6 +22,8 @@ export const colors = {
   purple450: '#460F6F',
   purple500: '#350854',
   purple550: '#24033B',
+  /** `background/brand`, the plain `Background` of the entry flow frames. */
+  brand: '#470071',
   cardLight: '#B48CD7',
   glass: 'rgba(105,31,169,0.4)',
   glassPressed: 'rgba(105,31,169,0.6)',
@@ -61,8 +63,6 @@ export const colors = {
   green: '#30CD00',
   modal: '#4C147C',
   menu: '#1B002D',
-  /** Figma `background/brand` (the `Background` component). */
-  brand: '#470071',
   /** `Card-Profile` Type=Name tile: base fill and its violet / peach glows. */
   nameCard: '#604CB0',
   nameCardViolet: '#BC93FF',
@@ -91,6 +91,10 @@ export const colors = {
   aqua: '#34FEE6',
   /** Figma `color/success/300`. */
   success300: '#34CE77',
+  /** Figma `color/mint` (end of the Trending tag gradient). */
+  mint: '#34C070',
+  /** Figma `color/orchid`: the NavBar selected-item glow. */
+  orchid: '#DF9CFF',
 } as const;
 
 /** The Figma `alpha/*` primitives by name: `alpha/white-30` is `alpha['white-30']`. */
@@ -131,6 +135,8 @@ export const alpha = {
   'shadow-70': 'rgba(22,21,24,0.7)',
   'shadow-90': 'rgba(22,21,24,0.9)',
   'midnight-90': 'rgba(26,9,37,0.9)',
+  'midnight-violet-90': 'rgba(37,26,59,0.9)',
+  'mauve-0': 'rgba(134,94,153,0)',
 } as const;
 
 /** The Figma "Color" collection (Design System Mobile, Colors page 1:154) by its own names: `text/link`
@@ -195,6 +201,7 @@ export const color = {
     secondary: colors.pearl,
     disabled: colors.textDisabled,
     danger: colors.danger,
+    hud: colors.iconHud,
   },
 } as const;
 

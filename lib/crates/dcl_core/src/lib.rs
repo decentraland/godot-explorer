@@ -26,6 +26,7 @@ pub mod network_inspector;
 pub mod notifications;
 mod open_url;
 pub mod places;
+pub mod platform;
 pub mod profile;
 pub mod realm;
 pub mod report;

@@ -39,7 +39,7 @@ files about to be deleted. One bounded job, then pure wiring.
 | 4.3 avatar | Rules, catalog parsing, palettes, base emotes and the edits are in `dcl_core::avatar`; the engine only renders. **Left:** owned wearables/emotes (need an account with items to check the lambda shape), deleting the rule half of `wearables.gd` and `player_identity.gd` (the renderer still uses them, 5.2). |
 | 4.4 chat / 4.10 HUD | Version and FPS line moved to RN. Avatar tap to a profile is not done (no player-profile screen). |
 | 4.5 settings | Done: engine reads the core's store, `ConfigFile`, `config_data.gd` and `DclConfig` are gone. `graphic_settings.gd`, `audio_settings.gd`, `locale_settings.gd`, `general_settings.gd` and the benchmark stay as appliers. |
-| 4.6 push | Registration through the core, permission, local reminders (Android, Kotlin plugin stack). iOS unwritten. Delivery unverified. |
+| 4.6 push | Registration through the core, permission, local reminders (Android, the host's Kotlin). iOS unwritten. Delivery unverified. |
 | 4.7 profile | Not touched this phase. |
 | 4.8 IAP | Deferred to 6/7 (D-44). |
 | 4.9 modals | RN queue, scene requests, destination checks, password, engine notices, update and device-support. Ban pre-check, NFT card and the loading-timeout verdict not done. |

@@ -1,8 +1,5 @@
 #import "GodotHost.h"
 
-#import <objc/message.h>
-#import <objc/runtime.h>
-
 #if DCL_WITH_GODOT
 // C API from the engine's drivers/apple_embedded/godot_host.h (built with embedded_host=yes).
 extern "C" {
@@ -166,23 +163,6 @@ static void startEngineNow(void) {
 }
 #endif
 
-#if DCL_WITH_GODOT
-// Plugin services registered with GDTApplicationDelegate (deeplinks), minus the engine's own
-// GDTAppDelegateService, which would start a second engine.
-static NSArray *pluginServices(void) {
-	Class delegate = NSClassFromString(@"GDTApplicationDelegate");
-	SEL servicesSelector = NSSelectorFromString(@"services");
-	if (![delegate respondsToSelector:servicesSelector]) {
-		return @[];
-	}
-	NSArray *services = ((NSArray * (*)(id, SEL))objc_msgSend)(delegate, servicesSelector);
-	Class engineService = NSClassFromString(@"GDTAppDelegateService");
-	return [services filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(id service, NSDictionary *) {
-		return ![service isKindOfClass:engineService];
-	}]];
-}
-#endif
-
 @implementation DclGodotHost
 
 + (UIViewController *)rootViewControllerWithReactView:(UIView *)reactView {
@@ -203,56 +183,6 @@ static NSArray *pluginServices(void) {
 + (void)setGodotOnTop:(BOOL)onTop {
 	DclHostViewController *controller = sController;
 	[(DclHostView *)controller.view setGodotOnTop:onTop];
-}
-
-+ (void)forwardLaunchOptions:(NSDictionary<UIApplicationLaunchOptionsKey, id> *)launchOptions {
-#if DCL_WITH_GODOT
-	for (id service in pluginServices()) {
-		if ([service respondsToSelector:@selector(application:didFinishLaunchingWithOptions:)]) {
-			[service application:UIApplication.sharedApplication didFinishLaunchingWithOptions:launchOptions];
-		}
-	}
-#endif
-}
-
-+ (void)forwardOpenURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey, id> *)options {
-#if DCL_WITH_GODOT
-	for (id service in pluginServices()) {
-		if ([service respondsToSelector:@selector(application:openURL:options:)]) {
-			[service application:UIApplication.sharedApplication openURL:url options:options];
-		}
-	}
-#endif
-}
-
-+ (void)forwardUserActivity:(NSUserActivity *)userActivity {
-#if DCL_WITH_GODOT
-	for (id service in pluginServices()) {
-		if ([service respondsToSelector:@selector(application:continueUserActivity:restorationHandler:)]) {
-			[service application:UIApplication.sharedApplication continueUserActivity:userActivity restorationHandler:^(NSArray *) {}];
-		}
-	}
-#endif
-}
-
-+ (void)forwardDeviceToken:(NSData *)deviceToken error:(NSError *)error {
-#if DCL_WITH_GODOT
-	// The plugin adds these methods to GDTApplicationDelegate itself; its implementations do not
-	// use self, so they are called without an instance.
-	Class delegate = NSClassFromString(@"GDTApplicationDelegate");
-	UIApplication *app = UIApplication.sharedApplication;
-	if (deviceToken) {
-		SEL selector = @selector(application:didRegisterForRemoteNotificationsWithDeviceToken:);
-		if (class_respondsToSelector(delegate, selector)) {
-			((void (*)(id, SEL, UIApplication *, NSData *))class_getMethodImplementation(delegate, selector))(nil, selector, app, deviceToken);
-		}
-	} else {
-		SEL selector = @selector(application:didFailToRegisterForRemoteNotificationsWithError:);
-		if (class_respondsToSelector(delegate, selector)) {
-			((void (*)(id, SEL, UIApplication *, NSError *))class_getMethodImplementation(delegate, selector))(nil, selector, app, error);
-		}
-	}
-#endif
 }
 
 @end

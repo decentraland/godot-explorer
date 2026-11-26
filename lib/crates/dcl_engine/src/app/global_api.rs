@@ -266,18 +266,8 @@ impl DclGlobal {
     // URLs and the guest device.
 
     #[func]
-    pub fn open_webview_url(url: GString) {
-        session::open_webview_url(&url.to_string());
-    }
-
-    #[func]
-    pub fn open_url(url: GString, #[opt(default = false)] use_webkit: bool) {
-        session::open_url(&url.to_string(), use_webkit);
-    }
-
-    #[func]
-    pub fn get_device_anchor_id() -> GString {
-        session::get_device_anchor_id()
+    pub fn open_url(url: GString) {
+        session::open_url(&url.to_string());
     }
 
     #[func]

@@ -1,12 +1,13 @@
 name: 📱 Mobile build label (1.x)
 
 # GitHub reads a pull_request_target workflow from the default branch whatever the PR's base, so
-# the `build` label on a PR into 1.x lands here. It runs 1.x's own mobile_distribute.yml, which
-# builds that line's code with that line's scripts.
+# the `build` label on a PR into 1.x, or on a 1.x release candidate into release / release-*,
+# lands here. It runs 1.x's own mobile_distribute.yml, which builds the PR's code with the base
+# branch's scripts.
 on:
   pull_request_target:
     types: [labeled]
-    branches: [1.x]
+    branches: [1.x, release, 'release-*']
 
 permissions:
   contents: read

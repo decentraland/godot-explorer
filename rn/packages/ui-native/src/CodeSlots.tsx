@@ -1,13 +1,40 @@
-import { useRef, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, StyleSheet, TextInput, View } from 'react-native';
 import { AppText } from './AppText';
 import { colors, fonts } from './tokens';
 import { u } from './scale';
 
+/** The typing caret, blinking at the system's half-second. */
+function Caret() {
+  const opacity = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const blink = Animated.loop(
+      Animated.sequence([
+        Animated.delay(530),
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+        Animated.delay(530),
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    blink.start();
+    return () => blink.stop();
+  }, [opacity]);
+  return <Animated.View style={[styles.caret, { opacity }]} />;
+}
+
 /** Figma `Input/CodeSlots` laid out as `OTP-Input`: one 84×130 slot per digit, 10 apart. The slot
  * being typed gets the Lavender Light border, filled slots a Pearl one, every slot `status/danger`
  * when `error`. `errorMessage` reserves its line under the slots and shows it while `error`. A
- * hidden input carries the real text so the OS keyboard and autofill work.
+ * transparent input laid over the slots carries the real text, so a tap lands on it and the OS
+ * keyboard and autofill work.
  * Figma Input/CodeSlots: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=562-5058
  */
 export function CodeSlots({
@@ -28,14 +55,18 @@ export function CodeSlots({
   accessibilityLabel: string;
 }) {
   const input = useRef<TextInput>(null);
-  const [focused, setFocused] = useState(autoFocus);
+  const [focused, setFocused] = useState(false);
+  // Not `autoFocus`: inside a `Modal` Android hides the keyboard when the dialog window takes focus.
+  useEffect(() => {
+    if (!autoFocus) {
+      return;
+    }
+    const id = setTimeout(() => input.current?.focus(), 300);
+    return () => clearTimeout(id);
+  }, [autoFocus]);
   const digits = value.slice(0, length).split('');
   const slots = (
-    <Pressable
-      accessibilityRole="none"
-      onPress={() => input.current?.focus()}
-      style={styles.row}
-    >
+    <View style={styles.row}>
       {Array.from({ length }, (_, i) => {
         const digit = digits[i];
         const typing = focused && i === digits.length && !error;
@@ -57,7 +88,7 @@ export function CodeSlots({
                 {digit}
               </AppText>
             ) : (
-              typing && <View style={styles.caret} />
+              typing && <Caret />
             )}
           </View>
         );
@@ -73,13 +104,13 @@ export function CodeSlots({
         textContentType="oneTimeCode"
         autoComplete="one-time-code"
         maxLength={length}
-        autoFocus={autoFocus}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        caretHidden
-        style={styles.hidden}
+        cursorColor="transparent"
+        selectionColor="transparent"
+        style={styles.input}
       />
-    </Pressable>
+    </View>
   );
   if (errorMessage === undefined) {
     return slots;
@@ -119,10 +150,6 @@ const styles = StyleSheet.create({
   digit: { fontFamily: fonts.semibold, fontSize: u(24), color: colors.snow },
   digitError: { color: colors.danger },
   caret: { width: u(1.66), height: u(25), backgroundColor: colors.white },
-  hidden: {
-    position: 'absolute',
-    opacity: 0,
-    width: 1,
-    height: 1,
-  },
+  // Not 'transparent': Android reads an alpha of 0 as unset and draws the text black.
+  input: { ...StyleSheet.absoluteFill, color: 'rgba(0,0,0,0.01)' },
 });

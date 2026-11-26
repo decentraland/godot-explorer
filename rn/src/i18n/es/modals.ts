@@ -2,10 +2,6 @@ import type { modals as en } from '../en/modals';
 
 export const modals: Partial<Record<keyof typeof en, string>> = {
   NOTIFICATIONS_LIMITED_PERFORMANCE: 'Rendimiento limitado',
-  AUTH_UPDATE_BODY:
-    'Hay una nueva versión de Decentraland disponible. Actualiza para disfrutar de la mejor experiencia.',
-  AUTH_UPDATE_TITLE: 'Nueva versión disponible',
-  COMMON_UPDATE: 'ACTUALIZAR',
   MODAL_BAN_KICKED_BODY: 'Ponte en contacto con soporte para más información.',
   MODAL_BAN_KICKED_PRIMARY: 'VOLVER A DESCUBRIR',
   MODAL_BAN_KICKED_TITLE: 'Te han baneado',

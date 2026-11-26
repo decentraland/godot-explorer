@@ -12,8 +12,6 @@
 /godot/shaders/ @decentraland/rgl-mobile-devs @decentraland/rgl-mobile-qa
 /godot/project.godot @decentraland/rgl-mobile-devs @decentraland/rgl-mobile-qa
 /godot/export_presets.cfg @decentraland/rgl-mobile-devs @decentraland/rgl-mobile-qa
-/plugins/ @decentraland/rgl-mobile-devs @decentraland/rgl-mobile-qa
-/godot/ios/ @decentraland/rgl-mobile-devs @decentraland/rgl-mobile-qa
 
 # UI: product reviews what players see.
 /godot/src/ui/ @decentraland/rgl-mobile-devs @decentraland/rgl-mobile-product

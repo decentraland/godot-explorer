@@ -1,8 +1,6 @@
 use godot::classes::RenderingServer;
 use godot::prelude::*;
 
-use crate::godot_classes::{dcl_android_plugin::DclAndroidPlugin, dcl_ios_plugin::DclIosPlugin};
-
 /// Thermal state levels
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ThermalState {
@@ -461,8 +459,8 @@ pub struct DclDynamicGraphicsManager {
     state: DynamicGraphicsState,
 
     /// Godot-specific fields
-    has_ios_plugin: bool,
-    has_android_plugin: bool,
+    /// The native host registered device readings (a phone).
+    has_device_host: bool,
     viewport_rid: Option<Rid>,
     render_time_enabled: bool,
 
@@ -488,14 +486,12 @@ pub struct DclDynamicGraphicsManager {
 #[godot_api]
 impl INode for DclDynamicGraphicsManager {
     fn init(base: Base<Node>) -> Self {
-        let has_ios_plugin = DclIosPlugin::is_available();
-        let has_android_plugin = DclAndroidPlugin::is_available();
+        let has_device_host = dcl_core::platform::device().is_some();
 
         Self {
             base,
             state: DynamicGraphicsState::new(),
-            has_ios_plugin,
-            has_android_plugin,
+            has_device_host,
             viewport_rid: None,
             render_time_enabled: false,
             // Thermal FPS cap state
@@ -520,15 +516,13 @@ impl INode for DclDynamicGraphicsManager {
             self.render_time_enabled = false;
 
             godot_print!(
-                "[DynamicGraphics] ready: viewport acquired, render time measurement deferred (iOS={}, Android={})",
-                self.has_ios_plugin,
-                self.has_android_plugin
+                "[DynamicGraphics] ready: viewport acquired, render time measurement deferred (device host={})",
+                self.has_device_host
             );
         } else {
             godot_print!(
-                "[DynamicGraphics] WARNING: could not get viewport (iOS={}, Android={})",
-                self.has_ios_plugin,
-                self.has_android_plugin
+                "[DynamicGraphics] WARNING: could not get viewport (device host={})",
+                self.has_device_host
             );
         }
     }
@@ -781,13 +775,13 @@ impl DclDynamicGraphicsManager {
 
     /// Get thermal and charging state from the platform in a single call
     fn get_platform_metrics(&self) -> (String, String) {
-        if self.has_ios_plugin {
-            return DclIosPlugin::get_thermal_and_charging_state();
+        match dcl_core::platform::device() {
+            Some(device) => {
+                let readings = device.readings();
+                (readings.thermal_state, readings.charging_state)
+            }
+            None => ("nominal".to_string(), "unknown".to_string()),
         }
-        if self.has_android_plugin {
-            return DclAndroidPlugin::get_thermal_and_charging_state();
-        }
-        ("nominal".to_string(), "unknown".to_string())
     }
 
     fn get_total_render_time_ms(&self) -> f64 {

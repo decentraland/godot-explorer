@@ -439,12 +439,6 @@ fn main() -> Result<(), anyhow::Error> {
                         .takes_value(false),
                 )
                 .arg(
-                    Arg::new("plugin")
-                        .long("plugin")
-                        .help("Update dcl-godot-ios plugin")
-                        .takes_value(false),
-                )
-                .arg(
                     Arg::new("lib")
                         .long("lib")
                         .help("Update Rust library (libdclgodot)")
@@ -723,7 +717,7 @@ fn main() -> Result<(), anyhow::Error> {
                     if hub_viewer && platform == "android" {
                         print_message(
                             MessageType::Warning,
-                            "--hub-viewer: Android Kotlin logs (dcl-godot-android) won't show — they reach only logcat, which is now off.",
+                            "--hub-viewer: Android Kotlin logs (the RN host) won't show — they reach only logcat, which is now off.",
                         );
                     }
                 } else if platform == "ios" {
@@ -1055,7 +1049,6 @@ fn main() -> Result<(), anyhow::Error> {
         }
         ("update-ios-xcode", sm) => ios_xcode::update_ios_xcode(
             sm.is_present("godot"),
-            sm.is_present("plugin"),
             sm.is_present("lib"),
             sm.is_present("pck"),
         ),
