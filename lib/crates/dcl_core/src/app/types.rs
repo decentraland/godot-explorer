@@ -154,6 +154,8 @@ pub enum EngineCommand {
     SetRendering(bool),
     /// The avatar the core computed from an edit; the engine renders it.
     ApplyAvatar(super::AvatarState),
+    /// The profile the core saved, as JSON content: the engine makes it the player's own.
+    CommitAvatar(String),
     Control(super::Control),
 }
 

@@ -43,6 +43,9 @@ fn signal_payload(command: &EngineCommand) -> Option<(&'static str, VarDictionar
         EngineCommand::HideAvatarPreview => Some(("hide_avatar_preview", VarDictionary::new())),
         EngineCommand::SetRendering(_) => None,
         EngineCommand::ApplyAvatar(avatar) => Some(("apply_avatar", avatar_args(avatar))),
+        EngineCommand::CommitAvatar(profile) => {
+            Some(("commit_avatar", vdict! { "profile" => profile.clone() }))
+        }
         EngineCommand::Control(control) => control_payload(control),
     }
 }

@@ -17,6 +17,7 @@ import {
 } from '../src/backpack/mockApi';
 import { MOCK_CATALOG, MOCK_WEARABLES } from '../src/backpack/mockCatalog';
 import { EmptyCopy, showsCredits } from '../src/backpack/platformPolicy';
+import { registerModalApi } from '../src/modals/bridge';
 
 const mockCore = {
   ...createMockCore(),
@@ -307,5 +308,47 @@ describe('Backpack layouts', () => {
     expect(full.tree.root.findAllByType(CreditsBadge)).toHaveLength(0);
     const emotes = await mount({ credits: true, initial: { mode: 'emotes' } });
     expect(emotes.tree.root.findAllByType(CreditsBadge)).toHaveLength(0);
+  });
+});
+
+describe('Backpack data', () => {
+  it('adds what the account owns after the catalog', async () => {
+    const sweater = MOCK_WEARABLES.find(w => w.name === 'xmas_sweater')!;
+    const { tree } = await mount({
+      initial: { tab: 'clothing', filter: 'collectibles' },
+      api: {
+        catalog: {
+          ...MOCK_CATALOG,
+          wearables: MOCK_WEARABLES.filter(w => w !== sweater),
+        },
+        owned: { wearables: [sweater], emotes: [] },
+      },
+    });
+    expect(find(tree, 'xmas_sweater')).toBeDefined();
+  });
+
+  it('saves the avatar once when the Backpack goes away', async () => {
+    const { tree, api } = await mount();
+    expect(api.saves).toBe(0);
+    act(() => tree.unmount());
+    expect(api.saves).toBe(1);
+  });
+
+  it('asks to try again when the save fails', async () => {
+    const show = jest.fn();
+    registerModalApi({
+      show,
+      dismiss: jest.fn(),
+      askPassword: jest.fn(),
+      isOpen: () => false,
+    });
+    const { tree, api } = await mount({ api: { saveFails: true } });
+    await act(async () => tree.unmount());
+    expect(show).toHaveBeenCalledWith(
+      expect.objectContaining({ key: 'backpack-save-failed' }),
+    );
+    await act(async () => show.mock.calls[0][0].buttons[1].onPress());
+    expect(api.saves).toBe(2);
+    registerModalApi(null);
   });
 });

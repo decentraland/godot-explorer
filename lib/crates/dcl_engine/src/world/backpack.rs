@@ -10,8 +10,10 @@ use godot::prelude::*;
 use super::state;
 use crate::avatars::avatar::build::update_from_profile;
 use crate::avatars::avatar::emote_load::async_play_emote_or_stash;
+use crate::avatars::dcl_user_profile::DclUserProfile;
 use crate::avatars::emotes;
 use crate::avatars::preview::AvatarPreview;
+use crate::comms::profile::{SerializedProfile, UserProfile};
 use crate::engine::local_task::{await_all, next_frame};
 use crate::fetcher::globals;
 
@@ -167,6 +169,36 @@ impl Backpack {
         ) {
             self.emit_avatar();
         }
+    }
+
+    /// Makes the profile the core saved the player's own: the in-world avatar, comms and the
+    /// core follow the identity's `profile_changed`.
+    pub fn commit_avatar(&self, content: &str) {
+        let content = match serde_json::from_str::<SerializedProfile>(content) {
+            Ok(content) => content,
+            Err(error) => {
+                tracing::error!("backpack: saved profile not readable: {error}");
+                return;
+            }
+        };
+        let mut identity = globals::player_identity();
+        let base_url = identity
+            .bind()
+            .get_profile_or_null()
+            .map(|profile| profile.bind().inner.base_url.clone())
+            .unwrap_or_else(|| {
+                let realm = globals::realm();
+                let content_url = realm.bind().get_profile_content_url();
+                format!("{content_url}contents/")
+            });
+        let profile = UserProfile {
+            version: content.version as u32,
+            content,
+            base_url,
+        };
+        identity
+            .bind_mut()
+            .set_profile(DclUserProfile::from_gd(profile));
     }
 
     pub fn focus_camera(&self, target: &str) {

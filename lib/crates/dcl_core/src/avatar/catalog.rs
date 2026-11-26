@@ -2,6 +2,7 @@
 
 use serde_json::Value;
 
+use super::owned::{item_urn, TokenUrns};
 use super::taxonomy::is_base_wearable;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -31,21 +32,39 @@ impl CatalogItem {
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Catalog {
     items: Vec<CatalogItem>,
+    tokens: TokenUrns,
 }
 
 impl Catalog {
     pub fn new(items: Vec<CatalogItem>) -> Self {
-        Self { items }
+        Self {
+            items,
+            tokens: TokenUrns::new(),
+        }
     }
 
     pub fn items(&self) -> &[CatalogItem] {
         &self.items
     }
 
+    /// The item by its URN or by one of its tokens' URNs.
     pub fn find(&self, urn: &str) -> Option<&CatalogItem> {
+        let urn = item_urn(urn);
         self.items
             .iter()
             .find(|item| item.urn.eq_ignore_ascii_case(urn))
+    }
+
+    /// The owned token URN a deployed profile carries for each owned item.
+    pub fn tokens(&self) -> &TokenUrns {
+        &self.tokens
+    }
+
+    /// Replaces the owned items (an account's purchases change) and keeps the rest.
+    pub fn set_owned(&mut self, owned: Vec<CatalogItem>, tokens: TokenUrns) {
+        self.items.retain(|item| !item.collectible);
+        self.merge(owned);
+        self.tokens = tokens;
     }
 
     /// Adds the items whose urn is not there yet.
@@ -58,7 +77,7 @@ impl Catalog {
     }
 }
 
-const RARITIES: [&str; 8] = [
+pub(super) const RARITIES: [&str; 8] = [
     "common",
     "uncommon",
     "rare",
@@ -69,7 +88,7 @@ const RARITIES: [&str; 8] = [
     "unique",
 ];
 
-fn english_name(raw: &Value) -> String {
+pub(super) fn english_name(raw: &Value) -> String {
     raw.get("i18n")
         .and_then(Value::as_array)
         .and_then(|entries| {
@@ -84,7 +103,7 @@ fn english_name(raw: &Value) -> String {
         .to_string()
 }
 
-fn body_shapes_of(raw: &Value) -> Vec<String> {
+pub(super) fn body_shapes_of(raw: &Value) -> Vec<String> {
     let mut shapes: Vec<String> = Vec::new();
     let reps = raw
         .pointer("/data/representations")

@@ -229,6 +229,8 @@ int8_t
 uniffi_dcl_core_fn_func_is_removable_category(RustBuffer category,
                                               RustCallStatus *uniffi_out_err);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_load_avatar_catalog();
+/*handle*/ uint64_t uniffi_dcl_core_fn_func_load_owned_avatar_items();
+/*handle*/ uint64_t uniffi_dcl_core_fn_func_save_avatar();
 int8_t
 uniffi_dcl_core_fn_func_connection_healthy(RustCallStatus *uniffi_out_err);
 void uniffi_dcl_core_fn_func_connection_reset(RustCallStatus *uniffi_out_err);
@@ -527,6 +529,8 @@ uint16_t uniffi_dcl_core_checksum_func_avatar_palette();
 uint16_t uniffi_dcl_core_checksum_func_base_emotes();
 uint16_t uniffi_dcl_core_checksum_func_is_removable_category();
 uint16_t uniffi_dcl_core_checksum_func_load_avatar_catalog();
+uint16_t uniffi_dcl_core_checksum_func_load_owned_avatar_items();
+uint16_t uniffi_dcl_core_checksum_func_save_avatar();
 uint16_t uniffi_dcl_core_checksum_func_connection_healthy();
 uint16_t uniffi_dcl_core_checksum_func_connection_reset();
 uint16_t uniffi_dcl_core_checksum_func_connection_retry();
@@ -4971,6 +4975,28 @@ NativeDclCore::NativeDclCore(
             return this->cpp_uniffi_dcl_core_fn_func_load_avatar_catalog(
                 rt, thisVal, args, count);
           });
+  props["ubrn_uniffi_dcl_core_fn_func_load_owned_avatar_items"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_load_owned_avatar_items"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_load_owned_avatar_items(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_save_avatar"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(rt,
+                                    "ubrn_uniffi_dcl_core_fn_func_save_avatar"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_save_avatar(rt, thisVal,
+                                                                 args, count);
+          });
   props["ubrn_uniffi_dcl_core_fn_func_connection_healthy"] =
       jsi::Function::createFromHostFunction(
           rt,
@@ -6627,6 +6653,29 @@ NativeDclCore::NativeDclCore(
           [this](jsi::Runtime &rt, const jsi::Value &thisVal,
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_dcl_core_checksum_func_load_avatar_catalog(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_load_owned_avatar_items"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_load_owned_avatar_items"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this
+                ->cpp_uniffi_dcl_core_checksum_func_load_owned_avatar_items(
+                    rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_save_avatar"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_save_avatar"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_save_avatar(
                 rt, thisVal, args, count);
           });
   props["ubrn_uniffi_dcl_core_checksum_func_connection_healthy"] =
@@ -8547,6 +8596,22 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_load_avatar_catalog(
   return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
                                                          value);
 }
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_load_owned_avatar_items(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_fn_func_load_owned_avatar_items();
+
+  return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
+                                                         value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_save_avatar(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_fn_func_save_avatar();
+
+  return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
+                                                         value);
+}
 jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_connection_healthy(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
@@ -10188,6 +10253,21 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_load_avatar_catalog(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
   auto value = uniffi_dcl_core_checksum_func_load_avatar_catalog();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value
+NativeDclCore::cpp_uniffi_dcl_core_checksum_func_load_owned_avatar_items(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_load_owned_avatar_items();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_save_avatar(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_save_avatar();
 
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }

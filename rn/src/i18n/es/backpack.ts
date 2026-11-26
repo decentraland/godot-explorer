@@ -12,4 +12,7 @@ export const backpack: Partial<Record<keyof typeof en, string>> = {
   BACKPACK_COLLECTIBLES: 'Coleccionables',
   BACKPACK_EQUIPPED: 'Equipado',
   BACKPACK_NOTHING_HERE_YET: 'Aquí no hay nada todavía',
+  BACKPACK_SAVE_FAILED: 'No se guardó tu avatar',
+  BACKPACK_SAVE_FAILED_BODY:
+    'Revisa tu conexión a internet y vuelve a intentarlo.',
 };

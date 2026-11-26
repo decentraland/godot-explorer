@@ -48,4 +48,7 @@ export const backpack = {
   BACKPACK_COLOR_FACIAL_HAIR: 'Facial hair color',
   BACKPACK_COLOR_EYEBROWS: 'Eyebrows color',
   BACKPACK_COLOR_EYES: 'Eye color',
+  BACKPACK_SAVE_FAILED: "Your avatar wasn't saved",
+  BACKPACK_SAVE_FAILED_BODY:
+    'Please check your internet connection and try again.',
 } as const;

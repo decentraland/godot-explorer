@@ -315,6 +315,7 @@ interface NativeModuleInterface {
     uniffi_out_err: UniffiRustCallStatus,
   ): Uint8Array;
   ubrn_uniffi_dcl_core_fn_func_load_avatar_catalog(): bigint;
+  ubrn_uniffi_dcl_core_fn_func_load_owned_avatar_items(): bigint;
   ubrn_uniffi_dcl_core_fn_func_mark_notifications_read(ids: Uint8Array): bigint;
   ubrn_uniffi_dcl_core_fn_func_marketplace_browse_url(
     section: Uint8Array,
@@ -353,6 +354,7 @@ interface NativeModuleInterface {
     rails: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus,
   ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_save_avatar(): bigint;
   ubrn_uniffi_dcl_core_fn_func_scene_link_url(
     realm: Uint8Array,
     x: number,
@@ -631,6 +633,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_jump_position_url(): number;
   ubrn_uniffi_dcl_core_checksum_func_jump_realm_url(): number;
   ubrn_uniffi_dcl_core_checksum_func_load_avatar_catalog(): number;
+  ubrn_uniffi_dcl_core_checksum_func_load_owned_avatar_items(): number;
   ubrn_uniffi_dcl_core_checksum_func_mark_notifications_read(): number;
   ubrn_uniffi_dcl_core_checksum_func_marketplace_browse_url(): number;
   ubrn_uniffi_dcl_core_checksum_func_marketplace_item_url(): number;
@@ -645,6 +648,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_resolve_destination_with_secret(): number;
   ubrn_uniffi_dcl_core_checksum_func_review_check(): number;
   ubrn_uniffi_dcl_core_checksum_func_review_fire(): number;
+  ubrn_uniffi_dcl_core_checksum_func_save_avatar(): number;
   ubrn_uniffi_dcl_core_checksum_func_scene_link_url(): number;
   ubrn_uniffi_dcl_core_checksum_func_seasonal_skin(): number;
   ubrn_uniffi_dcl_core_checksum_func_seasonal_skin_take_fetch_attempt(): number;

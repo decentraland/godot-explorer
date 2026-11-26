@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use rand::{rngs::StdRng, SeedableRng};
 
-use crate::avatar::{self, Catalog};
+use crate::avatar::{self, item_urn, Catalog, TokenUrns};
 
 pub use control::{
     AvatarState, CameraFocus, CameraMode, ChatLine, ChatProfile, ColorTarget, Control, HudInsets,
@@ -41,6 +41,8 @@ pub struct App {
     /// The preview is shown over a running world (the in-world backpack), not as a state of its own.
     overlay: bool,
     catalog: Catalog,
+    /// Token URNs of the collectibles the engine reported worn; the avatar keeps item URNs.
+    worn_tokens: TokenUrns,
     rng: StdRng,
 }
 
@@ -58,6 +60,7 @@ impl App {
             last_hud: None,
             overlay: false,
             catalog: Catalog::default(),
+            worn_tokens: TokenUrns::new(),
             rng: StdRng::from_entropy(),
         }
     }
@@ -83,6 +86,36 @@ impl App {
 
     pub fn catalog(&self) -> &Catalog {
         &self.catalog
+    }
+
+    pub fn catalog_mut(&mut self) -> &mut Catalog {
+        &mut self.catalog
+    }
+
+    /// The token URN to deploy for each collectible, by lowercase item URN.
+    pub fn avatar_tokens(&self) -> TokenUrns {
+        let mut tokens = self.worn_tokens.clone();
+        tokens.extend(self.catalog.tokens().clone());
+        tokens
+    }
+
+    /// The engine takes the saved profile (JSON content) as the player's own.
+    pub fn commit_avatar(&mut self, profile: String) {
+        self.send(EngineCommand::CommitAvatar(profile));
+    }
+
+    /// Item URNs in place of token URNs, so the avatar compares with the catalog; the tokens are
+    /// kept for the next deploy.
+    fn with_item_urns(&mut self, mut avatar: AvatarState) -> AvatarState {
+        for urn in avatar.wearables.iter_mut().chain(avatar.emotes.iter_mut()) {
+            let item = item_urn(urn).to_string();
+            if item != *urn {
+                self.worn_tokens
+                    .insert(item.to_lowercase(), std::mem::take(urn));
+                *urn = item;
+            }
+        }
+        avatar
     }
 
     #[cfg(test)]
@@ -314,6 +347,7 @@ impl App {
                 self.events.loading_detail(&detail)
             }
             (EngineEvent::Avatar(avatar), _) => {
+                let avatar = self.with_item_urns(avatar);
                 self.events.avatar_changed(&avatar);
                 self.avatar = Some(avatar);
             }

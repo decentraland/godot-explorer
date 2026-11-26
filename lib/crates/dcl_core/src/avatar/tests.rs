@@ -290,3 +290,116 @@ fn the_base_catalog_is_read_from_the_lambdas() {
         Err(CatalogError::Network(_))
     ));
 }
+
+const HELMET: &str =
+    "urn:decentraland:matic:collections-v2:0x91add3f3a17b1e4c7cf85f2489d2ab3526d9e305:6";
+
+fn owned_page(total: u64) -> serde_json::Value {
+    serde_json::json!({
+        "elements": [{
+            "type": "on-chain",
+            "urn": HELMET,
+            "individualData": [{ "id": format!("{HELMET}:6318"), "tokenId": "6318" }],
+            "name": "Secret Helmet #2",
+            "rarity": "mythic",
+            "category": "helmet",
+            "entity": {
+                "content": [
+                    { "file": "male/helmet.glb", "hash": "QmModel" },
+                    { "file": "thumbnail.png", "hash": "QmThumb" }
+                ],
+                "metadata": {
+                    "id": HELMET,
+                    "thumbnail": "thumbnail.png",
+                    "i18n": [{ "code": "en", "text": "Secret Helmet" }],
+                    "data": {
+                        "category": "helmet",
+                        "representations": [{ "bodyShapes": [MALE] }]
+                    }
+                }
+            }
+        }, {
+            "urn": "urn:decentraland:matic:collections-v2:0xdead:1",
+            "individualData": [],
+            "entity": { "content": [], "metadata": { "thumbnail": "thumbnail.png" } }
+        }],
+        "totalAmount": total,
+        "pageNum": 1,
+        "pageSize": 100
+    })
+}
+
+#[test]
+fn parses_owned_wearables_with_their_tokens() {
+    let page = parse_owned_wearables(&owned_page(1).to_string(), "https://peer.test/content/");
+    assert_eq!(
+        page.items,
+        vec![CatalogItem {
+            urn: HELMET.into(),
+            name: "Secret Helmet".into(),
+            category: "helmet".into(),
+            thumbnail: "https://peer.test/content/contents/QmThumb".into(),
+            rarity: "mythic".into(),
+            body_shapes: vec![MALE.into()],
+            collectible: true,
+        }]
+    );
+    assert_eq!(
+        page.tokens,
+        vec![(HELMET.to_lowercase(), format!("{HELMET}:6318"))]
+    );
+    assert_eq!((page.total, page.received), (1, 2));
+}
+
+#[test]
+fn token_urns_resolve_to_their_item() {
+    let token = format!("{HELMET}:6318");
+    assert_eq!(item_urn(&token), HELMET);
+    assert_eq!(item_urn(HELMET), HELMET);
+    assert_eq!(item_urn(MALE), MALE);
+    let third_party = "urn:decentraland:matic:collections-thirdparty:brand:coll:item";
+    assert_eq!(item_urn(third_party), third_party);
+
+    let mut catalog = catalog();
+    let owned = parse_owned_wearables(&owned_page(1).to_string(), "c/");
+    let tokens: TokenUrns = owned.tokens.into_iter().collect();
+    catalog.set_owned(owned.items, tokens);
+    assert_eq!(
+        catalog.find(&token).map(|item| item.urn.as_str()),
+        Some(HELMET)
+    );
+    assert_eq!(catalog.tokens().get(&HELMET.to_lowercase()), Some(&token));
+    // A new owned list replaces the collectibles, the base items stay.
+    catalog.set_owned(Vec::new(), TokenUrns::new());
+    assert!(catalog.find(HELMET).is_none());
+    assert!(catalog.find(&format!("{BASE}eyes_00")).is_some());
+}
+
+#[tokio::test]
+async fn owned_wearables_page_through_the_explorer_lambdas() {
+    use crate::profile::{Endpoints, HttpReply, HttpRequest, Transport};
+    use std::sync::Mutex;
+
+    struct Pages(Mutex<Vec<String>>);
+    #[async_trait::async_trait]
+    impl Transport for Pages {
+        async fn send(&self, request: HttpRequest) -> Result<HttpReply, String> {
+            self.0.lock().unwrap().push(request.url);
+            Ok(HttpReply {
+                status: 200,
+                body: owned_page(150).to_string(),
+            })
+        }
+    }
+    let pages = Pages(Mutex::default());
+    let endpoints = Endpoints::new("https://peer.test/lambdas/", "https://peer.test/content/");
+    let (items, tokens) = owned_wearables(&pages, &endpoints, "0xabc").await.unwrap();
+    let urls = pages.0.lock().unwrap().clone();
+    assert_eq!(urls.len(), 2);
+    assert!(urls[0].starts_with(
+        "https://peer.test/explorer/0xabc/wearables?pageNum=1&pageSize=100&collectionType=on-chain"
+    ));
+    assert!(urls[1].contains("pageNum=2"));
+    assert_eq!(items.len(), 2);
+    assert_eq!(tokens.len(), 1);
+}

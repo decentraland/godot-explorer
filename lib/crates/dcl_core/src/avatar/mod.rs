@@ -2,6 +2,7 @@
 //! the emote slots and randomizing produce. The engine renders the result; it decides nothing.
 
 mod catalog;
+mod owned;
 mod rules;
 mod service;
 mod taxonomy;
@@ -10,6 +11,10 @@ mod taxonomy;
 mod tests;
 
 pub use catalog::{parse_wearables, Catalog, CatalogItem};
+pub use owned::{
+    item_urn, owned_emotes, owned_wearables, parse_owned_emotes, parse_owned_wearables, OwnedEmote,
+    TokenUrns,
+};
 pub use rules::{
     equip, randomize, set_body_shape, set_color, set_emote_slot, unequip, AvatarError,
 };

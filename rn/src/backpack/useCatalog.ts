@@ -20,9 +20,19 @@ export function useCatalog(api: BackpackApi): {
     api
       .loadCatalog()
       .then(loaded => {
-        if (!cancelled) {
-          setCatalog({ status: 'ready', ...loaded });
+        if (cancelled) {
+          return;
         }
+        setCatalog({ status: 'ready', ...loaded });
+        // Owned items arrive after the base ones; without them the base catalog still works.
+        api
+          .loadOwned()
+          .then(owned => {
+            if (!cancelled) {
+              setCatalog({ status: 'ready', ...withOwned(loaded, owned) });
+            }
+          })
+          .catch(() => {});
       })
       .catch(() => {
         if (!cancelled) {
@@ -36,4 +46,16 @@ export function useCatalog(api: BackpackApi): {
 
   const retry = useCallback(() => setAttempt(count => count + 1), []);
   return { catalog, retry };
+}
+
+/** The catalog plus the owned items it does not list yet. */
+export function withOwned(catalog: Catalog, owned: Catalog): Catalog {
+  const add = <T extends { id: string }>(base: T[], more: T[]): T[] => {
+    const known = new Set(base.map(item => item.id.toLowerCase()));
+    return [...base, ...more.filter(item => !known.has(item.id.toLowerCase()))];
+  };
+  return {
+    wearables: add(catalog.wearables, owned.wearables),
+    emotes: add(catalog.emotes, owned.emotes),
+  };
 }

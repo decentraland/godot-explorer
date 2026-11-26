@@ -85,6 +85,8 @@ export function createMockAvatarApi(avatar: MockAvatar): AvatarApi {
       );
       return CATALOG;
     },
+    loadOwnedAvatarItems: async () => ({ wearables: [], emotes: [] }),
+    saveAvatar: async () => false,
     avatarPalette: target => PALETTES[target],
     baseEmotes: () =>
       EMOTES.map(([id, name]) => ({
