@@ -551,7 +551,10 @@ func _unset_avatar_modifier_area():
 	_on_set_avatar_modifier_area([])
 
 
-func async_update_avatar_from_profile(profile: DclUserProfile):
+## scene_look: a scene's AvatarShape applied over the profile; null renders the profile look.
+func async_update_avatar_from_profile(
+	profile: DclUserProfile, scene_look: DclAvatarWireFormat = null
+):
 	_profile_status = ""
 	_profile_ready = true
 	# The reveal waits for the body and for the ground too, so the give-up clock
@@ -579,7 +582,7 @@ func async_update_avatar_from_profile(profile: DclUserProfile):
 	if avatar_id_changed:
 		try_show()
 
-	await async_update_avatar(avatar, new_avatar_name)
+	await async_update_avatar(scene_look if scene_look != null else avatar, new_avatar_name)
 
 
 func async_update_avatar(

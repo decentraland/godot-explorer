@@ -38,26 +38,19 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
 // (e.g. PBBillboard.target_entity landed mid-RC and broke the billboard itest).
 // Bump the pin deliberately and update any affected generated-struct usages.
 //
-// Pinned to the npm `next` release built from protocol `main` commit 694568d
-// (PR #495 merged) — the first build that ships `PBSkybox`/`PBSun`/
-// `PBEnvironmentFog` and `decentraland/common/gradient.proto` for scene sky
-// control. It also carries the decentraland/pulse protos + options.proto
-// (quantization FieldOptions), TouchscreenInputControls/UiInputBinding, the rfc4
-// `PlayerEmote` extension fields with `Chat.forwarded_from`, `font_src` on the
-// four text components and `PBAvatarEmoteCommand.state`, so the build-time
-// patches lib/build.rs keeps for those now no-op.
+// Pinned to the npm `next` release built from protocol `main` commit 551f65b
+// (PR #506 merged: `AvatarShape` on player entities and
+// `AvatarEquippedData.wearables`). It also carries everything earlier pins
+// brought: `PBSkybox`/`PBSun`/`PBEnvironmentFog` and gradient.proto, the
+// decentraland/pulse protos + options.proto (quantization FieldOptions),
+// TouchscreenInputControls/UiInputBinding, the rfc4 `PlayerEmote` extension
+// fields with `Chat.forwarded_from`, `font_src` on the four text components
+// and `PBAvatarEmoteCommand.state`, so the build-time patches lib/build.rs
+// keeps for those now no-op.
 const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some(
-    "https://registry.npmjs.org/@dcl/protocol/-/protocol-1.0.0-40563911091.commit-694568d.tgz",
+    "https://registry.npmjs.org/@dcl/protocol/-/protocol-1.0.0-43896819135.commit-551f65b.tgz",
 );
 const PROTOCOL_NPM_DIST_TAG: &str = "next";
-
-// POC: protocol PR #506 (AvatarShape on player entities + AvatarEquippedData.wearables) has no
-// npm build yet, so its two proto files are laid over the pinned tarball from the PR head commit.
-const PROTOCOL_PR_506_COMMIT: &str = "c43d1e18f53b1a0b6c17855daac32e9057fe0176";
-const PROTOCOL_PR_506_FILES: [&str; 2] = [
-    "proto/decentraland/sdk/components/avatar_equipped_data.proto",
-    "proto/decentraland/sdk/components/avatar_shape.proto",
-];
 
 fn get_protocol_url() -> Result<String, anyhow::Error> {
     if let Some(url) = PROTOCOL_FIXED_VERSION_URL {
@@ -108,15 +101,6 @@ pub fn install_dcl_protocol() -> Result<(), anyhow::Error> {
         create_directory_all(&dest_path)?;
         let mut file = File::create(dest_path)?;
         io::copy(&mut entry, &mut file)?;
-    }
-
-    for file in PROTOCOL_PR_506_FILES {
-        let url =
-            format!("https://raw.githubusercontent.com/decentraland/protocol/{PROTOCOL_PR_506_COMMIT}/{file}");
-        let bytes = http_get_bytes(&url, "Download of a protocol PR #506 file")?;
-        let dest_path = Path::new(destination_path.as_str()).join(file);
-        create_directory_all(&dest_path)?;
-        fs::write(dest_path, bytes)?;
     }
 
     spinner.finish_with_message("✅ Protocol files installed");

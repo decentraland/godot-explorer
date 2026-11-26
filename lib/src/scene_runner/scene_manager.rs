@@ -2784,6 +2784,13 @@ impl SceneManager {
         };
         let signal_data = (*scene_id, scene.scene_entity_definition.id.clone());
 
+        let entity_id = &scene.scene_entity_definition.id;
+        let reload_alive = self
+            .scenes
+            .values()
+            .any(|other| &other.scene_entity_definition.id == entity_id);
+        crate::avatars::scene_look::forget_removed_scene(*scene_id, entity_id, reload_alive);
+
         // Drop the scene's external-content bookkeeping so a reload restarts
         // its counters from zero.
         crate::content::external_content::clear_scene(&scene.scene_entity_definition.id);
@@ -3447,6 +3454,10 @@ impl SceneManager {
         }
 
         self.last_current_parcel_scene_id = self.current_parcel_scene_id;
+        let mut avatars = DclGlobal::singleton().bind().avatars.clone();
+        avatars
+            .bind_mut()
+            .set_current_scene_for_looks(self.current_parcel_scene_id);
 
         let scene_id = Variant::from(self.current_parcel_scene_id.0);
         self.base_mut()

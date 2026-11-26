@@ -8,6 +8,7 @@ use godot::classes::{
 };
 use godot::prelude::*;
 
+use super::{avatar_type::DclAvatarWireFormat, scene_look::SceneLooks};
 use crate::{
     auth::wallet::AsH160,
     avatars::dcl_user_profile::DclUserProfile,
@@ -140,6 +141,10 @@ pub struct AvatarScene {
     // so the cache survives cross-session.
     impostor_cache_last_used: HashMap<String, i64>,
     impostor_cache_last_cleanup_ms: i64,
+
+    pub(super) scene_looks: SceneLooks,
+    /// Wearable-definition promises an outfit's `AvatarEquippedData` visibility waits for.
+    pub(super) pending_equipped_visibility: HashMap<SceneEntityId, Vec<InstanceId>>,
 }
 
 #[godot_api]
@@ -163,6 +168,8 @@ impl INode for AvatarScene {
             impostor_free_instances: (0..IMPOSTOR_MAX_INSTANCES).rev().collect(),
             impostor_cache_last_used: HashMap::new(),
             impostor_cache_last_cleanup_ms: 0,
+            scene_looks: SceneLooks::default(),
+            pending_equipped_visibility: HashMap::new(),
         }
     }
 
@@ -181,6 +188,8 @@ impl INode for AvatarScene {
         if !self.pending_avatars.is_empty() {
             self.promote_pending_avatar();
         }
+        self.apply_dirty_scene_looks();
+        self.resolve_pending_equipped_visibility();
         self.maybe_run_cache_cleanup();
     }
 }
@@ -789,6 +798,16 @@ impl AvatarScene {
         self.update_avatar(SceneEntityId::PLAYER, &profile.bind().inner);
     }
 
+    /// What the local player's avatar renders for `profile`: the current scene's `AvatarShape` on
+    /// `engine.PlayerEntity` applied over it, or null for the profile look.
+    #[func]
+    pub fn get_player_scene_look(
+        &self,
+        profile: Gd<DclUserProfile>,
+    ) -> Option<Gd<DclAvatarWireFormat>> {
+        self.scene_look_for(SceneEntityId::PLAYER, &profile.bind().inner.content.avatar)
+    }
+
     #[func]
     pub fn update_avatar_transform_with_godot_transform(
         &mut self,
@@ -1306,13 +1325,6 @@ impl AvatarScene {
         }
     }
 
-    /// Called by the local player's avatar after it loads: `visible_urns` are the wearables that
-    /// ended up rendered. Writes `AvatarEquippedData.wearables[].visible` for the player.
-    #[func]
-    pub fn set_player_equipped_visibility(&mut self, visible_urns: PackedStringArray) {
-        self.apply_player_equipped_visibility(&visible_urns);
-    }
-
     #[func]
     pub fn update_dcl_avatar_by_alias(&mut self, alias: u32, profile: Gd<DclUserProfile>) {
         self.update_avatar_by_alias(alias, &profile.bind().inner);
@@ -1489,8 +1501,8 @@ impl AvatarScene {
         }
     }
 
-    const FROM_ENTITY_ID: u16 = 32;
-    const MAX_ENTITY_ID: u16 = 256;
+    pub(crate) const FROM_ENTITY_ID: u16 = 32;
+    pub(crate) const MAX_ENTITY_ID: u16 = 256;
 
     // This function is not optimized, it will iterate over all the entities but this happens only when add an player
     fn get_next_entity_id(&self) -> Result<SceneEntityId, &'static str> {
@@ -1698,6 +1710,8 @@ impl AvatarScene {
             self.last_updated_profile.remove(&entity_id);
             self.last_movement_timestamp.remove(&alias);
             self.last_position_index.remove(&alias);
+            self.forget_entity_looks(entity_id);
+            self.pending_equipped_visibility.remove(&entity_id);
 
             // Remove from tree first, then queue_free (correct order)
             self.base_mut()
@@ -2118,11 +2132,12 @@ impl AvatarScene {
         }
         self.last_updated_profile.insert(entity_id, profile.clone());
 
+        let look = self.scene_look_for(entity_id, &profile.content.avatar);
         if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(&entity_id) {
             let dcl_user_profile = DclUserProfile::from_gd(profile.clone());
             avatar_scene.call(
                 "async_update_avatar_from_profile",
-                &[dcl_user_profile.to_variant()],
+                &[dcl_user_profile.to_variant(), look.to_variant()],
             );
         }
 
@@ -2152,7 +2167,7 @@ impl AvatarScene {
         let avatar_equipped_data_value = avatar_equipped_data_component
             .get(&entity_id)
             .and_then(|v| v.value.clone());
-        // Same outfit: keep the visibility already resolved (the avatar will not reload).
+        // Same outfit: keep the visibility already resolved until it is recomputed below.
         if let (Some(new), Some(old)) = (
             new_avatar_equipped_data.as_mut(),
             &avatar_equipped_data_value,
@@ -2176,6 +2191,7 @@ impl AvatarScene {
             SceneCrdtStateProtoComponents::get_avatar_equipped_data_mut(&mut self.crdt_state)
                 .put(entity_id, new_avatar_equipped_data);
         }
+        self.request_equipped_visibility(entity_id, profile);
 
         let new_player_identity_data = Some(profile.content.to_pb_player_identity_data());
         let player_identity_data_component =

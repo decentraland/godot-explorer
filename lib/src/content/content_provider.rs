@@ -17,7 +17,10 @@ use tokio::sync::{oneshot, watch, RwLock, Semaphore};
 
 use crate::{
     auth::wallet::AsH160,
-    avatars::{dcl_user_profile::DclUserProfile, item::DclItemEntityDefinition},
+    avatars::{
+        dcl_user_profile::DclUserProfile, item::DclItemEntityDefinition,
+        scene_wearables::SceneWearableRegistry,
+    },
     content::content_mapping::DclContentMappingAndUrl,
     dcl::common::string::FindNthChar,
     godot_classes::{
@@ -175,6 +178,7 @@ pub struct ContentProvider {
     optimized_original_size: HashMap<String, ImageSize>,
     // URL base for optimized wearable/emote assets (e.g., "http://127.0.0.1:9090/")
     optimized_wearable_base_url: Option<String>,
+    pub(crate) scene_wearables: SceneWearableRegistry,
 }
 
 #[derive(Clone)]
@@ -415,6 +419,7 @@ impl INode for ContentProvider {
             // Default to the same URL used for scene optimized assets (CLI
             // override first, then the prod bucket).
             optimized_wearable_base_url: Some(format!("{}/", resolved_optimized_base_url())),
+            scene_wearables: SceneWearableRegistry::default(),
         }
     }
     fn ready(&mut self) {}
@@ -2125,6 +2130,9 @@ impl ContentProvider {
                 .unwrap_or(wearable_id.len());
             let wearable_id = wearable_id[0..token_id_pos].to_lowercase();
 
+            if self.scene_wearables.get(&wearable_id).is_some() {
+                continue;
+            }
             if let Some(promise) = self.get_cached_promise(&wearable_id) {
                 promise_ids.insert(promise.instance_id());
             } else {
@@ -2172,6 +2180,9 @@ impl ContentProvider {
         let token_id_pos = id.find_nth_char(6, ':').unwrap_or(id.len());
         let id = id[0..token_id_pos].to_lowercase();
 
+        if let Some(wearable) = self.scene_wearables.get(&id) {
+            return Some(DclItemEntityDefinition::from_gd(wearable));
+        }
         if let Some(promise) = self.get_cached_promise(&id) {
             if let Ok(results) = promise
                 .bind()

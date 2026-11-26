@@ -595,9 +595,8 @@ static func get_curated_wearable_list(
 	for wearable_id in wearables:
 		var wearable: DclItemEntityDefinition = Global.content_provider.get_wearable(wearable_id)
 		if DclItemEntityDefinition.is_valid_wearable(wearable, body_shape_id, false):
-			var category = wearable.get_category()
-			if not ret.wearables_by_category.has(category):
-				ret.wearables_by_category[category] = wearable
+			# Of two wearables with the same category, the later one is used.
+			ret.wearables_by_category[wearable.get_category()] = wearable
 		else:
 			printerr("invalid wearable ", wearable_id, " for body_shape ", body_shape_id)
 

@@ -1,9 +1,6 @@
 class_name Player
 extends CharacterBody3D
 
-const EquippedVisibility := preload(
-	"res://src/decentraland_components/avatar/player_equipped_visibility.gd"
-)
 const DEFAULT_CAMERA_FOV = 60.0
 const SPRINTING_CAMERA_FOV = 75.0
 
@@ -375,7 +372,6 @@ func _ready():
 		add_child(PlayerDesktopInput.new(self))
 
 	Global.camera_mode_set.connect(_on_global_camera_mode_set)
-	avatar.avatar_loaded.connect(EquippedVisibility.report.bind(avatar))
 
 	# Setup the outline system with the main camera
 	if outline_system:
@@ -445,7 +441,9 @@ func _on_player_profile_changed(new_profile: DclUserProfile):
 	# Only update avatar if the profile version has changed
 	if new_version != current_profile_version:
 		current_profile_version = new_version
-		avatar.async_update_avatar_from_profile(new_profile)
+		avatar.async_update_avatar_from_profile(
+			new_profile, Global.avatars.get_player_scene_look(new_profile)
+		)
 
 
 func _on_scene_changed(_scene_id: int) -> void:
