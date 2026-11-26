@@ -1784,11 +1784,11 @@ impl CommunicationManager {
         }
 
         // Tee to Pulse (quantized PlayerStateInput, unreliable-sequenced). The 10Hz/1Hz cadence
-        // is inherited from broadcast_position.gd — under the server's 20Hz disconnect cap.
+        // comes from app/position_broadcaster.rs — under the server's 20Hz disconnect cap.
         #[cfg(feature = "use_pulse")]
         if pulse_established {
             if let Some(pulse_room) = &mut self.pulse_room {
-                pulse_room.send_movement(&uncompressed_movement);
+                pulse_room.send_movement(&uncompressed_movement, Instant::now());
                 message_sent = true;
             }
         }
