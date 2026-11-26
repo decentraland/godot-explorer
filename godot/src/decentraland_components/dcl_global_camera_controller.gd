@@ -12,6 +12,7 @@ var global_virtual_camera_transform: Transform3D
 var last_virtual_camera_entity_node = null
 var last_camera_reached = true
 var transition_start_transform: Transform3D
+var transition_start_fov: float = DEFAULT_VIRTUAL_CAMERA_FOV
 var transition_time_counter: float = 0.0
 
 @onready var global_virtual_camera = PERSISTANT_CAMERA.instantiate()
@@ -54,6 +55,7 @@ func _process(delta: float) -> void:
 	var look_at_entity_node: Node3D = null
 	var transition_speed: float = 0.0
 	var transition_time: float = 0.0
+	var target_fov: float
 
 	if is_instance_valid(scene_virtual_camera) and scene_virtual_camera.entity_id > 0:
 		desired_target = Global.scene_runner.get_scene_entity_node_or_null_3d(
@@ -70,9 +72,13 @@ func _process(delta: float) -> void:
 
 		transition_speed = scene_virtual_camera.transition_speed
 		transition_time = scene_virtual_camera.transition_time
+		# Vertical in degrees, like Godot's default `keep_aspect` (KEEP_HEIGHT).
+		var fov: float = scene_virtual_camera.fov
+		target_fov = clampf(fov, 1.0, 179.0) if fov > 0.0 else DEFAULT_VIRTUAL_CAMERA_FOV
 		Global.scene_runner.raycast_use_cursor_position = true
 	else:
 		transition_time = DEFAULT_TRANSITION_TIME
+		target_fov = Global.player_camera_node.fov
 
 		# Latch guard: no active scene virtual camera, yet the cursor mode is still on while
 		# the transition is already marked complete (last_camera_reached). This happens when
@@ -112,10 +118,10 @@ func _process(delta: float) -> void:
 			var current_camera = get_viewport().get_camera_3d()
 			if current_camera != global_virtual_camera and is_instance_valid(current_camera):
 				global_virtual_camera.global_transform = current_camera.global_transform
+				global_virtual_camera.fov = current_camera.fov
 
 			# Make the global virtual camera current
 			global_virtual_camera.make_current()
-			global_virtual_camera.fov = DEFAULT_VIRTUAL_CAMERA_FOV
 			Global.set_camera_mode(Global.CameraMode.CINEMATIC)
 
 			# When virtual camera is active we always show the primary avatar and hide outlines.
@@ -133,9 +139,12 @@ func _process(delta: float) -> void:
 		# Reset transition counter and store start transform
 		transition_time_counter = 0.0
 		transition_start_transform = global_virtual_camera.global_transform
+		transition_start_fov = global_virtual_camera.fov
 		last_virtual_camera_entity_node = desired_target
 	# If desired = target, and transition_time_counter == 1.0, so we're already attached
 	elif last_camera_reached:
+		if desired_target != null:
+			global_virtual_camera.fov = target_fov
 		if is_instance_valid(look_at_entity_node):
 			global_virtual_camera.look_at(look_at_entity_node.global_position)
 		return
@@ -165,6 +174,7 @@ func _process(delta: float) -> void:
 
 	# Calculate constant-speed interpolation factor
 	var t = clamp(transition_time_counter / effective_transition_time, 0.0, 1.0)
+	global_virtual_camera.fov = lerpf(transition_start_fov, target_fov, t)
 
 	# Perform smooth transition
 	if desired_target == null:
