@@ -67,9 +67,19 @@ impl DeepLinkRouter {
             return;
         }
         let obj = DclParseDeepLink::parse_decentraland_link(url.as_str().into());
+        let host_driven = globals::engine().bind().is_host_driven();
         {
             let mut global = DclGlobal::singleton();
             let mut global = global.bind_mut();
+            if host_driven {
+                // The core owns navigation: keep the destination `world::enter` stored for the
+                // explorer's boot, or a link routed before that boot would send it elsewhere.
+                let previous = global.deep_link_obj.bind();
+                let mut next = obj.clone();
+                let mut next = next.bind_mut();
+                next.realm = previous.realm.clone();
+                next.location = previous.location;
+            }
             global.deep_link_url = url.as_str().into();
             global.deep_link_obj = obj.clone();
         }
@@ -80,7 +90,7 @@ impl DeepLinkRouter {
         apply_link_settings(&obj);
 
         // With the host driving the app the core routes the link, including push attribution.
-        if globals::engine().bind().is_host_driven() {
+        if host_driven {
             return;
         }
         track_push_open(&obj, &start_kind.to_string());
