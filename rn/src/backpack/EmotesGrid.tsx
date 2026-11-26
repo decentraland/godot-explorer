@@ -1,7 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { ItemCard, space, u } from '@dcl/ui-native';
 import { t } from '../i18n';
-import { EmoteArt } from './ItemArt';
 import { emoteStrip } from './emoteLogic';
 import { Emote } from './emotes';
 import { EmptyBlock } from './GridStates';
@@ -52,7 +51,6 @@ export function EmotesGrid({
               label={emote.name}
               rarity={emote.rarity}
               thumbnail={emote.thumbnail}
-              art={<EmoteArt id={emote.id} />}
               state={
                 strip === 'unequip'
                   ? 'unequip'

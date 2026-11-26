@@ -1,8 +1,7 @@
-import { Image, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { ItemCard, layout, space, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { Emote, emoteIdOf } from './emotes';
-import { EmoteArt } from './ItemArt';
 
 /** `Cards-Wearables` is drawn at 96 dp; the wheel scales it to 56. */
 const CARD = 96;
@@ -10,18 +9,6 @@ const SLOT = 56;
 /** Landscape tiles are smaller so the ten slots fit a 360dp-high viewport in two columns of five. */
 const SLOT_COMPACT = 44;
 const GRID_GAP = 6;
-
-export function EmoteThumb({ emote }: { emote?: Emote }) {
-  return emote?.thumbnail ? (
-    <Image
-      source={{ uri: emote.thumbnail }}
-      style={StyleSheet.absoluteFill}
-      resizeMode="cover"
-    />
-  ) : (
-    <EmoteArt id={emote?.id ?? ''} />
-  );
-}
 
 /**
  * The ten equipped emote slots: a horizontal row above the sheet in portrait, a vertical column
@@ -54,7 +41,6 @@ export function EmoteSlots({
         key={index}
         label={t('BACKPACK_EMOTE_SLOT', { number: index + 1 })}
         thumbnail={emote?.thumbnail}
-        art={emote ? <EmoteArt id={emote.id} /> : undefined}
         empty={!emote}
         state={on ? (flash ? 'equipped' : 'selected') : 'default'}
         scale={(vertical ? SLOT_COMPACT : SLOT) / CARD}

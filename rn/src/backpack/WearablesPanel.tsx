@@ -14,7 +14,6 @@ import type { I18nKey } from '../i18n';
 import { Wearable } from './catalog';
 import type { SubRow } from './BackpackChrome';
 import { EmptyBlock, SkeletonGrid } from './GridStates';
-import { ItemArt } from './ItemArt';
 import { ItemGrid } from './ItemGrid';
 import type { EmptyCopy } from './platformPolicy';
 import {
@@ -114,11 +113,6 @@ export function WearablesPanel(props: WearablesPanelProps) {
                 key={entry.key}
                 label={t(entry.label)}
                 thumbnail={worn?.thumbnail}
-                art={
-                  worn ? (
-                    <ItemArt category={worn.category} name={worn.name} />
-                  ) : undefined
-                }
                 selected={slot?.key === entry.key}
                 onPress={() => props.onSlot(entry)}
               />
@@ -176,7 +170,6 @@ export function WearablesPanel(props: WearablesPanelProps) {
               <ItemCard
                 label={item.name}
                 thumbnail={item.thumbnail}
-                art={<ItemArt category={item.category} name={item.name} />}
                 rarity={item.rarity}
                 state={equipped ? 'unequip' : 'default'}
                 actionLabel={
