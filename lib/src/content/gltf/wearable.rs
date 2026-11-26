@@ -15,10 +15,11 @@ use super::common::{count_nodes, load_gltf_pipeline};
 /// 3. Processes textures
 /// 4. Saves the processed scene to disk (NO colliders - wearables don't need them)
 ///
-/// Returns the path to the saved scene file on success.
+/// Returns the path to the saved scene file, named after `cache_id`, on success.
 pub async fn load_and_save_wearable_gltf(
     file_path: String,
     file_hash: String,
+    cache_id: String,
     content_mapping: ContentMappingAndUrlRef,
     ctx: SceneGltfContext,
 ) -> Result<String, anyhow::Error> {
@@ -33,7 +34,7 @@ pub async fn load_and_save_wearable_gltf(
             // NOTE: No colliders for wearables - they don't need collision shapes
 
             // Save the processed scene to disk
-            let scene_path = get_wearable_path_for_hash(&ctx.content_folder, hash);
+            let scene_path = get_wearable_path_for_hash(&ctx.content_folder, &cache_id);
             save_node_as_scene(node.clone(), &scene_path).map_err(anyhow::Error::msg)?;
 
             // Get file size synchronously

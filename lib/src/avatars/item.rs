@@ -141,7 +141,7 @@ impl DclItemEntityDefinition {
     }
 
     #[func]
-    fn get_category(&self) -> GString {
+    pub(crate) fn get_category(&self) -> GString {
         if let Some(wearable_data) = &self.inner.item.wearable_data {
             GString::from(wearable_data.category.slot)
         } else if let Some(emote_data) = &self.inner.item.emote_data {
@@ -185,7 +185,7 @@ impl DclItemEntityDefinition {
 
     /// Only for wearables
     #[func]
-    fn get_hides_list(&self, body_shape_id: String) -> PackedStringArray {
+    pub(crate) fn get_hides_list(&self, body_shape_id: String) -> PackedStringArray {
         // Ensure it's a wearable
         let Some(wearable_data) = &self.inner.item.wearable_data else {
             return PackedStringArray::new();
@@ -306,7 +306,11 @@ impl DclItemEntityDefinition {
         internal_check
     }
 
-    fn _is_valid_wearable(&self, body_shape_id: &str, skip_content_integrity: bool) -> bool {
+    pub(crate) fn _is_valid_wearable(
+        &self,
+        body_shape_id: &str,
+        skip_content_integrity: bool,
+    ) -> bool {
         let Some(wearable_data) = &self.inner.item.wearable_data else {
             return false;
         };
@@ -337,7 +341,11 @@ impl DclItemEntityDefinition {
                 // For GLTF wearables, check if cached on disk
                 // Note: Loading state is handled by the promise system - callers should
                 // use load_wearable_gltf() which returns cached promises for in-progress loads
-                content_provider.is_wearable_cached(GString::from(main_file_hash))
+                let cache_id = content_provider
+                    .scene_wearables
+                    .asset_id(&repr.main_file, &self.inner.content_mapping)
+                    .unwrap_or_else(|| main_file_hash.clone());
+                content_provider.is_wearable_cached(GString::from(&cache_id))
             }
         } else {
             true

@@ -441,7 +441,9 @@ func _on_player_profile_changed(new_profile: DclUserProfile):
 	# Only update avatar if the profile version has changed
 	if new_version != current_profile_version:
 		current_profile_version = new_version
-		avatar.async_update_avatar_from_profile(new_profile)
+		avatar.async_update_avatar_from_profile(
+			new_profile, Global.avatars.get_player_scene_look(new_profile)
+		)
 
 
 func _on_scene_changed(_scene_id: int) -> void:

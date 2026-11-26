@@ -38,16 +38,17 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
 // (e.g. PBBillboard.target_entity landed mid-RC and broke the billboard itest).
 // Bump the pin deliberately and update any affected generated-struct usages.
 //
-// Pinned to the npm `next` release built from protocol `main` commit 694568d
-// (PR #495 merged) — the first build that ships `PBSkybox`/`PBSun`/
-// `PBEnvironmentFog` and `decentraland/common/gradient.proto` for scene sky
-// control. It also carries the decentraland/pulse protos + options.proto
-// (quantization FieldOptions), TouchscreenInputControls/UiInputBinding, the rfc4
-// `PlayerEmote` extension fields with `Chat.forwarded_from`, `font_src` on the
-// four text components and `PBAvatarEmoteCommand.state`, so the build-time
-// patches lib/build.rs keeps for those now no-op.
+// Pinned to the npm `next` release built from protocol `main` commit 551f65b
+// (PR #506 merged: `AvatarShape` on player entities and
+// `AvatarEquippedData.wearables`). It also carries everything earlier pins
+// brought: `PBSkybox`/`PBSun`/`PBEnvironmentFog` and gradient.proto, the
+// decentraland/pulse protos + options.proto (quantization FieldOptions),
+// TouchscreenInputControls/UiInputBinding, the rfc4 `PlayerEmote` extension
+// fields with `Chat.forwarded_from`, `font_src` on the four text components
+// and `PBAvatarEmoteCommand.state`, so the build-time patches lib/build.rs
+// keeps for those now no-op.
 const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some(
-    "https://registry.npmjs.org/@dcl/protocol/-/protocol-1.0.0-40563911091.commit-694568d.tgz",
+    "https://registry.npmjs.org/@dcl/protocol/-/protocol-1.0.0-43896819135.commit-551f65b.tgz",
 );
 const PROTOCOL_NPM_DIST_TAG: &str = "next";
 

@@ -1,13 +1,19 @@
 use crate::{
-    avatars::avatar_type::DclAvatarWireFormat,
+    avatars::{
+        avatar_scene::AvatarScene,
+        avatar_type::DclAvatarWireFormat,
+        scene_look::SceneLook,
+        scene_wearables::{resolve_scene_wearables, ResolvedWearable},
+    },
     comms::profile::{AvatarColor, AvatarColor3, AvatarEmote, AvatarWireFormat},
+    content::content_mapping::ContentMappingAndUrlRef,
     dcl::{
         components::{
             proto_components::{
                 common::Color3,
-                sdk::components::{EmoteState, PbAvatarEmoteCommand},
+                sdk::components::{EmoteState, PbAvatarEmoteCommand, PbAvatarShape},
             },
-            SceneComponentId,
+            SceneComponentId, SceneEntityId,
         },
         crdt::{
             grow_only_set::GenericGrowOnlySetComponentOperation,
@@ -60,6 +66,52 @@ fn color3_to_avatar_color(color: Color3) -> AvatarColor {
     }
 }
 
+/// Wearables past this count are dropped from a player's scene look.
+const MAX_PLAYER_SCENE_WEARABLES: usize = 32;
+
+/// `engine.PlayerEntity` or another player's entity: there `AvatarShape` changes that player's
+/// look instead of drawing an NPC.
+fn is_player_entity(entity: &SceneEntityId) -> bool {
+    *entity == SceneEntityId::PLAYER
+        || (AvatarScene::FROM_ENTITY_ID..AvatarScene::MAX_ENTITY_ID).contains(&entity.number)
+}
+
+fn resolve_wearables(
+    scene_entity_id: &str,
+    content_mapping: &ContentMappingAndUrlRef,
+    wearables: &[String],
+) -> Vec<ResolvedWearable> {
+    let mut content_provider = DclGlobal::singleton().bind().content_provider.clone();
+    let mut content_provider = content_provider.bind_mut();
+    resolve_scene_wearables(
+        &mut content_provider.scene_wearables,
+        scene_entity_id,
+        content_mapping,
+        wearables,
+    )
+}
+
+fn scene_categories(wearables: &[ResolvedWearable]) -> Vec<String> {
+    wearables
+        .iter()
+        .filter_map(|wearable| wearable.scene_category.map(String::from))
+        .collect()
+}
+
+/// `id`, `name`, the expression trigger, `emotes` and `talking` are ignored on player entities.
+fn player_scene_look(shape: &PbAvatarShape, mut wearables: Vec<ResolvedWearable>) -> SceneLook {
+    wearables.truncate(MAX_PLAYER_SCENE_WEARABLES);
+    SceneLook {
+        body_shape: shape.body_shape.clone(),
+        skin: shape.skin_color.clone().map(color3_to_avatar_color),
+        hair: shape.hair_color.clone().map(color3_to_avatar_color),
+        eyes: shape.eye_color.clone().map(color3_to_avatar_color),
+        show_only_wearables: shape.show_only_wearables,
+        scene_categories: scene_categories(&wearables),
+        wearables: wearables.into_iter().map(|wearable| wearable.urn).collect(),
+    }
+}
+
 /// Pull the emote still mid-playback off an avatar node about to be freed and turn
 /// it into an `ES_INTERRUPTED` entry. Returns None when nothing was playing.
 fn take_unfinished_emote(avatar_node: &mut Gd<Node>) -> Option<PbAvatarEmoteCommand> {
@@ -94,6 +146,21 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             }
 
             let new_value = new_value.unwrap();
+            if is_player_entity(entity) {
+                let look = new_value.value.as_ref().map(|shape| {
+                    let wearables = resolve_wearables(
+                        &scene.scene_entity_definition.id,
+                        &scene.content_mapping,
+                        &shape.wearables,
+                    );
+                    player_scene_look(shape, wearables)
+                });
+                let mut avatars = DclGlobal::singleton().bind().avatars.clone();
+                avatars
+                    .bind_mut()
+                    .set_scene_look(scene.scene_id, *entity, look);
+                continue;
+            }
             let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
@@ -118,8 +185,15 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             } else if let Some(new_value) = new_value {
                 let avatar_name = new_value.name.unwrap_or("NPC".into());
 
+                let wearables = resolve_wearables(
+                    &scene.scene_entity_definition.id,
+                    &scene.content_mapping,
+                    &new_value.wearables,
+                );
+                let scene_categories = scene_categories(&wearables);
                 let mut new_avatar_data = AvatarWireFormat {
-                    wearables: new_value.wearables,
+                    wearables: wearables.into_iter().map(|wearable| wearable.urn).collect(),
+                    force_render: (!scene_categories.is_empty()).then_some(scene_categories),
                     emotes: Some(
                         new_value
                             .emotes

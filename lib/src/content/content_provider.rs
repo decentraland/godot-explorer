@@ -17,7 +17,10 @@ use tokio::sync::{oneshot, watch, RwLock, Semaphore};
 
 use crate::{
     auth::wallet::AsH160,
-    avatars::{dcl_user_profile::DclUserProfile, item::DclItemEntityDefinition},
+    avatars::{
+        dcl_user_profile::DclUserProfile, item::DclItemEntityDefinition,
+        scene_wearables::SceneWearableRegistry,
+    },
     content::content_mapping::DclContentMappingAndUrl,
     dcl::common::string::FindNthChar,
     godot_classes::{
@@ -175,6 +178,7 @@ pub struct ContentProvider {
     optimized_original_size: HashMap<String, ImageSize>,
     // URL base for optimized wearable/emote assets (e.g., "http://127.0.0.1:9090/")
     optimized_wearable_base_url: Option<String>,
+    pub(crate) scene_wearables: SceneWearableRegistry,
 }
 
 #[derive(Clone)]
@@ -415,6 +419,7 @@ impl INode for ContentProvider {
             // Default to the same URL used for scene optimized assets (CLI
             // override first, then the prod bucket).
             optimized_wearable_base_url: Some(format!("{}/", resolved_optimized_base_url())),
+            scene_wearables: SceneWearableRegistry::default(),
         }
     }
     fn ready(&mut self) {}
@@ -702,8 +707,18 @@ impl ContentProvider {
             }
         };
 
+        // A scene GLB is cached per path, and is never on the optimized wearables server.
+        let scene_asset_id = self
+            .scene_wearables
+            .asset_id(&file_path_str, &content_mapping_ref);
+        let optimized_base_url = match scene_asset_id {
+            Some(_) => None,
+            None => self.optimized_wearable_base_url.clone(),
+        };
+        let cache_id = scene_asset_id.unwrap_or_else(|| file_hash.clone());
+
         // Use prefixed cache key to avoid conflicts with scene/emote loaders
-        let cache_key = format!("wearable_{}", file_hash);
+        let cache_key = format!("wearable_{}", cache_id);
 
         // Return existing promise if already loading/loaded
         if let Some(existing) = self.get_cached_promise(&cache_key) {
@@ -749,7 +764,6 @@ impl ContentProvider {
         };
 
         let file_hash_clone = file_hash.clone();
-        let optimized_base_url = self.optimized_wearable_base_url.clone();
         let opt_wearable_counter = self.optimized_wearable_count.clone();
         let rt_wearable_counter = self.runtime_wearable_count.clone();
 
@@ -757,6 +771,7 @@ impl ContentProvider {
         TokioRuntime::spawn(async move {
             let result = Self::async_load_wearable_or_emote(
                 file_hash_clone,
+                cache_id,
                 file_path_str,
                 content_mapping_ref,
                 ctx,
@@ -905,6 +920,7 @@ impl ContentProvider {
         // Spawn async task - cache check and loading all happens here
         TokioRuntime::spawn(async move {
             let result = Self::async_load_wearable_or_emote(
+                file_hash_clone.clone(),
                 file_hash_clone,
                 file_path_str,
                 content_mapping_ref,
@@ -979,6 +995,7 @@ impl ContentProvider {
         // Spawn async task - NO optimized URL = runtime processing only
         TokioRuntime::spawn(async move {
             let result = Self::async_load_wearable_or_emote(
+                file_hash_clone.clone(),
                 file_hash_clone,
                 file_path_str,
                 content_mapping_ref,
@@ -2125,6 +2142,9 @@ impl ContentProvider {
                 .unwrap_or(wearable_id.len());
             let wearable_id = wearable_id[0..token_id_pos].to_lowercase();
 
+            if self.scene_wearables.get(&wearable_id).is_some() {
+                continue;
+            }
             if let Some(promise) = self.get_cached_promise(&wearable_id) {
                 promise_ids.insert(promise.instance_id());
             } else {
@@ -2172,6 +2192,9 @@ impl ContentProvider {
         let token_id_pos = id.find_nth_char(6, ':').unwrap_or(id.len());
         let id = id[0..token_id_pos].to_lowercase();
 
+        if let Some(wearable) = self.scene_wearables.get(&id) {
+            return Some(DclItemEntityDefinition::from_gd(wearable));
+        }
         if let Some(promise) = self.get_cached_promise(&id) {
             if let Ok(results) = promise
                 .bind()
@@ -3129,9 +3152,11 @@ impl ContentProvider {
 
     /// Shared async function for loading wearables and emotes.
     /// Checks for optimized ZIP bundles first, falls back to runtime processing.
+    /// `cache_id` names the runtime-processed wearable scene: the file hash, except for a scene GLB.
     #[allow(clippy::too_many_arguments)]
     async fn async_load_wearable_or_emote(
         file_hash: String,
+        cache_id: String,
         file_path: String,
         content_mapping: super::content_mapping::ContentMappingAndUrlRef,
         ctx: SceneGltfContext,
@@ -3283,7 +3308,7 @@ impl ContentProvider {
             let cache_path = if is_emote {
                 get_emote_path_for_hash(&ctx.content_folder, &file_hash)
             } else {
-                get_wearable_path_for_hash(&ctx.content_folder, &file_hash)
+                get_wearable_path_for_hash(&ctx.content_folder, &cache_id)
             };
 
             if ctx.resource_provider.file_exists_by_path(&cache_path).await {
@@ -3318,8 +3343,14 @@ impl ContentProvider {
                     load_and_save_emote_gltf(file_path, file_hash.clone(), content_mapping, ctx)
                         .await
                 } else {
-                    load_and_save_wearable_gltf(file_path, file_hash.clone(), content_mapping, ctx)
-                        .await
+                    load_and_save_wearable_gltf(
+                        file_path,
+                        file_hash.clone(),
+                        cache_id,
+                        content_mapping,
+                        ctx,
+                    )
+                    .await
                 };
 
                 match result {
