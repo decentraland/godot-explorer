@@ -351,22 +351,34 @@ var analytics_user_id: String = "":
 var _legacy_last_places: Array = []
 
 
+## Removes earlier visits to the same parcel of Genesis City (whichever DAO realm url reached it)
+## or to the same world (however its name was spelled).
 func fix_last_places_duplicates(place_dict: Dictionary, _last_places: Array):
-	var realm = place_dict.get("realm")
+	var realm: String = place_dict.get("realm", "")
 	var position = place_dict.get("position")
+	var is_genesis := Realm.is_genesis_city(realm)
 	var to_remove: Array = []
 	for place in _last_places:
-		var place_realm = place.get("realm")
-		var place_position = place.get("position")
-		if place_realm == realm:
-			if Realm.is_genesis_city(realm):
-				if place_position == position:
-					to_remove.push_back(place)
-			else:
+		var place_realm: String = place.get("realm", "")
+		if Realm.is_genesis_city(place_realm) != is_genesis:
+			continue
+		if is_genesis:
+			if place.get("position") == position:
 				to_remove.push_back(place)
+		elif Realm.normalize_realm_url(place_realm) == Realm.normalize_realm_url(realm):
+			to_remove.push_back(place)
 
 	for place in to_remove:
 		_last_places.erase(place)
+
+
+## Drops visits Discover resolved to a place already listed by a newer visit (another parcel of
+## the same scene), so one place never holds two "Last visited" slots.
+func remove_last_places(places: Array) -> void:
+	var last_places := _last_places_for_current_wallet()
+	for place in places:
+		last_places.erase(place)
+	save_to_settings_file()
 
 
 ## The current wallet's "Last visited" places, newest first.
