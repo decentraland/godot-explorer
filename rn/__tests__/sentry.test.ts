@@ -16,6 +16,8 @@ import {
   CLEARED_TAG,
   initSentry,
   releaseFor,
+  scrubEvent,
+  scrubText,
   SENTRY_DSN,
   startCoreReports,
 } from '../src/sentry';
@@ -143,6 +145,43 @@ describe('initSentry', () => {
     });
     initSentry();
     expect(mocked.init.mock.calls[0][0]).toMatchObject({ release: undefined });
+  });
+});
+
+describe('scrub', () => {
+  const WALLET = '0x1234567890abcdef1234567890abcdef12345678';
+  const JWT = 'eyJhbGciOiJIUzI1NiJ9.eyJyb29tIjoid29ybGQifQ.sig_part-123';
+
+  it('redacts room tokens, JWTs and wallets from event text', () => {
+    expect(
+      scrubText(
+        `wss://livekit.decentraland.org?access_token=${JWT}&x=1`,
+      ),
+    ).toBe('wss://livekit.decentraland.org?access_token=[redacted]&x=1');
+    expect(scrubText(`token ${JWT} in text`)).toBe('token [jwt] in text');
+    expect(scrubText(`profile for ${WALLET} failed`)).toBe(
+      'profile for 0x1234… failed',
+    );
+    expect(scrubText('0x1234 short hex stays')).toBe('0x1234 short hex stays');
+    expect(scrubText('')).toBe('');
+  });
+
+  it('applies to the message and every exception value before sending', () => {
+    initSentry();
+    const options = mocked.init.mock.calls[0][0] as Record<string, unknown>;
+    expect(options.beforeSend).toBe(scrubEvent);
+
+    const event = scrubEvent({
+      message: `room ${JWT}`,
+      exception: {
+        values: [{ value: `[Rust:dclgodot] ${WALLET} kicked` }, { type: 'E' }],
+      },
+    });
+    expect(event.message).toBe('room [jwt]');
+    expect(event.exception?.values?.[0].value).toBe(
+      '[Rust:dclgodot] 0x1234… kicked',
+    );
+    expect(event.exception?.values?.[1].value).toBeUndefined();
   });
 });
 

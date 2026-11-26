@@ -277,11 +277,14 @@ pub fn commit_from_about(about: &Value, world_scenes: &[EntityUrn]) -> RealmComm
         None => ensure_ends_with_slash(&urls::peer_lambdas()),
     };
 
-    let sizes = configuration
+    // An item that is not an object names no bounds: it would otherwise count as (0,0,0,0).
+    let sizes: Vec<&Value> = configuration
         .pointer("/map/sizes")
         .and_then(Value::as_array)
-        .map(Vec::as_slice)
-        .unwrap_or_default();
+        .into_iter()
+        .flatten()
+        .filter(|size| size.is_object())
+        .collect();
     let (min_bounds, max_bounds) = if sizes.is_empty() {
         (DEFAULT_MIN_BOUNDS, DEFAULT_MAX_BOUNDS)
     } else {
@@ -407,6 +410,8 @@ mod tests {
         assert_eq!(about_problem(&json!([])), Some("invalid /about response"));
         assert!(about_problem(&json!({"content": null})).is_some());
         assert!(about_problem(&json!({"content": {"publicUrl": 3}})).is_some());
+        assert!(about_problem(&json!({"content": {"publicUrl": null}})).is_some());
+        assert!(about_problem(&json!({"content": "x"})).is_some());
         assert!(about_problem(&json!({"content": {"publicUrl": "https://c/"}})).is_none());
     }
 
@@ -448,6 +453,58 @@ mod tests {
         assert_eq!(
             commit.lambda_server_base_url,
             ensure_ends_with_slash(&urls::peer_lambdas())
+        );
+    }
+
+    #[test]
+    fn wrong_typed_keys_read_as_absent() {
+        let about = json!({
+            "content": {"publicUrl": "https://c"},
+            "configurations": null,
+            "lambdas": "x",
+            "comms": [],
+        });
+        let defaults = commit_from_about(&about, &[]);
+        assert_eq!(
+            defaults,
+            commit_from_about(&json!({"content": {"publicUrl": "https://c"}}), &[])
+        );
+
+        let about = json!({
+            "content": {"publicUrl": "https://c"},
+            "configurations": {
+                "scenesUrn": [1, null, format!("{ENTITY_URN_PREFIX}{ENTITY}?=&baseUrl=https://b/")],
+                "globalScenesUrn": "not-an-array",
+                "realmName": ["a"],
+                "networkId": "1",
+                "localSceneParcels": {"a": 1},
+                "cityLoaderContentServer": null,
+                "map": {"sizes": [null, "a", {"left": "1", "top": 2}, {"left": -150, "bottom": 5.0}]},
+            },
+            "lambdas": {"publicUrl": null},
+        });
+        let commit = commit_from_about(&about, &[]);
+        assert_eq!(commit.scene_urns.len(), 1);
+        assert!(commit.global_scene_urns.is_empty());
+        assert_eq!(commit.realm_name, "no_realm_name");
+        assert_eq!(commit.network_id, 1);
+        assert!(!commit.serves_local_scenes);
+        assert_eq!(commit.city_loader_content_base_url, "");
+        assert_eq!(commit.min_bounds, (-150, 0));
+        assert_eq!(commit.max_bounds, (0, 2));
+        assert_eq!(
+            commit.lambda_server_base_url,
+            defaults.lambda_server_base_url
+        );
+
+        let only_junk_sizes = json!({
+            "content": {"publicUrl": "https://c"},
+            "configurations": {"map": {"sizes": [null, "a"]}},
+        });
+        let commit = commit_from_about(&only_junk_sizes, &[]);
+        assert_eq!(
+            (commit.min_bounds, commit.max_bounds),
+            (DEFAULT_MIN_BOUNDS, DEFAULT_MAX_BOUNDS)
         );
     }
 

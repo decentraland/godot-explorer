@@ -320,7 +320,10 @@ async fn a_preview_names_its_scene_through_pointers_or_its_urn() {
     let by_urn = FakeFetch::default()
         .get(
             &format!("{url}/about"),
-            Ok(json!({"configurations": {"scenesUrn": [urn]}})),
+            Ok(json!({
+                "content": {"publicUrl": "http://192.168.1.20:8000/content"},
+                "configurations": {"scenesUrn": [urn]},
+            })),
         )
         .get(
             &format!("http://192.168.1.20:8000/content/contents/{id}"),
@@ -332,9 +335,31 @@ async fn a_preview_names_its_scene_through_pointers_or_its_urn() {
         (true, "From urn")
     );
 
-    let bare = FakeFetch::default().get(&format!("{url}/about"), Ok(json!({})));
+    let bare = FakeFetch::default().get(
+        &format!("{url}/about"),
+        Ok(json!({"content": {"publicUrl": "http://192.168.1.20:8000/content"}})),
+    );
     let resolved = go(&bare, url).await;
     assert!(resolved.ready && resolved.title.is_empty());
+}
+
+#[tokio::test]
+async fn a_preview_without_a_public_content_url_is_unreachable() {
+    let url = "http://192.168.1.20:8000";
+    for about in [
+        json!({}),
+        json!({"content": {"publicUrl": null}}),
+        json!({"content": "x"}),
+    ] {
+        let fetch = FakeFetch::default().get(&format!("{url}/about"), Ok(about.clone()));
+        let resolved = go(&fetch, &format!("{url} 1,1")).await;
+        assert_eq!(
+            resolved.failure,
+            Some(ResolveFailure::PreviewUnreachable),
+            "{about}"
+        );
+        assert!(fetch.posts().is_empty(), "{about}");
+    }
 }
 
 #[tokio::test]

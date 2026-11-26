@@ -322,7 +322,11 @@ impl DeepLinkRouter {
             // Bound to a sign-in this install didn't start (or already settled): the server
             // would reject it without the matching verifier anyway.
         } else if auth.pending_mobile_auth {
+            // An empty id is still this process's attempt: an auth site that predates
+            // authRequestId, or a verifier that could not be persisted.
             effects.push(Effect::CompleteMobileSignIn { identity_id: id });
+        } else if auth_request_id.is_empty() && ctx.pending_auth_requests.is_empty() {
+            // No sign-in was started from this install: nothing to complete.
         } else if auth.wallet_connected {
             // Parking would sign the user back in as the link's owner after a sign-out.
         } else {
@@ -1099,6 +1103,11 @@ mod tests {
 
     const REQUEST: &str = "13d31e96-1a1a-48ec-af16-b10c4c982e08";
 
+    /// Signed out with a browser sign-in started before a kill: a cold link can be parked.
+    fn parkable() -> RouteContext {
+        ctx_with_requests(AuthSnapshot::default(), &[REQUEST])
+    }
+
     #[test]
     fn a_signin_bound_to_another_request_is_dropped_in_every_state() {
         let link = format!("decentraland://open?signin=id1&authRequestId={REQUEST}");
@@ -1151,11 +1160,34 @@ mod tests {
     }
 
     #[test]
-    fn a_signin_without_a_request_id_is_never_foreign() {
+    fn a_signin_without_a_request_id_uses_a_pending_request() {
         let (mut r, _) = router();
-        let ctx = ctx_with_requests(AuthSnapshot::default(), &[REQUEST]);
-        r.handle("decentraland://open?signin=id1", StartKind::Cold, &ctx);
+        r.handle(
+            "decentraland://open?signin=id1",
+            StartKind::Cold,
+            &parkable(),
+        );
         assert_eq!(pending_id(&mut r), Some("id1".into()));
+    }
+
+    #[test]
+    fn a_signin_without_a_request_id_and_nothing_pending_is_foreign() {
+        for start in [StartKind::Warm, StartKind::Cold] {
+            let (mut r, _) = router();
+            let routed = r.handle(
+                "decentraland://open?signin=id1",
+                start,
+                &signin_ctx(AuthSnapshot::default()),
+            );
+            assert!(
+                !routed.effects.iter().any(|e| matches!(
+                    e,
+                    Effect::CompleteMobileSignIn { .. } | Effect::SignInParked
+                )),
+                "{start:?}"
+            );
+            assert_eq!(pending_id(&mut r), None);
+        }
     }
 
     #[test]
@@ -1192,10 +1224,13 @@ mod tests {
     #[test]
     fn signin_with_a_wallet_connected_is_dropped() {
         let (mut r, _) = router();
-        let ctx = signin_ctx(AuthSnapshot {
-            wallet_connected: true,
-            ..Default::default()
-        });
+        let ctx = ctx_with_requests(
+            AuthSnapshot {
+                wallet_connected: true,
+                ..Default::default()
+            },
+            &[REQUEST],
+        );
         let routed = r.handle("decentraland://open?signin=id1", StartKind::Warm, &ctx);
         assert!(!routed.effects.contains(&Effect::SignInParked));
         assert_eq!(pending_id(&mut r), None);
@@ -1207,7 +1242,7 @@ mod tests {
         let routed = r.handle(
             "decentraland://open?signin=id1&location=1,2",
             StartKind::Cold,
-            &signin_ctx(AuthSnapshot::default()),
+            &parkable(),
         );
         assert_eq!(routed.navigation, None);
         assert!(routed.effects.contains(&Effect::SignInParked));
@@ -1217,7 +1252,11 @@ mod tests {
     #[test]
     fn parked_token_is_single_shot() {
         let (mut r, _) = router();
-        r.handle("decentraland://open?signin=id1", StartKind::Cold, &mobile());
+        r.handle(
+            "decentraland://open?signin=id1",
+            StartKind::Cold,
+            &parkable(),
+        );
         assert_eq!(pending_id(&mut r), Some("id1".into()));
         assert_eq!(pending_id(&mut r), None);
     }
@@ -1232,7 +1271,11 @@ mod tests {
         ];
         for (age, redeemable) in cases {
             let (mut r, clock) = router();
-            r.handle("decentraland://open?signin=id1", StartKind::Cold, &mobile());
+            r.handle(
+                "decentraland://open?signin=id1",
+                StartKind::Cold,
+                &parkable(),
+            );
             clock.0.fetch_add(age, Ordering::SeqCst);
             let expected = redeemable.then(|| "id1".to_string());
             assert_eq!(pending_id(&mut r), expected, "age {age}");
@@ -1242,7 +1285,11 @@ mod tests {
     #[test]
     fn stale_token_is_cleared_by_the_failed_take() {
         let (mut r, clock) = router();
-        r.handle("decentraland://open?signin=id1", StartKind::Cold, &mobile());
+        r.handle(
+            "decentraland://open?signin=id1",
+            StartKind::Cold,
+            &parkable(),
+        );
         clock
             .0
             .fetch_add(PENDING_SIGNIN_MAX_AGE_MS + 1, Ordering::SeqCst);
@@ -1254,11 +1301,19 @@ mod tests {
     #[test]
     fn a_later_token_replaces_the_parked_one() {
         let (mut r, clock) = router();
-        r.handle("decentraland://open?signin=old", StartKind::Cold, &mobile());
+        r.handle(
+            "decentraland://open?signin=old",
+            StartKind::Cold,
+            &parkable(),
+        );
         clock
             .0
             .fetch_add(PENDING_SIGNIN_MAX_AGE_MS, Ordering::SeqCst);
-        r.handle("decentraland://open?signin=new", StartKind::Cold, &mobile());
+        r.handle(
+            "decentraland://open?signin=new",
+            StartKind::Cold,
+            &parkable(),
+        );
         clock.0.fetch_add(10, Ordering::SeqCst);
         assert_eq!(pending_id(&mut r), Some("new".into()));
     }

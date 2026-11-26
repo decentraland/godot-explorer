@@ -2035,15 +2035,22 @@ impl CommunicationManager {
     fn _internal_get_comms_from_realm(&self) -> Option<(String, Option<GString>)> {
         let realm = DclGlobal::singleton().bind().get_realm();
         let realm_about = realm.bind().get_realm_about();
-        let comms = VarDictionary::from_variant(&realm_about.get(&StringName::from("comms"))?);
-        let comms_protocol = String::from_variant(&comms.get(&StringName::from("protocol"))?);
+        // The realm serves /about: a wrong-typed value reads as absent instead of panicking.
+        let comms = realm_about
+            .get(&StringName::from("comms"))?
+            .try_to::<VarDictionary>()
+            .ok()?;
+        let comms_protocol = comms
+            .get(&StringName::from("protocol"))?
+            .try_to::<String>()
+            .ok()?;
 
         let fixed_adapter_raw = comms
             .get(&StringName::from("fixedAdapter"))
-            .map(|v| GString::from_variant(&v).to_string());
+            .and_then(|v| v.try_to::<String>().ok());
         let adapter_raw = comms
             .get(&StringName::from("adapter"))
-            .map(|v| GString::from_variant(&v).to_string());
+            .and_then(|v| v.try_to::<String>().ok());
 
         #[cfg(feature = "use_livekit")]
         let disable_archipelago = !self.archipelago_enabled();

@@ -646,8 +646,13 @@ async fn a_warm_link_finishes_the_browser_sign_in_that_this_process_started() {
 #[test]
 fn a_cold_link_signs_in_a_signed_out_user_and_is_dropped_for_a_signed_in_one() {
     use crate::deep_link_route::StartKind;
+    use crate::session::signin_verifier::{create_verifier, VerifierStore};
+    // The browser sign-in was started before the OS killed the app.
+    let started_before_a_kill =
+        |s: &Setup| VerifierStore::new(s.dir.path()).add_pending(create_verifier());
     let s = setup();
     signed_out(&s);
+    started_before_a_kill(&s);
     let outcome = s.hub.route_deep_link(
         "decentraland://open?signin=cold1",
         StartKind::Cold,
@@ -662,7 +667,20 @@ fn a_cold_link_signs_in_a_signed_out_user_and_is_dropped_for_a_signed_in_one() {
     );
     assert!(s.hub.resume_parked_sign_in().is_none(), "single shot");
 
+    let never_started = setup();
+    signed_out(&never_started);
+    let outcome = never_started.hub.route_deep_link(
+        "decentraland://open?signin=foreign",
+        StartKind::Cold,
+        crate::Platform::Android,
+    );
+    assert!(
+        outcome.complete_sign_in.is_none(),
+        "no sign-in was started from this install"
+    );
+
     let booting = setup();
+    started_before_a_kill(&booting);
     let outcome = booting.hub.route_deep_link(
         "decentraland://open?signin=early",
         StartKind::Cold,
