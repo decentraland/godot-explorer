@@ -3247,6 +3247,7 @@ impl SceneManager {
             global_bind.reset_touch_controls();
             let was_skybox_active = global_bind.sdk_skybox_time_active;
             global_bind.reset_skybox_time();
+            global_bind.scene_sky.reset();
             drop(global_bind);
             if was_skybox_active {
                 global

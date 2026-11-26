@@ -4,6 +4,9 @@ shader_type sky;
 
 uniform sampler2D milky_way_noise : source_color;
 uniform float stars_energy = 1.0;
+// 1.0 while a scene pins PBSkybox.stars.brightness: the override is a constant star layer,
+// like the Unity explorer draws it, so it must not follow the time of day.
+uniform float stars_override = 0.0;
 
 // Cubemap clouds (imported from a 6×1 strip atlas). Sampled with EYEDIR rotated around
 // the Y axis by clouds_rotation_y_deg + scroll, so the cloud silhouettes can be aligned
@@ -214,12 +217,13 @@ void sky() {
       sun_with_bite * max(day_factor, moon_gate) + second_sun_disc * day_factor, 0.0, 1.0);
   float celestial = combined_disc * sun_opacity * sun_opacity;
 
-  // 1.0 at midnight, 0.0 at noon. Drives star visibility.
+  // 1.0 at midnight, 0.0 at noon.
   float day_night_blend = 1.0 - sin(day_night_cycle * PI);
+  float star_visibility = stars_override > 0.5 ? 1.0 : day_night_blend;
 
-  // Stars: only compute at night (skip voronoi during daytime — perf win)
+  // Stars: only compute when something makes them visible (skip voronoi otherwise — perf win)
   float stars = 0.0;
-  if (day_night_blend > 0.01) {
+  if (star_visibility > 0.01) {
     vec2 uv = world_aligned_uv(rd, rd*.5-.5, vec3(0.0), vec2(.0));
     vec2 center;
     vec4 voronoi_data = voronoiEdges(uv*150.0, 0.9 + clouds_mask * .1, 0.0, 0.0, 0.0, center);
@@ -255,7 +259,7 @@ void sky() {
   vec3 outer_screen = vec3(1.0) - (vec3(1.0) - cloud_linear) * (vec3(1.0) - sky_base);
   COLOR = mix(sky_base, outer_screen, clouds_mask);
 
-  COLOR += mix(stars * day_night_blend * day_night_blend * day_night_blend * day_night_blend * .5, 0.0, max(clouds_mask, celestial));
+  COLOR += mix(stars * pow(star_visibility, 4.0) * .5, 0.0, max(clouds_mask, celestial));
 
   // Sun disc: render as bright white. sun_color_cycle drives the rim/glow halo, not the disc.
   vec3 sun_col = vec3(2.0);

@@ -105,6 +105,7 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
         S::InputModifier => "InputModifier",
         S::TouchScreenControls => "TouchScreenControls",
         S::SkyboxTime => "SkyboxTime",
+        S::Skybox => "Skybox",
         S::TriggerArea => "TriggerArea",
         S::VirtualCameras => "VirtualCameras",
         S::AudioSource => "AudioSource",
@@ -143,6 +144,7 @@ use super::{
         pointer_events::update_scene_pointer_events,
         raycast::update_raycasts,
         realm_info::sync_realm_info,
+        skybox::update_skybox,
         skybox_time::update_skybox_time,
         text_shape::update_text_shape,
         touch_screen_controls::update_touch_screen_controls,
@@ -329,6 +331,7 @@ pub fn _process_scene(
                             tick_number,
                             frame_number: frames_count as u32,
                             total_runtime: (Instant::now() - scene.start_time).as_secs_f32(),
+                            scene_hidden: false,
                         }),
                     );
 
@@ -559,6 +562,10 @@ pub fn _process_scene(
                 }
                 SceneUpdateState::SkyboxTime => {
                     update_skybox_time(scene, crdt_state, current_parcel_scene_id);
+                    false
+                }
+                SceneUpdateState::Skybox => {
+                    update_skybox(scene, crdt_state, current_parcel_scene_id);
                     false
                 }
                 SceneUpdateState::TriggerArea => {
