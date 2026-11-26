@@ -14,7 +14,7 @@ use godot::{
 };
 use http::Uri;
 
-fn _player_is_inside_scene(scene: &Scene, current_parcel_scene_id: &SceneId) -> bool {
+pub(super) fn player_is_inside_scene(scene: &Scene, current_parcel_scene_id: &SceneId) -> bool {
     // Check if player is inside the scene that requested the move
     if let SceneType::Parcel = scene.scene_type {
         &scene.scene_id == current_parcel_scene_id
@@ -30,7 +30,7 @@ pub fn change_realm(
     message: &Option<String>,
     response: &RpcResultSender<Result<(), String>>,
 ) {
-    if !_player_is_inside_scene(scene, current_parcel_scene_id) {
+    if !player_is_inside_scene(scene, current_parcel_scene_id) {
         response.send(Err("Primary Player is outside the scene".to_string()));
         return;
     }
@@ -50,7 +50,7 @@ pub fn open_external_url(
     url: &Uri,
     response: &RpcResultSender<Result<(), String>>,
 ) {
-    if !_player_is_inside_scene(scene, current_parcel_scene_id) {
+    if !player_is_inside_scene(scene, current_parcel_scene_id) {
         response.send(Err("Primary Player is outside the scene".to_string()));
         return;
     }
@@ -69,7 +69,7 @@ pub fn open_nft_dialog(
     urn: &str,
     response: &RpcResultSender<Result<(), String>>,
 ) {
-    if !_player_is_inside_scene(scene, current_parcel_scene_id) {
+    if !player_is_inside_scene(scene, current_parcel_scene_id) {
         response.send(Err("Primary Player is outside the scene".to_string()));
         return;
     }
@@ -91,7 +91,7 @@ pub fn move_player_to(
     avatar_target: &Option<[f32; 3]>,
 ) {
     // Check if player is inside the scene that requested the move
-    if !_player_is_inside_scene(scene, current_parcel_scene_id) {
+    if !player_is_inside_scene(scene, current_parcel_scene_id) {
         tracing::warn!("movePlayerTo failed: Primary Player is outside the scene");
         return;
     }
@@ -178,7 +178,7 @@ pub fn teleport_to(
     realm: &Option<String>,
     response: &RpcResultSender<Result<(), String>>,
 ) {
-    if !_player_is_inside_scene(scene, current_parcel_scene_id) {
+    if !player_is_inside_scene(scene, current_parcel_scene_id) {
         response.send(Err("Primary Player is outside the scene".to_string()));
         return;
     }
@@ -203,7 +203,7 @@ pub fn teleport_to(
 
 pub fn trigger_emote(scene: &Scene, current_parcel_scene_id: &SceneId, emote_id: &str, mask: i64) {
     // Check if player is inside the scene that requested the move
-    if !_player_is_inside_scene(scene, current_parcel_scene_id) {
+    if !player_is_inside_scene(scene, current_parcel_scene_id) {
         tracing::warn!("triggerEmote failed: Primary Player is outside the scene");
         return;
     }
@@ -235,7 +235,7 @@ pub fn trigger_scene_emote(
     );
 
     // Check if player is inside the scene that requested the move
-    if !_player_is_inside_scene(scene, current_parcel_scene_id) {
+    if !player_is_inside_scene(scene, current_parcel_scene_id) {
         tracing::warn!("triggerSceneEmote failed: Primary Player is outside the scene");
         return;
     }
@@ -307,7 +307,7 @@ pub fn stop_emote(scene: &Scene, current_parcel_scene_id: &SceneId) {
     // Same gate as triggerEmote: only the scene the player is standing in may stop it.
     // Note this passes unconditionally for SceneType::Global, which is exactly why the
     // masked case needs the owner check on the GDScript side.
-    if !_player_is_inside_scene(scene, current_parcel_scene_id) {
+    if !player_is_inside_scene(scene, current_parcel_scene_id) {
         tracing::warn!("stopEmote failed: Primary Player is outside the scene");
         return;
     }

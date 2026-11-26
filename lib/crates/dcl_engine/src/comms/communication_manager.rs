@@ -10,6 +10,9 @@ use crate::auth::wallet;
 use crate::avatars::avatar_sink::GlobalSceneSink;
 #[cfg(feature = "use_livekit")]
 use crate::comms::consts::DISABLE_ARCHIPELAGO;
+#[cfg(feature = "use_livekit")]
+use crate::comms::livekit_room_id;
+use crate::comms::redact_url_query;
 use crate::{
     comms::{
         adapter::{
@@ -2057,7 +2060,7 @@ impl CommunicationManager {
         tracing::debug!(
             "Comms protocol: {}, fixedAdapter: {:?}",
             comms_protocol,
-            comms_fixed_adapter
+            comms_fixed_adapter.as_deref().map(redact_url_query)
         );
 
         Some((comms_protocol, comms_fixed_adapter.map(|s| s.to_godot())))
@@ -2122,7 +2125,10 @@ impl CommunicationManager {
         let comms_fixed_adapter_str = comms_fixed_adapter_gstr.to_string();
         let Some((protocol, comms_address)) = comms_fixed_adapter_str.as_str().split_once(':')
         else {
-            tracing::warn!("unrecognised fixed adapter string: {comms_fixed_adapter_str}");
+            tracing::warn!(
+                "unrecognised fixed adapter string: {}",
+                redact_url_query(&comms_fixed_adapter_str)
+            );
             return;
         };
 
@@ -2142,7 +2148,7 @@ impl CommunicationManager {
         tracing::warn!(
             "🔌 Comms reconnection attempt - protocol: '{}', address: '{}'",
             protocol,
-            comms_address
+            redact_url_query(comms_address)
         );
 
         let current_ephemeral_auth_chain = player_identity
@@ -2209,10 +2215,8 @@ impl CommunicationManager {
 
                     // Create LiveKit room with shared message processor
                     // Main rooms use auto_subscribe: true (default) to automatically receive all peers
-                    let mut livekit_room = LivekitRoom::new(
-                        comms_address.to_string(),
-                        format!("livekit-{}", comms_address),
-                    );
+                    let mut livekit_room =
+                        LivekitRoom::new(comms_address.to_string(), livekit_room_id(comms_address));
                     livekit_room.set_message_processor_sender(processor_sender);
 
                     // Store the room - no need to change connection type
