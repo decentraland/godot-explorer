@@ -558,7 +558,15 @@ impl Player {
         }
         self.pinch_accumulated_delta += pixel_delta;
         let mode = self.current_camera_mode();
-        match rig::toggle_direction(self.pinch_accumulated_delta) {
+        let viewport_size = self
+            .base()
+            .get_viewport()
+            .map(|viewport| viewport.get_visible_rect().size)
+            .unwrap_or_default();
+        match rig::toggle_direction(
+            self.pinch_accumulated_delta,
+            rig::toggle_spread(viewport_size),
+        ) {
             1 => {
                 if mode == CameraMode::ThirdPerson {
                     self.switch_camera_mode(CameraMode::FirstPerson);

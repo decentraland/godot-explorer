@@ -59,9 +59,14 @@ pub fn normalized_or_zero(v: godot::prelude::Vector3) -> godot::prelude::Vector3
 /// small enough that a thumb-anchored or angled pinch still trips it.
 pub const COMMIT_SPREAD: f32 = 16.0;
 
-/// Accumulated spread change (px) in one direction that swaps 1p<->3p: two fixed camera
-/// positions, no continuous zoom curve.
-pub const MODE_TOGGLE_SPREAD: f32 = 80.0;
+/// Accumulated spread change in one direction that swaps 1p<->3p (two fixed camera positions, no
+/// continuous zoom curve), as a fraction of the screen's shorter side: ~81 px on a 1080-wide phone.
+pub const MODE_TOGGLE_SPREAD_FRACTION: f32 = 0.075;
+
+/// Spread at which the pinching fingers count as brought together, as a fraction of the screen's
+/// shorter side (~162 px on a 1080-wide phone). Not absolute pixels: fingertips stop ~100 px
+/// apart, and a fixed 90 px made the closing pinch impossible to finish.
+pub const END_SPREAD_FRACTION: f32 = 0.15;
 
 /// The pinch commits once the spread has changed past `COMMIT_SPREAD` from where the pair formed,
 /// in either direction.
@@ -69,12 +74,29 @@ pub fn should_commit(start_spread: f32, current_spread: f32) -> bool {
     (current_spread - start_spread).abs() >= COMMIT_SPREAD
 }
 
-/// Net spread direction once the accumulated delta passes `MODE_TOGGLE_SPREAD`: 1 spreading
-/// (fingers opening), -1 closing, 0 below the threshold.
-pub fn toggle_direction(accumulated_delta: f32) -> i32 {
-    if accumulated_delta >= MODE_TOGGLE_SPREAD {
+/// The pinch ends once the fingers are brought together: under `near_spread` after starting
+/// wider. A pair that merely starts close (the usual zoom-in opening) is not ended on its first
+/// drag.
+pub fn should_end(start_spread: f32, current_spread: f32, near_spread: f32) -> bool {
+    current_spread < near_spread && current_spread < start_spread
+}
+
+/// "Fingers together" distance for a viewport.
+pub fn end_spread(viewport_size: godot::prelude::Vector2) -> f32 {
+    viewport_size.x.min(viewport_size.y) * END_SPREAD_FRACTION
+}
+
+/// Accumulated spread that swaps camera mode for a viewport.
+pub fn toggle_spread(viewport_size: godot::prelude::Vector2) -> f32 {
+    viewport_size.x.min(viewport_size.y) * MODE_TOGGLE_SPREAD_FRACTION
+}
+
+/// Net spread direction once the accumulated delta passes `threshold` (`toggle_spread`): 1
+/// spreading (fingers opening), -1 closing, 0 below it.
+pub fn toggle_direction(accumulated_delta: f32, threshold: f32) -> i32 {
+    if accumulated_delta >= threshold {
         1
-    } else if accumulated_delta <= -MODE_TOGGLE_SPREAD {
+    } else if accumulated_delta <= -threshold {
         -1
     } else {
         0
@@ -123,12 +145,53 @@ mod tests {
         assert!(should_commit(100.0, 80.0));
     }
 
+    /// Portrait phone the spacing numbers are checked against (Samsung A54).
+    const PHONE: godot::prelude::Vector2 = godot::prelude::Vector2::new(1080.0, 2400.0);
+
     #[test]
     fn the_toggle_needs_a_deliberate_spread() {
-        assert_eq!(toggle_direction(79.9), 0);
-        assert_eq!(toggle_direction(80.0), 1);
-        assert_eq!(toggle_direction(-80.0), -1);
-        assert_eq!(toggle_direction(-10.0), 0);
+        let toggle = toggle_spread(PHONE);
+        assert_eq!(toggle_direction(toggle - 0.5, toggle), 0);
+        assert_eq!(toggle_direction(-toggle + 0.5, toggle), 0);
+        assert_eq!(toggle_direction(toggle, toggle), 1);
+        assert_eq!(toggle_direction(-toggle, toggle), -1);
+    }
+
+    #[test]
+    fn a_pinch_ends_when_the_fingers_come_together() {
+        let near = end_spread(PHONE);
+        assert!(should_end(400.0, near - 1.0, near));
+        assert!(!should_end(400.0, near + 10.0, near), "still apart");
+        assert!(!should_end(400.0, 300.0, near), "merely narrowing");
+        // A pair that started close is not ended on its first drag, or zoom-in would be dead.
+        assert!(!should_end(near - 10.0, near - 10.0, near));
+        assert!(should_end(near + 50.0, near - 20.0, near));
+    }
+
+    /// A closing pinch accumulates at most start - end spread, so a pair forming closer than
+    /// end + toggle spread commits, ends and toggles nothing: both sides of that dead band.
+    #[test]
+    fn a_closing_pinch_has_room_to_toggle() {
+        let near = end_spread(PHONE);
+        let toggle = toggle_spread(PHONE);
+        assert!((near - 1080.0 * END_SPREAD_FRACTION).abs() < 1e-3);
+        assert!((toggle - 1080.0 * MODE_TOGGLE_SPREAD_FRACTION).abs() < 1e-3);
+        let too_close = near + toggle - 1.0;
+        assert_eq!(toggle_direction(near - too_close, toggle), 0);
+        let just_enough = near + toggle + 1.0;
+        assert_eq!(toggle_direction(near - just_enough, toggle), -1);
+        let start = 420.0;
+        assert_eq!(
+            toggle_direction(near - (start - COMMIT_SPREAD), toggle),
+            -1,
+            "the travel left after the commit reaches the toggle"
+        );
+        let seeded = near - (start - COMMIT_SPREAD) + COMMIT_SPREAD;
+        assert_eq!(
+            toggle_direction(seeded, toggle),
+            -1,
+            "the committing travel counts toward the toggle"
+        );
     }
 
     #[test]

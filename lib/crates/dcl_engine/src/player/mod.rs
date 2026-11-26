@@ -10,6 +10,7 @@ pub mod jump_action;
 pub mod mobile_input;
 pub mod movement_systems;
 pub mod outline_system;
+pub mod pinch_zone;
 pub mod rig;
 pub mod step_up;
 pub mod stuck_detector;

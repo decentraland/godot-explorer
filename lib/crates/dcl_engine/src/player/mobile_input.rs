@@ -5,10 +5,11 @@
 //! Pinch belongs to the CAMERA area only: the joystick's active rect is movement (walk plus its
 //! own second-finger look), so a touch there is never a pinch candidate. That alone kills the
 //! walk-left + look-right false positive. The pinch and the joystick run independently (you can
-//! walk and zoom at once). With no competing gesture in the camera area a pinch is simply the
-//! finger spread changing past a threshold (the math is in `rig`).
+//! walk and zoom at once). The pair only forms on the avatar (`pinch_zone`, #3317); then a pinch
+//! is the finger spread changing past a threshold, and bringing the fingers together ends it (the
+//! math is in `rig`).
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use godot::classes::{
     control::MouseFilter, Control, IControl, Input, InputEvent, InputEventScreenDrag,
@@ -16,7 +17,10 @@ use godot::classes::{
 };
 use godot::prelude::*;
 
-use super::{body::Player, rig};
+use super::{
+    body::{CameraMode, Player},
+    pinch_zone, rig,
+};
 use crate::ui::joystick::VirtualJoystick;
 use crate::{fetcher::globals, godot_classes::dcl_global::DclGlobal};
 
@@ -59,6 +63,9 @@ pub struct MobileCameraInput {
     /// Only these are pinch candidates, so a pinch over interactive UI never steals its drags.
     free_touches: HashMap<i32, Vector2>,
     pinch_active: bool,
+    /// Fingers that ended a pinch and have not lifted yet: not candidates, so the ended pair
+    /// cannot re-form from the same fingers while they come off the screen.
+    spent_pinch: HashSet<i32>,
     pinch_a: i32,
     pinch_b: i32,
     /// Candidate start positions, seeded when the count reaches two.
@@ -99,6 +106,7 @@ impl IControl for MobileCameraInput {
         ) {
             self.touches.clear();
             self.free_touches.clear();
+            self.spent_pinch.clear();
             self.look_index = -1;
             self.look_engaged = false;
             self.js_look_index = -1;
@@ -133,6 +141,7 @@ impl IControl for MobileCameraInput {
                     self.pinch_active && (index == self.pinch_a || index == self.pinch_b);
                 self.touches.remove(&index);
                 self.free_touches.remove(&index);
+                self.spent_pinch.remove(&index);
                 if index == self.look_index {
                     self.look_index = -1;
                     self.look_engaged = false;
@@ -293,8 +302,10 @@ impl MobileCameraInput {
             // survivors so the gesture keeps going instead of stranding.
             self.pinch_a = candidates[0];
             self.pinch_b = candidates[1];
-            self.pinch_prev_distance =
-                self.touches[&self.pinch_a].distance_to(self.touches[&self.pinch_b]);
+            // Measured from where the re-seated pair formed, same as a seeded one.
+            self.pinch_start_a = self.touches[&self.pinch_a];
+            self.pinch_start_b = self.touches[&self.pinch_b];
+            self.pinch_prev_distance = self.pinch_start_a.distance_to(self.pinch_start_b);
         }
     }
 
@@ -361,15 +372,15 @@ impl MobileCameraInput {
         }
     }
 
-    /// Free touch indices (those seen by gui_input, so owned by no UI) PLUS fingers inside the
-    /// joystick's active rect while the joystick hasn't engaged movement: a horizontal pinch often
-    /// anchors a thumb there. Excluded while the joystick is walking or the look is engaged, so
-    /// walk + look is untouched.
+    /// The pinch pair among the free touch indices (those seen by gui_input, so owned by no UI)
+    /// PLUS fingers inside the joystick's active rect while the joystick hasn't engaged movement:
+    /// a horizontal pinch often anchors a thumb there. Excluded while the joystick is walking or
+    /// the look is engaged, so walk + look is untouched. Empty when no pair sits on the avatar.
     fn free_pinch_candidates(&self) -> Vec<i32> {
         let mut out: Vec<i32> = self
             .free_touches
             .keys()
-            .filter(|index| self.touches.contains_key(index))
+            .filter(|index| self.touches.contains_key(index) && !self.spent_pinch.contains(index))
             .copied()
             .collect();
         out.sort_unstable();
@@ -380,7 +391,9 @@ impl MobileCameraInput {
                     .touches
                     .iter()
                     .filter(|(index, position)| {
-                        !self.free_touches.contains_key(index) && area.contains_point(**position)
+                        !self.free_touches.contains_key(index)
+                            && !self.spent_pinch.contains(index)
+                            && area.contains_point(**position)
                     })
                     .map(|(index, _)| *index)
                     .collect();
@@ -388,7 +401,38 @@ impl MobileCameraInput {
                 out.extend(inside);
             }
         }
-        out
+        let Some((center, half_size)) = self.pinch_zone() else {
+            return Vec::new();
+        };
+        let eligible: Vec<(i32, Vector2)> = out
+            .iter()
+            .map(|index| (*index, self.touches[index]))
+            .collect();
+        let viewport_size = self.base().get_viewport_rect().size;
+        pinch_zone::closest_pair(&eligible, center, half_size, viewport_size)
+            .map(Vec::from)
+            .unwrap_or_default()
+    }
+
+    /// The pinch zone's centre and half size in screen pixels: around the projected rig pivot in
+    /// third person (the camera looks at it, so it is the avatar on screen), the screen centre in
+    /// first person so pinching back out works. None when the camera cannot project: no pinch.
+    fn pinch_zone(&self) -> Option<(Vector2, Vector2)> {
+        let player = self.player.as_ref()?;
+        let camera = self.base().get_viewport()?.get_camera_3d()?;
+        let viewport_size = self.base().get_viewport_rect().size;
+        let half_size = pinch_zone::zone_half_size(viewport_size);
+        match player.bind().current_camera_mode() {
+            CameraMode::FirstPerson => Some((viewport_size * 0.5, half_size)),
+            CameraMode::ThirdPerson => {
+                let anchor = player.bind().get_mount_camera()?.get_global_position();
+                if camera.is_position_behind(anchor) {
+                    return None;
+                }
+                Some((camera.unproject_position(anchor), half_size))
+            }
+            CameraMode::Cinematic => None,
+        }
     }
 
     fn seed_pinch_candidate(&mut self, candidates: &[i32]) {
@@ -443,8 +487,10 @@ impl MobileCameraInput {
     }
 
     fn commit_pinch(&mut self, a: Vector2, b: Vector2) {
+        let distance = a.distance_to(b);
+        let start_distance = self.pinch_start_a.distance_to(self.pinch_start_b);
         self.pinch_active = true;
-        self.pinch_prev_distance = a.distance_to(b);
+        self.pinch_prev_distance = distance;
         // Both fingers are in the camera area (never the joystick's), so the walk keeps running:
         // only the free single-finger look yields to the zoom. A joystick-zone finger (idle
         // joystick) means the "walk" was really the pinch's anchor thumb: cancel the joystick so
@@ -460,7 +506,11 @@ impl MobileCameraInput {
             }
         }
         if let Some(player) = &mut self.player {
-            player.bind_mut().begin_pinch_zoom();
+            let mut player = player.bind_mut();
+            player.begin_pinch_zoom();
+            // The committing travel seeds the accumulator, or a closing pinch has ~16 px less
+            // room to reach the toggle.
+            player.apply_pinch_zoom(distance - start_distance);
         }
     }
 
@@ -474,6 +524,14 @@ impl MobileCameraInput {
         let distance = a.distance_to(b);
         let delta = distance - self.pinch_prev_distance;
         self.pinch_prev_distance = distance;
+        // Fingers brought together: the gesture is over, and the next pinch has to form from a
+        // fresh two-finger touchdown.
+        let start_distance = self.pinch_start_a.distance_to(self.pinch_start_b);
+        let near = rig::end_spread(self.base().get_viewport_rect().size);
+        if rig::should_end(start_distance, distance, near) {
+            self.end_pinch();
+            return;
+        }
         if delta.abs() > 1e-5 {
             if let Some(player) = &mut self.player {
                 player.bind_mut().apply_pinch_zoom(delta);
@@ -482,6 +540,11 @@ impl MobileCameraInput {
     }
 
     fn end_pinch(&mut self) {
+        for index in [self.pinch_a, self.pinch_b] {
+            if self.touches.contains_key(&index) {
+                self.spent_pinch.insert(index);
+            }
+        }
         self.pinch_active = false;
         self.pinch_a = -1;
         self.pinch_b = -1;
