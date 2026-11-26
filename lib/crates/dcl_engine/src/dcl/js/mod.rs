@@ -778,6 +778,7 @@ fn op_require(
         "text_encoding" => Ok(include_str!("js_modules/text_encoding.js").to_owned()),
         "~system/Runtime" => Ok(include_str!("js_modules/Runtime.js").to_owned()),
         "~system/Scene" => Ok(include_str!("js_modules/Scene.js").to_owned()),
+        "~system/SceneRewards" => Ok(include_str!("js_modules/SceneRewards.js").to_owned()),
         "~system/SignedFetch" => Ok(include_str!("js_modules/SignedFetch.js").to_owned()),
         "~system/Testing" => Ok(include_str!("js_modules/Testing.js").to_owned()),
         "~system/UserActionModule" => Ok(include_str!("js_modules/UserActionModule.js").to_owned()),

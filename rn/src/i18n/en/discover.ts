@@ -75,9 +75,9 @@ export const discover = {
   CATEGORY_FASHION_TITLE: 'Fashion',
   CATEGORY_BUSINESS_TITLE: 'Business',
   FTUE_WELCOME_TITLE: 'Welcome',
-  FTUE_START_HERE: 'start here',
-  FTUE_SKIP: 'Skip',
-  FTUE_SKIP_AND_EXPLORE: 'Skip and explore',
+  FTUE_GET_STARTED: 'Let’s get you started',
+  FTUE_RECOMMENDED_PLACES: 'Recommended places',
+  FTUE_EXPLORE_MORE: 'Explore more',
   STORY_BACK: 'Back',
   DISCOVER_ACTION_FAILED: "Couldn't save that. Try again.",
 } as const;

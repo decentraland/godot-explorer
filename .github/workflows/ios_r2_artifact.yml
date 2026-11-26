@@ -230,6 +230,9 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
           AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+          # R2's signing region. Unset, the CLI on an AWS-hosted runner signs with that host's
+          # EC2 region (us-west-2) and R2 answers InvalidRegionName.
+          AWS_REGION: auto
           AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
           R2_PUBLIC_BASE_URL: "https://mobile-artifacts.dclregenesislabs.xyz"
           REF: ${{ inputs.ref }}
@@ -270,23 +273,27 @@ jobs:
           KEY="ios/${SAFE_BRANCH}/${SHA}/export.tar.gz"
           LATEST_KEY="ios/${SAFE_BRANCH}/latest/export.tar.gz"
 
-          echo "📤 Uploading export to s3://${AWS_S3_BUCKET}/${KEY}"
           # R2 occasionally rejects CompleteMultipartUpload with InvalidPart; a fresh attempt
           # starts a new multipart upload, so retry up to 3 times.
-          for attempt in 1 2 3; do
-            aws s3 cp export.tar.gz "s3://${AWS_S3_BUCKET}/${KEY}" --endpoint-url "$AWS_ENDPOINT_URL" && break
-            if [ "$attempt" -eq 3 ]; then
-              echo "❌ export upload failed after 3 attempts"
-              exit 1
-            fi
-            echo "⚠️  upload attempt $attempt/3 failed — retrying in $((attempt * 5))s"
-            sleep $((attempt * 5))
-          done
+          upload() {
+            for attempt in 1 2 3; do
+              aws s3 cp "$1" "s3://${AWS_S3_BUCKET}/$2" --endpoint-url "$AWS_ENDPOINT_URL" && return 0
+              if [ "$attempt" -lt 3 ]; then
+                echo "⚠️  upload attempt $attempt/3 failed — retrying in $((attempt * 5))s"
+                sleep $((attempt * 5))
+              fi
+            done
+            echo "❌ upload to $2 failed after 3 attempts"
+            return 1
+          }
+
+          echo "📤 Uploading export to s3://${AWS_S3_BUCKET}/${KEY}"
+          upload export.tar.gz "$KEY"
           # The branch 'latest' pointer is a plain second upload (~15 s): R2's copy-object on a
           # ~1 GB object hits the CLI read timeout after 3 min before any fallback could run.
           # asc-deploy's manual dispatch defaults to ios/<branch>/latest, so it must stay populated.
           echo "🔗 Updating latest pointer s3://${AWS_S3_BUCKET}/${LATEST_KEY}"
-          aws s3 cp export.tar.gz "s3://${AWS_S3_BUCKET}/${LATEST_KEY}" --endpoint-url "$AWS_ENDPOINT_URL"
+          upload export.tar.gz "$LATEST_KEY"
 
           # Sidecar: record the build number this export was BAKED with, right next to the tarball.
           # The deploy orchestrator (mobile_distribute ios-resolve) compares it against a fresh

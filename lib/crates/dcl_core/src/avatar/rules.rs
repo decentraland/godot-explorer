@@ -109,6 +109,32 @@ pub fn set_body_shape(
     Ok(next)
 }
 
+/// Dresses the avatar from scratch: the body shape with its required defaults, then every item
+/// the catalog knows and that fits (the rest is left out), then the colours.
+pub fn set_look(
+    avatar: &AvatarState,
+    catalog: &Catalog,
+    body_shape: &str,
+    wearables: &[String],
+    skin: &str,
+    hair: &str,
+    eyes: &str,
+) -> Result<AvatarState, AvatarError> {
+    let bare = AvatarState {
+        wearables: Vec::new(),
+        ..avatar.clone()
+    };
+    let mut next = set_body_shape(&bare, catalog, body_shape)?;
+    for urn in wearables {
+        if let Ok(dressed) = equip(&next, catalog, urn) {
+            next = dressed;
+        }
+    }
+    let next = set_color(&next, ColorTarget::Skin, skin)?;
+    let next = set_color(&next, ColorTarget::Hair, hair)?;
+    set_color(&next, ColorTarget::Eyes, eyes)
+}
+
 fn is_hex_color(color: &str) -> bool {
     color.len() == 7 && color.starts_with('#') && color[1..].chars().all(|c| c.is_ascii_hexdigit())
 }
