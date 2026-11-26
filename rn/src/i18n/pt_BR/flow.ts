@@ -37,6 +37,7 @@ export const flow: Partial<Record<keyof typeof en, string>> = {
   FLOW_PROVIDER_APPLE: 'Apple',
   FLOW_PROVIDER_EMAIL: 'Continuar com email',
   FLOW_PROVIDER_WALLET: 'Wallet Connect',
+  FLOW_PROVIDER_METAMASK: 'MetaMask',
   FLOW_EMAIL_TITLE: 'Entre\ncom seu email',
   FLOW_EMAIL_LABEL: 'Digite seu email',
   FLOW_NEXT: 'PRÓXIMO',
@@ -58,6 +59,14 @@ export const flow: Partial<Record<keyof typeof en, string>> = {
   FLOW_AUTH_WAIT_TITLE: 'Abrindo\no navegador...',
   FLOW_AUTH_LOADING_TITLE: 'Carregando...',
   FLOW_AUTH_VERIFY_TITLE: 'Confirmando\no login...',
+  FLOW_AUTH_METAMASK_OPENING: 'Abrindo\no MetaMask...',
+  FLOW_AUTH_METAMASK_WAITING: 'Esperando\no MetaMask...',
+  FLOW_AUTH_WALLET_CONNECTING: 'Conectando\nsua Wallet...',
+  FLOW_AUTH_WALLET_WAITING: 'Confirme na\nsua Wallet...',
+  FLOW_WALLET_REJECTED:
+    'A solicitação foi recusada na sua Wallet. Tente novamente.',
+  FLOW_METAMASK_NOT_INSTALLED:
+    'O MetaMask não está instalado. Instale e tente novamente.',
   FLOW_EMAIL_INVALID: 'Formato inválido.',
   FLOW_GUEST_WAIT_TITLE: 'Preparando tudo…',
   FLOW_CANCEL: 'Cancelar',

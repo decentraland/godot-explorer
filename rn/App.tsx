@@ -24,6 +24,7 @@ import { useJumpIn } from './src/discover/sheetHooks';
 import { colors, ToastProvider } from '@dcl/ui-native';
 import { runCoreSelfTest } from './src/core/selfTest';
 import { EntryFlow } from './src/flow/EntryFlow';
+import { WalletModal } from './src/flow/wallet';
 
 function AppBody() {
   const [entered, setEntered] = useState(false);
@@ -141,6 +142,7 @@ function App() {
               <NavProvider>
                 <AppBody />
               </NavProvider>
+              <WalletModal />
             </ModalProvider>
           </ToastProvider>
         )}

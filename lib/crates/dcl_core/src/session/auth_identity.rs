@@ -16,6 +16,8 @@ use rand::thread_rng;
 
 /// Auth chain expiration duration: 4 weeks (30 days)
 pub const AUTH_CHAIN_EXPIRATION_SECS: u64 = 30 * 24 * 3600;
+/// External-wallet sign-ins: the 3 months the auth site gives a mobile sign-in.
+pub const WALLET_AUTH_CHAIN_EXPIRATION_SECS: u64 = 90 * 24 * 3600;
 
 pub fn get_ephemeral_message(ephemeral_address: &str, expiration: std::time::SystemTime) -> String {
     let datetime: DateTime<Utc> = expiration.into();
@@ -215,9 +217,11 @@ pub fn create_ephemeral_from_external_signature(
     ))
 }
 
-/// Generates ephemeral identity data for external signing.
+/// Generates ephemeral identity data for external signing, valid for `lifetime_secs`.
 /// Returns the message to be signed, ephemeral private key, and expiration timestamp.
-pub fn generate_ephemeral_for_signing() -> (String, Vec<u8>, std::time::SystemTime) {
+pub fn generate_ephemeral_for_signing(
+    lifetime_secs: u64,
+) -> (String, Vec<u8>, std::time::SystemTime) {
     let local_wallet = LocalWallet::new(&mut thread_rng());
     let signing_key_bytes = local_wallet.signer().to_bytes().to_vec();
     let ephemeral_address = format!("{:#x}", local_wallet.address());
@@ -226,7 +230,7 @@ pub fn generate_ephemeral_for_signing() -> (String, Vec<u8>, std::time::SystemTi
     // Without this, the message MetaMask signs ("...Expiration: ...45.123Z") would differ
     // from the reconstructed message ("...Expiration: ...45.000Z"), causing ecrecover to fail.
     let expiration_secs = (std::time::SystemTime::now()
-        + std::time::Duration::from_secs(AUTH_CHAIN_EXPIRATION_SECS))
+        + std::time::Duration::from_secs(lifetime_secs))
     .duration_since(std::time::UNIX_EPOCH)
     .unwrap()
     .as_secs();

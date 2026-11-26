@@ -16,7 +16,7 @@ export type Step =
   | 'ftue'
   | 'done';
 
-export type Provider = 'google' | 'apple' | 'email' | 'wallet';
+export type Provider = 'google' | 'apple' | 'email' | 'wallet' | 'metamask';
 
 export type FlowState = {
   step: Step;

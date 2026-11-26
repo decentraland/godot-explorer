@@ -6,7 +6,10 @@ use std::time::{Instant, SystemTime};
 use crate::{
     app::{AppEvents, SignInMethod, SignInStep, State},
     session::{
-        auth_identity::{create_ephemeral_from_external_signature, generate_ephemeral_for_signing},
+        auth_identity::{
+            create_ephemeral_from_external_signature, generate_ephemeral_for_signing,
+            WALLET_AUTH_CHAIN_EXPIRATION_SECS,
+        },
         decentraland_auth_server::{mobile_auth_url, IdentityStatusError},
         identity::SessionEvent,
         signin_verifier::{create_verifier, is_terminal_status, Selection},
@@ -271,7 +274,8 @@ impl Hub {
     /// a fresh ephemeral key, which stays here.
     pub fn sign_in_wallet_begin(&self) -> Result<String, SignInError> {
         self.begin(SignInMethod::Wallet)?;
-        let (message, key, expiration) = generate_ephemeral_for_signing();
+        let (message, key, expiration) =
+            generate_ephemeral_for_signing(WALLET_AUTH_CHAIN_EXPIRATION_SECS);
         *self
             .wallet_pending
             .lock()

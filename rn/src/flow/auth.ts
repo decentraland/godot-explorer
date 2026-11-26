@@ -1,6 +1,8 @@
+import { trackScreen } from '../analytics';
 import { core } from '../core';
 import { onCoreEvents } from '../core/events';
 import { Control, CoreError } from '../core/native';
+import { cancelWalletSignIn } from './wallet';
 
 export type AuthResult = { hasProfile: boolean; name: string };
 
@@ -28,15 +30,14 @@ export const sendEmailCode = (email: string) => core().signInEmailStart(email);
 export const verifyEmailCode = (email: string, code: string) =>
   core().signInEmailVerify(email, code);
 
-/**
- * Google, Apple and external wallets: the core asks the shell to open the page (see
- * `startLinkHandling`). `wallet_connect` opens the page straight on its wallet list, as 1.x does.
- */
-export const startBrowserSignIn = (
-  provider: 'google' | 'apple' | 'wallet_connect',
-) => core().signInBrowser(provider);
+/** Google and Apple: the core asks the shell to open the page (see `startLinkHandling`). */
+export const startBrowserSignIn = (provider: 'google' | 'apple') =>
+  core().signInBrowser(provider);
 
-export const cancelSignIn = () => core().cancelSignIn();
+export const cancelSignIn = () => {
+  cancelWalletSignIn();
+  core().cancelSignIn();
+};
 export const signOut = () => core().signOut();
 
 /** Resolves once the app state says the user is signed in, rejects when a step fails. */
@@ -53,6 +54,24 @@ export function whenSignedIn(): Promise<void> {
     if (core().state().tag === 'SignedIn') {
       done(resolve);
     }
+  });
+}
+
+/** How the player signed in, as `AUTH_SUCCESS` reports it. */
+export type AuthProvider =
+  | 'guest'
+  | 'email'
+  | 'google'
+  | 'apple'
+  | 'metamask'
+  | 'wallet_connect';
+
+/** 1.x's event, with the provider added; a guest is any account the core counts as one. */
+export function trackAuthSuccess(provider: AuthProvider) {
+  const guest = core().isGuest();
+  trackScreen('AUTH_SUCCESS', {
+    login_type: guest ? 'guest' : 'fully_registered',
+    provider,
   });
 }
 
