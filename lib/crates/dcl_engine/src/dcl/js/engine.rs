@@ -13,7 +13,7 @@ use tokio::sync::mpsc::Receiver;
 
 use crate::dcl::{
     common::{
-        CommunicatedWithRenderer, SceneDying, SceneLastJsTickUs, SceneLogs,
+        CommunicatedWithRenderer, SceneDying, SceneExitReason, SceneLastJsTickUs, SceneLogs,
         SceneMainCrdtFileContent, SceneRendererDelta, SceneTickStart,
     },
     crdt::{
@@ -261,6 +261,9 @@ async fn op_crdt_recv_wait(op_state: Rc<RefCell<OpState>>) -> Result<u32, anyhow
         op_state.put(local_api_calls);
         op_state.put(mutex_scene_crdt_state);
         op_state.put(SceneDying(true));
+        op_state.put(SceneExitReason(
+            "scene CRDT state poisoned, shutting down".to_string(),
+        ));
         return Err(anyhow::anyhow!("scene CRDT state poisoned, shutting down"));
     };
 
@@ -440,9 +443,15 @@ async fn op_crdt_recv_wait(op_state: Rc<RefCell<OpState>>) -> Result<u32, anyhow
 
             data_buf
         }
-        _ => {
-            // channel has been closed, shutdown gracefully
+        other => {
+            // Kill is the main thread asking for the shutdown, which it already
+            // tracks; a closed channel means the renderer dropped us unannounced.
             tracing::debug!("{}: shutting down", std::thread::current().name().unwrap());
+            if other.is_none() {
+                op_state.put(SceneExitReason(
+                    "renderer channel closed without a kill signal".to_string(),
+                ));
+            }
 
             // TODO: handle recv from renderer
             op_state.put(SceneDying(true));

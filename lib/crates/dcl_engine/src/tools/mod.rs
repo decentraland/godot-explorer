@@ -3,6 +3,7 @@ pub mod avatar_renderer;
 pub mod debug_hub;
 pub mod godot_logger;
 pub mod gp_benchmark;
+pub mod last_panic;
 pub mod log_stream;
 pub mod memory_monitor;
 pub mod network_inspector;
