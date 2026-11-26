@@ -200,6 +200,7 @@ mod tests {
     use super::*;
     use std::time::Duration;
     use tokio::net::TcpListener;
+    use tokio_tungstenite::tungstenite::handshake::server::{Request, Response};
 
     async fn wait_for(mut cond: impl FnMut() -> bool) {
         for _ in 0..100 {
@@ -217,7 +218,18 @@ mod tests {
         let addr = listener.local_addr().unwrap();
         tokio::spawn(async move {
             let (tcp, _) = listener.accept().await.unwrap();
-            let mut ws = tokio_tungstenite::accept_async(tcp).await.unwrap();
+            // The client fails a handshake whose response does not echo the requested subprotocol.
+            let mut ws = tokio_tungstenite::accept_hdr_async(
+                tcp,
+                #[allow(clippy::result_large_err)]
+                |_req: &Request, mut resp: Response| {
+                    resp.headers_mut()
+                        .insert("sec-websocket-protocol", "rfc5".parse().unwrap());
+                    Ok(resp)
+                },
+            )
+            .await
+            .unwrap();
             while let Some(Ok(msg)) = ws.next().await {
                 if msg.is_binary() {
                     ws.send(msg).await.unwrap();
