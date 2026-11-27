@@ -49,7 +49,7 @@ flows do not depend on each other or on their order.
 | `07-place-sheet` | Place sheet, Favorite / Like / Dislike, Share, `JUMP IN` |
 | `08-event-sheet` | Event sheet, expand, share |
 | `09-friend-sheet` | Friend sheet |
-| `10-backpack` | Tabs, slots, selection pairs, Emotes, Filter |
+| `10-backpack` | Item selection in every slot, colors, Collectibles filter, state kept on leaving, Emotes (assign, move) |
 | `11-profile` | Profile data, edit form, unsaved-changes dialog |
 | `12-world-menu` | Chat, drawer panels (Discover, Social, Notifications, Settings), leaving the world |
 | `13-settings` | The eight sections and their labels |
@@ -60,9 +60,15 @@ flows do not depend on each other or on their order.
 
 - **Mock (fixed, in the repo):** session, avatar and wearables, profile, settings, notifications, chat, friends,
   the current place, favorites and votes (in memory). Flows assert these by exact name.
+  The Backpack catalog (`src/core/mock/avatarApi.ts`) has several items per slot so selection can be tested. Mask has
+  none on purpose, to assert the empty state; `neon_jacket`, `crystal_tiara` and `laser_visor` are collectible, so the
+  Collectibles filter has results on wearables. No emote is collectible: base emotes never are, so on emotes that filter
+  shows the empty state.
 - **Live public services:** Featured, Popular, Events, the place lists and search results. They change daily, so flows
   check structure (a rail has content under its title), never a place or event name. The flows still need the rails
   to have content and `05-search` needs a result that contains "plaza".
+- **Emote thumbnails** are also requested from the Catalyst, with a fallback to drawn silhouettes when it fails. The
+  emote list and the wearables never come from the Catalyst in this build, and no flow asserts on an image.
 
 If a file under `src/core/mock` or `src/menu/mockData.ts` changes, the flows that assert its values change with it.
 
@@ -74,6 +80,12 @@ If a file under `src/core/mock` or `src/menu/mockData.ts` changes, the flows tha
 - Check live data by structure (`text: ".+"` with `below` / `above`); check mock data by name.
 - Text matching ignores case; use labels that only the screen under test has.
 - For anything the app keeps between steps, tap only when not selected, then assert it is selected.
+  `subflows/select.yaml` does exactly that: `runFlow` it with `env: ITEM: "<label>"`. The avatar the entry's Randomize
+  leaves is random, so a flow cannot assume what is worn when it starts.
+- Elements that are off screen are not in the hierarchy: bring them in with a `swipe` `from:` a visible element (the
+  Extras slots after Glasses, the emote slots 7 to 10) before asserting or tapping them.
+- When a label repeats on screen, narrow the match with `above` / `below` (an emote name appears in the chip over the
+  slots and in its grid tile).
 - Prefer a fixed `swipe` over `scrollUntilVisible` on the Discover home (see Known limits).
 
 ## Known limits
@@ -82,6 +94,8 @@ If a file under `src/core/mock` or `src/menu/mockData.ts` changes, the flows tha
 - Profile and Backpack opened from the world drawer crash this build
   ([#3265](https://github.com/decentraland/godot-explorer/issues/3265)). From the bottom tabs both pages work, so no
   flow here opens them from the drawer.
+- The Backpack landscape layout is not covered. Menus are portrait-locked (`src/platform/orientation.ts`), so rotating
+  the device does not change the layout, and the only route to landscape is the world drawer, which crashes (above).
 - `Report Bug` (Settings > Help & Support) and `ADD EMAIL` (Settings > Account) do nothing
   ([#3266](https://github.com/decentraland/godot-explorer/issues/3266)). No flow covers them.
 - `CREATE ACCOUNT` opens a page titled "Sign in" with the same methods as `SIGN IN`.
