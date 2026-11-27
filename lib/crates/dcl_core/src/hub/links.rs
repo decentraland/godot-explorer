@@ -103,6 +103,12 @@ impl Hub {
                 Effect::Config {
                     param: ConfigParam::FtueTutorialStart,
                 } => crate::ftue::force_tutorial(),
+                Effect::Config {
+                    param: ConfigParam::FakeOwnedWearables { urns },
+                } => crate::avatar::set_fake_owned(urns),
+                Effect::Config {
+                    param: ConfigParam::DisableProfileDeploy,
+                } => crate::profile::global().set_deploy_disabled(true),
                 // The shell also hears it: a preview launch signs in silently.
                 Effect::SetPreviewUrl { url } => {
                     self.with_app(|app| {

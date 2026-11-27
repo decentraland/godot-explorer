@@ -45,20 +45,25 @@ pub struct OwnedAvatarItems {
 pub async fn load_owned_avatar_items() -> Result<OwnedAvatarItems, CoreError> {
     let core = core()?;
     let identity = SessionIdentity;
-    let Some(address) = identity.address().filter(|_| !identity.is_local_guest()) else {
-        return Ok(OwnedAvatarItems {
-            wearables: Vec::new(),
-            emotes: Vec::new(),
-        });
-    };
+    let address = identity.address().filter(|_| !identity.is_local_guest());
     let endpoints = profile::global().endpoints();
     let (wearables, emotes) = core
         .handle()
         .spawn(async move {
             let transport = ReqwestTransport::new();
-            let wearables = avatar::owned_wearables(&transport, &endpoints, &address).await?;
+            // Dev/testing links add fake-owned wearables, also for a guest.
+            let fake = avatar::fake_owned_wearables(&transport, &endpoints).await?;
+            let Some(address) = address else {
+                return Ok((
+                    (fake, avatar::TokenUrns::new()),
+                    (Vec::new(), avatar::TokenUrns::new()),
+                ));
+            };
+            let (mut wearables, tokens) =
+                avatar::owned_wearables(&transport, &endpoints, &address).await?;
+            wearables.extend(fake);
             let emotes = avatar::owned_emotes(&transport, &endpoints, &address).await?;
-            Ok::<_, avatar::CatalogError>((wearables, emotes))
+            Ok::<_, avatar::CatalogError>(((wearables, tokens), emotes))
         })
         .await
         .map_err(invalid)?

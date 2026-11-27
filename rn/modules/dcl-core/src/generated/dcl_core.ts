@@ -7190,6 +7190,8 @@ export enum ConfigParam_Tags {
   SafeMarginDebug = 'SafeMarginDebug',
   ControlsFtueShow = 'ControlsFtueShow',
   FtueTutorialStart = 'FtueTutorialStart',
+  FakeOwnedWearables = 'FakeOwnedWearables',
+  DisableProfileDeploy = 'DisableProfileDeploy',
 }
 /**
  * A setting a link carries, for the owner of that setting to apply.
@@ -7675,6 +7677,67 @@ export const ConfigParam = (() => {
     }
   }
 
+  type FakeOwnedWearables__interface = {
+    tag: ConfigParam_Tags.FakeOwnedWearables;
+    inner: Readonly<{ urns: Array<string> }>;
+  };
+  /**
+   * Dev/testing: wearables the Backpack lists as owned (see `avatar::set_fake_owned`).
+   */
+  class FakeOwnedWearables_
+    extends UniffiEnum
+    implements FakeOwnedWearables__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.FakeOwnedWearables;
+    readonly inner: Readonly<{ urns: Array<string> }>;
+    constructor(inner: { urns: Array<string> }) {
+      super('ConfigParam', 'FakeOwnedWearables');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { urns: Array<string> }): FakeOwnedWearables_ {
+      return new FakeOwnedWearables_(inner);
+    }
+
+    static instanceOf(obj: any): obj is FakeOwnedWearables_ {
+      return obj.tag === ConfigParam_Tags.FakeOwnedWearables;
+    }
+  }
+
+  type DisableProfileDeploy__interface = {
+    tag: ConfigParam_Tags.DisableProfileDeploy;
+  };
+  /**
+   * Dev/testing: profile changes stay on this device.
+   */
+  class DisableProfileDeploy_
+    extends UniffiEnum
+    implements DisableProfileDeploy__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.DisableProfileDeploy;
+    constructor() {
+      super('ConfigParam', 'DisableProfileDeploy');
+    }
+
+    static new(): DisableProfileDeploy_ {
+      return new DisableProfileDeploy_();
+    }
+
+    static instanceOf(obj: any): obj is DisableProfileDeploy_ {
+      return obj.tag === ConfigParam_Tags.DisableProfileDeploy;
+    }
+  }
+
   function instanceOf(obj: any): obj is ConfigParam {
     return obj[uniffiTypeNameSymbol] === 'ConfigParam';
   }
@@ -7699,6 +7762,8 @@ export const ConfigParam = (() => {
     SafeMarginDebug: SafeMarginDebug_,
     ControlsFtueShow: ControlsFtueShow_,
     FtueTutorialStart: FtueTutorialStart_,
+    FakeOwnedWearables: FakeOwnedWearables_,
+    DisableProfileDeploy: DisableProfileDeploy_,
   });
 })();
 /**
@@ -7723,7 +7788,9 @@ export type ConfigParam = InstanceType<
     | 'GpBenchmark'
     | 'SafeMarginDebug'
     | 'ControlsFtueShow'
-    | 'FtueTutorialStart']
+    | 'FtueTutorialStart'
+    | 'FakeOwnedWearables'
+    | 'DisableProfileDeploy']
 >;
 
 // FfiConverter for enum ConfigParam
@@ -7790,6 +7857,12 @@ const FfiConverterTypeConfigParam = (() => {
           return new ConfigParam.ControlsFtueShow();
         case 18:
           return new ConfigParam.FtueTutorialStart();
+        case 19:
+          return new ConfigParam.FakeOwnedWearables({
+            urns: FfiConverterSequenceString.readFromCursor(c),
+          });
+        case 20:
+          return new ConfigParam.DisableProfileDeploy();
         default:
           throw new UniffiInternalError.UnexpectedEnumCase();
       }
@@ -7890,6 +7963,16 @@ const FfiConverterTypeConfigParam = (() => {
           c.writeI32(18);
           return;
         }
+        case ConfigParam_Tags.FakeOwnedWearables: {
+          c.writeI32(19);
+          const inner = value.inner;
+          FfiConverterSequenceString.writeIntoCursor(inner.urns, c);
+          return;
+        }
+        case ConfigParam_Tags.DisableProfileDeploy: {
+          c.writeI32(20);
+          return;
+        }
         default:
           // Throwing from here means that ConfigParam_Tags hasn't matched an ordinal.
           throw new UniffiInternalError.UnexpectedEnumCase();
@@ -7982,6 +8065,15 @@ const FfiConverterTypeConfigParam = (() => {
           return 4;
         }
         case ConfigParam_Tags.FtueTutorialStart: {
+          return 4;
+        }
+        case ConfigParam_Tags.FakeOwnedWearables: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterSequenceString.allocationSize(inner.urns);
+          return size;
+        }
+        case ConfigParam_Tags.DisableProfileDeploy: {
           return 4;
         }
         default:

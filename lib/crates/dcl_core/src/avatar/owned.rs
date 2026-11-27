@@ -65,7 +65,7 @@ impl<T> Default for OwnedPage<T> {
 }
 
 /// The content-server URL of the entity's thumbnail.
-fn thumbnail_of(entity: &Value, content_base: &str) -> Option<String> {
+pub(super) fn thumbnail_of(entity: &Value, content_base: &str) -> Option<String> {
     let file = entity.pointer("/metadata/thumbnail")?.as_str()?;
     let hash = entity
         .get("content")?

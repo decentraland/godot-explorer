@@ -330,6 +330,43 @@ fn owned_page(total: u64) -> serde_json::Value {
 }
 
 #[test]
+fn parses_fake_owned_wearables_from_their_entities() {
+    let entity = |id: &str, thumbnail: bool| {
+        serde_json::json!({
+            "pointers": [id],
+            "content": if thumbnail {
+                serde_json::json!([{ "file": "thumbnail.png", "hash": "QmThumb" }])
+            } else {
+                serde_json::json!([])
+            },
+            "metadata": {
+                "id": id,
+                "name": "Secret Helmet",
+                "rarity": "mythic",
+                "thumbnail": "thumbnail.png",
+                "data": {
+                    "category": "helmet",
+                    "representations": [{ "bodyShapes": [MALE] }]
+                }
+            }
+        })
+    };
+    let payload = serde_json::json!([entity(HELMET, true), entity("urn:no-thumbnail", false)]);
+    assert_eq!(
+        parse_wearable_entities(&payload.to_string(), "https://peer.test/content/"),
+        vec![CatalogItem {
+            urn: HELMET.into(),
+            name: "Secret Helmet".into(),
+            category: "helmet".into(),
+            thumbnail: "https://peer.test/content/contents/QmThumb".into(),
+            rarity: "mythic".into(),
+            body_shapes: vec![MALE.into()],
+            collectible: true,
+        }]
+    );
+}
+
+#[test]
 fn parses_owned_wearables_with_their_tokens() {
     let page = parse_owned_wearables(&owned_page(1).to_string(), "https://peer.test/content/");
     assert_eq!(
