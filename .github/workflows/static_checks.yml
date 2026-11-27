@@ -54,3 +54,6 @@ jobs:
 
       - name: SceneCredits JS module unit tests
         run: node --test lib/crates/dcl_engine/src/dcl/js/js_modules/SceneCredits.test.cjs
+
+      - name: Scene API op results unit tests
+        run: node --test lib/crates/dcl_engine/src/dcl/js/js_modules/op_results.test.cjs

@@ -32,6 +32,11 @@ thread_local! {
         RefCell::new(HashMap::new());
 }
 
+/// At engine shutdown: see `crate::release_thread_local_engine_objects`.
+pub(crate) fn release_engine_objects() {
+    STYLED_FONTS.take();
+}
+
 /// `base` with `glyph_spacing` extra px between glyphs, cached (`base` itself for 0). One
 /// FontVariation carries it: nesting variations would drop the inner one's properties.
 fn spaced_font(base: &Gd<Font>, glyph_spacing: i32) -> Gd<Font> {

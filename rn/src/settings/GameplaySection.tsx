@@ -6,7 +6,7 @@ import {
   Dropdown,
   fonts,
   u,
-  WarningBanner,
+  Alert,
 } from '@dcl/ui-native';
 import { emitIntent } from '../hud/hudSignals';
 import { t } from '../i18n';
@@ -47,8 +47,8 @@ export function GameplaySection({ m }: { m: SettingsModel }) {
               onChange={v => set('camera_mode', v as CameraMode)}
             />
             {env.cameraLocked && (
-              <WarningBanner
-                outlined
+              <Alert
+                background="translucent"
                 message={t('SETTINGS_THE_CAMERA_MODE_IS_SET_BY')}
               />
             )}

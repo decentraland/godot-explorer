@@ -4,6 +4,11 @@ import { Text } from 'react-native';
 import { Path } from 'react-native-svg';
 import {
   ActionSquareButton,
+  Alert,
+  BadgeBar,
+  BadgeDCL,
+  BadgeProfileRow,
+  ItemCard,
   AvatarBackground,
   AvatarCard,
   Badge,
@@ -20,6 +25,7 @@ import {
   LogoLoader,
   NotificationBadge,
   LinkRow,
+  Notification,
   Menu,
   PageDots,
   ProfileCard,
@@ -32,7 +38,6 @@ import {
   EventTimeTag,
   Tabs,
   Tooltip,
-  WarningBanner,
   colors,
   SCALE,
   indexFromOffset,
@@ -303,7 +308,57 @@ describe('Skeleton and EmptyState', () => {
   });
 });
 
-describe('LinkRow and WarningBanner', () => {
+describe('Badges', () => {
+  const art = { uri: 'https://example.com/badge.png' };
+
+  it('BadgeDCL shows the bar with progress, else the date', () => {
+    const withBar = render(
+      <BadgeDCL image={art} name="Traveler bronze" progress={0.4} />,
+    );
+    expect(withBar.root.findAllByType(BadgeBar).length).toBe(1);
+    act(() => withBar.unmount());
+    const withDate = render(
+      <BadgeDCL image={art} name="Traveler bronze" date="Jan. 2024" />,
+    );
+    expect(withDate.root.findAllByType(BadgeBar).length).toBe(0);
+    expect(text(withDate)).toContain('Jan. 2024');
+    act(() => withDate.unmount());
+  });
+
+  it('BadgeDCL marks the selected badge and presses', () => {
+    const onPress = jest.fn();
+    const tree = render(
+      <BadgeDCL
+        image={art}
+        name="Traveler bronze"
+        state="selected"
+        onPress={onPress}
+      />,
+    );
+    const node = pressable(tree, 'Traveler bronze');
+    expect(node.props.accessibilityState).toMatchObject({ selected: true });
+    act(() => node.props.onPress());
+    expect(onPress).toHaveBeenCalled();
+    act(() => tree.unmount());
+  });
+
+  it('BadgeBar clamps its value', () => {
+    const tree = render(<BadgeBar value={1.5} />);
+    expect(
+      tree.root.findByProps({ accessibilityRole: 'progressbar' }).props
+        .accessibilityValue,
+    ).toMatchObject({ now: 100 });
+    act(() => tree.unmount());
+  });
+
+  it('BadgeProfileRow is the empty plus slot without an image', () => {
+    const tree = render(<BadgeProfileRow />);
+    expect(tree.root.findAllByType(ItemCard).length).toBe(1);
+    act(() => tree.unmount());
+  });
+});
+
+describe('LinkRow, Alert and Notification', () => {
   it('LinkRow presses and marks selection', () => {
     const onPress = jest.fn();
     const tree = render(
@@ -316,10 +371,32 @@ describe('LinkRow and WarningBanner', () => {
     expect(onPress).toHaveBeenCalled();
   });
 
-  it('WarningBanner shows its message', () => {
+  it('Alert shows the bold lead before its message', () => {
+    const tree = render(
+      <Alert lead="Reward claim failed." message="Try again." />,
+    );
+    expect(text(tree)).toContain('Reward claim failed.');
+    expect(text(tree)).toContain('Try again.');
     expect(
-      text(render(<WarningBanner message="Device no longer supported" />)),
-    ).toContain('Device no longer supported');
+      tree.root.findAllByProps({ accessibilityRole: 'alert' }).length,
+    ).toBeGreaterThan(0);
+    act(() => tree.unmount());
+  });
+
+  it('Notification runs its action', () => {
+    const onAction = jest.fn();
+    const tree = render(
+      <Notification
+        title="Unlock the full experience"
+        body="Add email to play across mobile and desktop."
+        actionLabel="Add email"
+        onAction={onAction}
+      />,
+    );
+    expect(text(tree)).toContain('Unlock the full experience');
+    act(() => pressable(tree, 'Add email').props.onPress());
+    expect(onAction).toHaveBeenCalled();
+    act(() => tree.unmount());
   });
 });
 
@@ -399,7 +476,9 @@ describe('demo props', () => {
       'ProgressBar',
       'SectionCollapsible',
       'LinkRow',
-      'WarningBanner',
+      'Alert',
+      'Notification',
+      'BadgeDCL',
       'PageDots',
       'SnapCarousel',
       'HudCircleButton',

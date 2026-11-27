@@ -29,6 +29,9 @@ export type FlowState = {
   error: string | null;
   /** The version gate's verdict on `update_available`: no LATER when required. */
   updateRequired: boolean;
+  /** The look was finished in the editor: back from the name returns there, not to the presets,
+   * which would apply the preset over it. */
+  customized: boolean;
 };
 
 export type FlowAction =
@@ -60,6 +63,7 @@ export const initialFlow: FlowState = {
   name: '',
   error: null,
   updateRequired: false,
+  customized: false,
 };
 
 const go = (
@@ -143,7 +147,9 @@ export function reduceFlow(state: FlowState, action: FlowAction): FlowState {
     case 'customizeAvatar':
       return go(state, 'avatar_customize');
     case 'avatarConfirmed':
-      return go(state, 'avatar_naming');
+      return go(state, 'avatar_naming', {
+        customized: state.step === 'avatar_customize',
+      });
     case 'named':
       return go(state, 'ftue', { name: action.name });
     case 'finish':
@@ -174,7 +180,7 @@ function back(state: FlowState): FlowState {
     case 'avatar_customize':
       return go(state, 'avatar_create');
     case 'avatar_naming':
-      return go(state, 'avatar_create');
+      return go(state, state.customized ? 'avatar_customize' : 'avatar_create');
     default:
       return state;
   }
