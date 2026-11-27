@@ -1,0 +1,42 @@
+{
+  "ecs7": true,
+  "runtimeVersion": "7",
+  "display": {
+    "title": "Locale Unit Test",
+    "description": "Locale Unit Test",
+    "navmapThumbnail": "images/scene-thumbnail.png",
+    "favicon": "favicon_asset"
+  },
+  "owner": "",
+  "contact": {
+    "name": "Seba",
+    "email": ""
+  },
+  "main": "bin/game.js",
+  "tags": [],
+  "scene": {
+    "parcels": [
+      "56,-52"
+    ],
+    "base": "56,-52"
+  },
+  "spawnPoints": [
+    {
+      "name": "spawn1",
+      "position": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "cameraTarget": {
+        "x": 8,
+        "y": 2,
+        "z": 16
+      },
+      "default": true
+    }
+  ],
+  "requiredPermissions": [],
+  "featureToggles": {},
+  "name": "mode-testing"
+}
