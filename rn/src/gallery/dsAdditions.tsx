@@ -1,9 +1,11 @@
 // Design System Mobile components added on 2026-11-17: Button/SeeMore, Button/ProfileLink,
 // Profile/Attribute, Icon/Profile, Menu/NavItem, Settings/Row, Input/Username and Modal/Special;
-// Loader/Logo, Image Not Found, Background/Avatar and Tooltip on 2026-11-25.
+// Loader/Logo, Image Not Found, Background/Avatar, Tooltip, Alert and Notification on
+// 2026-11-25.
 import { useState } from 'react';
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import {
+  Alert,
   AppText,
   AvatarBackground,
   BrandBackground,
@@ -16,6 +18,7 @@ import {
   LogoLoader,
   MenuNavItem,
   ModalSpecial,
+  Notification,
   ProfileAttribute,
   ProfileIconType,
   ScrollFade,
@@ -212,6 +215,30 @@ registerPreview('extra/ds-tooltip', {
   ),
 });
 
+registerPreview('extra/ds-alert', {
+  title: 'DS: Alert and Notification',
+  orientation: 'portrait',
+  render: () => (
+    <View style={styles.page}>
+      <BrandBackground />
+      <ScrollView contentContainerStyle={styles.alerts}>
+        <Notification
+          title="Unlock the full experience"
+          body="Add email to play across mobile and desktop, and claim an exclusive Wearable."
+          actionLabel="Add email"
+          onAction={noop}
+        />
+        <Alert lead="Reward claim failed." message="Try again." />
+        <Alert
+          lead="Reward claim failed."
+          message="Check your connection and try again."
+        />
+        <Alert background="translucent" message="Device no longer supported" />
+      </ScrollView>
+    </View>
+  ),
+});
+
 const styles = StyleSheet.create({
   page: { flex: 1 },
   content: {
@@ -246,4 +273,5 @@ const styles = StyleSheet.create({
   tooltipPage: { flex: 1, backgroundColor: color.background.elevated },
   tooltips: { padding: space['2xl'], gap: space['2xl'] },
   tooltipLeft: { marginLeft: space.lg },
+  alerts: { padding: space['2xl'], gap: space.xl },
 });

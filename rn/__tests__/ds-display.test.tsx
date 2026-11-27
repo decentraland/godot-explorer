@@ -4,6 +4,7 @@ import { Text } from 'react-native';
 import { Path } from 'react-native-svg';
 import {
   ActionSquareButton,
+  Alert,
   AvatarBackground,
   AvatarCard,
   Badge,
@@ -20,6 +21,7 @@ import {
   LogoLoader,
   NotificationBadge,
   LinkRow,
+  Notification,
   Menu,
   PageDots,
   ProfileCard,
@@ -32,7 +34,6 @@ import {
   EventTimeTag,
   Tabs,
   Tooltip,
-  WarningBanner,
   colors,
   SCALE,
   indexFromOffset,
@@ -303,7 +304,7 @@ describe('Skeleton and EmptyState', () => {
   });
 });
 
-describe('LinkRow and WarningBanner', () => {
+describe('LinkRow, Alert and Notification', () => {
   it('LinkRow presses and marks selection', () => {
     const onPress = jest.fn();
     const tree = render(
@@ -316,10 +317,32 @@ describe('LinkRow and WarningBanner', () => {
     expect(onPress).toHaveBeenCalled();
   });
 
-  it('WarningBanner shows its message', () => {
+  it('Alert shows the bold lead before its message', () => {
+    const tree = render(
+      <Alert lead="Reward claim failed." message="Try again." />,
+    );
+    expect(text(tree)).toContain('Reward claim failed.');
+    expect(text(tree)).toContain('Try again.');
     expect(
-      text(render(<WarningBanner message="Device no longer supported" />)),
-    ).toContain('Device no longer supported');
+      tree.root.findAllByProps({ accessibilityRole: 'alert' }).length,
+    ).toBeGreaterThan(0);
+    act(() => tree.unmount());
+  });
+
+  it('Notification runs its action', () => {
+    const onAction = jest.fn();
+    const tree = render(
+      <Notification
+        title="Unlock the full experience"
+        body="Add email to play across mobile and desktop."
+        actionLabel="Add email"
+        onAction={onAction}
+      />,
+    );
+    expect(text(tree)).toContain('Unlock the full experience');
+    act(() => pressable(tree, 'Add email').props.onPress());
+    expect(onAction).toHaveBeenCalled();
+    act(() => tree.unmount());
   });
 });
 
@@ -399,7 +422,8 @@ describe('demo props', () => {
       'ProgressBar',
       'SectionCollapsible',
       'LinkRow',
-      'WarningBanner',
+      'Alert',
+      'Notification',
       'PageDots',
       'SnapCarousel',
       'HudCircleButton',

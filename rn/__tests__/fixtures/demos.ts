@@ -1,6 +1,7 @@
 import { ComponentProps } from 'react';
 import {
   ActionSquareButton,
+  Alert,
   BottomSheet,
   Checkbox,
   Chip,
@@ -12,6 +13,7 @@ import {
   EmptyState,
   HudCircleButton,
   LinkRow,
+  Notification,
   PageDots,
   SnapCarousel,
   ProgressBar,
@@ -22,7 +24,6 @@ import {
   Switch,
   TextField,
   ToastBubble,
-  WarningBanner,
 } from '@dcl/ui-native';
 
 const noop = () => {};
@@ -135,9 +136,16 @@ export const demos = {
     external: true,
     onPress: noop,
   } satisfies ComponentProps<typeof LinkRow>,
-  WarningBanner: {
+  Alert: {
     message: 'Device no longer supported',
-  } satisfies ComponentProps<typeof WarningBanner>,
+    background: 'translucent',
+  } satisfies ComponentProps<typeof Alert>,
+  Notification: {
+    title: 'Unlock the full experience',
+    body: 'Add email to play across mobile and desktop, and claim an exclusive Wearable.',
+    actionLabel: 'Add email',
+    onAction: noop,
+  } satisfies ComponentProps<typeof Notification>,
   PageDots: { count: 4, index: 1 } satisfies ComponentProps<typeof PageDots>,
   SnapCarousel: {
     data: ['a', 'b', 'c'],
