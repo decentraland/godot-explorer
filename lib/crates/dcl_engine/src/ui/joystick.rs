@@ -141,6 +141,9 @@ impl IControl for VirtualJoystick {
             .loading_started()
             .connect_other(&me, |this| this.on_loading_scene());
         self.on_loading_scene();
+        // `resized` only fires on a change: when the size is already final here, the base would
+        // stay at the shader's (0, 0), the top-left corner, until the first touch.
+        self.reset();
     }
 }
 
