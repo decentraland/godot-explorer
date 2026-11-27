@@ -58,7 +58,8 @@ export function SearchView({
 }: {
   initial?: Partial<SearchState>;
   onBack: () => void;
-  onPlace: (place: Place) => void;
+  /** `position`: the card's slot in its result rail. */
+  onPlace: (place: Place, position: number) => void;
   onEvent: (event: DiscoverEvent) => void;
   lastPlayed: Place[];
   idleContent?: ReactNode;
@@ -81,8 +82,8 @@ export function SearchView({
       title={title}
       state={ready(list)}
       keyOf={place => place.id}
-      renderItem={place => (
-        <PlaceCard place={place} onPress={() => onPlace(place)} />
+      renderItem={(place, i) => (
+        <PlaceCard place={place} onPress={() => onPlace(place, i)} />
       )}
     />
   );

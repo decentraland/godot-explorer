@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
+import { trackClick } from '../analytics';
+import { core } from '../core';
+import { Control } from '../core/native';
 import type { DiscoverEvent, Place } from '../discover/api';
 import { recordPlayed, usePlayed } from '../discover/history';
 import { useToast } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { setOrientation } from '../platform/orientation';
+import { modalApi } from '../modals/bridge';
 import { enterPlaceChecked } from '../modals/destination';
 import { getMenuApi } from './api';
 import { GuestError } from './coreNotificationsApi';
@@ -45,6 +49,27 @@ export function jumpTo(place: Place): void {
   closeMenu();
   recordPlayed(place);
   enterPlaceChecked(place).catch(() => undefined);
+}
+
+/** "Stuck somewhere?" (#3229): RELOAD reloads the place behind the loading screen, and the engine
+ * puts the player back on the scene's spawn point. */
+function askReloadScene(): void {
+  closeMenu();
+  modalApi()?.show({
+    key: 'reload-scene',
+    title: t('MODAL_RELOAD_SCENE_TITLE'),
+    body: t('MODAL_RELOAD_SCENE_BODY'),
+    buttons: [
+      { label: t('COMMON_CANCEL'), tone: 'secondary' },
+      {
+        label: t('MODAL_RELOAD_SCENE_PRIMARY'),
+        onPress: () => {
+          trackClick('reload', 'DISCOVER_IN_GAME', { details: 'reload' });
+          core().control(new Control.ReloadScene());
+        },
+      },
+    ],
+  });
 }
 
 function OpenDrawer({ navigate }: { navigate: Navigate }) {
@@ -213,7 +238,9 @@ function OpenDrawer({ navigate }: { navigate: Navigate }) {
             onExploreMore={() => withPortrait({ kind: 'discover' })}
             onRetry={feed.reload}
             onKebab={action => {
-              if (action === 'share' && scene.state.status === 'ready') {
+              if (action === 'reload') {
+                askReloadScene();
+              } else if (action === 'share' && scene.state.status === 'ready') {
                 shareScene(scene.state.data);
               } else if (action === 'reportContent') {
                 Linking.openURL(REPORT_CONTENT_URL).catch(() => undefined);

@@ -77,6 +77,7 @@ pub struct DclGlobalCameraController {
     last_virtual_camera_entity_node: Option<Gd<Node3D>>,
     last_camera_reached: bool,
     transition_start_transform: Transform3D,
+    transition_start_fov: f32,
     transition_time_counter: f32,
 }
 
@@ -156,6 +157,7 @@ impl DclGlobalCameraController {
         let mut look_at_entity_node: Option<Gd<Node3D>> = None;
         let mut transition_speed = 0.0;
         let mut transition_time;
+        let target_fov;
 
         match scene_virtual_camera
             .filter(|virtual_camera| virtual_camera.bind().get_entity_id() > 0)
@@ -182,10 +184,18 @@ impl DclGlobalCameraController {
                 }
                 transition_speed = virtual_camera.get_transition_speed();
                 transition_time = virtual_camera.get_transition_time();
+                // Vertical in degrees, like Godot's default `keep_aspect` (KEEP_HEIGHT).
+                let fov = virtual_camera.get_fov();
+                target_fov = if fov > 0.0 {
+                    fov.clamp(1.0, 179.0)
+                } else {
+                    DEFAULT_VIRTUAL_CAMERA_FOV
+                };
                 runner.bind_mut().set_raycast_use_cursor_position(true);
             }
             None => {
                 transition_time = DEFAULT_TRANSITION_TIME;
+                target_fov = player_camera.get_fov();
                 // Latch guard: no active scene virtual camera, yet the cursor mode is still on
                 // while the transition is already marked complete. That happens when a
                 // virtual-camera sub-scene is torn down within the same scene: the target entity
@@ -225,10 +235,10 @@ impl DclGlobalCameraController {
                             && current.instance_id() != camera.instance_id()
                         {
                             camera.set_global_transform(current.get_global_transform());
+                            camera.set_fov(current.get_fov());
                         }
                     }
                     camera.make_current();
-                    camera.set_fov(DEFAULT_VIRTUAL_CAMERA_FOV);
                     set_global_camera_mode(CameraMode::Cinematic);
 
                     // With a virtual camera active the primary avatar is always shown and the
@@ -250,9 +260,13 @@ impl DclGlobalCameraController {
             }
             self.transition_time_counter = 0.0;
             self.transition_start_transform = camera.get_global_transform();
+            self.transition_start_fov = camera.get_fov();
             self.last_virtual_camera_entity_node = desired_target.clone();
         } else if self.last_camera_reached {
             // Already attached.
+            if desired_target.is_some() {
+                camera.set_fov(target_fov);
+            }
             if let Some(look_at) = &look_at_entity_node {
                 if look_at.is_instance_valid() {
                     camera.look_at(look_at.get_global_position());
@@ -289,6 +303,7 @@ impl DclGlobalCameraController {
         self.transition_time_counter += delta;
         // A constant-speed interpolation factor.
         let t = (self.transition_time_counter / transition_time).clamp(0.0, 1.0);
+        camera.set_fov(self.transition_start_fov + (target_fov - self.transition_start_fov) * t);
 
         match &desired_target {
             None => {

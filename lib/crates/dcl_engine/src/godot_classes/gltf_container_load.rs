@@ -244,12 +244,6 @@ impl DclGltfContainer {
                 if let Ok(faces) = mesh.get_meta("dcl_faces").try_to::<PackedVector3Array>() {
                     shape.set_faces(&faces);
                 }
-                let backface = mesh
-                    .get_meta_ex("dcl_backface")
-                    .default(&true.to_variant())
-                    .done()
-                    .booleanize();
-                shape.set_backface_collision_enabled(backface);
                 mesh.set_meta("dcl_shape", &shape.to_variant());
                 // The shape owns its own copy of the faces (and the BVH): ours go.
                 mesh.remove_meta("dcl_faces");
@@ -266,6 +260,31 @@ impl DclGltfContainer {
         body.add_child(&collision_shape);
         mesh_instance.add_child(&body);
         Some(body)
+    }
+
+    /// Generated colliders are one-sided, like PhysX (#2853), but a scene baked by an older build
+    /// saved `backface_collision = true` in its PackedScene (local cache and bucket alike). Read
+    /// before writing: the fork's setter rebuilds the trimesh, and the shape is shared per GLB.
+    fn make_collider_one_sided(body: &Gd<StaticBody3D>) {
+        for child in body
+            .get_children_ex()
+            .include_internal(true)
+            .done()
+            .iter_shared()
+        {
+            let Ok(collision_shape) = child.try_cast::<CollisionShape3D>() else {
+                continue;
+            };
+            let Some(Ok(mut shape)) = collision_shape
+                .get_shape()
+                .map(|shape| shape.try_cast::<ConcavePolygonShape3D>())
+            else {
+                continue;
+            };
+            if shape.is_backface_collision_enabled() {
+                shape.set_backface_collision_enabled(false);
+            }
+        }
     }
 
     /// Sets collision masks and metadata on every collider after instantiating. A StaticBody3D
@@ -287,6 +306,7 @@ impl DclGltfContainer {
                     body = Self::ensure_lazy_collider(&mut mesh_instance);
                 }
                 if let Some(mut body) = body {
+                    Self::make_collider_one_sided(&body);
                     let invisible = body.has_meta("invisible_mesh")
                         && body.get_meta("invisible_mesh").booleanize();
                     let mask = collider_mask(invisible, visible_cmask, invisible_cmask);
@@ -475,5 +495,53 @@ mod tests {
         assert!(tracks_static_mode(1, false));
         assert!(!tracks_static_mode(0, false));
         assert!(!tracks_static_mode(1, true));
+    }
+}
+
+// Itests compile into the extension (not `cfg(test)`) so the Godot test runner registers them.
+mod itest {
+    use godot::classes::{CollisionShape3D, ConcavePolygonShape3D, StaticBody3D};
+    use godot::prelude::*;
+
+    use super::DclGltfContainer;
+    use crate::framework::TestContext;
+
+    fn body_with_collider(backface: bool) -> (Gd<StaticBody3D>, Gd<ConcavePolygonShape3D>) {
+        let mut shape = ConcavePolygonShape3D::new_gd();
+        shape.set_faces(&PackedVector3Array::from(&[
+            Vector3::ZERO,
+            Vector3::RIGHT,
+            Vector3::UP,
+        ]));
+        shape.set_backface_collision_enabled(backface);
+        let mut collider = CollisionShape3D::new_alloc();
+        collider.set_shape(&shape);
+        let mut body = StaticBody3D::new_alloc();
+        body.add_child(&collider);
+        (body, shape)
+    }
+
+    #[godot::test::itest]
+    fn itest_baked_backface_collision_is_cleared(_ctx: &TestContext) {
+        let (baked, baked_shape) = body_with_collider(true);
+        DclGltfContainer::make_collider_one_sided(&baked);
+        assert!(!baked_shape.is_backface_collision_enabled());
+        assert_eq!(
+            baked_shape.get_faces().len(),
+            3,
+            "the baked geometry survives"
+        );
+
+        let (current, current_shape) = body_with_collider(false);
+        DclGltfContainer::make_collider_one_sided(&current);
+        assert!(!current_shape.is_backface_collision_enabled());
+
+        let bare = StaticBody3D::new_alloc();
+        DclGltfContainer::make_collider_one_sided(&bare);
+        assert_eq!(bare.get_child_count(), 0);
+
+        baked.free();
+        current.free();
+        bare.free();
     }
 }

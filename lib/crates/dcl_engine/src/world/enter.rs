@@ -4,6 +4,7 @@ use godot::classes::Window;
 use godot::prelude::*;
 
 use super::{api, state};
+use crate::app::audio_settings;
 use crate::engine::local_task::next_frame;
 use crate::fetcher::globals;
 use crate::godot_classes::dcl_global::DclGlobal;
@@ -42,6 +43,13 @@ pub async fn enter(parcel: Vector2i, realm: String, is_cancelled: impl Fn() -> b
 /// The same world teardown as returning to the lobby once did, but the identity stays and the next
 /// scene is the avatar host; the orientation is left to the shell.
 pub async fn exit() {
+    // The shell's menus show at once: the world's music stops and its scenes go quiet now, not
+    // when they are reaped. The next world's loading session restores their volume.
+    let music = DclGlobal::singleton().bind().music_player.clone();
+    if let Some(mut music) = music {
+        music.bind_mut().stop();
+    }
+    audio_settings::apply_setting_with(audio_settings::SCENE_VOLUME, Some(0.0));
     settle_surface().await;
     if let Some(world) = state::current() {
         world.loading.bind().cancel();

@@ -86,6 +86,7 @@ export function createMockControl(
           showUi({ hidden: command.inner.hidden });
           break;
         case Control_Tags.AnswerSceneRequest:
+        case Control_Tags.ReloadScene:
           break;
         default:
           avatar.applyAvatarControl(command);

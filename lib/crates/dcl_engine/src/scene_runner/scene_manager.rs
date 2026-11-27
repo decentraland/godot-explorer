@@ -905,7 +905,7 @@ impl SceneManager {
         // Collect all loading events from scenes
         let mut assets_started: Vec<(SceneId, u32)> = Vec::new();
         let mut assets_finished: Vec<(SceneId, u32)> = Vec::new();
-        let mut scenes_ready: Vec<SceneId> = Vec::new();
+        let mut ready_candidates: Vec<SceneId> = Vec::new();
 
         for (scene_id, scene) in self.scenes.iter_mut() {
             // Skip non-alive scenes
@@ -928,20 +928,13 @@ impl SceneManager {
                 scene.gltf_loading_finished_count = 0;
             }
 
-            // Check if scene is ready (tick >= 10 and no GLTF loading)
-            // We wait for tick 10 instead of 4 to give GLTFs time to start loading
+            // Ready once past tick 10 with no GLTF loading, and settled (checked below, after
+            // this tick's events): tick 10 gives GLTFs time to start loading.
             if !scene.loading_reported_ready
                 && scene.tick_number >= 10
                 && scene.gltf_loading.is_empty()
             {
-                tracing::debug!(
-                    "[LOADING] Scene {:?} marked ready - tick={}, gltf_loading_count={}",
-                    scene_id,
-                    scene.tick_number,
-                    scene.gltf_loading.len()
-                );
-                scene.loading_reported_ready = true;
-                scenes_ready.push(*scene_id);
+                ready_candidates.push(*scene_id);
             }
         }
 
@@ -972,9 +965,23 @@ impl SceneManager {
             }
         }
 
+        let now = Instant::now();
+        let scenes_ready: Vec<SceneId> = ready_candidates
+            .into_iter()
+            .filter(|scene_id| session.is_scene_settled(*scene_id, now))
+            .collect();
+
         let current_parcel = self.current_parcel_scene_id;
         let mut current_parcel_rendered = false;
         for scene_id in scenes_ready {
+            if let Some(scene) = self.scenes.get_mut(&scene_id) {
+                scene.loading_reported_ready = true;
+                tracing::debug!(
+                    "[LOADING] Scene {:?} marked ready - tick={}",
+                    scene_id,
+                    scene.tick_number
+                );
+            }
             tracing::debug!("[LOADING] Scene {:?} reported READY", scene_id);
             session.report_scene_ready(scene_id);
             if scene_id == current_parcel {
@@ -1883,8 +1890,11 @@ impl SceneManager {
         if matches!(scene.scene_type, SceneType::Parcel) {
             self.crashed_scene_ids.push(*scene_id);
         }
-        self.abnormal_exits
-            .insert(*scene_id, CRDT_STATE_POISONED.to_string());
+        let reason = match crate::tools::last_panic::take() {
+            Some(panic) => crash_reason_summary(&format!("{CRDT_STATE_POISONED}: {panic}")),
+            None => CRDT_STATE_POISONED.to_string(),
+        };
+        self.abnormal_exits.insert(*scene_id, reason);
         scene.state = SceneState::ToKill(current_time_us);
         self.dying_scene_ids.push(*scene_id);
         true
@@ -3237,6 +3247,7 @@ impl SceneManager {
             global_bind.reset_touch_controls();
             let was_skybox_active = global_bind.sdk_skybox_time_active;
             global_bind.reset_skybox_time();
+            global_bind.scene_sky.reset();
             drop(global_bind);
             if was_skybox_active {
                 global

@@ -1,4 +1,5 @@
 pub mod data_definition;
+pub mod discover;
 pub mod frame;
 pub mod global;
 pub mod install_attribution;

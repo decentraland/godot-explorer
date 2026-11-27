@@ -28,7 +28,7 @@ describe('menu scene from the core', () => {
     expect(await createCoreMenuApi(createMockApi()).scene()).toEqual({
       title: 'Plaza',
       creator: 'Ana',
-      linkQuery: 'position=3,-4',
+      link: 'https://decentraland.org/jump/places?position=3,-4',
     });
   });
 
@@ -43,7 +43,9 @@ describe('menu scene from the core', () => {
       }),
     );
     const header = await createCoreMenuApi(createMockApi()).scene();
-    expect(header.linkQuery).toBe('realm=foo.dcl.eth');
+    expect(header.link).toBe(
+      'https://decentraland.org/jump/places?realm=foo.dcl.eth',
+    );
   });
 
   it('falls back to a neutral header when the core cannot say', async () => {
@@ -51,7 +53,7 @@ describe('menu scene from the core', () => {
     expect(await createCoreMenuApi(createMockApi()).scene()).toEqual({
       title: 'Decentraland',
       creator: '',
-      linkQuery: 'position=0,0',
+      link: 'https://decentraland.org/jump/places?position=0,0',
     });
   });
 

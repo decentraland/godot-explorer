@@ -515,7 +515,10 @@ impl ArchipelagoManager {
                     tracing::debug!("connecting to island {:?}", msg.island_id);
                     let Some((protocol, comms_address)) = msg.conn_str.as_str().split_once(':')
                     else {
-                        tracing::error!("unrecognised connection adapter string: {:?}", msg);
+                        tracing::error!(
+                            "unrecognised connection adapter string for island {:?}",
+                            msg.island_id
+                        );
                         continue;
                     };
                     match protocol {
@@ -569,8 +572,9 @@ impl ArchipelagoManager {
                         }
                         _ => {
                             tracing::warn!(
-                                "protocol not supported as child of archipelago {:?}",
-                                msg
+                                "protocol {} not supported as child of archipelago (island {:?})",
+                                protocol,
+                                msg.island_id
                             )
                         }
                     }

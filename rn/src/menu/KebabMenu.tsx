@@ -1,9 +1,10 @@
 import { IconName, Menu } from '@dcl/ui-native';
 import { t } from '../i18n';
 
-export type KebabAction = 'share' | 'reportContent' | 'reportBug';
+export type KebabAction = 'reload' | 'share' | 'reportContent' | 'reportBug';
 
 const ITEMS: { action: KebabAction; icon: IconName; label: string }[] = [
+  { action: 'reload', icon: 'menuLocation', label: 'MENU_KEBAB_RELOAD' },
   { action: 'share', icon: 'share', label: 'MENU_KEBAB_SHARE' },
   { action: 'reportContent', icon: 'flag', label: 'MENU_KEBAB_REPORT_CONTENT' },
   { action: 'reportBug', icon: 'bug', label: 'MENU_KEBAB_REPORT_BUG' },

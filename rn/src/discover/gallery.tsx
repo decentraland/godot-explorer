@@ -168,6 +168,7 @@ const placeSheet = (
       initial={over.initial}
       onClose={noop}
       onJumpIn={noop}
+      onShare={noop}
       onFavorite={noop}
       onVote={noop}
     />,
@@ -213,6 +214,7 @@ reg([89], 'Place sheet, loading', () =>
       detail={null}
       onClose={noop}
       onJumpIn={noop}
+      onShare={noop}
       onFavorite={noop}
       onVote={noop}
     />,

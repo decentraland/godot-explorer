@@ -14,8 +14,8 @@ use uuid::Uuid;
 use super::{
     data_definition::{
         build_segment_event_batch_item, build_segment_identify_body, PushIdentifyTraits,
-        SegmentEvent, SegmentEventCommonExplorerFields, SegmentEventCustom,
-        SegmentEventExplorerMoveToParcel, SegmentEventGuestWalletCreation,
+        SegmentEvent, SegmentEventClickButton, SegmentEventCommonExplorerFields,
+        SegmentEventCustom, SegmentEventExplorerMoveToParcel, SegmentEventGuestWalletCreation,
         SegmentEventScreenViewed,
     },
     property::{to_object, Property},
@@ -111,6 +111,18 @@ impl Analytics {
             (!object.is_empty()).then(|| serde_json::Value::from(object).to_string());
         self.queue_event(SegmentEvent::ScreenViewed(SegmentEventScreenViewed {
             screen_name: name.to_string(),
+            extra_properties,
+        }));
+    }
+
+    /// Queues a "Click Button" for `button` on `screen`, the properties as its `extra_properties`.
+    pub fn track_click(&self, button: &str, screen: &str, properties: &[Property]) {
+        let object = to_object(properties);
+        let extra_properties =
+            (!object.is_empty()).then(|| serde_json::Value::from(object).to_string());
+        self.queue_event(SegmentEvent::ClickButton(SegmentEventClickButton {
+            button_text: button.to_string(),
+            screen_name: screen.to_string(),
             extra_properties,
         }));
     }
@@ -482,6 +494,34 @@ mod tests {
             serde_json::from_str::<Value>(extra).unwrap(),
             serde_json::json!({"reason": "done"})
         );
+    }
+
+    #[tokio::test]
+    async fn clicks_carry_the_button_screen_and_extra_properties() {
+        let (analytics, transport) = setup();
+        analytics.track_click(
+            "JUMP_IN",
+            "PLACE_DETAIL_CLICK",
+            &[
+                text("place_id", "p1"),
+                Property {
+                    key: "position".into(),
+                    value: PropertyValue::Null,
+                },
+            ],
+        );
+        analytics.track_click("SEARCH_ERASE", "SEARCH_CLICK", &[]);
+        analytics.set_eula_accepted(true).await;
+        let items = transport.items();
+        assert_eq!(items[0]["event"], "Click Button");
+        assert_eq!(items[0]["properties"]["button_text"], "JUMP_IN");
+        assert_eq!(items[0]["properties"]["screen_name"], "PLACE_DETAIL_CLICK");
+        let extra = items[0]["properties"]["extra_properties"].as_str().unwrap();
+        assert_eq!(
+            serde_json::from_str::<Value>(extra).unwrap(),
+            serde_json::json!({"place_id": "p1", "position": null})
+        );
+        assert!(items[1]["properties"].get("extra_properties").is_none());
     }
 
     #[tokio::test]

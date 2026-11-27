@@ -20,7 +20,7 @@ export const discover = {
   EVENTS_REMINDER_SET: 'REMINDER SET',
   DISCOVER_EVENTS: 'Events',
   DISCOVER_FEATURED: 'Featured',
-  DISCOVER_FRIENDS: 'Friends',
+  DISCOVER_FRIENDS: 'Friends online',
   DISCOVER_JUMP_BACK_IN: 'Jump back in',
   DISCOVER_POPULAR: 'Popular',
   DISCOVER_NEW_IN_DECENTRALAND: 'New in Decentraland',

@@ -17,7 +17,7 @@ data). 646 crates in the workspace graph. Sizes are bloat's attribution, approxi
 | `reqwest` | 0.5 MiB | In use (38 sites). Two stacks coexist, see below. |
 | `regex_*` + `aho_corasick` | ~0.9 MiB | 2 call sites, `regex = "*"` unpinned. Candidate to replace with plain string code. |
 | `rustls`, `ring`, `h2`, `hyper` | 0.9 MiB | Needed by the HTTP/WS stack. |
-| `ethers_providers` | 0.18 MiB | Pulled by `dcl_core` (`ws`, `rustls`) and by `ethers-signers`' tree. |
+| `ethers_providers` | 0.18 MiB | Removed (1.x #3130): scenes' `sendAsync` is an HTTPS JSON-RPC call on `reqwest` in `dcl_core`. |
 | everything else | each < 0.3 MiB | Not worth a swap on size alone. |
 
 The 86 smallest crates add 150 KiB together. Dependencies are not the size problem: V8, WebRTC and the
@@ -32,10 +32,10 @@ bindings are 60% of the code; a rewrite of small crates would move the binary by
 
 ## Candidates, not done (each needs a decision or a device check)
 
-- **Duplicated stacks** (`cargo tree -d`): `hyper` 0.14 and 1.x, `http` 0.2 and 1.x, `h2` 0.3 and 0.4,
-  `reqwest` 0.11 (pulls the old stack), `prost` 0.11 and 0.12 (livekit), `base64` 0.13 and 0.21,
-  `thiserror` 1 and 2, `syn` 1, 2 and 3. Moving `reqwest` to 0.12 removes most of the hyper/http/h2 doubles;
-  it touches every HTTP call, so it is its own change.
+- **Duplicated stacks** (`cargo tree -d`): `hyper` 0.14 and 1.x and `http` 0.2 and 1.x (the inspector
+  keeps hyper 0.14), `prost` 0.11 and 0.12 (livekit), `base64` 0.13 and 0.21, `thiserror` 1 and 2, `syn`
+  1, 2 and 3. `reqwest` 0.12, rustls 0.23 and a single `h2` came with 1.x #3130; CI fails if rustls 0.21 or
+  rustls-webpki 0.101 return to a lockfile.
 - **`ethers-core` / `ethers-signers`** (maintenance mode, pulls `k256`, `elliptic-curve`, `bls`/`scrypt`
   trees): used at 55 sites for signing. `alloy` is the maintained replacement; a migration, not a swap.
 - **`async-trait`** (59 uses): native `async fn` in traits covers most; the dyn-compatible ones keep it.

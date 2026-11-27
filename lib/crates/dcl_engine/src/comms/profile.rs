@@ -210,6 +210,8 @@ impl SerializedProfile {
                 .map(ToString::to_string)
                 .unwrap_or("urn:decentraland:off-chain:base-avatars:BaseFemale".to_owned()),
             name: self.name.to_owned(),
+            // Unset = the engine does not report voice activity for this profile.
+            talking: None,
         }
     }
     pub fn to_pb_player_identity_data(&self) -> PbPlayerIdentityData {

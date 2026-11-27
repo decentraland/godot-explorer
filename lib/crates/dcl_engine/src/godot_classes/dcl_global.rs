@@ -271,6 +271,9 @@ pub struct DclGlobal {
     pub sdk_skybox_fixed_time: u32,
     #[var(pub)]
     pub sdk_skybox_transition_forward: bool,
+    /// The sky overrides of the scene the player is in (PBSkybox, PBSun, PBEnvironmentFog on its
+    /// ROOT entity), read by the sky every frame.
+    pub scene_sky: crate::scene_runner::components::skybox::PublishedSceneSky,
 }
 
 #[godot_api]
@@ -286,6 +289,8 @@ impl INode for DclGlobal {
             "DclGlobal init invoked version={}",
             env!("GODOT_EXPLORER_VERSION")
         );
+
+        crate::tools::last_panic::install_hook();
 
         // Scene Inspector is initialized lazily when the first scene with
         // --scene-inspector enabled is spawned (see scene_thread in dcl/js/mod.rs).
@@ -495,6 +500,7 @@ impl INode for DclGlobal {
             logging_selftest: Default::default(),
             sdk_skybox_fixed_time: 0,
             sdk_skybox_transition_forward: true,
+            scene_sky: Default::default(),
         }
     }
 }

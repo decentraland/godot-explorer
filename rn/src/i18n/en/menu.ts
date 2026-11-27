@@ -16,6 +16,7 @@ export const menu = {
   MENU_LIVE: 'LIVE',
   MENU_LAST_PLAYED: 'Last Played',
   MENU_FRIENDS_COUNT: 'Friends {count}',
+  MENU_KEBAB_RELOAD: 'Reload',
   MENU_KEBAB_SHARE: 'Share',
   MENU_KEBAB_REPORT_CONTENT: 'Report Content',
   MENU_KEBAB_REPORT_BUG: 'Report bug',

@@ -275,10 +275,13 @@ pub fn simulate_input(action: &str, pressed: bool, strength: f32, frames: u32) {
 
 /// First touch index of a simulated gesture, clear of the ones a real screen hands out first.
 const GESTURE_TOUCH: i32 = 20;
-/// Where a simulated look or pinch happens, as a fraction of the screen: the open camera area
-/// right of the joystick's zone and above the action buttons.
+/// Where a simulated look happens, as a fraction of the screen: the open camera area right of the
+/// joystick's zone and above the action buttons.
 const LOOK_POINT: (f32, f32) = (0.62, 0.35);
-const PINCH_POINTS: [(f32, f32); 2] = [(0.56, 0.35), (0.72, 0.35)];
+/// A pinch only forms on the avatar (`player::pinch_zone`), which both camera modes centre on
+/// screen. Its fingers start this fraction of the shorter side apart: a closing pinch that starts
+/// under 22.5% of it ends before it reaches the camera toggle (`player::rig::should_end`).
+const PINCH_START_SPREAD: f32 = 0.3;
 
 /// A named touch gesture for a scene test, played through the real mobile controls as touch
 /// events: `joystick` pushes the stick toward `x,y` by `strength` and holds it `frames` frames;
@@ -328,7 +331,8 @@ pub fn simulate_gesture(kind: &str, x: f32, y: f32, strength: f32, frames: u32) 
             }
         }
         "pinch" => {
-            let [a, b] = PINCH_POINTS.map(at);
+            let offset = Vector2::new(size.x.min(size.y) * PINCH_START_SPREAD / 2.0, 0.0);
+            let (a, b) = (size * 0.5 - offset, size * 0.5 + offset);
             let half = Vector2::new(x / 2.0, 0.0);
             Gesture {
                 fingers: vec![(a, a - half), (b, b + half)],

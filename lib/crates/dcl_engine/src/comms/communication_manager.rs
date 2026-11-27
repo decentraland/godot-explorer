@@ -10,6 +10,9 @@ use crate::auth::wallet;
 use crate::avatars::avatar_sink::GlobalSceneSink;
 #[cfg(feature = "use_livekit")]
 use crate::comms::consts::DISABLE_ARCHIPELAGO;
+#[cfg(feature = "use_livekit")]
+use crate::comms::livekit_room_id;
+use crate::comms::redact_url_query;
 use crate::{
     comms::{
         adapter::{
@@ -1781,11 +1784,11 @@ impl CommunicationManager {
         }
 
         // Tee to Pulse (quantized PlayerStateInput, unreliable-sequenced). The 10Hz/1Hz cadence
-        // is inherited from broadcast_position.gd — under the server's 20Hz disconnect cap.
+        // comes from app/position_broadcaster.rs — under the server's 20Hz disconnect cap.
         #[cfg(feature = "use_pulse")]
         if pulse_established {
             if let Some(pulse_room) = &mut self.pulse_room {
-                pulse_room.send_movement(&uncompressed_movement);
+                pulse_room.send_movement(&uncompressed_movement, Instant::now());
                 message_sent = true;
             }
         }
@@ -1850,7 +1853,6 @@ impl CommunicationManager {
                 timestamp: self.start_time.elapsed().as_secs_f32(),
                 is_stopping: None,
                 mask: crate::avatars::emote_mask::wire_mask_from_internal(mask),
-                ..Default::default()
             })),
             protocol_version: DEFAULT_PROTOCOL_VERSION,
         };
@@ -2032,15 +2034,22 @@ impl CommunicationManager {
     fn _internal_get_comms_from_realm(&self) -> Option<(String, Option<GString>)> {
         let realm = DclGlobal::singleton().bind().get_realm();
         let realm_about = realm.bind().get_realm_about();
-        let comms = VarDictionary::from_variant(&realm_about.get(&StringName::from("comms"))?);
-        let comms_protocol = String::from_variant(&comms.get(&StringName::from("protocol"))?);
+        // The realm serves /about: a wrong-typed value reads as absent instead of panicking.
+        let comms = realm_about
+            .get(&StringName::from("comms"))?
+            .try_to::<VarDictionary>()
+            .ok()?;
+        let comms_protocol = comms
+            .get(&StringName::from("protocol"))?
+            .try_to::<String>()
+            .ok()?;
 
         let fixed_adapter_raw = comms
             .get(&StringName::from("fixedAdapter"))
-            .map(|v| GString::from_variant(&v).to_string());
+            .and_then(|v| v.try_to::<String>().ok());
         let adapter_raw = comms
             .get(&StringName::from("adapter"))
-            .map(|v| GString::from_variant(&v).to_string());
+            .and_then(|v| v.try_to::<String>().ok());
 
         #[cfg(feature = "use_livekit")]
         let disable_archipelago = !self.archipelago_enabled();
@@ -2057,7 +2066,7 @@ impl CommunicationManager {
         tracing::debug!(
             "Comms protocol: {}, fixedAdapter: {:?}",
             comms_protocol,
-            comms_fixed_adapter
+            comms_fixed_adapter.as_deref().map(redact_url_query)
         );
 
         Some((comms_protocol, comms_fixed_adapter.map(|s| s.to_godot())))
@@ -2122,7 +2131,10 @@ impl CommunicationManager {
         let comms_fixed_adapter_str = comms_fixed_adapter_gstr.to_string();
         let Some((protocol, comms_address)) = comms_fixed_adapter_str.as_str().split_once(':')
         else {
-            tracing::warn!("unrecognised fixed adapter string: {comms_fixed_adapter_str}");
+            tracing::warn!(
+                "unrecognised fixed adapter string: {}",
+                redact_url_query(&comms_fixed_adapter_str)
+            );
             return;
         };
 
@@ -2142,7 +2154,7 @@ impl CommunicationManager {
         tracing::warn!(
             "🔌 Comms reconnection attempt - protocol: '{}', address: '{}'",
             protocol,
-            comms_address
+            redact_url_query(comms_address)
         );
 
         let current_ephemeral_auth_chain = player_identity
@@ -2209,10 +2221,8 @@ impl CommunicationManager {
 
                     // Create LiveKit room with shared message processor
                     // Main rooms use auto_subscribe: true (default) to automatically receive all peers
-                    let mut livekit_room = LivekitRoom::new(
-                        comms_address.to_string(),
-                        format!("livekit-{}", comms_address),
-                    );
+                    let mut livekit_room =
+                        LivekitRoom::new(comms_address.to_string(), livekit_room_id(comms_address));
                     livekit_room.set_message_processor_sender(processor_sender);
 
                     // Store the room - no need to change connection type

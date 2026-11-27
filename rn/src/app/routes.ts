@@ -1,4 +1,5 @@
 import type { Place } from '../discover/api';
+import type { CardOrigin } from '../discover/metrics';
 import type { NavKey } from '@dcl/ui-native';
 
 /**
@@ -8,9 +9,10 @@ import type { NavKey } from '@dcl/ui-native';
 export interface RouteParams {
   home: undefined;
   world: { place: Place };
-  placeDetail: { placeId: string };
+  /** `origin`: the card that opened the sheet, absent when a link did. */
+  placeDetail: { placeId: string; origin?: CardOrigin };
   eventDetail: { eventId: string };
-  friendDetail: { address: string };
+  friendDetail: { address: string; origin?: CardOrigin };
   profileEdit: undefined;
   /** Tab bodies other than explore/backpack; rendered inside the home shell. */
   settings: undefined;

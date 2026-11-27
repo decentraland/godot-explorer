@@ -7,7 +7,7 @@ beforeEach(() => {
 });
 
 describe('menu core api', () => {
-  it('serves the discover feed from the public places and events APIs', async () => {
+  it('serves the discover feed from the mobile-bff destinations and events', async () => {
     const place = {
       id: 'p1',
       title: 'Real Place',
@@ -23,6 +23,7 @@ describe('menu core api', () => {
       user_name: 'Bo',
       image: 'https://img/e1.png',
       live: true,
+      approved: true,
       total_attendees: 3,
       start_at: '2026-10-12T12:00:00Z',
       x: 1,

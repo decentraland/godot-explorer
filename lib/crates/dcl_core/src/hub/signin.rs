@@ -217,7 +217,7 @@ impl Hub {
         // without the header and the server decides.
         let pending = match self.verifiers.select_pending(&auth_request_id) {
             Selection::Use(pending) => Some(pending),
-            Selection::NoVerifier | Selection::Foreign => None,
+            Selection::Foreign => None,
         };
         let used_request_id = pending.as_ref().map(|p| p.auth_request_id.clone());
         let result = self

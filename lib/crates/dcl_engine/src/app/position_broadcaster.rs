@@ -7,12 +7,15 @@ use godot::prelude::*;
 use crate::fetcher::globals;
 use crate::player::body::Player;
 
-/// About 2.75 cm: 0.5 m/s at the 55 ms timer.
+/// About 2.75 cm: 0.275 m/s at the 100 ms timer.
 const POSITION_THRESHOLD: f32 = 0.0275;
 /// About 0.57 degrees, in radians.
 const ROTATION_THRESHOLD: f32 = 0.01;
 /// About a second of nothing changing between forced sends.
-const IDLE_KEEPALIVE_TICKS: u32 = 18;
+const IDLE_KEEPALIVE_TICKS: u32 = 10;
+/// 10 Hz, Unity's MoveSendRate: under the Pulse server's 20 Hz disconnect cap even when a
+/// main-thread stall makes the timer catch up.
+const SEND_INTERVAL_S: f64 = 0.1;
 
 /// The last values sent.
 #[derive(Clone, Copy)]
@@ -84,7 +87,7 @@ pub struct PositionBroadcaster {
 #[godot_api]
 impl ITimer for PositionBroadcaster {
     fn ready(&mut self) {
-        self.base_mut().set_wait_time(0.055);
+        self.base_mut().set_wait_time(SEND_INTERVAL_S);
         self.base_mut().set_autostart(true);
         let me = self.to_gd();
         self.base()

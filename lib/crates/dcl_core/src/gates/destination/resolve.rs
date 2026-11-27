@@ -466,18 +466,19 @@ impl Resolver<'_> {
     }
 
     async fn preview(&self, target: &Target) -> Resolution {
-        let Some(about) = self.about(target).await else {
-            return Resolution::of(failed(target, ResolveFailure::PreviewUnreachable));
+        // Anything with an IP host classifies as a preview, so this gate is what keeps a
+        // `preview=` link to a server without a usable /about away from the commit.
+        let about = match self.about(target).await {
+            Some(about) if realm::about_problem(&about).is_none() => about,
+            _ => return Resolution::of(failed(target, ResolveFailure::PreviewUnreachable)),
         };
         // A local preview serves its own content, so the pointer lookup works on it like any
         // catalyst. Its /about lists `localSceneParcels` and leaves `scenesUrn` empty, which is
         // why the urn read below is the fallback and not the other way round.
         if let Some(parcel) = target.parcel {
-            if realm::about_problem(&about).is_none() {
-                let content_url = realm::ensure_ends_with_slash(content_public_url(&about));
-                if let Some(found) = self.scene_at(&content_url, parcel).await {
-                    return Resolution::of(ready(target, Some(&found))).with_about(&about);
-                }
+            let content_url = realm::ensure_ends_with_slash(content_public_url(&about));
+            if let Some(found) = self.scene_at(&content_url, parcel).await {
+                return Resolution::of(ready(target, Some(&found))).with_about(&about);
             }
         }
         let scene = self.urn_scene(&about).await;

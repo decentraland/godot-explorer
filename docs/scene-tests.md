@@ -71,7 +71,7 @@ pixel coordinates (`52,-72-touch-controls` is the example):
 - `joystick(context, { x: 0, y: -1 }, 1, 60)` touches the joystick's area, pushes it forward fully
   and holds it 60 frames.
 - `look(context, { x: 300, y: 0 }, 20)` drags one finger across the camera area.
-- `pinch(context, 200, 20)` spreads two fingers apart in the camera area (negative closes them).
+- `pinch(context, 200, 20)` spreads two fingers apart over the avatar (negative closes them).
 
 ### App commands and engine queries
 

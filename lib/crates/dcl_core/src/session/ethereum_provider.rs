@@ -1,10 +1,15 @@
-use ethers_providers::{Provider, Ws};
-use tokio::sync::Mutex;
+use std::time::Duration;
+
+use reqwest::StatusCode;
 
 use crate::urls;
 
+const RPC_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// JSON-RPC client for the Ethereum node behind `urls::ethereum_rpc`, used by scenes'
+/// `sendAsync`. Each request is its own HTTPS POST, so scenes don't wait on each other.
 pub struct EthereumProvider {
-    provider: Mutex<Option<Provider<Ws>>>,
+    client: reqwest::Client,
 }
 
 impl Default for EthereumProvider {
@@ -15,9 +20,11 @@ impl Default for EthereumProvider {
 
 impl EthereumProvider {
     pub fn new() -> Self {
-        Self {
-            provider: Mutex::new(None),
-        }
+        let client = reqwest::Client::builder()
+            .timeout(RPC_TIMEOUT)
+            .build()
+            .expect("fail trying to build reqwest client");
+        Self { client }
     }
 
     pub async fn send_async(
@@ -25,23 +32,130 @@ impl EthereumProvider {
         method: &str,
         params: &[serde_json::Value],
     ) -> Result<serde_json::Value, anyhow::Error> {
-        let mut this_provider = self.provider.lock().await;
+        let body = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": method,
+            "params": params,
+        });
+        let response = self
+            .client
+            .post(urls::ethereum_rpc_with_project("kernel-local"))
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| {
+                if e.is_timeout() {
+                    anyhow::anyhow!("{method}: Ethereum RPC request timed out")
+                } else {
+                    anyhow::anyhow!("{method} failed: {e}")
+                }
+            })?;
+        let status = response.status();
+        let text = response.text().await?;
+        rpc_result(method, status, &text)
+    }
+}
 
-        let provider = match this_provider.take() {
-            Some(provider) => provider,
-            None => {
-                let provider_url = urls::ethereum_rpc_with_project("kernel-local");
-                Provider::<Ws>::connect(&provider_url).await?
-            }
-        };
-        let result = provider.request(method, params).await;
-
-        match result {
-            Err(e) => Err(anyhow::Error::new(e)),
-            Ok(result) => {
-                *this_provider = Some(provider);
-                Ok(result)
-            }
+/// The `result` of a JSON-RPC reply, or an error that carries the server's text.
+fn rpc_result(
+    method: &str,
+    status: StatusCode,
+    text: &str,
+) -> Result<serde_json::Value, anyhow::Error> {
+    let Ok(mut response) = serde_json::from_str::<serde_json::Value>(text) else {
+        anyhow::bail!("{method} failed (HTTP {status}): {text}");
+    };
+    if let Some(error) = response.get("error").filter(|error| !error.is_null()) {
+        if !error.is_object() {
+            anyhow::bail!("{method} failed: {error}");
         }
+        let mut message = format!(
+            "{method} failed (code: {}, message: {}",
+            error["code"],
+            error["message"].as_str().unwrap_or_default()
+        );
+        if !error["data"].is_null() {
+            message.push_str(&format!(", data: {}", error["data"]));
+        }
+        anyhow::bail!("{message})");
+    }
+    match response.get_mut("result") {
+        Some(result) => Ok(result.take()),
+        None => anyhow::bail!("{method} failed (HTTP {status}): {text}"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn error_text(status: StatusCode, text: &str) -> String {
+        rpc_result("eth_call", status, text)
+            .unwrap_err()
+            .to_string()
+    }
+
+    #[test]
+    fn returns_the_result() {
+        let result = rpc_result(
+            "eth_blockNumber",
+            StatusCode::OK,
+            r#"{"jsonrpc":"2.0","id":1,"error":null,"result":"0x1b4"}"#,
+        )
+        .unwrap();
+        assert_eq!(result, serde_json::json!("0x1b4"));
+    }
+
+    #[test]
+    fn rpc_error_carries_code_message_and_data() {
+        assert_eq!(
+            error_text(
+                StatusCode::OK,
+                r#"{"jsonrpc":"2.0","id":1,"error":{"code":3,"message":"execution reverted","data":"0x08c379a0"}}"#,
+            ),
+            r#"eth_call failed (code: 3, message: execution reverted, data: "0x08c379a0")"#
+        );
+    }
+
+    #[test]
+    fn error_with_null_id_is_reported() {
+        assert_eq!(
+            error_text(
+                StatusCode::BAD_REQUEST,
+                r#"{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"invalid request"}}"#,
+            ),
+            "eth_call failed (code: -32600, message: invalid request)"
+        );
+    }
+
+    #[test]
+    fn string_error_is_reported() {
+        assert_eq!(
+            error_text(
+                StatusCode::OK,
+                r#"{"jsonrpc":"2.0","id":1,"error":"rate limited"}"#
+            ),
+            r#"eth_call failed: "rate limited""#
+        );
+    }
+
+    #[test]
+    fn non_json_reply_keeps_status_and_body() {
+        assert_eq!(
+            error_text(
+                StatusCode::TOO_MANY_REQUESTS,
+                "<html>Too Many Requests</html>"
+            ),
+            "eth_call failed (HTTP 429 Too Many Requests): <html>Too Many Requests</html>"
+        );
+    }
+
+    #[test]
+    fn reply_without_result_is_an_error() {
+        assert_eq!(
+            error_text(StatusCode::OK, r#"{"jsonrpc":"2.0","id":1}"#),
+            r#"eth_call failed (HTTP 200 OK): {"jsonrpc":"2.0","id":1}"#
+        );
     }
 }

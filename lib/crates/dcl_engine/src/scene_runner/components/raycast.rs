@@ -16,7 +16,7 @@ use crate::{
     },
     engine::local_task::defer,
     godot_classes::dcl_global::DclGlobal,
-    scene_runner::scene::Scene,
+    scene_runner::{components::physics_layers, scene::Scene},
 };
 use godot::{
     classes::{PhysicsDirectSpaceState3D, PhysicsRayQueryParameters3D},
@@ -154,7 +154,7 @@ fn do_raycast(scene: &Scene, node_3d: &Gd<Node3D>, raycast: &PbRaycast) -> PbRay
 
     raycast_query.set_from(raycast_from);
     raycast_query.set_to(raycast_to);
-    raycast_query.set_collision_mask(collision_mask);
+    raycast_query.set_collision_mask(physics_layers::query_mask(collision_mask));
 
     // debug drawing the ray
     let id: i64 = node_3d.instance_id().to_i64();

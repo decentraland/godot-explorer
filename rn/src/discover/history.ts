@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { Place } from './api';
 
-const MAX = 10;
+const MAX = 6;
 let played: Place[] = [];
 const listeners = new Set<() => void>();
 

@@ -9,6 +9,7 @@ use godot::classes::{
 use godot::prelude::*;
 
 use super::cycle_math;
+use super::scene_skybox::SceneSkybox;
 
 #[derive(GodotClass)]
 #[class(base=Node, init)]
@@ -55,6 +56,7 @@ pub struct SkyBase {
     moon_light: Option<Gd<DirectionalLight3D>>,
     #[init(node = "SkyLights/AnimationPlayer")]
     anim_player: OnReady<Gd<AnimationPlayer>>,
+    pub(super) scene_skybox: Option<SceneSkybox>,
 }
 
 #[godot_api]
@@ -70,11 +72,27 @@ impl INode for SkyBase {
         // Play, pause, and sample by seeking.
         self.anim_player.play_ex().name("light_cycle").done();
         self.anim_player.pause();
+        self.scene_skybox = Some(SceneSkybox::new(
+            self.base().instance_id(),
+            self.world_environment.clone(),
+            self.main_light.clone(),
+            self.moon_light.clone(),
+        ));
     }
 
     fn process(&mut self, delta: f64) {
         let time = self.current_time();
         self.drive(time, delta as f32);
+        // Scene overrides run last: they replace whichever time-of-day value the cycle just wrote.
+        if let Some(scene_skybox) = self.scene_skybox.as_mut() {
+            scene_skybox.update(time);
+        }
+    }
+
+    fn exit_tree(&mut self) {
+        if let Some(scene_skybox) = self.scene_skybox.as_mut() {
+            scene_skybox.restore();
+        }
     }
 }
 

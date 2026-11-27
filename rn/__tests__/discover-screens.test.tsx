@@ -76,16 +76,16 @@ describe('DiscoverScreen', () => {
     const tree = await mount(
       <DiscoverScreen onJumpIn={noop} played={[PLACES[0]]} />,
     );
-    for (const title of [
+    const order = [
       'Jump back in',
       'Popular',
-      'Friends',
+      'Friends online',
+      'New in Decentraland',
       'Events',
       'Favorites',
       'My Places',
-    ]) {
-      expect(text(tree)).toContain(title);
-    }
+    ].map(title => text(tree).indexOf(`"${title}"`));
+    expect(order.every((at, i) => at > (order[i - 1] ?? -1))).toBe(true);
     expect(text(tree)).toContain('Butterfly Prawn Farming');
   });
 
@@ -107,7 +107,10 @@ describe('DiscoverScreen', () => {
     await act(async () => card.props.onPress());
     expect(nav.route).toEqual({
       name: 'placeDetail',
-      params: { placeId: 'butterfly' },
+      params: {
+        placeId: 'butterfly',
+        origin: { carousel: 'most_active', position: 2 },
+      },
     });
   });
 

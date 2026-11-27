@@ -4,7 +4,12 @@ use std::{sync::Arc, time::Duration};
 
 use super::{core, CoreError};
 use crate::{
-    analytics::{global::analytics, property::Property, service::Analytics},
+    analytics::{
+        discover::{discover_snapshot, DiscoverCarousel},
+        global::analytics,
+        property::Property,
+        service::Analytics,
+    },
     scene::{
         capture_screenshot as capture, current_scene as derive_current, scene_tracker,
         screenshot_provider, CurrentScene, ReqwestPlaceSource,
@@ -63,6 +68,20 @@ pub fn track(event: String, props: Vec<Property>) -> Result<(), CoreError> {
 #[uniffi::export]
 pub fn track_screen(name: String, props: Vec<Property>) -> Result<(), CoreError> {
     service()?.track_screen(&name, &props);
+    Ok(())
+}
+
+/// Queues a "Click Button" for `button` on `screen`.
+#[uniffi::export]
+pub fn track_click(button: String, screen: String, props: Vec<Property>) -> Result<(), CoreError> {
+    service()?.track_click(&button, &screen, &props);
+    Ok(())
+}
+
+/// Queues the `DISCOVER` screen view listing what each carousel shows.
+#[uniffi::export]
+pub fn track_discover(location: String, carousels: Vec<DiscoverCarousel>) -> Result<(), CoreError> {
+    service()?.queue_event(discover_snapshot(&location, &carousels));
     Ok(())
 }
 

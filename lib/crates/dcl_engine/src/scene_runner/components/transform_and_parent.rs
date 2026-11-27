@@ -14,7 +14,7 @@ use crate::{
         },
         crdt::{last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState},
     },
-    scene_runner::{godot_dcl_scene::GodotDclScene, scene::Scene},
+    scene_runner::scene::Scene,
 };
 
 impl DclTransformAndParent {
@@ -178,8 +178,15 @@ pub fn update_transform_and_parent(
                 godot_dcl_scene.ensure_node_3d(&entity).0.desired_parent_3d = SceneEntityId::ROOT;
                 godot_dcl_scene.hierarchy_dirty_3d = true;
             } else {
-                let has_cycle =
-                    detect_entity_id_in_parent_chain(godot_dcl_scene, desired_parent_3d, entity);
+                let has_cycle = detect_entity_id_in_parent_chain(
+                    |e| {
+                        godot_dcl_scene
+                            .get_godot_entity_node(e)
+                            .map(|n| n.desired_parent_3d)
+                    },
+                    desired_parent_3d,
+                    entity,
+                );
 
                 if !has_cycle {
                     let parent_node = godot_dcl_scene
@@ -270,33 +277,39 @@ pub fn apply_dcl_transform_to_node_3d(
     true
 }
 
+// Bounded so a cycle that never reaches `search_entity` (B->C->B) cannot spin the
+// main thread; the bound also caps Node3D nesting, which Godot walks recursively.
+// Entities past it stay unparented, exactly like a detected cycle.
+const MAX_PARENT_CHAIN_DEPTH: usize = 256;
+
 fn detect_entity_id_in_parent_chain(
-    godot_dcl_scene: &GodotDclScene,
+    parent_of: impl Fn(&SceneEntityId) -> Option<SceneEntityId>,
     mut current_entity: SceneEntityId,
     search_entity: SceneEntityId,
 ) -> bool {
-    while let Some(node) = godot_dcl_scene.get_godot_entity_node(&current_entity) {
+    for _ in 0..MAX_PARENT_CHAIN_DEPTH {
+        let Some(parent) = parent_of(&current_entity) else {
+            return false;
+        };
         if current_entity == SceneEntityId::ROOT {
             return false;
         }
-
-        if node.desired_parent_3d == search_entity {
+        if parent == search_entity {
             return true;
         }
-
         // self-parenting?
-        if current_entity == node.desired_parent_3d {
+        if parent == current_entity {
             return false;
         }
-
-        current_entity = node.desired_parent_3d;
+        current_entity = parent;
     }
-
-    false
+    true
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::*;
 
     #[test]
@@ -306,5 +319,85 @@ mod tests {
         let direct = DclTransformAndParent::from_godot(&t, origin);
         let via_world = DclTransformAndParent::from_godot(&t, Vector3::ZERO).to_scene_local(origin);
         assert_eq!(direct.translation, via_world.translation);
+    }
+
+    fn entity(number: u16) -> SceneEntityId {
+        SceneEntityId::new(number, 0)
+    }
+
+    // Mirrors GodotEntityNode::new, whose desired_parent_3d defaults to ROOT.
+    fn chain(links: &[(SceneEntityId, SceneEntityId)]) -> HashMap<SceneEntityId, SceneEntityId> {
+        let mut map = HashMap::from([(SceneEntityId::ROOT, SceneEntityId::ROOT)]);
+        map.extend(links.iter().copied());
+        map
+    }
+
+    #[test]
+    fn parent_chain_cycle_not_containing_entity_terminates() {
+        let (b, c, x) = (entity(1002), entity(1003), entity(1004));
+        let map = chain(&[(b, c), (c, b)]);
+        assert!(detect_entity_id_in_parent_chain(
+            |e| map.get(e).copied(),
+            b,
+            x
+        ));
+    }
+
+    #[test]
+    fn parent_chain_finds_entity_and_stops_at_root() {
+        let (b, x, y) = (entity(1002), entity(1003), entity(1004));
+        let map = chain(&[(b, x), (x, SceneEntityId::ROOT)]);
+        assert!(detect_entity_id_in_parent_chain(
+            |e| map.get(e).copied(),
+            b,
+            x
+        ));
+        assert!(!detect_entity_id_in_parent_chain(
+            |e| map.get(e).copied(),
+            x,
+            y
+        ));
+    }
+
+    #[test]
+    fn parent_chain_self_parent_is_not_a_cycle() {
+        let (b, x) = (entity(1002), entity(1003));
+        let map = chain(&[(b, b)]);
+        assert!(!detect_entity_id_in_parent_chain(
+            |e| map.get(e).copied(),
+            b,
+            x
+        ));
+    }
+
+    #[test]
+    fn parent_chain_deeper_than_cap_is_rejected() {
+        // e_1 -> e_2 -> ... -> e_n -> ROOT: walking from e_1 needs n + 1 steps to see ROOT.
+        let chain_of = |n: usize| {
+            let links: Vec<_> = (1..=n)
+                .map(|i| {
+                    let next = if i == n {
+                        SceneEntityId::ROOT
+                    } else {
+                        entity(1000 + i as u16 + 1)
+                    };
+                    (entity(1000 + i as u16), next)
+                })
+                .collect();
+            chain(&links)
+        };
+        let y = entity(60_000);
+        let too_deep = chain_of(MAX_PARENT_CHAIN_DEPTH);
+        assert!(detect_entity_id_in_parent_chain(
+            |e| too_deep.get(e).copied(),
+            entity(1001),
+            y
+        ));
+        let within = chain_of(MAX_PARENT_CHAIN_DEPTH - 1);
+        assert!(!detect_entity_id_in_parent_chain(
+            |e| within.get(e).copied(),
+            entity(1001),
+            y
+        ));
     }
 }

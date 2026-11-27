@@ -7,7 +7,6 @@ import {
   removeScreenshot,
   withDescription,
 } from '../src/menu/bugReport';
-import { linkQueryFor, sceneLink } from '../src/menu/api';
 import {
   closeMenu,
   closeZones,
@@ -34,7 +33,6 @@ import {
   tabBadges,
 } from '../src/menu/social';
 import { ctaFor } from '../src/menu/PlaceModal';
-import { mainRealm } from '../src/discover/api';
 
 const MIN = 60_000;
 const DAY = 24 * 60 * MIN;
@@ -248,25 +246,11 @@ describe('share and links', () => {
       sceneShareMessage({
         title: 'Space Runner',
         creator: '',
-        linkQuery: 'realm=spacerunner.dcl.eth',
+        link: 'https://decentraland.org/jump/places?realm=spacerunner.dcl.eth',
       }),
     ).toBe(
-      '📍 Join Me At Space Runner following this link: https://mobile.dclexplorer.com/open?realm=spacerunner.dcl.eth',
+      '📍 Join Me At Space Runner following this link: https://decentraland.org/jump/places?realm=spacerunner.dcl.eth',
     );
-    expect(sceneLink('position=1,2')).toBe(
-      'https://mobile.dclexplorer.com/open?position=1,2',
-    );
-  });
-
-  it('uses a position in Genesis City and the world name elsewhere', () => {
-    expect(linkQueryFor(mainRealm(), 3, -4)).toBe('position=3,-4');
-    expect(
-      linkQueryFor(
-        'https://worlds-content-server.decentraland.org/world/foo.dcl.eth',
-        0,
-        0,
-      ),
-    ).toBe('realm=foo.dcl.eth');
   });
 });
 

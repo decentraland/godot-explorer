@@ -353,6 +353,12 @@ void uniffi_dcl_core_fn_func_set_analytics_flush_interval(
     double seconds, RustCallStatus *uniffi_out_err);
 void uniffi_dcl_core_fn_func_track(RustBuffer event, RustBuffer props,
                                    RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_func_track_click(RustBuffer button, RustBuffer screen,
+                                         RustBuffer props,
+                                         RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_func_track_discover(RustBuffer location,
+                                            RustBuffer carousels,
+                                            RustCallStatus *uniffi_out_err);
 void uniffi_dcl_core_fn_func_track_screen(RustBuffer name, RustBuffer props,
                                           RustCallStatus *uniffi_out_err);
 RustBuffer
@@ -593,6 +599,8 @@ uint16_t uniffi_dcl_core_checksum_func_flush_analytics();
 uint16_t uniffi_dcl_core_checksum_func_set_analytics_consent();
 uint16_t uniffi_dcl_core_checksum_func_set_analytics_flush_interval();
 uint16_t uniffi_dcl_core_checksum_func_track();
+uint16_t uniffi_dcl_core_checksum_func_track_click();
+uint16_t uniffi_dcl_core_checksum_func_track_discover();
 uint16_t uniffi_dcl_core_checksum_func_track_screen();
 uint16_t uniffi_dcl_core_checksum_func_seasonal_skin();
 uint16_t uniffi_dcl_core_checksum_func_seasonal_skin_take_fetch_attempt();
@@ -5693,6 +5701,28 @@ NativeDclCore::NativeDclCore(
             return this->cpp_uniffi_dcl_core_fn_func_track(rt, thisVal, args,
                                                            count);
           });
+  props["ubrn_uniffi_dcl_core_fn_func_track_click"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(rt,
+                                    "ubrn_uniffi_dcl_core_fn_func_track_click"),
+          3,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_track_click(rt, thisVal,
+                                                                 args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_track_discover"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_track_discover"),
+          2,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_track_discover(
+                rt, thisVal, args, count);
+          });
   props["ubrn_uniffi_dcl_core_fn_func_track_screen"] =
       jsi::Function::createFromHostFunction(
           rt,
@@ -7371,6 +7401,28 @@ NativeDclCore::NativeDclCore(
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_dcl_core_checksum_func_track(rt, thisVal,
                                                                  args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_track_click"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_track_click"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_track_click(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_track_discover"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_track_discover"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_track_discover(
+                rt, thisVal, args, count);
           });
   props["ubrn_uniffi_dcl_core_checksum_func_track_screen"] =
       jsi::Function::createFromHostFunction(
@@ -9274,6 +9326,35 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_track(
 
   return jsi::Value::undefined();
 }
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_track_click(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_func_track_click(
+      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]),
+      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]),
+      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[2]),
+      &status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_track_discover(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_func_track_discover(
+      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]),
+      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]),
+      &status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
 jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_track_screen(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
@@ -10666,6 +10747,20 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_track(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
   auto value = uniffi_dcl_core_checksum_func_track();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_track_click(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_track_click();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_track_discover(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_track_discover();
 
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }

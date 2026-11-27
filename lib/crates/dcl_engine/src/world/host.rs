@@ -228,6 +228,9 @@ impl Host {
                 .bind()
                 .teleport(Vector2i::new(int("x"), int("y"))),
             "send_chat" => chat_commands::submit_message(&text("text")),
+            "reload_scene" => {
+                DclNavigator::reload_current("on_reload".into());
+            }
             "emote" => globals::engine()
                 .bind()
                 .play_local_emote(text("urn").as_str().into()),

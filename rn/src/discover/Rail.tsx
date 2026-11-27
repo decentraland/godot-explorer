@@ -41,7 +41,7 @@ export function Rail<T>({
   count?: boolean;
   state: RailState<T>;
   keyOf: (item: T, index: number) => string;
-  renderItem: (item: T) => ReactNode;
+  renderItem: (item: T, index: number) => ReactNode;
   skeleton?: 'place' | 'event' | 'compact';
   loadingMore?: boolean;
   onEnd?: () => void;
@@ -87,7 +87,7 @@ export function Rail<T>({
         ) : (
           <>
             {state.items.map((item, i) => (
-              <View key={keyOf(item, i)}>{renderItem(item)}</View>
+              <View key={keyOf(item, i)}>{renderItem(item, i)}</View>
             ))}
             {loadingMore || state.hasMore ? <LoadMoreCard wide={wide} /> : null}
           </>

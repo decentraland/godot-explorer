@@ -65,6 +65,10 @@ pub struct LoadingSession {
     // Timeout tracking
     /// Last progress timestamp per scene for timeout detection
     pub scene_last_progress: HashMap<SceneId, Instant>,
+    /// Last GLTF start or finish per scene (or its spawn), for `is_scene_settled`
+    scene_last_asset_activity: HashMap<SceneId, Instant>,
+    /// First time each scene was checked with nothing loading, for SCENE_SETTLE_CAP_SECS
+    scene_first_idle: HashMap<SceneId, Instant>,
 
     // Progress tracking
     /// High water mark - progress never goes backwards
@@ -90,6 +94,13 @@ pub struct LoadingSession {
 impl LoadingSession {
     /// Per-scene timeout in seconds (no progress)
     pub const SCENE_TIMEOUT_SECS: u64 = 10;
+    /// How long a scene must go without starting or finishing a GLTF before it counts as
+    /// ready. Scenes defer content behind their own timers (Genesis Plaza on mobile spawns
+    /// most of the plaza 1 s after its first models finish), so an empty queue is not enough.
+    pub const SCENE_SETTLE_MS: u64 = 3000;
+    /// A scene that keeps starting GLTFs never goes quiet, and each finished one refreshes
+    /// its timeout: past this long since it was first idle, it is ready anyway.
+    pub const SCENE_SETTLE_CAP_SECS: u64 = 10;
 
     /// Create a new loading session
     pub fn new(id: u64, scene_entity_ids: Vec<String>) -> Self {
@@ -108,6 +119,8 @@ impl LoadingSession {
             loaded_assets: HashMap::new(),
             ready_scenes: HashSet::new(),
             scene_last_progress: HashMap::new(),
+            scene_last_asset_activity: HashMap::new(),
+            scene_first_idle: HashMap::new(),
             max_progress: 0.0,
             assets_phase_start: None,
             last_asset_registered: None,
@@ -237,13 +250,31 @@ impl LoadingSession {
         self.spawned_scenes.insert(scene_id);
         // Don't set expected_assets here - let asset discovery populate it
         // This prevents premature Assets → Ready transition
-        self.scene_last_progress.insert(scene_id, Instant::now());
+        let now = Instant::now();
+        self.scene_last_progress.insert(scene_id, now);
+        self.scene_last_asset_activity.insert(scene_id, now);
+    }
+
+    /// Whether a scene with nothing loading has gone SCENE_SETTLE_MS without GLTF activity
+    /// (or SCENE_SETTLE_CAP_SECS since it was first idle). Call only while it is idle.
+    pub fn is_scene_settled(&mut self, scene_id: SceneId, now: Instant) -> bool {
+        let first_idle = *self.scene_first_idle.entry(scene_id).or_insert(now);
+        if now.saturating_duration_since(first_idle).as_secs() >= Self::SCENE_SETTLE_CAP_SECS {
+            return true;
+        }
+        self.scene_last_asset_activity
+            .get(&scene_id)
+            .is_none_or(|last| {
+                now.saturating_duration_since(*last).as_millis() >= Self::SCENE_SETTLE_MS as u128
+            })
     }
 
     /// Report that an asset was loaded for a scene
     pub fn report_asset_loaded(&mut self, scene_id: SceneId) {
         *self.loaded_assets.entry(scene_id).or_insert(0) += 1;
-        self.scene_last_progress.insert(scene_id, Instant::now());
+        let now = Instant::now();
+        self.scene_last_progress.insert(scene_id, now);
+        self.scene_last_asset_activity.insert(scene_id, now);
     }
 
     /// Report that an asset started loading (increments expected count).
@@ -252,7 +283,9 @@ impl LoadingSession {
     /// a stream of "started" events from keeping a stalled scene alive.
     pub fn report_asset_loading_started(&mut self, scene_id: SceneId) {
         *self.expected_assets.entry(scene_id).or_insert(0) += 1;
-        self.last_asset_registered = Some(Instant::now());
+        let now = Instant::now();
+        self.last_asset_registered = Some(now);
+        self.scene_last_asset_activity.insert(scene_id, now);
     }
 
     /// Report that a scene is fully ready (tick >= 4 and GLTF done)
@@ -609,5 +642,63 @@ mod tests {
 
         // Done phase always returns 100% progress
         assert_eq!(session.calculate_progress(), 100.0);
+    }
+
+    /// Genesis Plaza on mobile loads its main.crdt models, waits for them to finish and
+    /// spawns the rest of the plaza 1 s later: the moment its first models finish is not
+    /// the moment it is ready.
+    #[test]
+    fn test_scene_settles_only_after_asset_activity_goes_quiet() {
+        let mut session = LoadingSession::new(1, vec!["scene1".to_string()]);
+        session.report_scene_spawned(SceneId(1), 0);
+        session.report_asset_loading_started(SceneId(1));
+        session.report_asset_loaded(SceneId(1));
+
+        let now = Instant::now();
+        assert!(!session.is_scene_settled(SceneId(1), now));
+        let settle = std::time::Duration::from_millis(LoadingSession::SCENE_SETTLE_MS);
+        assert!(session.is_scene_settled(SceneId(1), now + settle));
+    }
+
+    #[test]
+    fn test_new_asset_restarts_the_settle_window() {
+        let mut session = LoadingSession::new(1, vec!["scene1".to_string()]);
+        session.report_scene_spawned(SceneId(1), 0);
+        let settle = std::time::Duration::from_millis(LoadingSession::SCENE_SETTLE_MS);
+        let quiet_since = Instant::now() - settle;
+        session
+            .scene_last_asset_activity
+            .insert(SceneId(1), quiet_since);
+        assert!(session.is_scene_settled(SceneId(1), Instant::now()));
+
+        session.report_asset_loading_started(SceneId(1));
+        assert!(!session.is_scene_settled(SceneId(1), Instant::now()));
+    }
+
+    #[test]
+    fn test_scene_without_assets_settles_from_spawn() {
+        let mut session = LoadingSession::new(1, vec!["scene1".to_string()]);
+        session.report_scene_spawned(SceneId(1), 0);
+        let settle = std::time::Duration::from_millis(LoadingSession::SCENE_SETTLE_MS);
+        assert!(!session.is_scene_settled(SceneId(1), Instant::now()));
+        assert!(session.is_scene_settled(SceneId(1), Instant::now() + settle));
+    }
+
+    /// A scene that keeps adding GLTFs (a game spawning props every second) never goes
+    /// quiet, and every finished asset refreshes its timeout: it must still become ready.
+    #[test]
+    fn test_steady_gltf_stream_settles_after_the_cap() {
+        let mut session = LoadingSession::new(1, vec!["scene1".to_string()]);
+        session.report_scene_spawned(SceneId(1), 0);
+        let now = Instant::now();
+        assert!(!session.is_scene_settled(SceneId(1), now));
+
+        let cap = std::time::Duration::from_secs(LoadingSession::SCENE_SETTLE_CAP_SECS);
+        let just_before = |t: Instant| t - std::time::Duration::from_millis(1);
+        session
+            .scene_last_asset_activity
+            .insert(SceneId(1), just_before(now + cap));
+        assert!(!session.is_scene_settled(SceneId(1), just_before(now + cap)));
+        assert!(session.is_scene_settled(SceneId(1), now + cap));
     }
 }

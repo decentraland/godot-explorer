@@ -6,9 +6,12 @@ import type { Property } from './core/native';
 export const FLUSH_ONBOARDING_S = 2;
 export const FLUSH_APP_S = 10;
 
-export type EventProps = Record<string, string | number | boolean>;
+export type EventProps = Record<string, string | number | boolean | null>;
 
-function valueOf(value: string | number | boolean): PropertyValue {
+function valueOf(value: string | number | boolean | null): PropertyValue {
+  if (value === null) {
+    return new PropertyValue.Null();
+  }
   if (typeof value === 'string') {
     return new PropertyValue.Text({ value });
   }
@@ -34,4 +37,13 @@ export function trackEvent(name: string, props?: EventProps): void {
 /** Queues a "Screen Viewed" for `name`. */
 export function trackScreen(name: string, props?: EventProps): void {
   core().trackScreen(name, toProperties(props));
+}
+
+/** Queues a "Click Button" for `button` on `screen`. */
+export function trackClick(
+  button: string,
+  screen: string,
+  props?: EventProps,
+): void {
+  core().trackClick(button, screen, toProperties(props));
 }

@@ -2,7 +2,6 @@ import { core } from '../core';
 import { fetchDiscover, mainRealm } from '../discover/api';
 import { deviceDetails } from '../platform/deviceFacts';
 import { createCoreNotificationsApi } from './coreNotificationsApi';
-import { linkQueryFor } from './api';
 import type { DiscoverFeed, MenuApi, SceneInfo } from './types';
 
 const safeVersion = (): string => {
@@ -13,11 +12,11 @@ const safeVersion = (): string => {
   }
 };
 
-const FALLBACK_SCENE: SceneInfo = {
+const fallbackScene = (): SceneInfo => ({
   title: 'Decentraland',
   creator: '',
-  linkQuery: 'position=0,0',
-};
+  link: core().sceneLinkUrl(mainRealm(), 0, 0),
+});
 
 /**
  * Scene, screenshots and notifications come from the core, the discover feed from the public
@@ -35,16 +34,16 @@ export function createCoreMenuApi(
         const { title, creator, parcel, realm, genesis } =
           await core().currentScene();
         return {
-          title: title || FALLBACK_SCENE.title,
+          title: title || fallbackScene().title,
           creator,
-          linkQuery: linkQueryFor(
+          link: core().sceneLinkUrl(
             genesis ? mainRealm() : realm,
             parcel.x,
             parcel.y,
           ),
         };
       } catch {
-        return FALLBACK_SCENE;
+        return fallbackScene();
       }
     },
     captureScreenshot: async () => `file://${await core().captureScreenshot()}`,

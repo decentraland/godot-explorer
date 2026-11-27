@@ -31,6 +31,7 @@ export const menu: Partial<Record<keyof typeof en, string>> = {
   BUG_REPORT_CATEGORY_WEARABLES: 'Wearables/Emotes',
   BUG_REPORT_CATEGORY_PROFILE: 'Perfil',
   BUG_REPORT_CATEGORY_OTHER: 'Outro',
+  MENU_KEBAB_RELOAD: 'Recarregar',
   COMMON_CANCEL: 'CANCELAR',
   COMMON_SUBMIT: 'ENVIAR',
 };

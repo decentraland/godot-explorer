@@ -159,14 +159,18 @@ async fn request_set_position(urn: &EntityUrn) {
         tracing::error!("Rejected request async_request_set_position: {}", urn.urn);
         return;
     };
+    // The entity comes from the realm's own content server, so its shape is not guaranteed.
     let base = entity
         .pointer("/metadata/scene/base")
-        .and_then(Value::as_str)
-        .unwrap_or("0,0");
-    let mut parts = base
-        .split(',')
-        .map(|part| part.trim().parse::<i32>().unwrap_or(0));
-    let (x, y) = (parts.next().unwrap_or(0), parts.next().unwrap_or(0));
+        .and_then(Value::as_str);
+    let parcel = base.and_then(|base| {
+        let (x, y) = base.split_once(',')?;
+        Some((x.trim().parse::<i32>().ok()?, y.trim().parse::<i32>().ok()?))
+    });
+    let Some((x, y)) = parcel else {
+        tracing::warn!("[REALM] malformed scene base {base:?}: {}", urn.urn);
+        return;
+    };
     crate::world::api::teleport_to(Vector2i::new(x, y));
 }
 

@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { core } from '../core';
 
 export const mainRealm = (): string => core().urls().mainRealm;
@@ -5,13 +6,19 @@ export const placesApi = (): string => core().urls().places;
 export const eventsApi = (): string => core().urls().eventsApi;
 export const destinationsApi = (): string => core().urls().destinationsApi;
 
+// mobile-bff decides what Discover lists: the global `banned` tag, and on iOS (with this tag)
+// the block list of casinos, A/R-rated places and `banned_ios`.
+const bffFilter = (): string =>
+  Platform.OS === 'ios' ? 'sdk=7&tag=allowed_ios' : 'sdk=7';
+export const destinationsUrl = (query: string): string =>
+  `${destinationsApi()}/?${query}&${bffFilter()}`;
+export const bffEventsUrl = (query?: string): string =>
+  `${core().urls().mobileEventsApi}/?${bffFilter()}${query ? `&${query}` : ''}`;
+
 export const featuredUrl = (): string =>
-  `${placesApi()}?only_highlighted=true&limit=12&order_by=like_score`;
+  destinationsUrl('offset=0&limit=12&tag=featured');
 export const mostActiveUrl = (): string =>
-  `${placesApi()}?limit=12&order_by=most_active&order=desc`;
-export const liveEventsUrl = (): string => `${eventsApi()}?list=live&limit=10`;
-export const upcomingEventsUrl = (): string =>
-  `${eventsApi()}?list=upcoming&limit=10`;
+  destinationsUrl('offset=0&limit=12&order_by=most_active');
 
 /** What the Discover cards and the detail sheet show, whether it came from a place or an event. */
 export type Place = {
@@ -64,7 +71,7 @@ const num = (value: unknown, fallback = 0): number =>
   typeof value === 'number' && isFinite(value) ? value : fallback;
 
 type Raw = Record<string, unknown>;
-const rows = (payload: unknown): Raw[] => {
+export const rows = (payload: unknown): Raw[] => {
   const data = (payload as { data?: unknown } | null)?.data;
   return Array.isArray(data)
     ? (data.filter(item => typeof item === 'object' && item !== null) as Raw[])
@@ -157,6 +164,26 @@ export function parseEvents(payload: unknown): DiscoverEvent[] {
   });
 }
 
+// Live and trending, then live, then the rest by their next start (no date last).
+const eventRank = (raw: Raw): number =>
+  raw.live === true ? (raw.trending === true ? 0 : 1) : 2;
+const byNextStart = (a: Raw, b: Raw): number => {
+  const [x, y] = [str(a.next_start_at), str(b.next_start_at)];
+  return x && y ? (x < y ? -1 : x > y ? 1 : 0) : x ? -1 : y ? 1 : 0;
+};
+
+/** An events listing as the Discover rails show it: approved events only, live ones first. */
+export function parseListedEvents(payload: unknown): DiscoverEvent[] {
+  const data = rows(payload)
+    .filter(raw => raw.approved === true)
+    .sort(
+      (a, b) =>
+        eventRank(a) - eventRank(b) ||
+        (eventRank(a) === 2 ? byNextStart(a, b) : 0),
+    );
+  return parseEvents({ data });
+}
+
 export async function getJson(
   url: string,
   fetchImpl: typeof fetch,
@@ -174,19 +201,18 @@ export type DiscoverData = {
   mostActive: Place[];
 };
 
-/** Live events first, then the upcoming ones; a missing events service doesn't fail the page. */
+/** A missing events service doesn't fail the page. */
 export async function fetchDiscover(
   fetchImpl: typeof fetch = fetch,
 ): Promise<DiscoverData> {
-  const [featured, mostActive, live, upcoming] = await Promise.all([
+  const [featured, mostActive, events] = await Promise.all([
     getJson(featuredUrl(), fetchImpl),
     getJson(mostActiveUrl(), fetchImpl),
-    getJson(liveEventsUrl(), fetchImpl).catch(() => null),
-    getJson(upcomingEventsUrl(), fetchImpl).catch(() => null),
+    getJson(bffEventsUrl(), fetchImpl).catch(() => null),
   ]);
   return {
     featured: parsePlaces(featured),
     mostActive: parsePlaces(mostActive),
-    events: [...parseEvents(live), ...parseEvents(upcoming)],
+    events: parseListedEvents(events),
   };
 }

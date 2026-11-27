@@ -7,6 +7,8 @@ export type SceneApi = Pick<
   | 'captureScreenshot'
   | 'track'
   | 'trackScreen'
+  | 'trackClick'
+  | 'trackDiscover'
   | 'setAnalyticsConsent'
   | 'flushAnalytics'
   | 'setAnalyticsFlushInterval'

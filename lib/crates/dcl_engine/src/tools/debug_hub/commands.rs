@@ -184,6 +184,11 @@ fn state() -> Value {
         "scenes_loaded": globals::scene_runner().bind().debug_get_loaded_scene_ids().len(),
         "memory_static_mb": Os::singleton().get_static_memory_usage() as f64 / 1_048_576.0,
         "camera_mode": global.bind().current_camera_mode,
+        // The fov of the camera drawing the view (the virtual camera's while a scene uses one).
+        "camera_fov": global
+            .get_viewport()
+            .and_then(|viewport| viewport.get_camera_3d())
+            .map(|camera| camera.get_fov()),
         "portrait": global.bind().is_portrait,
         "signed_in": !globals::player_identity().bind().get_address_str().is_empty(),
         // No renderer: nothing is drawn and screenshots come back empty.

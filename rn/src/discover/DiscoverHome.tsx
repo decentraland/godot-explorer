@@ -9,6 +9,7 @@ import { CategoryChips } from './CategoryChips';
 import { FeatureBanners } from './FeatureBanners';
 import { CompactRow, FriendCard } from './MoreCards';
 import { Rail } from './Rail';
+import { CarouselKey, useDiscoverSnapshot } from './metrics';
 import { isOffline, RailState, useRail } from './rails';
 import { useSeasonalSkin } from './seasonalSkin';
 import { u } from '@dcl/ui-native';
@@ -69,6 +70,16 @@ export function DiscoverHome({
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => onOffline(offline, reload), [offline]);
+  useDiscoverSnapshot({
+    banners: banners.state,
+    played,
+    popular: popular.state,
+    friends: friends.state,
+    fresh: fresh.state,
+    events: events.state,
+    favorites: favorites.state,
+    mine: mine.state,
+  });
 
   const playedState: RailState<Place> = {
     status: 'ready',
@@ -77,16 +88,18 @@ export function DiscoverHome({
   };
   const bannerList =
     banners.state.status === 'ready' ? banners.state.items : null;
-  const places = (title: string, rail: typeof popular, count = false) => (
+  const places = (title: string, rail: typeof popular, key: CarouselKey) => (
     <Rail
       title={title}
-      count={count}
       state={rail.state}
       loadingMore={rail.loadingMore}
       onEnd={rail.loadMore}
       keyOf={(place, i) => `${place.id}:${i}`}
-      renderItem={place => (
-        <PlaceCard place={place} onPress={() => open.place(place)} />
+      renderItem={(place, i) => (
+        <PlaceCard
+          place={place}
+          onPress={() => open.place(place, { carousel: key, position: i })}
+        />
       )}
     />
   );
@@ -105,7 +118,9 @@ export function DiscoverHome({
         banners={bannerList}
         loading={banners.state.status === 'loading'}
         initialIndex={bannerIndex}
-        onOpen={banner => open.place(banner.place)}
+        onOpen={(banner, i) =>
+          open.place(banner.place, { carousel: 'featured', position: i })
+        }
         onJump={(banner: Banner) => onJump(banner.place)}
       />
       <Rail
@@ -113,21 +128,31 @@ export function DiscoverHome({
         state={playedState}
         skeleton="compact"
         keyOf={place => place.id}
-        renderItem={place => (
-          <CompactRow place={place} onPress={() => open.place(place)} />
+        renderItem={(place, i) => (
+          <CompactRow
+            place={place}
+            onPress={() =>
+              open.place(place, { carousel: 'last_visited', position: i })
+            }
+          />
         )}
       />
-      {places(t('DISCOVER_POPULAR'), popular)}
+      {places(t('DISCOVER_POPULAR'), popular, 'most_active')}
       <Rail
         title={t('DISCOVER_FRIENDS')}
         count
         state={friends.state}
         keyOf={friend => friend.address}
-        renderItem={friend => (
-          <FriendCard friend={friend} onPress={() => open.friend(friend)} />
+        renderItem={(friend, i) => (
+          <FriendCard
+            friend={friend}
+            onPress={() =>
+              open.friend(friend, { carousel: 'friends', position: i })
+            }
+          />
         )}
       />
-      {places(t('DISCOVER_NEW_IN_DECENTRALAND'), fresh)}
+      {places(t('DISCOVER_NEW_IN_DECENTRALAND'), fresh, 'new_in_decentraland')}
       <CategoryChips onOpen={onCategory} />
       <Rail
         title={t('DISCOVER_EVENTS')}
@@ -142,8 +167,8 @@ export function DiscoverHome({
           />
         )}
       />
-      {places(t('DISCOVER_FAVORITES'), favorites)}
-      {places(t('DISCOVER_MY_PLACES'), mine)}
+      {places(t('DISCOVER_FAVORITES'), favorites, 'favorites')}
+      {places(t('DISCOVER_MY_PLACES'), mine, 'my_places')}
     </ScrollView>
   );
 }

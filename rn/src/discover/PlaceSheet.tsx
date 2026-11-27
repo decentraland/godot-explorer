@@ -58,6 +58,7 @@ export function PlaceSheet({
   initial,
   onClose,
   onJumpIn,
+  onShare,
   onFavorite,
   onVote,
 }: {
@@ -65,6 +66,7 @@ export function PlaceSheet({
   initial?: SheetSnap;
   onClose: () => void;
   onJumpIn: () => void;
+  onShare: () => void;
   onFavorite: (on: boolean) => void;
   onVote: (vote: VoteState) => void;
 }) {
@@ -83,7 +85,7 @@ export function PlaceSheet({
           <SquareButton
             icon="share"
             label={t('COMMON_SHARE')}
-            onPress={() => place && sharePlace(place)}
+            onPress={onShare}
           />
           <SquareButton
             icon="like"

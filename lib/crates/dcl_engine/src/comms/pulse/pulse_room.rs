@@ -49,6 +49,10 @@ pub const HANDSHAKE_RESPONSE_TIMEOUT: Duration = Duration::from_secs(5);
 /// Byte-boundary channel capacity (outbound frames / inbound messages).
 const LINK_CAPACITY: usize = 1024;
 const MAX_RETRY_COOLDOWN: Duration = Duration::from_secs(30);
+/// Floor between two `PlayerStateInput`s (12.5 Hz): above the 10 Hz broadcast timer, so steady
+/// movement is never held back, and well under the server's 20 Hz disconnect cap, so a burst (the
+/// timer firing every frame to catch up after a main-thread stall) is coalesced instead.
+const INPUT_MIN_INTERVAL: Duration = Duration::from_millis(80);
 
 /// The connection's lifecycle — a single linear progression with two off-ramps (`Down` to
 /// rebuild, `Dead` to give up). The driver/link are live from `Connecting` through `Established`;
@@ -68,7 +72,7 @@ enum Connection {
     AwaitingResponse { timeout_at: Instant },
     /// Handshake accepted; steady state.
     Established,
-    /// Terminally disconnected (auth rejected, banned, evicted, flagged) — no reconnect attempted.
+    /// Terminally disconnected (auth rejected, banned, evicted) — no reconnect attempted.
     /// Only rebuilding the room (realm change / `change_adapter`) clears this.
     Dead,
 }
@@ -102,6 +106,9 @@ pub struct PulseRoom {
     /// as a failed attempt.
     established_this_attempt: bool,
     retry_cooldown: Duration,
+    /// The last session ended in a client-fault kick, so establishing again keeps the grown
+    /// `retry_cooldown` instead of resetting it.
+    client_fault_backoff: bool,
 
     /// Signed handshake bytes arriving from the off-thread signing task.
     handshake_rx: mpsc::Receiver<Result<Vec<u8>, String>>,
@@ -110,9 +117,13 @@ pub struct PulseRoom {
     /// Sink into the shared `MessageProcessor` — the same channel every room feeds.
     processor_sender: mpsc::Sender<IncomingMessage>,
 
-    /// Last `PlayerState` sent, cached by [`Self::send_movement`]. An outbound `EmoteStart`
-    /// attaches this — the server rejects an emote with a null `player_state`.
+    /// Newest `PlayerState` from [`Self::send_movement`], sent or held back. An outbound
+    /// `EmoteStart` attaches this — the server rejects an emote with a null `player_state`.
     last_state: Option<pulse::PlayerState>,
+    /// When the last `PlayerStateInput` went out, and the newest state held back until
+    /// [`INPUT_MIN_INTERVAL`] has passed since then (flushed from `poll`).
+    last_input_at: Option<Instant>,
+    pending_input: Option<pulse::PlayerState>,
     /// Last profile version announced over Pulse; announcements are reliable + stored
     /// server-side, so only send on change (the handshake itself carries the connect-time one).
     last_announced_profile_version: Option<u32>,
@@ -142,10 +153,13 @@ impl PulseRoom {
             },
             established_this_attempt: false,
             retry_cooldown: RETRY_COOLDOWN,
+            client_fault_backoff: false,
             handshake_rx,
             handshake_tx,
             processor_sender,
             last_state: None,
+            last_input_at: None,
+            pending_input: None,
             last_announced_profile_version: None,
             warned_out_of_grid: false,
             warned_decode_failed: false,
@@ -185,6 +199,7 @@ impl PulseRoom {
         self.drain_status(now, &mut events);
         self.drive_connection(now, identity, &mut events);
         self.drain_inbound(now, &mut events);
+        self.flush_input(now);
         events
     }
 
@@ -210,8 +225,10 @@ impl PulseRoom {
 
     /// Quantize + send the local movement as a `PlayerStateInput` (unreliable-sequenced, ch1).
     /// `movement` fields are in DCL world convention — the same values the rfc4 packets carry.
-    /// Out-of-grid positions are suppressed entirely (invalid parcel index = terminal disconnect).
-    pub fn send_movement(&mut self, movement: &rfc4::Movement) {
+    /// Out-of-grid positions are suppressed entirely (invalid parcel index = disconnect).
+    /// Inside [`INPUT_MIN_INTERVAL`] of the previous input the state replaces any held one and
+    /// goes out from `poll` once the interval has passed.
+    pub fn send_movement(&mut self, movement: &rfc4::Movement, now: Instant) {
         if !self.is_established() {
             return;
         }
@@ -225,6 +242,22 @@ impl PulseRoom {
         }
         let state = from_movement(movement, &self.grid);
         self.last_state = Some(state.clone());
+        self.pending_input = Some(state);
+        self.flush_input(now);
+    }
+
+    fn flush_input(&mut self, now: Instant) {
+        if !self.is_established()
+            || self
+                .last_input_at
+                .is_some_and(|at| now.duration_since(at) < INPUT_MIN_INTERVAL)
+        {
+            return;
+        }
+        let Some(state) = self.pending_input.take() else {
+            return;
+        };
+        self.last_input_at = Some(now);
         self.send_client_message(
             pulse::client_message::Message::Input(pulse::PlayerStateInput { state: Some(state) }),
             PulseReliability::UnreliableSequenced,
@@ -409,12 +442,15 @@ impl PulseRoom {
         self.link = None;
         self.driver = None; // dropping joins the already-exited driver thread
         self.last_state = None;
+        self.last_input_at = None;
+        self.pending_input = None;
         self.last_announced_profile_version = None;
         self.warned_decode_failed = false;
         self.flood_peer_left();
         if !self.established_this_attempt {
             events.push(PulseRoomEvent::AttemptFailed);
         }
+        self.client_fault_backoff = reason.is_some_and(PulseDisconnect::is_client_fault);
         let retry = reason.is_none_or(PulseDisconnect::should_retry);
         self.state = if retry {
             tracing::info!("pulse: transport dropped — reinitialising after cooldown");
@@ -593,7 +629,6 @@ impl PulseRoom {
                                 timestamp: 0.0,
                                 is_stopping: Some(false),
                                 mask: mask.map(|m| m as u32),
-                                ..Default::default()
                             }),
                         );
                     }
@@ -662,7 +697,9 @@ impl PulseRoom {
         tracing::info!("pulse: handshake accepted");
         self.state = Connection::Established;
         self.established_this_attempt = true;
-        self.retry_cooldown = RETRY_COOLDOWN;
+        if !self.client_fault_backoff {
+            self.retry_cooldown = RETRY_COOLDOWN;
+        }
         events.push(PulseRoomEvent::Established);
     }
 }
@@ -960,6 +997,97 @@ mod tests {
             }]
         );
         assert!(matches!(room.state, Connection::Dead));
+    }
+
+    #[tokio::test]
+    async fn client_fault_kick_reconnects_with_a_backoff_that_survives_reestablishing() {
+        let (sender, _keep) = processor_channel();
+        let (mut room, driver) = test_room(sender);
+        room.state = Connection::Established;
+        room.established_this_attempt = true;
+        let mut now = Instant::now();
+
+        driver
+            .status
+            .try_send(PulseStatus::Disconnected(
+                PulseDisconnect::InputRateExceeded,
+            ))
+            .unwrap();
+        assert!(room.poll(now, || None).is_empty());
+        let Connection::Down { respawn_at } = room.state else {
+            panic!("expected reconnect")
+        };
+        assert_eq!(respawn_at.duration_since(now), RETRY_COOLDOWN);
+
+        let reestablish_then_drop =
+            |room: &mut PulseRoom, now: Instant, reason: Option<PulseDisconnect>| {
+                let (link, channels) = pulse_channels(8);
+                room.link = Some(link);
+                room.state = Connection::AwaitingResponse { timeout_at: now };
+                room.on_handshake_response(now, true, None, &mut Vec::new());
+                room.lost_connection(reason, now, &mut Vec::new());
+                drop(channels);
+                let Connection::Down { respawn_at } = room.state else {
+                    panic!("expected reconnect")
+                };
+                respawn_at.duration_since(now)
+            };
+        for seconds in [4, 8] {
+            let wait = reestablish_then_drop(
+                &mut room,
+                now,
+                Some(PulseDisconnect::DiscreteEventRateExceeded),
+            );
+            assert_eq!(wait, Duration::from_secs(seconds));
+            now += wait;
+        }
+        // A plain transport drop ends the escalation: the session after it starts from 2 s again.
+        assert_eq!(
+            reestablish_then_drop(&mut room, now, None),
+            Duration::from_secs(16)
+        );
+        assert_eq!(reestablish_then_drop(&mut room, now, None), RETRY_COOLDOWN);
+    }
+
+    #[tokio::test]
+    async fn movement_inside_the_input_floor_is_coalesced_and_flushed_by_poll() {
+        let (sender, _keep) = processor_channel();
+        let (mut room, mut driver) = test_room(sender);
+        room.state = Connection::Established;
+        room.established_this_attempt = true;
+        let now = Instant::now();
+        let at = |x: f32| rfc4::Movement {
+            position_x: x,
+            position_z: 8.0,
+            ..Default::default()
+        };
+        let mut sent_inputs = || {
+            let mut frames = Vec::new();
+            while let Ok(frame) = driver.outbound.try_recv() {
+                assert_eq!(frame.reliability, PulseReliability::UnreliableSequenced);
+                frames.push(frame.bytes);
+            }
+            frames
+        };
+
+        room.send_movement(&at(1.0), now);
+        room.send_movement(&at(2.0), now + Duration::from_millis(20));
+        room.send_movement(&at(3.0), now + Duration::from_millis(40));
+        assert_eq!(sent_inputs().len(), 1);
+
+        room.poll(now + Duration::from_millis(60), || None);
+        assert!(sent_inputs().is_empty());
+
+        room.poll(now + INPUT_MIN_INTERVAL, || None);
+        let newest = pulse::ClientMessage {
+            message: Some(pulse::client_message::Message::Input(
+                pulse::PlayerStateInput {
+                    state: Some(from_movement(&at(3.0), &room.grid)),
+                },
+            )),
+        }
+        .encode_to_vec();
+        assert_eq!(sent_inputs(), vec![newest]);
     }
 
     #[tokio::test]

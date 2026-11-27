@@ -49,6 +49,34 @@ function coreVersion(): string | undefined {
   }
 }
 
+const ACCESS_TOKEN = /access_token=[^&\s'"]+/g;
+const JWT = /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g;
+const WALLET = /(0x[0-9a-fA-F]{4})[0-9a-fA-F]{36}/g;
+
+/**
+ * Event text must not carry secrets or wallets off the device: LiveKit room tokens ride in
+ * `?access_token=`, and a wallet identifies the player.
+ */
+export function scrubText(text: string): string {
+  return text
+    .replace(ACCESS_TOKEN, 'access_token=[redacted]')
+    .replace(JWT, '[jwt]')
+    .replace(WALLET, '$1…');
+}
+
+/** The message and every exception value, where core reports carry the logged text. */
+export function scrubEvent<E extends Sentry.Event>(event: E): E {
+  if (event.message !== undefined) {
+    event.message = scrubText(event.message);
+  }
+  for (const exception of event.exception?.values ?? []) {
+    if (exception.value !== undefined) {
+      exception.value = scrubText(exception.value);
+    }
+  }
+  return event;
+}
+
 /** Starts the one crash reporter, the owner of the native crash handlers. Call it first. */
 export function initSentry() {
   const environment = ENVIRONMENTS[core().environment()];
@@ -60,6 +88,7 @@ export function initSentry() {
     // says `org` (the visual-snapshot runs would report into production).
     enabled: environment !== 'development' && !__DEV__,
     sendDefaultPii: false,
+    beforeSend: scrubEvent,
     // Tracing off: no tracesSampleRate.
   });
 }

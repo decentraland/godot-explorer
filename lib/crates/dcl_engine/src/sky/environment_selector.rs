@@ -108,6 +108,26 @@ pub fn fog_depth(far: f32) -> (f32, f32) {
     (far * 0.6, far * 0.9)
 }
 
+/// The player's view distance setting, in meters.
+pub fn view_distance_setting() -> f32 {
+    globals::engine()
+        .bind()
+        .setting("view_distance".into())
+        .try_to::<f64>()
+        .unwrap_or(200.0) as f32
+}
+
+/// Depth fog for a view distance. The setting owns the fog, so a scene fog restores through here.
+pub fn apply_view_distance(environment: &mut Gd<Environment>, far: f32) {
+    let (begin, end) = fog_depth(far);
+    environment.set_fog_enabled(true);
+    environment.set_fog_mode(FogMode::DEPTH);
+    environment.set_fog_depth_begin(begin);
+    environment.set_fog_depth_end(end);
+    environment.set_fog_depth_curve(1.0);
+    environment.set_fog_sky_affect(0.0);
+}
+
 fn setting_i32(name: &str) -> i32 {
     globals::engine()
         .bind()
@@ -129,13 +149,7 @@ impl INode for EnvironmentSelector {
         self.set_skybox_and_shadow(setting_i32("skybox"));
         self.set_anti_aliasing(setting_i32("anti_aliasing"));
         self.set_bloom(setting_i32("bloom_quality"));
-        self.set_view_distance(
-            globals::engine()
-                .bind()
-                .setting("view_distance".into())
-                .try_to::<f64>()
-                .unwrap_or(200.0) as f32,
-        );
+        self.set_view_distance(view_distance_setting());
         let me = self.to_gd();
         globals::engine()
             .signals()
@@ -153,13 +167,7 @@ impl EnvironmentSelector {
             "shadow_quality" => self.set_shadow(setting_i32("shadow_quality")),
             "bloom_quality" => self.set_bloom(setting_i32("bloom_quality")),
             "anti_aliasing" => self.set_anti_aliasing(setting_i32("anti_aliasing")),
-            "view_distance" => self.set_view_distance(
-                globals::engine()
-                    .bind()
-                    .setting("view_distance".into())
-                    .try_to::<f64>()
-                    .unwrap_or(200.0) as f32,
-            ),
+            "view_distance" => self.set_view_distance(view_distance_setting()),
             _ => {}
         }
     }
@@ -173,13 +181,7 @@ impl EnvironmentSelector {
         let Some(mut environment) = self.sky_environment() else {
             return;
         };
-        let (begin, end) = fog_depth(far);
-        environment.set_fog_enabled(true);
-        environment.set_fog_mode(FogMode::DEPTH);
-        environment.set_fog_depth_begin(begin);
-        environment.set_fog_depth_end(end);
-        environment.set_fog_depth_curve(1.0);
-        environment.set_fog_sky_affect(0.0);
+        apply_view_distance(&mut environment, far);
     }
 
     fn set_skybox_and_shadow(&mut self, skybox_index: i32) {
@@ -209,12 +211,7 @@ impl EnvironmentSelector {
         self.sky = Some(sky);
         self.set_shadow(setting_i32("shadow_quality"));
         // The new sky has a new environment: fog and view distance again.
-        let far = globals::engine()
-            .bind()
-            .setting("view_distance".into())
-            .try_to::<f64>()
-            .unwrap_or(200.0) as f32;
-        self.set_view_distance(far);
+        self.set_view_distance(view_distance_setting());
     }
 
     fn use_flat_environment(&mut self) {

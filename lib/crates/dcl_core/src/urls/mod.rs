@@ -167,7 +167,7 @@ pub fn archipelago_stats() -> String {
 
 // Web3 (ungrouped — uses default)
 pub fn ethereum_rpc() -> String {
-    format!("wss://rpc.decentraland.{}/mainnet", default_suffix())
+    format!("https://rpc.decentraland.{}/mainnet", default_suffix())
 }
 pub fn ethereum_rpc_with_project(project: &str) -> String {
     format!("{}?project={}", ethereum_rpc(), project)
@@ -198,6 +198,10 @@ pub fn jump_events() -> String {
         "https://decentraland.{}/jump/events",
         suffix(ServiceGroup::Events)
     )
+}
+/// Base of shared place/world links (`?position=x,y` or `?realm=<world>`).
+pub fn jump_places() -> String {
+    format!("{}/jump/places", host())
 }
 
 // Seasonal Discover assets: one folder per season key, the same on every environment.
@@ -579,6 +583,7 @@ mod tests {
             terms_of_service(),
             content_policy(),
             jump_events(),
+            jump_places(),
             account_deletion(),
             intercom_tickets(),
             intercom_origin(),
