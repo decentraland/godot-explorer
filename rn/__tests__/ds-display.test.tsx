@@ -5,6 +5,10 @@ import { Path } from 'react-native-svg';
 import {
   ActionSquareButton,
   Alert,
+  BadgeBar,
+  BadgeDCL,
+  BadgeProfileRow,
+  ItemCard,
   AvatarBackground,
   AvatarCard,
   Badge,
@@ -304,6 +308,56 @@ describe('Skeleton and EmptyState', () => {
   });
 });
 
+describe('Badges', () => {
+  const art = { uri: 'https://example.com/badge.png' };
+
+  it('BadgeDCL shows the bar with progress, else the date', () => {
+    const withBar = render(
+      <BadgeDCL image={art} name="Traveler bronze" progress={0.4} />,
+    );
+    expect(withBar.root.findAllByType(BadgeBar).length).toBe(1);
+    act(() => withBar.unmount());
+    const withDate = render(
+      <BadgeDCL image={art} name="Traveler bronze" date="Jan. 2024" />,
+    );
+    expect(withDate.root.findAllByType(BadgeBar).length).toBe(0);
+    expect(text(withDate)).toContain('Jan. 2024');
+    act(() => withDate.unmount());
+  });
+
+  it('BadgeDCL marks the selected badge and presses', () => {
+    const onPress = jest.fn();
+    const tree = render(
+      <BadgeDCL
+        image={art}
+        name="Traveler bronze"
+        state="selected"
+        onPress={onPress}
+      />,
+    );
+    const node = pressable(tree, 'Traveler bronze');
+    expect(node.props.accessibilityState).toMatchObject({ selected: true });
+    act(() => node.props.onPress());
+    expect(onPress).toHaveBeenCalled();
+    act(() => tree.unmount());
+  });
+
+  it('BadgeBar clamps its value', () => {
+    const tree = render(<BadgeBar value={1.5} />);
+    expect(
+      tree.root.findByProps({ accessibilityRole: 'progressbar' }).props
+        .accessibilityValue,
+    ).toMatchObject({ now: 100 });
+    act(() => tree.unmount());
+  });
+
+  it('BadgeProfileRow is the empty plus slot without an image', () => {
+    const tree = render(<BadgeProfileRow />);
+    expect(tree.root.findAllByType(ItemCard).length).toBe(1);
+    act(() => tree.unmount());
+  });
+});
+
 describe('LinkRow, Alert and Notification', () => {
   it('LinkRow presses and marks selection', () => {
     const onPress = jest.fn();
@@ -424,6 +478,7 @@ describe('demo props', () => {
       'LinkRow',
       'Alert',
       'Notification',
+      'BadgeDCL',
       'PageDots',
       'SnapCarousel',
       'HudCircleButton',
