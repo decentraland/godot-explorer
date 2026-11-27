@@ -97,7 +97,7 @@ pub fn init_icu_default_locale() {
 
 #[cfg(test)]
 mod tests {
-    use super::to_bcp47;
+    use super::{get_scene_locale, get_system_locale, set_system_locale, to_bcp47};
 
     #[test]
     fn converts_godot_locale_to_bcp47() {
@@ -110,5 +110,15 @@ mod tests {
     fn empty_locale_falls_back_to_en() {
         assert_eq!(to_bcp47(""), "en");
         assert_eq!(to_bcp47("  "), "en");
+    }
+
+    #[test]
+    fn system_locale_is_stored_as_bcp47_apart_from_the_scene_locale() {
+        let scene_locale = get_scene_locale();
+        set_system_locale("es_AR");
+        assert_eq!(get_system_locale(), "es-AR");
+        assert_eq!(get_scene_locale(), scene_locale);
+        set_system_locale("");
+        assert_eq!(get_system_locale(), "en");
     }
 }
