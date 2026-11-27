@@ -22,15 +22,19 @@ const SEGMENTS = 96;
  * the gradient has at its midpoint. `size`, `radius` and `width` are in the node's own units (the
  * Figma frame / 2), drawn inside the edge; the SVG scales to its parent.
  */
-export function AngularStroke({
-  size,
-  radius,
-  width,
-  stops,
-  color,
-  opacity = 1,
-  transform = BOTTOM_CLOCKWISE,
-}: {
+export function AngularStroke({ size, ...rest }: AngularPathsProps) {
+  return (
+    <Svg
+      style={StyleSheet.absoluteFill}
+      viewBox={`0 0 ${size} ${size}`}
+      pointerEvents="none"
+    >
+      <AngularPaths size={size} {...rest} />
+    </Svg>
+  );
+}
+
+type AngularPathsProps = {
   size: number;
   radius: number;
   width: number;
@@ -38,17 +42,24 @@ export function AngularStroke({
   color: string;
   opacity?: number;
   transform?: Transform;
-}) {
+};
+
+/** The segments of `AngularStroke`, for drawing inside another SVG with the same `size` viewBox. */
+export function AngularPaths({
+  size,
+  radius,
+  width,
+  stops,
+  color,
+  opacity = 1,
+  transform = BOTTOM_CLOCKWISE,
+}: AngularPathsProps) {
   const segments = useMemo(
     () => outline(size, radius, width, stops, transform),
     [size, radius, width, stops, transform],
   );
   return (
-    <Svg
-      style={StyleSheet.absoluteFill}
-      viewBox={`0 0 ${size} ${size}`}
-      pointerEvents="none"
-    >
+    <>
       {segments.map(([d, alpha], i) =>
         alpha > 0.001 ? (
           <Path
@@ -61,7 +72,7 @@ export function AngularStroke({
           />
         ) : null,
       )}
-    </Svg>
+    </>
   );
 }
 

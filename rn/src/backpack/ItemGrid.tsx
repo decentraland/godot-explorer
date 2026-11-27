@@ -22,6 +22,8 @@ export function ItemGrid<T>({
   columns = layout.columns,
   bottomInset = 0,
   overhang = 0,
+  windowSize = 7,
+  initialNumToRender = 12,
 }: {
   items: T[];
   keyOf: (item: T) => string;
@@ -33,6 +35,9 @@ export function ItemGrid<T>({
   /** Room above the first row for card rings drawn outside the card; the list moves up by the
    * same amount so the cards stay in place. */
   overhang?: number;
+  /** Screens of rows kept rendered around the visible ones (FlatList `windowSize`). */
+  windowSize?: number;
+  initialNumToRender?: number;
 }) {
   const cells = padToColumns(items, columns);
   return (
@@ -53,8 +58,8 @@ export function ItemGrid<T>({
       ]}
       columnWrapperStyle={styles.row}
       showsVerticalScrollIndicator={false}
-      initialNumToRender={12}
-      windowSize={7}
+      initialNumToRender={initialNumToRender}
+      windowSize={windowSize}
       renderItem={({ item }) => (
         <View style={styles.cell}>
           {item === SPACER ? null : renderItem(item as T)}

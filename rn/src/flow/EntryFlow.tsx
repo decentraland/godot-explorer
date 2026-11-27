@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useReducer, useState } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
 import { BackpackScreen } from '../backpack/BackpackScreen';
+import { preloadCatalog } from '../backpack/useCatalog';
 import { Button, u } from '@dcl/ui-native';
 import type { Place } from '../discover/api';
 import { useApi } from '../discover/ApiContext';
@@ -56,6 +57,7 @@ export function EntryFlow({
   useEffect(() => {
     if (step === 'avatar_create') {
       ftuePlaces(api);
+      preloadCatalog();
     }
   }, [step, api]);
 
@@ -282,10 +284,7 @@ export function EntryFlow({
           onBack={back}
           footer={
             <View style={styles.footer}>
-              <Button
-                label={t('FLOW_CONTINUE')}
-                onPress={confirmAvatar}
-              />
+              <Button label={t('FLOW_CONTINUE')} onPress={confirmAvatar} />
             </View>
           }
         />

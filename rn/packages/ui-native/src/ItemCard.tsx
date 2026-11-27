@@ -10,7 +10,8 @@ import {
 import { AppText } from './AppText';
 import { RadialFill } from './Gradient';
 import { Icon } from './Icon';
-import { AngularStroke, AngularStop } from './internal/AngularStroke';
+import { AngularPaths, AngularStop } from './internal/AngularStroke';
+import { CachedSvg } from './internal/CachedSvg';
 import {
   colors,
   elevation,
@@ -96,6 +97,67 @@ export function RarityBackground({
         />
       ))}
     </View>
+  );
+}
+
+/** `#RRGGBB` at an opacity, as `#RRGGBBAA`. */
+const withAlpha = (hex: string, alpha: number) =>
+  `${hex}${Math.round(alpha * 255)
+    .toString(16)
+    .padStart(2, '0')}`;
+
+const faceStyles = new Map<string, ViewStyle>();
+
+/** The rarity glows as native gradients: drawn by the card's own view in its first frame. */
+function faceStyle(rarity: Rarity, disabled: boolean): ViewStyle {
+  const key = `${rarity}:${disabled}`;
+  const cached = faceStyles.get(key);
+  if (cached) {
+    return cached;
+  }
+  const { base, opacity, glows } = glowsFor(rarity, disabled);
+  // CSS lists the top layer first: the second glow is drawn over the first.
+  const layers = [...glows].reverse().map(glow => {
+    const [from, to] = fade(glow.color, opacity);
+    return (
+      `radial-gradient(ellipse ${glow.r * 100}% ${glow.r * 100}% at ` +
+      `${glow.cx * 100}% ${glow.cy * 100}%, ` +
+      `${withAlpha(from.color, from.opacity)} 0%, ${withAlpha(
+        to.color,
+        to.opacity,
+      )} 100%)`
+    );
+  });
+  const style: ViewStyle = {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: base,
+    experimental_backgroundImage: layers.join(', '),
+  };
+  faceStyles.set(key, style);
+  return style;
+}
+
+/** `RarityBackground` drawn natively, and the card's rim, the same on every card, drawn once and
+ * shown as one shared image. */
+function CardFace({ rarity, disabled }: { rarity: Rarity; disabled: boolean }) {
+  return (
+    <>
+      <View style={faceStyle(rarity, disabled)} />
+      <CachedSvg cacheKey="card-rim" viewBox="0 0 96 96">
+        <AngularPaths
+          size={96}
+          radius={5.94}
+          width={1}
+          stops={CARD_RIM}
+          color={colors.snow}
+          opacity={0.7}
+        />
+      </CachedSvg>
+    </>
   );
 }
 
@@ -242,21 +304,7 @@ export function ItemCard({
                   opacity={state === 'selected' ? 0.5 : disabled ? 0.2 : 0.3}
                 />
               ) : (
-                <>
-                  <RarityBackground
-                    rarity={rarity}
-                    disabled={disabled}
-                    style={disabled && styles.undimmed}
-                  />
-                  <AngularStroke
-                    size={96}
-                    radius={5.94}
-                    width={1}
-                    stops={CARD_RIM}
-                    color={colors.snow}
-                    opacity={0.7}
-                  />
-                </>
+                <CardFace rarity={rarity} disabled={disabled} />
               )}
             </View>
             {!empty && (
@@ -264,6 +312,10 @@ export function ItemCard({
                 {thumbnail ? (
                   <Image
                     source={{ uri: thumbnail }}
+                    // No fade-in (Android's default is 300 ms), and decoded at the tile's size: some
+                    // thumbnails are 1024 px.
+                    fadeDuration={0}
+                    resizeMethod="resize"
                     style={styles.fill}
                     resizeMode="cover"
                   />
@@ -380,7 +432,6 @@ const styles = StyleSheet.create({
   emptySelectedBg: { backgroundColor: colors.black60 },
   emptyDisabled: { opacity: 0.6 },
   disabledBg: { opacity: 0.8 },
-  undimmed: { opacity: 1 },
   /** Proportional, so a smaller card (Card-Profile's 75 dp tile) keeps the 192 px layout. */
   image: {
     position: 'absolute',

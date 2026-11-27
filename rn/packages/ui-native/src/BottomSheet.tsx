@@ -68,7 +68,17 @@ export function BottomSheet({
     [offset],
   );
 
-  useEffect(() => settle(heights[snap]), [snap, heights, settle]);
+  // A new container size (first measure, rotation) places the sheet at once; a snap or a config
+  // change animates it there.
+  const placedFor = useRef(height);
+  useEffect(() => {
+    if (placedFor.current !== height) {
+      placedFor.current = height;
+      offset.setValue(heights.full - heights[snap]);
+      return;
+    }
+    settle(heights[snap]);
+  }, [snap, heights, height, settle, offset]);
 
   const responder = useMemo(
     () =>

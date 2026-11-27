@@ -78,6 +78,7 @@ export function PortraitLayout({
         ) : (
           // The engine draws over RN here, so the avatar must end above the emote chip and slots.
           <AvatarHole
+            ready={area > 0}
             style={[
               styles.hole,
               {
@@ -120,21 +121,27 @@ export function PortraitLayout({
             />
           </View>
         )}
-        <BottomSheet
-          snap={state.sheet}
-          onSnapChange={sheet => dispatch({ type: 'sheet', sheet })}
-          containerHeight={area || undefined}
-          config={config}
-          handle={!emotes}
+        {/* Hidden until measured: drawn before, the sheet shows a frame at the wrong height. */}
+        <View
+          style={[StyleSheet.absoluteFill, area === 0 && styles.unmeasured]}
+          pointerEvents="box-none"
         >
-          <SheetContent
-            controller={controller}
-            copy={copy}
-            subRow={subRow}
-            bottomInset={heights.full - heights[state.sheet]}
-            flushTop={emotes}
-          />
-        </BottomSheet>
+          <BottomSheet
+            snap={state.sheet}
+            onSnapChange={sheet => dispatch({ type: 'sheet', sheet })}
+            containerHeight={area || undefined}
+            config={config}
+            handle={!emotes}
+          >
+            <SheetContent
+              controller={controller}
+              copy={copy}
+              subRow={subRow}
+              bottomInset={heights.full - heights[state.sheet]}
+              flushTop={emotes}
+            />
+          </BottomSheet>
+        </View>
         <FilterOverlay
           controller={controller}
           position={{
@@ -158,4 +165,5 @@ const styles = StyleSheet.create({
   hole: { flex: 1 },
   slots: { position: 'absolute', left: 0, right: 0 },
   credits: { position: 'absolute', left: space['2xl'] },
+  unmeasured: { opacity: 0 },
 });

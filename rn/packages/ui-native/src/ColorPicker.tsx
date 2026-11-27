@@ -75,7 +75,11 @@ export function Swatch({
         <>
           <View style={[styles.swatchFill, pressed && styles.swatchInset]}>
             {picker ? (
-              <Image source={pickerImage} style={styles.swatchImage} />
+              <Image
+                source={pickerImage}
+                style={styles.swatchImage}
+                fadeDuration={0}
+              />
             ) : (
               <View style={[styles.swatchImage, { backgroundColor: fill }]}>
                 <AngularStroke
