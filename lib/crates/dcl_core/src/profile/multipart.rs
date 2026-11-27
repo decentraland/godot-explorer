@@ -6,7 +6,8 @@ pub struct Multipart {
 }
 
 /// `fields` are text parts; `file` is the entity file, named by its own id and sent without a
-/// filename or content type, as the catalyst expects it.
+/// filename. The `application/octet-stream` type is what makes the catalyst's multipart parser
+/// (busboy) file it as a file instead of a text field.
 pub fn build(fields: &[(String, String)], file_name: &str, file: &[u8]) -> Multipart {
     let boundary = format!("dcl{}", uuid::Uuid::new_v4().simple());
     let mut body = Vec::new();
@@ -17,8 +18,11 @@ pub fn build(fields: &[(String, String)], file_name: &str, file: &[u8]) -> Multi
         );
     }
     body.extend_from_slice(
-        format!("--{boundary}\r\nContent-Disposition: form-data; name=\"{file_name}\"\r\n\r\n")
-            .as_bytes(),
+        format!(
+            "--{boundary}\r\nContent-Disposition: form-data; name=\"{file_name}\"\r\n\
+             Content-Type: application/octet-stream\r\n\r\n"
+        )
+        .as_bytes(),
     );
     body.extend_from_slice(file);
     body.extend_from_slice(format!("\r\n--{boundary}--\r\n").as_bytes());
@@ -41,7 +45,8 @@ mod tests {
             body,
             format!(
                 "--{b}\r\nContent-Disposition: form-data; name=\"entityId\"\r\n\r\nbafy\r\n\
-                 --{b}\r\nContent-Disposition: form-data; name=\"bafy\"\r\n\r\n{{}}\r\n--{b}--\r\n",
+                 --{b}\r\nContent-Disposition: form-data; name=\"bafy\"\r\n\
+                 Content-Type: application/octet-stream\r\n\r\n{{}}\r\n--{b}--\r\n",
                 b = boundary
             )
         );

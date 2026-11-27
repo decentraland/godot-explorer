@@ -20,7 +20,6 @@ export function AudioSection({ m }: { m: SettingsModel }) {
       <Group gap={37}>
         {SLIDERS.map(([key, label]) => (
           <Slider
-            variant="settings"
             key={key}
             label={t(label)}
             value={m.values[key]}

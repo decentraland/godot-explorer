@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   AppText,
+  Button,
   colors,
   Dialog,
+  Dropdown,
   fonts,
-  OutlinedButton,
-  ReadOnlyField,
+  Notification,
   u,
 } from '@dcl/ui-native';
 import { t } from '../i18n';
@@ -21,30 +22,6 @@ type DialogKind =
   | null;
 
 const DELETE_LINK = '#FF5F77';
-
-function GuestCard({ onAddEmail }: { onAddEmail: () => void }) {
-  return (
-    <View style={styles.card}>
-      <AppText variant="title" style={styles.cardTitle}>
-        {t('SETTINGS_UNLOCK_TITLE')}
-      </AppText>
-      <AppText variant="body" style={styles.cardBody}>
-        {t('SETTINGS_UNLOCK_BODY')}
-      </AppText>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t('SETTINGS_ADD_EMAIL')}
-        hitSlop={8}
-        onPress={onAddEmail}
-        style={styles.addEmail}
-      >
-        <AppText variant="button" style={styles.addEmailText}>
-          {t('SETTINGS_ADD_EMAIL')}
-        </AppText>
-      </Pressable>
-    </View>
-  );
-}
 
 /** Identity, guest upgrade or email, then sign out and delete pinned to the bottom of the pane. */
 export function AccountSection({
@@ -95,22 +72,31 @@ export function AccountSection({
         </AppText>
         <View style={styles.gap}>
           {account.guest ? (
-            <GuestCard
-              onAddEmail={() => {
+            <Notification
+              title={t('SETTINGS_UNLOCK_TITLE')}
+              body={t('SETTINGS_UNLOCK_BODY')}
+              actionLabel={t('SETTINGS_ADD_EMAIL')}
+              onAction={() => {
                 api.startEmailUpgrade();
               }}
             />
           ) : (
-            <ReadOnlyField
+            <Dropdown
+              readOnly
               label={t('SETTINGS_EMAIL')}
               value={account.email ?? ''}
+              options={[
+                { value: account.email ?? '', label: account.email ?? '' },
+              ]}
+              onChange={() => {}}
             />
           )}
         </View>
       </View>
       <View style={styles.bottom}>
-        <OutlinedButton
-          box
+        <Button
+          big
+          tone="secondary"
           icon="logout"
           label={t('CUSTOM_BUTTON_SIGN_OUT')}
           onPress={() => setDialog('signOut')}
@@ -144,7 +130,7 @@ export function AccountSection({
       />
       <Dialog
         visible={dialog === 'delete'}
-        icon="warning"
+        icon="alert"
         title={t('SETTINGS_DELETE_TITLE')}
         body={t('SETTINGS_DELETE_BODY')}
         onRequestClose={() => setDialog(null)}
@@ -193,24 +179,6 @@ const styles = StyleSheet.create({
     marginTop: u(4),
   },
   gap: { marginTop: u(26) },
-  card: {
-    padding: u(13),
-    borderRadius: u(5),
-    borderWidth: 1,
-    borderColor: colors.lavender,
-    backgroundColor: colors.black40,
-  },
-  cardTitle: { fontFamily: fonts.bold, fontSize: u(16), color: colors.snow },
-  cardBody: { fontSize: u(13), color: colors.snow, marginTop: u(4) },
-  addEmail: {
-    height: u(27),
-    marginTop: u(12),
-    borderRadius: u(3),
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.ruby,
-  },
-  addEmailText: { fontFamily: fonts.bold, fontSize: u(11) },
   bottom: { gap: u(32), paddingTop: u(32) },
   delete: { textAlign: 'center', fontSize: u(13), color: colors.snow },
   deleteLink: { color: DELETE_LINK, textDecorationLine: 'underline' },

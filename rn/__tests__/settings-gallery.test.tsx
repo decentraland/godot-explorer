@@ -7,7 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavProvider, useNav, Nav } from '../src/app/NavProvider';
 import { getScreen } from '../src/app/registry';
 import { getPreview, previewIds } from '../src/gallery/registry';
-import { LinkRow, OutlinedButton } from '@dcl/ui-native';
+import { Button, LinkRow } from '@dcl/ui-native';
 import '../src/settings';
 import '../src/settings/gallery';
 
@@ -117,12 +117,13 @@ describe('ds additive props', () => {
     act(() => tree.unmount());
   });
 
-  it('OutlinedButton takes an icon and a box shape', () => {
+  it('Button takes a leading icon', () => {
     let tree!: ReturnType<typeof create>;
     act(() => {
       tree = create(
-        <OutlinedButton
-          box
+        <Button
+          big
+          tone="secondary"
           icon="logout"
           label="SIGN OUT"
           onPress={() => {}}

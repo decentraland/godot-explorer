@@ -1,23 +1,43 @@
 import { ReactElement } from 'react';
 import { act, create, ReactTestInstance } from 'react-test-renderer';
 import { Text } from 'react-native';
+import { Path } from 'react-native-svg';
 import {
   ActionSquareButton,
+  Alert,
+  BadgeBar,
+  BadgeDCL,
+  BadgeProfileRow,
+  ItemCard,
+  AvatarBackground,
+  AvatarCard,
   Badge,
+  DetailRow,
+  DiscoverCard,
+  DiscoverCardSkeleton,
+  Header,
   Chip,
-  CollapsibleSection,
   EmptyState,
   HudCircleButton,
   Icon,
   IconButton,
+  ImageNotFound,
+  LogoLoader,
+  NotificationBadge,
   LinkRow,
+  Notification,
+  Menu,
   PageDots,
+  ProfileCard,
   ProgressBar,
+  RarityLabel,
+  Sheet,
   Skeleton,
   SnapCarousel,
-  StatusPill,
+  EventBadge,
+  EventTimeTag,
   Tabs,
-  WarningBanner,
+  Tooltip,
   colors,
   SCALE,
   indexFromOffset,
@@ -49,8 +69,10 @@ describe('tokens', () => {
   it('has the new Figma colours', () => {
     expect(colors.mythic).toBe('#FF4BED');
     expect(colors.iconHud).toBe('#DFD0FF');
-    expect(colors.teal).toBe('#2FCF9A');
-    expect(colors.periwinkle).toBe('#9D8CFF');
+    expect(colors.teal).toBe('#22C1C1');
+    expect(colors.periwinkle).toBe('#A0ABFF');
+    expect(colors.link).toBe('#A0ABFF');
+    expect(colors.rubyDisabled).toBe('rgba(255,45,85,0.5)');
     expect(colors.fieldDark).toBe('#2B0847');
   });
 });
@@ -66,23 +88,85 @@ describe('Icon', () => {
   });
 });
 
+describe('Menu', () => {
+  it('reports the pressed item and marks the selected one', () => {
+    const onSelect = jest.fn();
+    const tree = render(
+      <Menu
+        items={[
+          { key: 'share', label: 'Share', icon: 'share' },
+          { key: 'report', label: 'Report', selected: true, check: true },
+        ]}
+        onSelect={onSelect}
+      />,
+    );
+    act(() => pressable(tree, 'Share').props.onPress());
+    expect(onSelect).toHaveBeenCalledWith('share');
+    expect(pressable(tree, 'Report').props.accessibilityState.selected).toBe(
+      true,
+    );
+  });
+});
+
+describe('Cards_Discover and Cards_Backpack', () => {
+  it('DiscoverCard shows ImageNotFound without an image and the event creator row', () => {
+    const place = render(
+      <DiscoverCard
+        type="place"
+        title="Genesis Plaza"
+        image=""
+        users="12"
+        likeRate="90%"
+      />,
+    );
+    expect(text(place)).toContain('Genesis Plaza');
+    expect(text(place)).toContain('90%');
+    expect(place.root.findAllByProps({ name: 'imageOff' }).length).toBe(1);
+    const event = render(
+      <DiscoverCard
+        type="event"
+        title="Party"
+        image="https://example.com/a.png"
+        byLabel="by"
+        creator="Ana"
+      />,
+    );
+    expect(text(event)).toContain('Ana');
+    expect(event.root.findAllByProps({ name: 'imageOff' }).length).toBe(0);
+  });
+
+  it('DetailRow, skeleton and AvatarCard render', () => {
+    expect(text(render(<DetailRow type="coords" value="-12,40" />))).toContain(
+      '-12,40',
+    );
+    expect(
+      render(<DiscoverCardSkeleton type="event" />).toJSON(),
+    ).not.toBeNull();
+    const onPress = jest.fn();
+    const avatar = render(
+      <AvatarCard selected label="Avatar 1" onPress={onPress} />,
+    );
+    act(() => pressable(avatar, 'Avatar 1').props.onPress());
+    expect(onPress).toHaveBeenCalled();
+    expect(
+      pressable(avatar, 'Avatar 1').props.accessibilityState.selected,
+    ).toBe(true);
+  });
+
+  it('Header Type=Close shows only the close action', () => {
+    const onClose = jest.fn();
+    const tree = render(<Header title="Hidden" onClose={onClose} />);
+    expect(text(tree)).not.toContain('Hidden');
+    act(() => pressable(tree, 'Close').props.onPress());
+    expect(onClose).toHaveBeenCalled();
+  });
+});
+
 describe('Badge, IconButton, Tabs, HudCircleButton', () => {
   it('Badge shows a count, caps it, or is a dot', () => {
     expect(text(render(<Badge count={3} />))).toContain('3');
     expect(text(render(<Badge count={120} />))).toContain('99+');
     expect(text(render(<Badge />))).not.toContain('99');
-  });
-
-  it('IconButton renders a badge and extends the label', () => {
-    const tree = render(
-      <IconButton
-        icon="bell"
-        label="Notifications"
-        badge={2}
-        onPress={() => {}}
-      />,
-    );
-    expect(text(tree)).toContain('2');
   });
 
   it('Tabs show a badge on the tab', () => {
@@ -97,6 +181,23 @@ describe('Badge, IconButton, Tabs, HudCircleButton', () => {
       />,
     );
     expect(text(tree)).toContain('4');
+  });
+
+  it('IconButton Filter shows the red dot only with badge', () => {
+    const icon = (badge: boolean) => (
+      <IconButton
+        icon="filter"
+        badge={badge}
+        accessibilityLabel="Filter"
+        onPress={() => {}}
+      />
+    );
+    expect(
+      render(icon(true)).root.findAllByType(NotificationBadge),
+    ).toHaveLength(1);
+    expect(
+      render(icon(false)).root.findAllByType(NotificationBadge),
+    ).toHaveLength(0);
   });
 
   it('HudCircleButton presses and shows its badge', () => {
@@ -121,17 +222,22 @@ describe('ActionSquareButton', () => {
   });
 });
 
-describe('StatusPill and Chip', () => {
-  it('renders each kind', () => {
-    expect(text(render(<StatusPill kind="live" label="LIVE" />))).toContain(
-      'LIVE',
+describe('Tags and Chip', () => {
+  it('renders each event time kind and the live player count', () => {
+    const live = text(
+      render(<EventTimeTag kind="live" label="Live" players={12} />),
+    );
+    expect(live).toContain('Live');
+    expect(live).toContain('12');
+    expect(
+      text(render(<EventTimeTag kind="startingSoon" label="In 5 mins" />)),
+    ).toContain('In 5 mins');
+    expect(text(render(<EventTimeTag kind="date" label="Nov 12" />))).toContain(
+      'Nov 12',
     );
     expect(
-      text(render(<StatusPill kind="trending" label="Trending" />)),
-    ).toContain('Trending');
-    expect(text(render(<StatusPill kind="count" label="12" />))).toContain(
-      '12',
-    );
+      text(render(<EventBadge type="featured" label="Featured" />)),
+    ).toContain('Featured');
   });
 
   it('Chip presses and removes', () => {
@@ -188,29 +294,71 @@ describe('Skeleton and EmptyState', () => {
     act(() => pressable(tree, 'RETRY').props.onPress());
     expect(onPress).toHaveBeenCalled();
   });
-});
 
-describe('CollapsibleSection', () => {
-  it('hides children until open and toggles', () => {
-    const onToggle = jest.fn();
-    const closed = render(
-      <CollapsibleSection title="Links" open={false} onToggle={onToggle}>
-        <Text>inner</Text>
-      </CollapsibleSection>,
-    );
-    expect(text(closed)).not.toContain('inner');
-    act(() => pressable(closed, 'Links').props.onPress());
-    expect(onToggle).toHaveBeenCalled();
-    const open = render(
-      <CollapsibleSection title="Links" open onToggle={onToggle}>
-        <Text>inner</Text>
-      </CollapsibleSection>,
-    );
-    expect(text(open)).toContain('inner');
+  it('EmptyState renders text-only and small without an icon badge', () => {
+    const tree = render(<EmptyState size="sm" title="No friends yet" />);
+    expect(text(tree)).toContain('No friends yet');
+    act(() => tree.unmount());
+  });
+
+  it('RarityLabel shows the label it is given', () => {
+    const tree = render(<RarityLabel rarity="legendary" label="Legendary" />);
+    expect(text(tree)).toContain('Legendary');
+    act(() => tree.unmount());
   });
 });
 
-describe('LinkRow and WarningBanner', () => {
+describe('Badges', () => {
+  const art = { uri: 'https://example.com/badge.png' };
+
+  it('BadgeDCL shows the bar with progress, else the date', () => {
+    const withBar = render(
+      <BadgeDCL image={art} name="Traveler bronze" progress={0.4} />,
+    );
+    expect(withBar.root.findAllByType(BadgeBar).length).toBe(1);
+    act(() => withBar.unmount());
+    const withDate = render(
+      <BadgeDCL image={art} name="Traveler bronze" date="Jan. 2024" />,
+    );
+    expect(withDate.root.findAllByType(BadgeBar).length).toBe(0);
+    expect(text(withDate)).toContain('Jan. 2024');
+    act(() => withDate.unmount());
+  });
+
+  it('BadgeDCL marks the selected badge and presses', () => {
+    const onPress = jest.fn();
+    const tree = render(
+      <BadgeDCL
+        image={art}
+        name="Traveler bronze"
+        state="selected"
+        onPress={onPress}
+      />,
+    );
+    const node = pressable(tree, 'Traveler bronze');
+    expect(node.props.accessibilityState).toMatchObject({ selected: true });
+    act(() => node.props.onPress());
+    expect(onPress).toHaveBeenCalled();
+    act(() => tree.unmount());
+  });
+
+  it('BadgeBar clamps its value', () => {
+    const tree = render(<BadgeBar value={1.5} />);
+    expect(
+      tree.root.findByProps({ accessibilityRole: 'progressbar' }).props
+        .accessibilityValue,
+    ).toMatchObject({ now: 100 });
+    act(() => tree.unmount());
+  });
+
+  it('BadgeProfileRow is the empty plus slot without an image', () => {
+    const tree = render(<BadgeProfileRow />);
+    expect(tree.root.findAllByType(ItemCard).length).toBe(1);
+    act(() => tree.unmount());
+  });
+});
+
+describe('LinkRow, Alert and Notification', () => {
   it('LinkRow presses and marks selection', () => {
     const onPress = jest.fn();
     const tree = render(
@@ -223,10 +371,32 @@ describe('LinkRow and WarningBanner', () => {
     expect(onPress).toHaveBeenCalled();
   });
 
-  it('WarningBanner shows its message', () => {
+  it('Alert shows the bold lead before its message', () => {
+    const tree = render(
+      <Alert lead="Reward claim failed." message="Try again." />,
+    );
+    expect(text(tree)).toContain('Reward claim failed.');
+    expect(text(tree)).toContain('Try again.');
     expect(
-      text(render(<WarningBanner message="Device no longer supported" />)),
-    ).toContain('Device no longer supported');
+      tree.root.findAllByProps({ accessibilityRole: 'alert' }).length,
+    ).toBeGreaterThan(0);
+    act(() => tree.unmount());
+  });
+
+  it('Notification runs its action', () => {
+    const onAction = jest.fn();
+    const tree = render(
+      <Notification
+        title="Unlock the full experience"
+        body="Add email to play across mobile and desktop."
+        actionLabel="Add email"
+        onAction={onAction}
+      />,
+    );
+    expect(text(tree)).toContain('Unlock the full experience');
+    act(() => pressable(tree, 'Add email').props.onPress());
+    expect(onAction).toHaveBeenCalled();
+    act(() => tree.unmount());
   });
 });
 
@@ -298,20 +468,104 @@ describe('demo props', () => {
       'BottomSheet',
       'Skeleton',
       'EmptyState',
-      'StatusPill',
+      'EventTimeTag',
+      'EventBadge',
+      'Checkbox',
+      'Header',
       'Chip',
       'ProgressBar',
-      'OutlinedButton',
-      'CollapsibleSection',
+      'SectionCollapsible',
       'LinkRow',
-      'WarningBanner',
+      'Alert',
+      'Notification',
+      'BadgeDCL',
       'PageDots',
       'SnapCarousel',
       'HudCircleButton',
-      'ReadOnlyField',
       'ActionSquareButton',
     ]) {
       expect(demos).toHaveProperty(key);
     }
+  });
+});
+
+describe('ProfileCard', () => {
+  it('draws the NAME tile and the credits price', () => {
+    let tree!: ReturnType<typeof create>;
+    act(() => {
+      tree = create(
+        <ProfileCard
+          type="name"
+          title="NAME"
+          name="Name"
+          nameSuffix="DCL.ETH"
+          price="0"
+        />,
+      );
+    });
+    const out = JSON.stringify(tree.toJSON());
+    for (const s of ['NAME', 'Name', 'DCL.ETH', '"0"']) {
+      expect(out).toContain(s);
+    }
+    act(() => tree.unmount());
+  });
+});
+
+describe('Sheet', () => {
+  it('pins the footer under a hug body and drops it when collapsed', () => {
+    let tree!: ReturnType<typeof create>;
+    act(() => {
+      tree = create(
+        <Sheet footer={<Text>Next</Text>}>
+          <Text>Body</Text>
+        </Sheet>,
+      );
+    });
+    expect(JSON.stringify(tree.toJSON())).toContain('Next');
+    act(() =>
+      tree.update(<Sheet height="collapsed" footer={<Text>Next</Text>} />),
+    );
+    expect(JSON.stringify(tree.toJSON())).not.toContain('Next');
+    act(() => tree.unmount());
+  });
+});
+
+describe('Tooltip', () => {
+  it('draws the arrow, on one line, only when a side is given', () => {
+    const plain = render(<Tooltip text="Tap Chat to talk with others" />);
+    expect(text(plain)).toContain('Tap Chat to talk with others');
+    expect(plain.root.findAllByType(Path)).toHaveLength(0);
+    act(() => plain.unmount());
+    const left = render(<Tooltip arrow="left" text="Chat" />);
+    expect(left.root.findAllByType(Path)).toHaveLength(1);
+    expect(left.root.findByType(Text).props.numberOfLines).toBe(1);
+    act(() => left.unmount());
+  });
+});
+
+describe('DS image pieces', () => {
+  it('ImageNotFound draws the crossed-image glyph at the given size', () => {
+    const tree = render(<ImageNotFound iconSize={20} />);
+    const icon = tree.root.findByType(Icon);
+    expect(icon.props.name).toBe('imageOff');
+    expect(icon.props.size).toBe(20);
+    act(() => tree.unmount());
+  });
+
+  it('LogoLoader is a labelled progressbar', () => {
+    const tree = render(<LogoLoader accessibilityLabel="Loading" />);
+    expect(
+      tree.root.findAllByProps({
+        accessibilityRole: 'progressbar',
+        accessibilityLabel: 'Loading',
+      }).length,
+    ).toBeGreaterThan(0);
+    act(() => tree.unmount());
+  });
+
+  it('AvatarBackground renders the spotlight image', () => {
+    const tree = render(<AvatarBackground />);
+    expect(text(tree)).toContain('avatar-background');
+    act(() => tree.unmount());
   });
 });

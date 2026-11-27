@@ -26,7 +26,8 @@ camera look stay in Godot. Orientation belongs to RN: portrait before a scene, l
 - `src/discover/`, `src/backpack/`, `src/profile/`, `src/menu/`, `src/settings/`, `src/hud/`, `src/world/`,
   `src/modals/`, `src/notifications/`: the screens, built from Figma (`docs/rn-ui-spec/`). Public GETs (places,
   events, catalog) live here with hosts from `core.urls()`; anything signed is a typed core call.
-- `packages/ui-native/` (`@dcl/ui-native`, an npm workspace): the design system: tokens, fonts, `AppText`, `Pill`, `Tabs`, `ItemCard`, buttons, icons.
+- `packages/ui-native/` (`@dcl/ui-native`, an npm workspace): the design system: tokens, `u()`, `AppText`, icons and
+  components from the Figma Design System Mobile. How to use it and add to it: `packages/ui-native/README.md`.
 - `src/i18n/`: the only translation source: `en`, `es`, `pt_BR`, one file per area. The `engine` area is
   what Godot draws itself; `node scripts/i18n-engine.mjs` exports it to `godot/locale/*.csv` (checked in CI
   with `--check`). `__tests__/i18n-coverage.test.ts` fails on hardcoded UI text.
@@ -68,6 +69,11 @@ npm run android:no-godot       # emulator, even when app/godot is synced
 cargo run -- run --target ios --no-godot
 cargo run -- run --target android --no-godot
 ```
+
+Check screens on the emulator at the Figma frame size: `npm run emulator:figma` pins it to 720x1600 at 320 dpi
+(360x800dp @2x, the size of every Figma frame), so a screenshot is the frame's size and compares 1:1 with the design,
+with no scaling argument. `npm run emulator:reset` gives the phone back. The real aspect ratio is the second check,
+not the first.
 
 The Expo Go workflow ended with the FFI: a custom native module cannot load in Expo Go.
 React Native is pinned to the version of Expo SDK 57 (RN 0.86.3); upgrading RN means moving to the Expo SDK that

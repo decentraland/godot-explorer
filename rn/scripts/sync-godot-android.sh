@@ -19,8 +19,6 @@ mkdir -p "$DEST/libs" "$DEST/jniLibs/arm64-v8a"
 
 cp "$GODOT_LIBS/godot-lib.template_$BUILD.aar" "$DEST/libs/"
 cp "$GODOT_LIBS/arm64-v8a/deps/libwebrtc.jar" "$DEST/libs/"
-# DclAndroidPlugin (push, deeplinks, ExoPlayer, Reown, ...); its Maven deps are in app/godot.gradle.
-cp "$ROOT/godot/addons/dcl-godot-android/bin/$BUILD/dcl-godot-android-$BUILD.aar" "$DEST/libs/"
 
 # Stripped native libs and the project data both come from the exported APK.
 # libgodot_android.so is inside the AAR, so it is not copied here.

@@ -1,19 +1,19 @@
 import { CameraFocus } from '../core/native';
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import {
+  Pressable,
   ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvatarHole } from '../backpack/AvatarStage';
 import {
   AppText,
   BottomSheet,
   colors,
-  IconButton,
-  layout,
+  Icon,
+  radii,
   Snap,
   snapHeights,
   u,
@@ -63,60 +63,76 @@ export function ProfileSheet({
   onEquippedPress,
 }: ProfileSheetProps) {
   const { height } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
+  const [area, setArea] = useState(height);
   const hasAbout = profile ? aboutMode(profile) !== 'none' : true;
-  const config = {
+  const screen = snapHeights(height, {
     peek: u(PEEK_DP),
     half: hasAbout ? HALF_WITH_ABOUT : HALF_NO_ABOUT,
     full: 1,
+  });
+  // The Figma snaps are measured on the whole frame; the sheet lives above the nav bar, so each
+  // keeps its on-screen top by giving up the part the bar covers.
+  const covered = height - area;
+  const config = {
+    peek: Math.max(screen.peek - covered, 0),
+    half: (screen.half - covered) / area,
+    full: 1,
   };
-  const holeHeight = height - snapHeights(height, config)[snap];
+  const holeHeight = height - screen[snap];
   return (
     <View style={styles.root}>
       <ProfileBackdrop variant={backdrop} />
-      {snap !== 'full' && avatarVisible && (
-        <AvatarHole
-          focus={CameraFocus.Head}
-          style={[styles.hole, { height: holeHeight }]}
-        />
-      )}
-      <BottomSheet
-        snap={snap}
-        onSnapChange={onSnapChange}
-        config={config}
-        containerHeight={height}
+      <View
+        style={styles.area}
+        onLayout={event => setArea(event.nativeEvent.layout.height)}
       >
-        <ScrollView
-          contentContainerStyle={[
-            styles.content,
-            { paddingBottom: layout.navHeight + insets.bottom + u(24) },
-          ]}
-          showsVerticalScrollIndicator={false}
+        {snap !== 'full' && avatarVisible && (
+          <AvatarHole
+            focus={CameraFocus.Head}
+            style={[styles.hole, { height: holeHeight }]}
+          />
+        )}
+        <BottomSheet
+          snap={snap}
+          onSnapChange={onSnapChange}
+          config={config}
+          containerHeight={area}
         >
-          {snap === 'full' && (
-            <View style={styles.close}>
-              <IconButton
-                icon="close"
-                size={36}
-                label={t('PROFILE_CLOSE')}
-                onPress={() => onSnapChange('half')}
+          <ScrollView
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+          >
+            {snap === 'full' && (
+              <View style={styles.close}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('PROFILE_CLOSE')}
+                  onPress={() => onSnapChange('half')}
+                  hitSlop={8}
+                  style={({ pressed }) => [
+                    styles.closeButton,
+                    pressed && styles.closeButtonPressed,
+                  ]}
+                >
+                  <Icon name="close" size={20} />
+                </Pressable>
+              </View>
+            )}
+            {profile ? (
+              <Content
+                profile={profile}
+                onEdit={onEdit}
+                onCopyName={onCopyName}
+                onCopyAddress={onCopyAddress}
+                onEquippedPress={onEquippedPress}
               />
-            </View>
-          )}
-          {profile ? (
-            <Content
-              profile={profile}
-              onEdit={onEdit}
-              onCopyName={onCopyName}
-              onCopyAddress={onCopyAddress}
-              onEquippedPress={onEquippedPress}
-            />
-          ) : (
-            <ProfileSkeleton />
-          )}
-        </ScrollView>
-      </BottomSheet>
-      {footer ? <View style={styles.footer}>{footer}</View> : null}
+            ) : (
+              <ProfileSkeleton />
+            )}
+          </ScrollView>
+        </BottomSheet>
+      </View>
+      {footer}
     </View>
   );
 }
@@ -184,9 +200,19 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 const styles = StyleSheet.create({
   root: { ...StyleSheet.absoluteFill, backgroundColor: colors.purple500 },
   hole: { position: 'absolute', top: 0, left: 0, right: 0 },
-  footer: { position: 'absolute', left: 0, right: 0, bottom: 0 },
-  content: { paddingHorizontal: u(24), paddingTop: u(8) },
+  /** Clipped so the sheet stops at the nav bar instead of running under it. */
+  area: { flex: 1, overflow: 'hidden' },
+  content: { paddingHorizontal: u(24), paddingBottom: u(24) },
   close: { marginBottom: u(12), alignSelf: 'flex-start' },
+  closeButton: {
+    width: u(36),
+    height: u(36),
+    borderRadius: radii.button,
+    backgroundColor: colors.purple550,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonPressed: { opacity: 0.8 },
   edit: { marginTop: u(26) },
   section: { marginTop: u(30) },
   sectionTitle: {

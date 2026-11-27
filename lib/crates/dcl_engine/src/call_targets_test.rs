@@ -1,70 +1,13 @@
 //! Calls by name (`call("x")`, `call_deferred("x")`, `callable("x")`) are checked by Godot only
 //! when they run, so a renamed or removed target, or a static `#[func]` called on an instance,
 //! fails silently or panics in the field. This scans the sources and fails on any such target
-//! that is neither an instance `#[func]` / `#[signal]` of ours nor listed as external.
+//! that is not an instance `#[func]` / `#[signal]` of ours.
 
 use std::collections::{BTreeSet, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use regex::Regex;
-
-/// Names that belong to the engine fork or the native plugins (JNI / Swift singletons), which
-/// this crate cannot see. Engine builtins are called typed, never by name.
-const EXTERNAL: &[&str] = &[
-    // native plugins
-    "GetDuration",
-    "GetPosition",
-    "GetVideoHeight",
-    "GetVideoWidth",
-    "HasVideoSizeChanged",
-    "InitSurface",
-    "IsPlaying",
-    "Pause",
-    "Play",
-    "Release",
-    "SetLooping",
-    "SetPlaybackRate",
-    "SetPosition",
-    "SetSourceLocal",
-    "SetSourceUrl",
-    "SetVolume",
-    "Stop",
-    "add_calendar_event",
-    "can_make_payments",
-    "current_environment",
-    "debugBlockUiThread",
-    "finish_transaction",
-    "getDeviceAnchorId",
-    "get_apns_token",
-    "get_deeplink_url",
-    "get_device_anchor_id",
-    "get_mobile_device_info",
-    "get_mobile_metrics",
-    "has_notification_permission",
-    "load_products",
-    "open_auth_url",
-    "open_safari_auth_url",
-    "open_webview_url",
-    "ping",
-    "purchase",
-    "resolve_environment",
-    "share_text",
-    "share_text_with_image",
-    "start_listening",
-    "test_logging",
-    "version",
-];
-
-/// Signals of the native plugins, connected by name.
-const EXTERNAL_SIGNALS: &[&str] = &[
-    "apns_token_ready",
-    "deeplink_received",
-    "fcm_token_ready",
-    "fcm_token_refreshed",
-    "firebase_app_instance_id_ready",
-    "memory_trim",
-];
 
 fn sources(dir: &Path, out: &mut Vec<PathBuf>) {
     let Ok(entries) = fs::read_dir(dir) else {
@@ -114,9 +57,6 @@ fn call_targets_exist_on_instances() {
     for (path, text) in &texts {
         for caps in call.captures_iter(text) {
             let name = &caps[1];
-            if EXTERNAL.contains(&name) {
-                continue;
-            }
             match funcs.get(name) {
                 Some(true) => {}
                 Some(false) => {
@@ -134,8 +74,7 @@ fn call_targets_exist_on_instances() {
             }
         }
     }
-    // Signals are typed (`signals().name()`): a string-named emit never, a string-named connect
-    // only to a plugin's signal.
+    // Signals are typed (`signals().name()`): never emitted or connected by name.
     let emit = Regex::new(r#"emit_signal\(\s*""#).unwrap();
     let connect = Regex::new(r#"\.(?:connect|connect_flags|has_signal)\(\s*"(\w+)""#).unwrap();
     for (path, text) in &texts {
@@ -143,13 +82,11 @@ fn call_targets_exist_on_instances() {
             problems.insert(format!("emit_signal by name ({})", path.display()));
         }
         for caps in connect.captures_iter(text) {
-            let name = &caps[1];
-            if !EXTERNAL_SIGNALS.contains(&name) {
-                problems.insert(format!(
-                    "{name}: a signal connected by name ({})",
-                    path.display()
-                ));
-            }
+            problems.insert(format!(
+                "{}: a signal connected by name ({})",
+                &caps[1],
+                path.display()
+            ));
         }
     }
     assert!(

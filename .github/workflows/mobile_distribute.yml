@@ -271,6 +271,8 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
       AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+      # R2's signing region; unset, AWS-hosted runners sign with their EC2 region (InvalidRegionName).
+      AWS_REGION: auto
       AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
       BUILD_REPORTER_TOKEN: ${{ secrets.BUILD_REPORTER_TOKEN }}
       BOARD_EVENTS_URL: ${{ vars.BOARD_EVENTS_URL }}
@@ -611,6 +613,8 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
       AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+      # R2's signing region; unset, AWS-hosted runners sign with their EC2 region (InvalidRegionName).
+      AWS_REGION: auto
       AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
       BUILD_REPORTER_TOKEN: ${{ secrets.BUILD_REPORTER_TOKEN }}
       BOARD_EVENTS_URL: ${{ vars.BOARD_EVENTS_URL }}
@@ -744,6 +748,8 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.MOBILE_ARTIFACTS_R2_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.MOBILE_ARTIFACTS_R2_SECRET_ACCESS_KEY }}
       AWS_ENDPOINT_URL: ${{ secrets.MOBILE_ARTIFACTS_R2_ENDPOINT }}
+      # R2's signing region; unset, AWS-hosted runners sign with their EC2 region (InvalidRegionName).
+      AWS_REGION: auto
       AWS_S3_BUCKET: ${{ secrets.MOBILE_ARTIFACTS_R2_BUCKET }}
       # Public R2 domain mapped to the mobile-artifacts bucket root.
       R2_PUBLIC_BASE_URL: "https://mobile-artifacts.dclregenesislabs.xyz"

@@ -1,0 +1,106 @@
+appId: org.decentraland.godotexplorer
+name: Settings
+---
+# Settings opens each section as its own page with a Back arrow. The version label and the values are the
+# fixed mock, so each page is checked for its own labels. Nothing is toggled here.
+- runFlow: ../subflows/ensure-home.yaml
+- tapOn: "settings"
+- assertVisible: "Settings"
+- assertVisible: "Version 1.14.0-mock"
+
+# Graphics
+- tapOn: "Graphics"
+- assertVisible: "PERFORMANCE"
+- assertVisible: "Dynamic Graphics"
+- assertVisible: "Graphic Profiles"
+- assertVisible: "VISUAL"
+- assertVisible: "Dynamic Skybox"
+- assertVisible: "Custom Skybox"
+- tapOn:
+    text: "Back"
+    index: 0
+
+# Audio
+- tapOn: "Audio"
+- assertVisible: "VOLUME"
+- assertVisible: "General"
+- assertVisible: "Scene"
+- assertVisible: "UI SFX"
+- assertVisible: "Music/Ambient"
+- assertVisible: "Avatar & Emote SFX"
+- tapOn:
+    text: "Back"
+    index: 0
+
+# Gameplay
+- tapOn: "Gameplay"
+- assertVisible: "CHAT & SOCIAL"
+- assertVisible: "Close Chat After Sending"
+- assertVisible: "Show My Nametag"
+- assertVisible: "INTERFACE"
+- assertVisible: "Hide Player Names"
+- assertVisible: "Hide Interface"
+- assertVisible: "Hide Interaction Prompts"
+- tapOn:
+    text: "Back"
+    index: 0
+
+# Language
+- tapOn: "Language"
+- assertVisible: "App Language"
+- assertVisible: "English"
+- tapOn:
+    text: "Back"
+    index: 0
+
+# Account
+- tapOn: "Account"
+- assertVisible: "ADD EMAIL"
+- assertVisible: "SIGN OUT"
+- tapOn:
+    text: "Back"
+    index: 0
+
+# Help & Support
+- tapOn: "Help & Support"
+- assertVisible: "SUPPORT"
+- assertVisible: "Report Bug"
+- assertVisible: "Report Content"
+- assertVisible: "Help"
+- assertVisible: "COMMUNITY"
+- assertVisible: "Discord"
+- assertVisible: "LEGAL & POLICIES"
+- assertVisible: "Privacy Policy"
+- assertVisible: "Content Policy"
+- assertVisible: "Term Of Service"
+- tapOn:
+    text: "Back"
+    index: 0
+
+# Storage
+- tapOn: "Storage"
+- assertVisible: "TEMPORARY FILES"
+- assertVisible: "Current Cache Size"
+- assertVisible: "Max Cache Size"
+- assertVisible: "CLEAN CACHE"
+- tapOn:
+    text: "Back"
+    index: 0
+
+# Dev Tools
+- tapOn: "Dev Tools"
+- assertVisible: "Scene Logs"
+- assertVisible: "Raycast Debugger"
+- assertVisible: "Scene Processing"
+- assertVisible: "Realm"
+- assertVisible: "WebSocket URL"
+- assertVisible: "CONNECT"
+- assertVisible: "Process Tick Quota"
+- assertVisible: "TEST NOTIFICATIONS"
+- tapOn:
+    text: "Back"
+    index: 0
+
+# Back on the list: every section is listed again.
+- assertVisible: "Graphics"
+- assertVisible: "Dev Tools"

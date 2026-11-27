@@ -24,6 +24,7 @@ mod install_dependency;
 mod ios_xcode;
 mod keystore;
 mod log_server;
+mod maestro;
 mod path;
 mod platform;
 mod rn_app;
@@ -409,18 +410,32 @@ fn main() -> Result<(), anyhow::Error> {
                         .default_value("0.0.0.0"),
                 ),
         ).subcommand(
+            Command::new("maestro")
+                .about("Build the React Native app without the engine, install it on the connected Android device and run the Maestro UI flows (rn/.maestro/flows)")
+                .arg(
+                    Arg::new("flows")
+                        .help("Flows to run, by file-name prefix (04, 04-discover). Default: all, in file-name order")
+                        .multiple_values(true),
+                )
+                .arg(
+                    Arg::new("device")
+                        .long("device")
+                        .help("adb device id (required when several devices are connected)")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::new("skip-build")
+                        .long("skip-build")
+                        .help("Run on the mock build already installed instead of building and installing it")
+                        .takes_value(false),
+                ),
+        ).subcommand(
             Command::new("update-ios-xcode")
                 .about("Update iOS Xcode project with latest builds (macOS only)")
                 .arg(
                     Arg::new("godot")
                         .long("godot")
                         .help("Update Godot engine library")
-                        .takes_value(false),
-                )
-                .arg(
-                    Arg::new("plugin")
-                        .long("plugin")
-                        .help("Update dcl-godot-ios plugin")
                         .takes_value(false),
                 )
                 .arg(
@@ -702,7 +717,7 @@ fn main() -> Result<(), anyhow::Error> {
                     if hub_viewer && platform == "android" {
                         print_message(
                             MessageType::Warning,
-                            "--hub-viewer: Android Kotlin logs (dcl-godot-android) won't show — they reach only logcat, which is now off.",
+                            "--hub-viewer: Android Kotlin logs (the RN host) won't show — they reach only logcat, which is now off.",
                         );
                     }
                 } else if platform == "ios" {
@@ -1025,9 +1040,15 @@ fn main() -> Result<(), anyhow::Error> {
                 .context("please provide a package with -p")?,
         ),
         ("doctor", _) => doctor::run_doctor(),
+        ("maestro", sm) => {
+            let flows: Vec<String> = sm
+                .values_of("flows")
+                .map(|values| values.map(String::from).collect())
+                .unwrap_or_default();
+            maestro::run(&flows, sm.value_of("device"), sm.is_present("skip-build"))
+        }
         ("update-ios-xcode", sm) => ios_xcode::update_ios_xcode(
             sm.is_present("godot"),
-            sm.is_present("plugin"),
             sm.is_present("lib"),
             sm.is_present("pck"),
         ),

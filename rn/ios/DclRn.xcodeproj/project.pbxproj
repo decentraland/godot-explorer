@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D0F0A1E5F0A1E5F0A1E50002 /* fonts in Resources */ = {isa = PBXBuildFile; fileRef = D0F0A1E5F0A1E5F0A1E50001 /* fonts */; };
 		0C80B921A6F3F58F76C31292 /* libPods-DclRn.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DCACB8F33CDC322A6C60F78 /* libPods-DclRn.a */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		2E7EB2BB4B701E7E5D47CEAA /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
@@ -15,9 +16,12 @@
 		901965FF053094AC7A39AB80 /* GodotHost.mm in Sources */ = {isa = PBXBuildFile; fileRef = EB034757B9B4089C67208C23 /* GodotHost.mm */; };
 		CF4AC92B45BA16F33C282D42 /* GodotPlugins.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B130CF31BC32915856EA596D /* GodotPlugins.cpp */; };
 		E5A1C0DE0000000000000001 /* DclHostFfi.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5A1C0DE0000000000000002 /* DclHostFfi.swift */; };
+		A7D3C0DE0000000000000001 /* AVPlayerWrapper.mm in Sources */ = {isa = PBXBuildFile; fileRef = A7D3C0DE0000000000000002 /* AVPlayerWrapper.mm */; };
+		A7D3C0DE0000000000000004 /* HostServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7D3C0DE0000000000000005 /* HostServices.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D0F0A1E5F0A1E5F0A1E50001 /* fonts */ = {isa = PBXFileReference; lastKnownFileType = folder; name = fonts; path = DclRn/fonts; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* DclRn.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DclRn.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = DclRn/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = DclRn/Info.plist; sourceTree = "<group>"; };
@@ -35,6 +39,9 @@
 		EB034757B9B4089C67208C23 /* GodotHost.mm */ = {isa = PBXFileReference; includeInIndex = 1; name = GodotHost.mm; path = DclRn/GodotHost.mm; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		E5A1C0DE0000000000000002 /* DclHostFfi.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DclHostFfi.swift; path = DclRn/Generated/DclHostFfi.swift; sourceTree = "<group>"; };
+		A7D3C0DE0000000000000002 /* AVPlayerWrapper.mm */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.cpp.objcpp; name = AVPlayerWrapper.mm; path = DclRn/AVPlayerWrapper.mm; sourceTree = "<group>"; };
+		A7D3C0DE0000000000000003 /* AVPlayerWrapper.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; name = AVPlayerWrapper.h; path = DclRn/AVPlayerWrapper.h; sourceTree = "<group>"; };
+		A7D3C0DE0000000000000005 /* HostServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HostServices.swift; path = DclRn/HostServices.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,8 +60,12 @@
 			isa = PBXGroup;
 			children = (
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
+				D0F0A1E5F0A1E5F0A1E50001 /* fonts */,
 				761780EC2CA45674006654EE /* AppDelegate.swift */,
 				E5A1C0DE0000000000000002 /* DclHostFfi.swift */,
+				A7D3C0DE0000000000000005 /* HostServices.swift */,
+				A7D3C0DE0000000000000002 /* AVPlayerWrapper.mm */,
+				A7D3C0DE0000000000000003 /* AVPlayerWrapper.h */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
@@ -178,6 +189,7 @@
 			files = (
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
+				D0F0A1E5F0A1E5F0A1E50002 /* fonts in Resources */,
 				2E7EB2BB4B701E7E5D47CEAA /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -285,6 +297,8 @@
 			files = (
 				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
 				E5A1C0DE0000000000000001 /* DclHostFfi.swift in Sources */,
+				A7D3C0DE0000000000000001 /* AVPlayerWrapper.mm in Sources */,
+				A7D3C0DE0000000000000004 /* HostServices.swift in Sources */,
 				901965FF053094AC7A39AB80 /* GodotHost.mm in Sources */,
 				CF4AC92B45BA16F33C282D42 /* GodotPlugins.cpp in Sources */,
 			);

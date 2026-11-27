@@ -63,6 +63,7 @@ cargo run -- run --itest                  # Integration tests
 scripts/ci/scene-tests.sh                 # Scene tests, headless (docs/scene-tests.md)
 scripts/qa-scene.sh <name>                # One scene test in QA mode (production build, QA panel)
 cargo run -- run --stest                  # Scene tests via xtask, with scripts/serve-scene-tests.sh running
+cargo run -- maestro                      # RN UI flows on the mock build, Android device (rn/.maestro/README.md)
 ```
 
 ### Android Development
@@ -276,7 +277,7 @@ The habits AI-assisted changes most often get wrong in this repo. Reviewers hold
   `content_provider.rs` are past 3000 lines and nothing enforces a cap: new behaviour goes in its own
   file — a component, a helper, a module — and the big file gets one call into it, not a new block.
 - **No GDScript.** CI fails on any `.gd` under `godot/src`; only the kept editor/export addons
-  (`dcl-godot-android`, `dcl_build_plugin`, `emote_converter`) carry `.gd`.
+  (`dcl_build_plugin`, `emote_converter`) carry `.gd`.
 - **Rule of thumb:** over ~1500 lines, ask where else the code could live before adding to it.
 
 ### Diff discipline

@@ -8,14 +8,16 @@ use godot::{
     prelude::*,
 };
 
+use crate::scene_runner::components::ui::style::{resolve_corner_radii, CornerRadius};
+
 #[derive(GodotClass)]
 #[class(base=Control)]
 pub struct DclUiBorder {
     base: Base<Control>,
     // [left, right, top, bottom]
     widths: [f32; 4],
-    // [top_left, top_right, bottom_right, bottom_left]
-    radii: [f32; 4],
+    // [top_left, top_right, bottom_right, bottom_left], resolved against the size when drawn.
+    radii: [CornerRadius; 4],
     // [top, right, bottom, left]
     colors: [Color; 4],
     // Built lazily in set_border when all four colors match. When present, the
@@ -31,7 +33,7 @@ impl IControl for DclUiBorder {
         Self {
             base,
             widths: [0.0; 4],
-            radii: [0.0; 4],
+            radii: [CornerRadius::default(); 4],
             colors: [transparent; 4],
             cached_stylebox: None,
         }
@@ -60,8 +62,14 @@ impl IControl for DclUiBorder {
             return;
         }
 
-        // Fast path: stylebox was prebuilt in set_border. One FFI call, no rebuild.
-        if let Some(sb) = self.cached_stylebox.clone() {
+        let radii = resolve_corner_radii(self.radii, size.x, size.y);
+
+        // Fast path: stylebox was prebuilt in set_border; only its radii follow the size.
+        if let Some(mut sb) = self.cached_stylebox.clone() {
+            sb.set_corner_radius(Corner::TOP_LEFT, radii[0].round() as i32);
+            sb.set_corner_radius(Corner::TOP_RIGHT, radii[1].round() as i32);
+            sb.set_corner_radius(Corner::BOTTOM_RIGHT, radii[2].round() as i32);
+            sb.set_corner_radius(Corner::BOTTOM_LEFT, radii[3].round() as i32);
             let rect = Rect2::new(Vector2::ZERO, size);
             self.base_mut().draw_style_box(&sb, rect);
             return;
@@ -77,7 +85,7 @@ impl IControl for DclUiBorder {
         // with a CSS miter — inner endpoint at the adjacent border-width (bw_*, side_thickness).
         let w = size.x;
         let h = size.y;
-        let [br_tl, br_tr, br_br, br_bl] = self.radii;
+        let [br_tl, br_tr, br_br, br_bl] = radii;
 
         // Inner-endpoint coordinates per side, chosen to match the arc when present.
         let top_in_l_x = if br_tl > 0.0 { br_tl } else { bw_l };
@@ -276,7 +284,7 @@ impl DclUiBorder {
         self.base_mut().queue_redraw();
     }
 
-    pub fn set_border(&mut self, widths: [f32; 4], radii: [f32; 4], colors: [Color; 4]) {
+    pub fn set_border(&mut self, widths: [f32; 4], radii: [CornerRadius; 4], colors: [Color; 4]) {
         self.widths = widths;
         self.radii = radii;
         self.colors = colors;
@@ -296,10 +304,6 @@ impl DclUiBorder {
             sb.set_border_width(Side::RIGHT, widths[1].round() as i32);
             sb.set_border_width(Side::TOP, widths[2].round() as i32);
             sb.set_border_width(Side::BOTTOM, widths[3].round() as i32);
-            sb.set_corner_radius(Corner::TOP_LEFT, radii[0].round() as i32);
-            sb.set_corner_radius(Corner::TOP_RIGHT, radii[1].round() as i32);
-            sb.set_corner_radius(Corner::BOTTOM_RIGHT, radii[2].round() as i32);
-            sb.set_corner_radius(Corner::BOTTOM_LEFT, radii[3].round() as i32);
             sb.set_anti_aliased(true);
             self.cached_stylebox = Some(sb);
         } else {

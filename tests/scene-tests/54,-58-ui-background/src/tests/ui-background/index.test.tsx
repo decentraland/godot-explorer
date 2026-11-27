@@ -297,6 +297,22 @@ const backgroundTextureTests = [
         height={'50%'}
       />
     )
+  },
+  {
+    description: 'NineSlices with overflowing slices',
+    value: (
+      <UiItem
+        texture={{
+          src: nineSlicesTextureSource,
+          wrapMode: 'repeat',
+          filterMode: 'bi-linear'
+        }}
+        textureMode="nine-slices"
+        textureSlices={{ top: 0.2, right: 0.6, bottom: 0.9, left: 0.7 }}
+        width={'100%'}
+        height={'100%'}
+      />
+    )
   }
 ]
 
@@ -494,12 +510,20 @@ renderTest('ui-background: avatar texture', async function (context) {
 // The 9slice texture is 256 px: default slices are a third (85 px), the custom ones 115/256.
 test('ui-background: nine-slices with default slices', async function (context) {
   const { ui } = await texture(context, 'NineSlices with default textureSlices')
-  assertEquals([ui.background?.margins, ui.background?.stretch], [[85, 85, 85, 85], [2, 2]])
+  assertEquals([ui.background?.margins, ui.background?.stretch], [[85, 85, 85, 85], [0, 0]])
 })
 
 test('ui-background: nine-slices with custom slices', async function (context) {
   const { ui } = await texture(context, 'NineSlices with right values')
-  assertEquals([ui.background?.margins, ui.background?.stretch], [[115, 115, 115, 115], [2, 2]])
+  assertEquals([ui.background?.margins, ui.background?.stretch], [[115, 115, 115, 115], [0, 0]])
+})
+
+// #2060: as in Unity (DCLImage.AdjustSlices), when opposite slices add up to more than the
+// texture, the first keeps its value and the second gets the rest: left 0.7 + right 0.6 becomes
+// 0.7 + 0.3, top 0.2 + bottom 0.9 becomes 0.2 + 0.8, of a 256 px texture.
+test('ui-background: nine-slices that overflow the texture are clamped', async function (context) {
+  const { ui } = await texture(context, 'NineSlices with overflowing slices')
+  assertEquals(ui.background?.margins, [179, 51, 76, 204], 'margins [left, top, right, bottom]')
 })
 
 test('ui-background: smaller nine-slices keep their margins', async function (context) {
@@ -536,3 +560,110 @@ for (const [description, name] of [
     CustomReactEcsRenderer.destroy()
   })
 }
+
+// #3124: corner radii resolve against the box's size: over half of it they shrink to fit, and a
+// percentage is a share of its shorter side. Compared with the measured size, since React-ECS
+// scales pixel values by the UI scale factor.
+type Radius = number | string
+let roundedBox: { width: number; height: number; radius: Radius | [Radius, Radius, Radius, Radius] } = {
+  width: 100,
+  height: 100,
+  radius: 0
+}
+
+function RoundedBox(): JSX.Element {
+  const [topLeft, topRight, bottomRight, bottomLeft] = Array.isArray(roundedBox.radius)
+    ? roundedBox.radius
+    : [roundedBox.radius, roundedBox.radius, roundedBox.radius, roundedBox.radius]
+  return (
+    <MainCanvas>
+      <UiEntity
+        uiTransform={{
+          width: roundedBox.width,
+          height: roundedBox.height,
+          borderRadius: { topLeft, topRight, bottomRight, bottomLeft } as any
+        }}
+        uiBackground={{ color: Color4.Blue() }}
+      />
+    </MainCanvas>
+  )
+}
+
+async function rounded(context: TestFunctionContext, box: typeof roundedBox, done: (ui: Ui) => boolean): Promise<Ui> {
+  roundedBox = box
+  CustomReactEcsRenderer.setUiRenderer(RoundedBox)
+  await context.helpers.waitNTicks(5)
+  const blue = Array.from(engine.getEntitiesWith(UiBackground), ([entity]) => entity).find((entity) =>
+    isColor(Color4.Blue())(UiBackground.get(entity))
+  )
+  assert(blue !== undefined, 'no blue box')
+  return await settled(
+    context,
+    () => renderedUi(blue!),
+    (ui) => ui.size[0] > 0 && done(ui)
+  )
+}
+
+/** Each radius against `expected`, given as fractions of the box's width. */
+function expectRadii(ui: Ui, expected: number[], what: string): void {
+  const radii = ui.background?.radii ?? [0, 0, 0, 0]
+  const width = ui.size[0]
+  const ok = radii.every((radius, i) => Math.abs(radius - expected[i] * width) <= 1)
+  assert(
+    ok,
+    `${what}: radii ${JSON.stringify(radii)} for a ${width} px box, expected ${JSON.stringify(
+      expected.map((e) => e * width)
+    )}`
+  )
+}
+
+const near = (value: number, target: number) => Math.abs(value - target) <= 1
+
+test('ui-background: a borderRadius that fits is kept', async function (context) {
+  CustomReactEcsRenderer.destroy()
+  const ui = await rounded(context, { width: 100, height: 100, radius: 20 }, (ui) =>
+    near(ui.background!.radii[0], ui.size[0] * 0.2)
+  )
+  expectRadii(ui, [0.2, 0.2, 0.2, 0.2], 'radius 20 on 100')
+  CustomReactEcsRenderer.destroy()
+})
+
+test('ui-background: a borderRadius over half the box is clamped to half', async function (context) {
+  CustomReactEcsRenderer.destroy()
+  const ui = await rounded(context, { width: 100, height: 100, radius: 80 }, (ui) => ui.background!.radii[0] > 0)
+  expectRadii(ui, [0.5, 0.5, 0.5, 0.5], 'radius 80 on 100')
+  CustomReactEcsRenderer.destroy()
+})
+
+test('ui-background: corner radii that overflow a side shrink together', async function (context) {
+  CustomReactEcsRenderer.destroy()
+  // 80 + 40 on a 100 side: both scale by 100 / 120.
+  const ui = await rounded(
+    context,
+    { width: 100, height: 100, radius: [80, 40, 0, 0] },
+    (ui) => ui.background!.radii[0] > 0
+  )
+  expectRadii(ui, [80 / 120, 40 / 120, 0, 0], 'radii 80 and 40 on 100')
+  CustomReactEcsRenderer.destroy()
+})
+
+test('ui-background: a percent borderRadius is a share of the shorter side', async function (context) {
+  CustomReactEcsRenderer.destroy()
+  const circle = await rounded(context, { width: 100, height: 100, radius: '50%' }, (ui) => ui.background!.radii[0] > 0)
+  expectRadii(circle, [0.5, 0.5, 0.5, 0.5], '50% on a square')
+  const wide = await rounded(context, { width: 200, height: 100, radius: '25%' }, (ui) =>
+    near(ui.size[0], 2 * ui.size[1])
+  )
+  expectRadii(wide, [0.125, 0.125, 0.125, 0.125], '25% on a 200x100 box')
+  CustomReactEcsRenderer.destroy()
+})
+
+test('ui-background: a box that shrinks keeps its radius clamped', async function (context) {
+  CustomReactEcsRenderer.destroy()
+  const big = await rounded(context, { width: 100, height: 100, radius: 50 }, (ui) => ui.background!.radii[0] > 0)
+  const bigWidth = big.size[0]
+  expectRadii(big, [0.5, 0.5, 0.5, 0.5], 'radius 50 on 100')
+  const small = await rounded(context, { width: 60, height: 60, radius: 50 }, (ui) => ui.size[0] < bigWidth)
+  expectRadii(small, [0.5, 0.5, 0.5, 0.5], 'radius 50 on 60')
+  CustomReactEcsRenderer.destroy()
+})

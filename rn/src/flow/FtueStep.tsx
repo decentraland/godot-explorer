@@ -38,7 +38,6 @@ export function FtueStep({
   return (
     <FtueScreen
       username={username}
-      skipLabel="FTUE_SKIP_AND_EXPLORE"
       onJump={place => (onJumpIn ? onJumpIn(place) : onFinish())}
       onSkip={onFinish}
     />

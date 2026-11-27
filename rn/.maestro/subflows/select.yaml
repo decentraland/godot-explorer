@@ -1,0 +1,14 @@
+# Selects ${ITEM} unless it already is, and checks that it ends up selected. The avatar the entry's Randomize
+# leaves is random, so the flows that choose items start from either state.
+appId: org.decentraland.godotexplorer
+---
+- runFlow:
+    when:
+      notVisible:
+        text: ${ITEM}
+        selected: true
+    commands:
+      - tapOn: ${ITEM}
+- assertVisible:
+    text: ${ITEM}
+    selected: true

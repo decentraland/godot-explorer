@@ -153,10 +153,11 @@ pub fn start() {
         #[cfg(target_os = "ios")]
         {
             // Scale the phys_footprint ceiling to device RAM so the backstop is
-            // not hard-coded to one model. sysctl-based, safe to call here (main
-            // thread, no Godot API touched).
-            let total_ram_mb =
-                crate::godot_classes::dcl_ios_plugin::DclIosPlugin::get_total_ram_mb();
+            // not hard-coded to one model. The host reads it with sysctl; main
+            // thread, no Godot API touched.
+            let total_ram_mb = dcl_core::platform::device()
+                .map(|device| device.info().total_ram_mb)
+                .unwrap_or(-1);
             if total_ram_mb > 0 {
                 let ceiling = (total_ram_mb as f32 * FOOTPRINT_CRITICAL_FRACTION) as i32;
                 FOOTPRINT_CRITICAL_MB.store(ceiling, Ordering::Relaxed);

@@ -18,4 +18,5 @@ mod tick;
 
 pub use chat_commands::submit_message;
 pub use controls::{capture_mouse, release_mouse, reset_cursor_position, set_cursor_position};
+pub(crate) use host::release_engine_objects as release_host_engine_objects;
 pub use host::EngineHost;

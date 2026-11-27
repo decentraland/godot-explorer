@@ -20,9 +20,6 @@ use crate::godot_classes::promise::PromiseError;
 
 /// Flag names exactly as the mobile-bff payload serves them.
 pub const FLAG_ARCHIPELAGO: &str = "archipielago";
-/// Collects FCM push tokens and maps them in Segment. Turning it off stops new tokens from being
-/// registered; it does not stop delivery to tokens already collected, a server-side decision.
-pub const FLAG_PUSH_ENABLED: &str = "push-enabled";
 /// Foundation parity, the name Unity reads: scene glTF materials render with back faces culled,
 /// which an inverted-hull outline (a `doubleSided` shell with flipped normals) expects. Off by
 /// default: it also drops the back faces of genuinely double-sided content. CLI
@@ -145,13 +142,6 @@ impl FeatureFlags {
             let mut comms = comms.bind_mut();
             comms.set_archipelago_enabled(self.enabled(FLAG_ARCHIPELAGO, true));
         }
-        // Metrics holds the startup identify until this arrives: the cached FCM token is already
-        // there at its ready, so the identify would otherwise always win the race and the switch
-        // could only suppress token rotations. Reached on both paths above, so the hold ends even
-        // when the fetch fails.
-        globals::metrics()
-            .bind_mut()
-            .set_push_enabled(self.enabled(FLAG_PUSH_ENABLED, true));
         let _ = &mut comms;
         super::async_shaders::on_flags_applied();
     }

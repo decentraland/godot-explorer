@@ -1,12 +1,12 @@
 import { StyleSheet, View } from 'react-native';
 import {
   AppText,
+  Button,
   colors,
   Dropdown,
   fonts,
-  OutlinedButton,
   u,
-  WarningBanner,
+  Alert,
 } from '@dcl/ui-native';
 import { emitIntent } from '../hud/hudSignals';
 import { t } from '../i18n';
@@ -37,7 +37,6 @@ export function GameplaySection({ m }: { m: SettingsModel }) {
           <SectionCaption title={t('SETTINGS_CAMERA')} />
           <Group>
             <Dropdown
-              variant="settings"
               label={t('SETTINGS_CAMERA_MODE')}
               value={values.camera_mode}
               disabled={env.cameraLocked}
@@ -48,8 +47,8 @@ export function GameplaySection({ m }: { m: SettingsModel }) {
               onChange={v => set('camera_mode', v as CameraMode)}
             />
             {env.cameraLocked && (
-              <WarningBanner
-                outlined
+              <Alert
+                background="translucent"
                 message={t('SETTINGS_THE_CAMERA_MODE_IS_SET_BY')}
               />
             )}
@@ -90,8 +89,9 @@ export function GameplaySection({ m }: { m: SettingsModel }) {
               <AppText variant="body" style={styles.replayLabel}>
                 {t('SETTINGS_REPLAY_TUTORIAL')}
               </AppText>
-              <OutlinedButton
-                box
+              <Button
+                big
+                tone="secondary"
                 label={t('SETTINGS_REPLAY')}
                 onPress={() => emitIntent({ type: 'replay_tutorial' })}
               />

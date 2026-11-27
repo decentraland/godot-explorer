@@ -1,27 +1,28 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { AppText, colors, Icon, LinkRow, u } from '@dcl/ui-native';
+import { AppText, colors, Icon, MenuNavItem, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { sectionsFor, SectionKey } from './sections';
 
-/** The section rows; `selected` marks the open one in the landscape column. */
+/** The section rows (`Menu/NavItem`): Large in the portrait list, Small in the landscape column,
+ * where `selected` marks the open one. */
 export function SectionRows({
   devTools,
   selected,
-  rowHeight,
+  size,
   onSelect,
 }: {
   devTools: boolean;
   selected?: SectionKey | null;
-  rowHeight: number;
+  size: 'Large' | 'Small';
   onSelect: (key: SectionKey) => void;
 }) {
   return (
-    <View style={rowHeight < 40 ? styles.tightRows : undefined}>
+    <View style={size === 'Large' ? styles.listRows : styles.tightRows}>
       {sectionsFor(devTools).map(s => (
-        <LinkRow
+        <MenuNavItem
           key={s.key}
           label={t(s.label)}
-          height={rowHeight}
+          size={size}
           selected={selected === s.key}
           onPress={() => onSelect(s.key)}
         />
@@ -56,6 +57,8 @@ export function VersionRow({
 }
 
 const styles = StyleSheet.create({
+  // Figma: 30px between rows and 80px from the title to the first row's text.
+  listRows: { gap: u(15), paddingTop: u(6.5) },
   tightRows: { gap: u(4) },
   version: { flexDirection: 'row', alignItems: 'center', gap: u(8) },
   versionText: { color: colors.lavender, fontSize: u(12) },

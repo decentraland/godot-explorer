@@ -282,6 +282,188 @@ typedef void (*UniffiCallbackInterfaceAttestationServiceMethod3)(uint64_t, RustB
     );
 
 #endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_DEVICE_SERVICE_METHOD0
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_DEVICE_SERVICE_METHOD0
+typedef void (*UniffiCallbackInterfaceDeviceServiceMethod0)(uint64_t, RustBuffer* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_DEVICE_SERVICE_METHOD1
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_DEVICE_SERVICE_METHOD1
+typedef void (*UniffiCallbackInterfaceDeviceServiceMethod1)(uint64_t, RustBuffer* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_DEVICE_SERVICE_METHOD2
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_DEVICE_SERVICE_METHOD2
+typedef void (*UniffiCallbackInterfaceDeviceServiceMethod2)(uint64_t, uint32_t, int8_t* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_MARKETING_SERVICE_METHOD0
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_MARKETING_SERVICE_METHOD0
+typedef void (*UniffiCallbackInterfaceMarketingServiceMethod0)(uint64_t, RustBuffer* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_MARKETING_SERVICE_METHOD1
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_MARKETING_SERVICE_METHOD1
+typedef void (*UniffiCallbackInterfaceMarketingServiceMethod1)(uint64_t, RustBuffer, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_MARKETING_SERVICE_METHOD2
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_MARKETING_SERVICE_METHOD2
+typedef void (*UniffiCallbackInterfaceMarketingServiceMethod2)(uint64_t, RustBuffer, RustBuffer, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_MARKETING_SERVICE_METHOD3
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_MARKETING_SERVICE_METHOD3
+typedef void (*UniffiCallbackInterfaceMarketingServiceMethod3)(uint64_t, RustBuffer, RustBuffer, int8_t* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_MARKETING_SERVICE_METHOD4
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_MARKETING_SERVICE_METHOD4
+typedef void (*UniffiCallbackInterfaceMarketingServiceMethod4)(uint64_t, RustBuffer* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_MARKETING_SERVICE_METHOD5
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_MARKETING_SERVICE_METHOD5
+typedef void (*UniffiCallbackInterfaceMarketingServiceMethod5)(uint64_t, RustBuffer* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD0
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD0
+typedef void (*UniffiCallbackInterfaceVideoBackendMethod0)(uint64_t, int32_t* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD1
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD1
+typedef void (*UniffiCallbackInterfaceVideoBackendMethod1)(uint64_t, int32_t, int32_t, int32_t, int8_t* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD2
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD2
+typedef void (*UniffiCallbackInterfaceVideoBackendMethod2)(uint64_t, int32_t, RustBuffer, int8_t, int8_t* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD3
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD3
+typedef void (*UniffiCallbackInterfaceVideoBackendMethod3)(uint64_t, int32_t, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD4
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD4
+typedef void (*UniffiCallbackInterfaceVideoBackendMethod4)(uint64_t, int32_t, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD5
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD5
+typedef void (*UniffiCallbackInterfaceVideoBackendMethod5)(uint64_t, int32_t, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD6
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD6
+typedef void (*UniffiCallbackInterfaceVideoBackendMethod6)(uint64_t, int32_t, double, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD7
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD7
+typedef void (*UniffiCallbackInterfaceVideoBackendMethod7)(uint64_t, int32_t, double* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD8
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD8
+typedef void (*UniffiCallbackInterfaceVideoBackendMethod8)(uint64_t, int32_t, double* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD9
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD9
+typedef void (*UniffiCallbackInterfaceVideoBackendMethod9)(uint64_t, int32_t, int8_t* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD10
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD10
+typedef void (*UniffiCallbackInterfaceVideoBackendMethod10)(uint64_t, int32_t, float, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD11
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD11
+typedef void (*UniffiCallbackInterfaceVideoBackendMethod11)(uint64_t, int32_t, int8_t, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD12
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD12
+typedef void (*UniffiCallbackInterfaceVideoBackendMethod12)(uint64_t, int32_t, float, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD13
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD13
+typedef void (*UniffiCallbackInterfaceVideoBackendMethod13)(uint64_t, int32_t, int8_t* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD14
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD14
+typedef void (*UniffiCallbackInterfaceVideoBackendMethod14)(uint64_t, int32_t, RustBuffer* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD15
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD15
+typedef void (*UniffiCallbackInterfaceVideoBackendMethod15)(uint64_t, int32_t, uint64_t* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD16
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_VIDEO_BACKEND_METHOD16
+typedef void (*UniffiCallbackInterfaceVideoBackendMethod16)(uint64_t, int32_t, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
 #ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_HOST_LISTENER
 #define UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_HOST_LISTENER
 typedef struct UniffiVTableCallbackInterfaceHostListener {
@@ -302,6 +484,56 @@ typedef struct UniffiVTableCallbackInterfaceAttestationService {
     UniffiCallbackInterfaceAttestationServiceMethod2 _Nonnull iosGenerateKey;
     UniffiCallbackInterfaceAttestationServiceMethod3 _Nonnull iosAttestKey;
 } UniffiVTableCallbackInterfaceAttestationService;
+
+#endif
+#ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_DEVICE_SERVICE
+#define UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_DEVICE_SERVICE
+typedef struct UniffiVTableCallbackInterfaceDeviceService {
+    UniffiCallbackInterfaceFree _Nonnull uniffiFree;
+    UniffiCallbackInterfaceClone _Nonnull uniffiClone;
+    UniffiCallbackInterfaceDeviceServiceMethod0 _Nonnull info;
+    UniffiCallbackInterfaceDeviceServiceMethod1 _Nonnull readings;
+    UniffiCallbackInterfaceDeviceServiceMethod2 _Nonnull blockUiThread;
+} UniffiVTableCallbackInterfaceDeviceService;
+
+#endif
+#ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_MARKETING_SERVICE
+#define UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_MARKETING_SERVICE
+typedef struct UniffiVTableCallbackInterfaceMarketingService {
+    UniffiCallbackInterfaceFree _Nonnull uniffiFree;
+    UniffiCallbackInterfaceClone _Nonnull uniffiClone;
+    UniffiCallbackInterfaceMarketingServiceMethod0 _Nonnull appInstanceId;
+    UniffiCallbackInterfaceMarketingServiceMethod1 _Nonnull setUserId;
+    UniffiCallbackInterfaceMarketingServiceMethod2 _Nonnull setUserProperty;
+    UniffiCallbackInterfaceMarketingServiceMethod3 _Nonnull logEvent;
+    UniffiCallbackInterfaceMarketingServiceMethod4 _Nonnull installReferrer;
+    UniffiCallbackInterfaceMarketingServiceMethod5 _Nonnull deferredDeepLink;
+} UniffiVTableCallbackInterfaceMarketingService;
+
+#endif
+#ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_VIDEO_BACKEND
+#define UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_VIDEO_BACKEND
+typedef struct UniffiVTableCallbackInterfaceVideoBackend {
+    UniffiCallbackInterfaceFree _Nonnull uniffiFree;
+    UniffiCallbackInterfaceClone _Nonnull uniffiClone;
+    UniffiCallbackInterfaceVideoBackendMethod0 _Nonnull create;
+    UniffiCallbackInterfaceVideoBackendMethod1 _Nonnull initSurface;
+    UniffiCallbackInterfaceVideoBackendMethod2 _Nonnull setSource;
+    UniffiCallbackInterfaceVideoBackendMethod3 _Nonnull play;
+    UniffiCallbackInterfaceVideoBackendMethod4 _Nonnull pause;
+    UniffiCallbackInterfaceVideoBackendMethod5 _Nonnull stop;
+    UniffiCallbackInterfaceVideoBackendMethod6 _Nonnull seek;
+    UniffiCallbackInterfaceVideoBackendMethod7 _Nonnull position;
+    UniffiCallbackInterfaceVideoBackendMethod8 _Nonnull duration;
+    UniffiCallbackInterfaceVideoBackendMethod9 _Nonnull isPlaying;
+    UniffiCallbackInterfaceVideoBackendMethod10 _Nonnull setVolume;
+    UniffiCallbackInterfaceVideoBackendMethod11 _Nonnull setLooping;
+    UniffiCallbackInterfaceVideoBackendMethod12 _Nonnull setRate;
+    UniffiCallbackInterfaceVideoBackendMethod13 _Nonnull takeSizeChanged;
+    UniffiCallbackInterfaceVideoBackendMethod14 _Nonnull videoSize;
+    UniffiCallbackInterfaceVideoBackendMethod15 _Nonnull pollFrame;
+    UniffiCallbackInterfaceVideoBackendMethod16 _Nonnull release;
+} UniffiVTableCallbackInterfaceVideoBackend;
 
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_CLONE_HOSTLISTENER
@@ -364,6 +596,181 @@ uint64_t uniffi_dcl_host_fn_method_attestationservice_ios_generate_key(uint64_t 
 uint64_t uniffi_dcl_host_fn_method_attestationservice_ios_attest_key(uint64_t ptr, RustBuffer key_id, RustBuffer client_data_hash
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_CLONE_DEVICESERVICE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_CLONE_DEVICESERVICE
+uint64_t uniffi_dcl_host_fn_clone_deviceservice(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FREE_DEVICESERVICE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FREE_DEVICESERVICE
+void uniffi_dcl_host_fn_free_deviceservice(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_INIT_CALLBACK_VTABLE_DEVICESERVICE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_INIT_CALLBACK_VTABLE_DEVICESERVICE
+void uniffi_dcl_host_fn_init_callback_vtable_deviceservice(const UniffiVTableCallbackInterfaceDeviceService* _Nonnull vtable
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_DEVICESERVICE_INFO
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_DEVICESERVICE_INFO
+RustBuffer uniffi_dcl_host_fn_method_deviceservice_info(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_DEVICESERVICE_READINGS
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_DEVICESERVICE_READINGS
+RustBuffer uniffi_dcl_host_fn_method_deviceservice_readings(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_DEVICESERVICE_BLOCK_UI_THREAD
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_DEVICESERVICE_BLOCK_UI_THREAD
+int8_t uniffi_dcl_host_fn_method_deviceservice_block_ui_thread(uint64_t ptr, uint32_t ms, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_CLONE_MARKETINGSERVICE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_CLONE_MARKETINGSERVICE
+uint64_t uniffi_dcl_host_fn_clone_marketingservice(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FREE_MARKETINGSERVICE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FREE_MARKETINGSERVICE
+void uniffi_dcl_host_fn_free_marketingservice(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_INIT_CALLBACK_VTABLE_MARKETINGSERVICE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_INIT_CALLBACK_VTABLE_MARKETINGSERVICE
+void uniffi_dcl_host_fn_init_callback_vtable_marketingservice(const UniffiVTableCallbackInterfaceMarketingService* _Nonnull vtable
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_MARKETINGSERVICE_APP_INSTANCE_ID
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_MARKETINGSERVICE_APP_INSTANCE_ID
+RustBuffer uniffi_dcl_host_fn_method_marketingservice_app_instance_id(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_MARKETINGSERVICE_SET_USER_ID
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_MARKETINGSERVICE_SET_USER_ID
+void uniffi_dcl_host_fn_method_marketingservice_set_user_id(uint64_t ptr, RustBuffer user_id, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_MARKETINGSERVICE_SET_USER_PROPERTY
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_MARKETINGSERVICE_SET_USER_PROPERTY
+void uniffi_dcl_host_fn_method_marketingservice_set_user_property(uint64_t ptr, RustBuffer name, RustBuffer value, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_MARKETINGSERVICE_LOG_EVENT
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_MARKETINGSERVICE_LOG_EVENT
+int8_t uniffi_dcl_host_fn_method_marketingservice_log_event(uint64_t ptr, RustBuffer name, RustBuffer params_json, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_MARKETINGSERVICE_INSTALL_REFERRER
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_MARKETINGSERVICE_INSTALL_REFERRER
+RustBuffer uniffi_dcl_host_fn_method_marketingservice_install_referrer(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_MARKETINGSERVICE_DEFERRED_DEEP_LINK
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_MARKETINGSERVICE_DEFERRED_DEEP_LINK
+RustBuffer uniffi_dcl_host_fn_method_marketingservice_deferred_deep_link(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_CLONE_VIDEOBACKEND
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_CLONE_VIDEOBACKEND
+uint64_t uniffi_dcl_host_fn_clone_videobackend(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FREE_VIDEOBACKEND
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FREE_VIDEOBACKEND
+void uniffi_dcl_host_fn_free_videobackend(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_INIT_CALLBACK_VTABLE_VIDEOBACKEND
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_INIT_CALLBACK_VTABLE_VIDEOBACKEND
+void uniffi_dcl_host_fn_init_callback_vtable_videobackend(const UniffiVTableCallbackInterfaceVideoBackend* _Nonnull vtable
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_CREATE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_CREATE
+int32_t uniffi_dcl_host_fn_method_videobackend_create(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_INIT_SURFACE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_INIT_SURFACE
+int8_t uniffi_dcl_host_fn_method_videobackend_init_surface(uint64_t ptr, int32_t player, int32_t width, int32_t height, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_SET_SOURCE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_SET_SOURCE
+int8_t uniffi_dcl_host_fn_method_videobackend_set_source(uint64_t ptr, int32_t player, RustBuffer source, int8_t local, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_PLAY
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_PLAY
+void uniffi_dcl_host_fn_method_videobackend_play(uint64_t ptr, int32_t player, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_PAUSE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_PAUSE
+void uniffi_dcl_host_fn_method_videobackend_pause(uint64_t ptr, int32_t player, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_STOP
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_STOP
+void uniffi_dcl_host_fn_method_videobackend_stop(uint64_t ptr, int32_t player, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_SEEK
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_SEEK
+void uniffi_dcl_host_fn_method_videobackend_seek(uint64_t ptr, int32_t player, double seconds, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_POSITION
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_POSITION
+double uniffi_dcl_host_fn_method_videobackend_position(uint64_t ptr, int32_t player, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_DURATION
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_DURATION
+double uniffi_dcl_host_fn_method_videobackend_duration(uint64_t ptr, int32_t player, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_IS_PLAYING
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_IS_PLAYING
+int8_t uniffi_dcl_host_fn_method_videobackend_is_playing(uint64_t ptr, int32_t player, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_SET_VOLUME
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_SET_VOLUME
+void uniffi_dcl_host_fn_method_videobackend_set_volume(uint64_t ptr, int32_t player, float volume, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_SET_LOOPING
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_SET_LOOPING
+void uniffi_dcl_host_fn_method_videobackend_set_looping(uint64_t ptr, int32_t player, int8_t looping, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_SET_RATE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_SET_RATE
+void uniffi_dcl_host_fn_method_videobackend_set_rate(uint64_t ptr, int32_t player, float rate, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_TAKE_SIZE_CHANGED
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_TAKE_SIZE_CHANGED
+int8_t uniffi_dcl_host_fn_method_videobackend_take_size_changed(uint64_t ptr, int32_t player, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_VIDEO_SIZE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_VIDEO_SIZE
+RustBuffer uniffi_dcl_host_fn_method_videobackend_video_size(uint64_t ptr, int32_t player, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_POLL_FRAME
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_POLL_FRAME
+uint64_t uniffi_dcl_host_fn_method_videobackend_poll_frame(uint64_t ptr, int32_t player, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_RELEASE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_VIDEOBACKEND_RELEASE
+void uniffi_dcl_host_fn_method_videobackend_release(uint64_t ptr, int32_t player, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FUNC_ADD_HOST_LISTENER
 #define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FUNC_ADD_HOST_LISTENER
 uint64_t uniffi_dcl_host_fn_func_add_host_listener(uint64_t listener, RustCallStatus *_Nonnull out_status
@@ -393,6 +800,21 @@ RustBuffer uniffi_dcl_host_fn_func_attestation_status(RustCallStatus *_Nonnull o
 #ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FUNC_INSTALL_ATTESTATION
 #define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FUNC_INSTALL_ATTESTATION
 void uniffi_dcl_host_fn_func_install_attestation(uint64_t service, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FUNC_INSTALL_DEVICE_SERVICE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FUNC_INSTALL_DEVICE_SERVICE
+void uniffi_dcl_host_fn_func_install_device_service(uint64_t service, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FUNC_INSTALL_MARKETING_SERVICE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FUNC_INSTALL_MARKETING_SERVICE
+void uniffi_dcl_host_fn_func_install_marketing_service(uint64_t service, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FUNC_INSTALL_VIDEO_BACKEND
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FUNC_INSTALL_VIDEO_BACKEND
+void uniffi_dcl_host_fn_func_install_video_backend(uint64_t backend, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_FFI_DCL_HOST_RUSTBUFFER_ALLOC
@@ -691,6 +1113,24 @@ uint16_t uniffi_dcl_host_checksum_func_install_attestation(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_FUNC_INSTALL_DEVICE_SERVICE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_FUNC_INSTALL_DEVICE_SERVICE
+uint16_t uniffi_dcl_host_checksum_func_install_device_service(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_FUNC_INSTALL_MARKETING_SERVICE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_FUNC_INSTALL_MARKETING_SERVICE
+uint16_t uniffi_dcl_host_checksum_func_install_marketing_service(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_FUNC_INSTALL_VIDEO_BACKEND
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_FUNC_INSTALL_VIDEO_BACKEND
+uint16_t uniffi_dcl_host_checksum_func_install_video_backend(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_HOSTLISTENER_ENGINE_REQUIRED
 #define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_HOSTLISTENER_ENGINE_REQUIRED
 uint16_t uniffi_dcl_host_checksum_method_hostlistener_engine_required(void
@@ -724,6 +1164,162 @@ uint16_t uniffi_dcl_host_checksum_method_attestationservice_ios_generate_key(voi
 #ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_ATTESTATIONSERVICE_IOS_ATTEST_KEY
 #define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_ATTESTATIONSERVICE_IOS_ATTEST_KEY
 uint16_t uniffi_dcl_host_checksum_method_attestationservice_ios_attest_key(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_DEVICESERVICE_INFO
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_DEVICESERVICE_INFO
+uint16_t uniffi_dcl_host_checksum_method_deviceservice_info(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_DEVICESERVICE_READINGS
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_DEVICESERVICE_READINGS
+uint16_t uniffi_dcl_host_checksum_method_deviceservice_readings(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_DEVICESERVICE_BLOCK_UI_THREAD
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_DEVICESERVICE_BLOCK_UI_THREAD
+uint16_t uniffi_dcl_host_checksum_method_deviceservice_block_ui_thread(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_MARKETINGSERVICE_APP_INSTANCE_ID
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_MARKETINGSERVICE_APP_INSTANCE_ID
+uint16_t uniffi_dcl_host_checksum_method_marketingservice_app_instance_id(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_MARKETINGSERVICE_SET_USER_ID
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_MARKETINGSERVICE_SET_USER_ID
+uint16_t uniffi_dcl_host_checksum_method_marketingservice_set_user_id(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_MARKETINGSERVICE_SET_USER_PROPERTY
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_MARKETINGSERVICE_SET_USER_PROPERTY
+uint16_t uniffi_dcl_host_checksum_method_marketingservice_set_user_property(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_MARKETINGSERVICE_LOG_EVENT
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_MARKETINGSERVICE_LOG_EVENT
+uint16_t uniffi_dcl_host_checksum_method_marketingservice_log_event(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_MARKETINGSERVICE_INSTALL_REFERRER
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_MARKETINGSERVICE_INSTALL_REFERRER
+uint16_t uniffi_dcl_host_checksum_method_marketingservice_install_referrer(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_MARKETINGSERVICE_DEFERRED_DEEP_LINK
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_MARKETINGSERVICE_DEFERRED_DEEP_LINK
+uint16_t uniffi_dcl_host_checksum_method_marketingservice_deferred_deep_link(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_CREATE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_CREATE
+uint16_t uniffi_dcl_host_checksum_method_videobackend_create(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_INIT_SURFACE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_INIT_SURFACE
+uint16_t uniffi_dcl_host_checksum_method_videobackend_init_surface(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_SET_SOURCE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_SET_SOURCE
+uint16_t uniffi_dcl_host_checksum_method_videobackend_set_source(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_PLAY
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_PLAY
+uint16_t uniffi_dcl_host_checksum_method_videobackend_play(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_PAUSE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_PAUSE
+uint16_t uniffi_dcl_host_checksum_method_videobackend_pause(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_STOP
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_STOP
+uint16_t uniffi_dcl_host_checksum_method_videobackend_stop(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_SEEK
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_SEEK
+uint16_t uniffi_dcl_host_checksum_method_videobackend_seek(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_POSITION
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_POSITION
+uint16_t uniffi_dcl_host_checksum_method_videobackend_position(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_DURATION
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_DURATION
+uint16_t uniffi_dcl_host_checksum_method_videobackend_duration(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_IS_PLAYING
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_IS_PLAYING
+uint16_t uniffi_dcl_host_checksum_method_videobackend_is_playing(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_SET_VOLUME
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_SET_VOLUME
+uint16_t uniffi_dcl_host_checksum_method_videobackend_set_volume(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_SET_LOOPING
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_SET_LOOPING
+uint16_t uniffi_dcl_host_checksum_method_videobackend_set_looping(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_SET_RATE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_SET_RATE
+uint16_t uniffi_dcl_host_checksum_method_videobackend_set_rate(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_TAKE_SIZE_CHANGED
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_TAKE_SIZE_CHANGED
+uint16_t uniffi_dcl_host_checksum_method_videobackend_take_size_changed(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_VIDEO_SIZE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_VIDEO_SIZE
+uint16_t uniffi_dcl_host_checksum_method_videobackend_video_size(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_POLL_FRAME
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_POLL_FRAME
+uint16_t uniffi_dcl_host_checksum_method_videobackend_poll_frame(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_RELEASE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_VIDEOBACKEND_RELEASE
+uint16_t uniffi_dcl_host_checksum_method_videobackend_release(void
     
 );
 #endif

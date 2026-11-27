@@ -53,6 +53,11 @@ fn host() -> Option<Rc<Host>> {
     HOST.with(|host| host.borrow().clone())
 }
 
+/// At engine shutdown: see `crate::release_thread_local_engine_objects`.
+pub(crate) fn release_engine_objects() {
+    HOST.take();
+}
+
 /// The autoload node of the shell-driven app.
 #[derive(GodotClass)]
 #[class(base=Node, init)]
@@ -187,6 +192,7 @@ impl Host {
                 }
             }
             "focus_camera" => self.backpack.focus_camera(&text("focus")),
+            "preview_clip" => self.backpack.clip_bottom(int("bottom")),
             _ if AVATAR_CONTROLS.contains(&kind) => self.run_avatar_control(kind, args),
             _ if self.world_up.get() => self.run_world_control(kind, args),
             _ => {}

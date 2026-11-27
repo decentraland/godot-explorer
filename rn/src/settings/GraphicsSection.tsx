@@ -1,11 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import {
-  Dropdown,
-  DropdownOption,
-  LinearFill,
-  u,
-  WarningBanner,
-} from '@dcl/ui-native';
+import { Dropdown, DropdownOption, LinearFill, u, Alert } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { GRAPHIC_PROFILES, SKYBOX_TIMES } from './keys';
 import { Group, SectionCaption, ToggleRow } from './rows';
@@ -103,7 +97,6 @@ export function GraphicsSection({
           onChange={v => set('dynamic_graphics_enabled', v)}
         />
         <Dropdown
-          variant="settings"
           label={t('SETTINGS_GRAPHIC_PROFILES')}
           helper={t('SETTINGS_SETS_A_GRAPHICS_QUALITY_PRESET_FOR')}
           value={String(values.graphic_profile)}
@@ -123,7 +116,6 @@ export function GraphicsSection({
           onChange={v => set('dynamic_skybox', v)}
         />
         <Dropdown
-          variant="settings"
           label={t('SETTINGS_CUSTOM_SKYBOX')}
           placeholder={t('SETTINGS_SELECT')}
           value={customSky}
@@ -134,8 +126,8 @@ export function GraphicsSection({
           onChange={v => set('skybox_time', Number(v))}
         />
         {env.skyboxLocked && (
-          <WarningBanner
-            outlined
+          <Alert
+            background="translucent"
             message={t('SETTINGS_THE_SKYBOX_IS_SET_BY_THE')}
           />
         )}
