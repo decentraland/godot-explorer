@@ -2,6 +2,7 @@ import { ComponentProps } from 'react';
 import {
   ActionSquareButton,
   Alert,
+  BadgeDCL,
   BottomSheet,
   Checkbox,
   Chip,
@@ -146,6 +147,11 @@ export const demos = {
     actionLabel: 'Add email',
     onAction: noop,
   } satisfies ComponentProps<typeof Notification>,
+  BadgeDCL: {
+    image: { uri: 'https://example.com/badge.png' },
+    name: 'Traveler bronze',
+    progress: 0.4,
+  } satisfies ComponentProps<typeof BadgeDCL>,
   PageDots: { count: 4, index: 1 } satisfies ComponentProps<typeof PageDots>,
   SnapCarousel: {
     data: ['a', 'b', 'c'],

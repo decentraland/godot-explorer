@@ -12,6 +12,8 @@ export { ActionSquareButton } from './ActionSquareButton';
 export { AppText } from './AppText';
 export type { FigmaTextStyle, TextVariant } from './AppText';
 export { Badge } from './Badge';
+export { BadgeBar, BadgeDCL, BadgeProfileRow, BadgeSmall } from './BadgeDCL';
+export type { BadgeState } from './BadgeDCL';
 export { BottomNav } from './BottomNav';
 export type { NavKey } from './BottomNav';
 export { BottomSheet, SHEET_HANDLE_HEIGHT, useSheetDrag } from './BottomSheet';
