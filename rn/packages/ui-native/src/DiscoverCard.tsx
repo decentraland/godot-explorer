@@ -9,14 +9,16 @@ import {
 } from 'react-native';
 import { AppText } from './AppText';
 import { Icon, IconName } from './Icon';
+import { ImageNotFound } from './ImageNotFound';
 import { Skeleton } from './Skeleton';
-import { colors, fonts, radius } from './tokens';
+import { colors, fonts, radius, space } from './tokens';
 import { u } from './scale';
 
-/** Card widths and image heights in dp (Figma 294×156 / 406×240). */
+/** Card widths and image heights in dp (Figma 294×156 / 406×240 / 380×120). */
 export const DISCOVER_CARD = {
   place: { width: 147, image: 78 },
   event: { width: 203, image: 120 },
+  backIn: { width: 190, image: 60 },
 } as const;
 
 export type DetailType =
@@ -69,8 +71,9 @@ type Common = {
   style?: StyleProp<ViewStyle>;
 };
 
-/** Figma `Cards-Discovery`: Places (image, title, players + likes) and Event (image with the tag
- * row, title, "by" creator). `ImageNotFound` is the deep-purple box with the crossed image.
+/** Figma `Cards-Discovery`: Places (image, title, players + likes), Event (image with the tag
+ * row, title, "by" creator) and BackIn (square image beside a two-line title). `ImageNotFound` is
+ * the deep-purple box with the crossed image.
  * Figma Cards-Discovery: https://www.figma.com/design/Jis8xv58qaDNy53OCGLeoh/Design-System-Mobile?node-id=790-3141
  */
 export function DiscoverCard(
@@ -78,6 +81,7 @@ export function DiscoverCard(
     (
       | { type: 'place'; users: string; likeRate: string }
       | { type: 'event'; byLabel: string; creator: string; tags?: ReactNode }
+      | { type: 'backIn' }
     ),
 ) {
   const { title, image, art, onPress, style } = props;
@@ -85,6 +89,41 @@ export function DiscoverCard(
   const event = props.type === 'event';
   const size = DISCOVER_CARD[props.type];
   const missing = !art && (!image || failed);
+  if (props.type === 'backIn') {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={title}
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.backIn,
+          { width: u(size.width) },
+          pressed && styles.pressed,
+          style,
+        ]}
+      >
+        {missing ? (
+          <ImageNotFound iconSize={28} style={styles.backInImage} />
+        ) : (
+          <View style={[styles.image, styles.backInImage]}>
+            {art ?? (
+              <Image
+                source={{ uri: image }}
+                style={styles.fill}
+                resizeMode="cover"
+                onError={() => setFailed(true)}
+              />
+            )}
+          </View>
+        )}
+        <View style={styles.backInContent}>
+          <AppText numberOfLines={2} style={styles.placeTitle}>
+            {title}
+          </AppText>
+        </View>
+      </Pressable>
+    );
+  }
   return (
     <Pressable
       accessibilityRole="button"
@@ -216,6 +255,20 @@ const styles = StyleSheet.create({
     paddingBottom: u(8),
   },
   placeContent: { paddingTop: u(7), paddingBottom: u(9), gap: u(6) },
+  backIn: { flexDirection: 'row', gap: space['20'] },
+  backInImage: {
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: 'auto',
+    width: u(DISCOVER_CARD.backIn.image),
+    height: u(DISCOVER_CARD.backIn.image),
+  },
+  backInContent: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingTop: space['14'],
+    paddingBottom: space['18'],
+  },
   eventContent: { paddingTop: u(10), paddingBottom: u(12), gap: u(6) },
   placeTitle: {
     fontFamily: fonts.semibold,

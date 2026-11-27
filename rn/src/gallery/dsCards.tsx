@@ -159,6 +159,16 @@ registerPreview('extra/ds-cards-discover', {
           }
         />
       ))}
+      <DiscoverCard
+        type="backIn"
+        title="Experience Name two lines example elipsis"
+        art={art}
+      />
+      <DiscoverCard
+        type="backIn"
+        title="Experience Name two lines example elipsis"
+        image=""
+      />
       <View style={styles.wrap}>
         <DetailRow type="players" value="000" />
         <DetailRow type="likes" value="100%" />

@@ -135,6 +135,15 @@ describe('Cards_Discover and Cards_Backpack', () => {
     expect(event.root.findAllByProps({ name: 'imageOff' }).length).toBe(0);
   });
 
+  it('DiscoverCard BackIn shows the title beside the image, or ImageNotFound', () => {
+    const tree = render(
+      <DiscoverCard type="backIn" title="Genesis Plaza" image="" />,
+    );
+    expect(text(tree)).toContain('Genesis Plaza');
+    expect(tree.root.findAllByType(ImageNotFound).length).toBe(1);
+    act(() => tree.unmount());
+  });
+
   it('DetailRow, skeleton and AvatarCard render', () => {
     expect(text(render(<DetailRow type="coords" value="-12,40" />))).toContain(
       '-12,40',
