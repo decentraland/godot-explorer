@@ -2,6 +2,7 @@ use crate::godot_classes::dcl_hashing::get_hash_number;
 use godot::prelude::*;
 
 use crate::avatars::avatar_type::DclAvatarWireFormat;
+use crate::avatars::shape_motion::ShapeMotion;
 use crate::dcl::SceneId;
 
 use super::dcl_global::DclGlobal;
@@ -74,6 +75,8 @@ struct AnimState {
 }
 
 const PACKET_BUFFER_CAPACITY: usize = 8;
+/// Horizontal m/s below which the walk anim plays with no visible displacement.
+pub(crate) const IDLE_SPEED_FLOOR: f32 = 0.5;
 
 impl LerpState {
     /// Arrival interval in seconds; defaults to the LiveKit 10 Hz cadence
@@ -208,11 +211,11 @@ pub struct DclAvatar {
     wire_classification: bool,
 
     #[export]
-    walk: bool,
+    pub(crate) walk: bool,
     #[export]
-    run: bool,
+    pub(crate) run: bool,
     #[export]
-    jog: bool,
+    pub(crate) jog: bool,
     #[export]
     rise: bool,
     #[export]
@@ -264,6 +267,7 @@ pub struct DclAvatar {
     rendered_transform: Option<Transform3D>,
 
     lerp_state: LerpState,
+    pub(crate) shape_motion: ShapeMotion,
     base: Base<Node3D>,
 }
 
@@ -293,6 +297,7 @@ impl INode3D for DclAvatar {
             fall_fast: false,
             rendered_transform: None,
             lerp_state: Default::default(),
+            shape_motion: ShapeMotion::default(),
             base,
             walk: false,
             run: false,
@@ -355,6 +360,12 @@ impl DclAvatar {
     // stop, or being superseded by another emote.
     #[signal]
     fn emote_finished(id: GString, interrupted: bool, mask: i64);
+
+    /// Gait for a scene-moved AvatarShape (`avatars::shape_motion`).
+    #[func]
+    fn shape_motion_process(&mut self, delta: f64, emoting: bool) {
+        self.update_shape_motion(delta, emoting);
+    }
 
     #[func]
     pub fn set_target_position(&mut self, new_target: Transform3D) {
@@ -538,10 +549,8 @@ impl DclAvatar {
         }
     }
 
-    /// Classify walk/jog/run from horizontal speed (m/s). Idle floor 0.5:
-    /// below it the anim plays with no visible displacement.
-    fn classify_locomotion(&mut self, speed: f32) {
-        const IDLE_SPEED_FLOOR: f32 = 0.5;
+    /// Classify walk/jog/run from horizontal speed (m/s), idle below `IDLE_SPEED_FLOOR`.
+    pub(crate) fn classify_locomotion(&mut self, speed: f32) {
         self.movement_speed = speed;
         self.walk = speed < 4.0 && speed > IDLE_SPEED_FLOOR;
         self.run = speed >= 6.5;

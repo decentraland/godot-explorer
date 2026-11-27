@@ -76,6 +76,11 @@ static var scene_crash_body := TranslationKey.new("MODAL_SCENE_CRASH_BODY")
 static var scene_crash_primary := TranslationKey.new("MODAL_SCENE_CRASH_PRIMARY")
 static var scene_crash_secondary := TranslationKey.new("MODAL_SCENE_CRASH_SECONDARY")
 
+static var reload_scene_title := TranslationKey.new("MODAL_RELOAD_SCENE_TITLE")
+static var reload_scene_body := TranslationKey.new("MODAL_RELOAD_SCENE_BODY")
+static var reload_scene_primary := TranslationKey.new("MODAL_RELOAD_SCENE_PRIMARY")
+static var reload_scene_secondary := TranslationKey.new("COMMON_CANCEL")
+
 static var low_memory_title := TranslationKey.new("MODAL_LOW_MEMORY_TITLE")
 static var low_memory_body := TranslationKey.new("MODAL_LOW_MEMORY_BODY")
 static var low_memory_primary := TranslationKey.new("MODAL_LOW_MEMORY_PRIMARY")
@@ -413,6 +418,25 @@ func async_show_scene_crash_modal(entity_id: String) -> void:
 	_disconnect_button_signals()
 	current_modal.button_primary.pressed.connect(_on_scene_crash_reload.bind(entity_id))
 	current_modal.button_secondary.pressed.connect(_on_scene_crash_back)
+
+
+## "Stuck somewhere?" (#3229): reloads the current place, which lands the player on the
+## scene's spawn point once the loading screen goes down (SceneFetcher.on_loading_finished).
+func async_show_reload_scene_modal() -> void:
+	if not await _async_ensure_modal("ModalManager.async_show_reload_scene_modal"):
+		return
+
+	current_modal.set_title(reload_scene_title)
+	current_modal.set_body(reload_scene_body)
+	current_modal.set_primary_button_text(reload_scene_primary)
+	current_modal.set_secondary_button_text(reload_scene_secondary)
+	current_modal.hide_icon()
+	current_modal.hide_url()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(_on_reload_scene_primary)
+	current_modal.button_secondary.pressed.connect(close_current_modal)
 
 
 ## Shows a LOW_MEMORY warning modal (issue #2002): the memory monitor detected
@@ -1237,6 +1261,15 @@ func _on_realm_teleport_primary(realm_name: String) -> void:
 
 
 func _on_scene_crash_reload(_entity_id: String) -> void:
+	Navigator.async_go(Destination.reload_current(), "on_reload")
+	close_current_modal()
+
+
+func _on_reload_scene_primary() -> void:
+	if Global.metrics != null:
+		Global.metrics.track_click_button(
+			"reload", "DISCOVER_IN_GAME", JSON.stringify({"details": "reload"})
+		)
 	Navigator.async_go(Destination.reload_current(), "on_reload")
 	close_current_modal()
 

@@ -1,9 +1,9 @@
 extends Timer
 
 # Tuning constants
-const POSITION_THRESHOLD := 0.0275  # ~2.75 cm (0.5 m/s at the 55 ms timer)
+const POSITION_THRESHOLD := 0.0275  # ~2.75 cm (0.275 m/s at the 100 ms timer)
 const ROTATION_THRESHOLD := 0.01  # Approx ~0.57 degrees (in radians)
-const IDLE_KEEPALIVE_TICKS := 18  # ~1 s of no changes between forced sends
+const IDLE_KEEPALIVE_TICKS := 10  # ~1 s of no changes between forced sends
 
 @export var player_node: Node3D
 

@@ -303,6 +303,17 @@ pub struct DclGlobal {
     pub sdk_skybox_fixed_time: u32,
     #[var]
     pub sdk_skybox_transition_forward: bool,
+
+    // SDK scene skybox (PBSkybox/PBSun/PBEnvironmentFog on the ROOT entity of the
+    // current parcel scene). `sdk_skybox_config` is the override map as JSON, empty
+    // when the scene sets none; `sdk_skybox_scene_id` is the scene it belongs to, so
+    // the component is re-published when the player walks into the scene again.
+    #[var]
+    pub sdk_skybox_active: bool,
+    #[var]
+    pub sdk_skybox_config: GString,
+    #[var]
+    pub sdk_skybox_scene_id: i32,
 }
 
 #[godot_api]
@@ -521,6 +532,9 @@ impl INode for DclGlobal {
             sdk_skybox_time_active: false,
             sdk_skybox_fixed_time: 0,
             sdk_skybox_transition_forward: true,
+            sdk_skybox_active: false,
+            sdk_skybox_config: GString::new(),
+            sdk_skybox_scene_id: -1,
         }
     }
 }
@@ -529,6 +543,9 @@ impl INode for DclGlobal {
 impl DclGlobal {
     #[signal]
     fn sdk_skybox_time_active_changed(is_active: bool);
+
+    #[signal]
+    fn sdk_skybox_changed(config_json: GString, scene_id: i32);
 
     #[func]
     fn set_scene_log_enabled(&self, enabled: bool) {
@@ -776,6 +793,18 @@ impl DclGlobal {
         self.sdk_skybox_time_active = false;
         self.sdk_skybox_fixed_time = 0;
         self.sdk_skybox_transition_forward = true;
+    }
+
+    /// Drop the scene skybox overrides so the next scene re-publishes its own.
+    ///
+    /// Returns whether anything was active, so the caller only notifies Godot when
+    /// there is an override to tear down.
+    pub fn reset_skybox(&mut self) -> bool {
+        let was_active = self.sdk_skybox_active || !self.sdk_skybox_config.is_empty();
+        self.sdk_skybox_active = false;
+        self.sdk_skybox_config = GString::new();
+        self.sdk_skybox_scene_id = -1;
+        was_active
     }
 
     /// Check if walk input is disabled (either by disable_all or disable_walk)

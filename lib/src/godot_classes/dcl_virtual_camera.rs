@@ -22,6 +22,10 @@ pub struct DclVirtualCamera {
 
     #[export]
     transition_speed: f32,
+
+    /// Vertical field of view in degrees; 0 when the scene did not set one.
+    #[export]
+    fov: f32,
 }
 
 impl DclVirtualCamera {
@@ -30,6 +34,7 @@ impl DclVirtualCamera {
         self.look_at_entity_id = 0;
         self.transition_speed = 0.0;
         self.transition_time = 0.0;
+        self.fov = 0.0;
     }
 
     pub fn set_transform(&mut self, entity_id: &SceneEntityId) {
@@ -45,6 +50,7 @@ impl DclVirtualCamera {
         self.clear();
         self.entity_id = entity_id.as_i32();
         self.look_at_entity_id = virtual_camera_value.look_at_entity.unwrap_or(0) as i32;
+        self.fov = virtual_camera_value.fov.unwrap_or(0.0);
 
         match &virtual_camera_value
             .default_transition

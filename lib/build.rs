@@ -418,7 +418,7 @@ fn main() -> io::Result<()> {
         }
     }
 
-    // Not in the pinned @dcl/protocol build yet (see `patched_avatar_nametag_proto`).
+    // Only when the pinned @dcl/protocol build lacks it (see `patched_avatar_nametag_proto`).
     if !has_avatar_nametag {
         proto_components.push(Component {
             id: 1221,
@@ -525,11 +525,10 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-/// The pinned @dcl/protocol build (protocol `main`, commit 0ff6038) has an
-/// rfc4 `comms.proto` that lacks fields the Pulse transport and Unity interop rely on
-/// (they live in protocol `experimental`): `PlayerEmote` 4..=11 (`is_stopping` &
-/// co., bridged from Pulse `EmoteStopped` and already sent by Unity peers over
-/// LiveKit) and `Chat.forwarded_from` (SFU forwarding). The npm tree is gitignored
+/// rfc4 `comms.proto` patch: adds the fields the Pulse transport and Unity interop
+/// rely on when the pinned @dcl/protocol build does not carry them — `PlayerEmote`
+/// 4..=11 (`is_stopping` & co., bridged from Pulse `EmoteStopped` and already sent by
+/// Unity peers over LiveKit) and `Chat.forwarded_from` (SFU forwarding). The npm tree is gitignored
 /// and wiped by `cargo run -- install`, so it can't be edited in place; instead,
 /// patch a copy under OUT_DIR/proto_patched/ and compile that one (that root is
 /// listed first so the canonical path resolves to the patched copy). Each patch
@@ -597,9 +596,9 @@ fn patched_rfc4_comms_proto() -> std::path::PathBuf {
     dest
 }
 
-/// The pinned @dcl/protocol build (commit 0ff6038) predates protocol#459, which added
-/// the `EmoteState` lifecycle enum and `PBAvatarEmoteCommand.state` (field 5) so scenes
-/// can observe emote completion/interruption. Same idiom as `patched_rfc4_comms_proto`:
+/// Adds the `EmoteState` lifecycle enum and `PBAvatarEmoteCommand.state` (field 5), which
+/// let scenes observe emote completion/interruption, when the pinned @dcl/protocol build
+/// (protocol#459) does not carry them. Same idiom as `patched_rfc4_comms_proto`:
 /// patch a copy under OUT_DIR/proto_patched/ and compile that one instead of the npm
 /// copy (which `cargo run -- install` rewrites). The enum is declared at FILE scope to
 /// match upstream exactly: prost maps a nested enum to `pb_avatar_emote_command::EmoteState`
@@ -640,8 +639,8 @@ fn patched_avatar_emote_command_proto() -> std::path::PathBuf {
     dest
 }
 
-/// The pinned @dcl/protocol build (commit 0ff6038) predates protocol#474, which adds
-/// `PBAvatarNametag` (component 1221). Same idiom as `patched_avatar_emote_command_proto`:
+/// Adds `PBAvatarNametag` (component 1221) when the pinned @dcl/protocol build
+/// (protocol#474) does not carry it. Same idiom as `patched_avatar_emote_command_proto`:
 /// write the file under OUT_DIR/proto_patched/ so `cargo run -- install` cannot drop it.
 /// No-ops once the pinned build ships the file, which then compiles from the npm tree.
 fn patched_avatar_nametag_proto() -> std::path::PathBuf {
@@ -674,9 +673,9 @@ fn patched_avatar_nametag_proto() -> std::path::PathBuf {
     dest
 }
 
-/// The pinned @dcl/protocol build predates protocol#489 (`font_src` on the four text
-/// components). Same idiom as `patched_avatar_emote_command_proto`; no-ops once the
-/// pinned build ships the field.
+/// Adds `font_src` to the four text components when the pinned @dcl/protocol build
+/// (protocol#489) does not carry it. Same idiom as `patched_avatar_emote_command_proto`;
+/// no-ops once the pinned build ships the field.
 const FONT_SRC_PATCHES: &[(&str, &str, &str)] = &[
     (
         "text_shape.proto",

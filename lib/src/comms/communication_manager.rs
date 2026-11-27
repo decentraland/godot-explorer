@@ -1779,7 +1779,7 @@ impl CommunicationManager {
         #[cfg(feature = "use_pulse")]
         if pulse_established {
             if let Some(pulse_room) = &mut self.pulse_room {
-                pulse_room.send_movement(&uncompressed_movement);
+                pulse_room.send_movement(&uncompressed_movement, Instant::now());
                 message_sent = true;
             }
         }
@@ -1844,7 +1844,6 @@ impl CommunicationManager {
                 timestamp: self.start_time.elapsed().as_secs_f32(),
                 is_stopping: None,
                 mask: crate::avatars::emote_mask::wire_mask_from_internal(mask),
-                ..Default::default()
             })),
             protocol_version: DEFAULT_PROTOCOL_VERSION,
         };
