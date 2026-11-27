@@ -89,11 +89,11 @@ impl DeepLinkRouter {
         );
         apply_link_settings(&obj);
 
-        // With the host driving the app the core routes the link, including push attribution.
-        if host_driven {
-            return;
+        // With the host driving the app the core attributes push opens. The signal still goes out:
+        // its listeners apply engine-side params (`scene-inspector`, `test-logging`).
+        if !host_driven {
+            track_push_open(&obj, &start_kind.to_string());
         }
-        track_push_open(&obj, &start_kind.to_string());
         self.run_deferred(|this| this.emit_deep_link_received());
     }
 
