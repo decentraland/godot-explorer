@@ -7,7 +7,7 @@ use crate::{
     godot_classes::{dcl_camera_3d::DclCamera3D, dcl_global::DclGlobal},
 };
 
-const DEFAULT_TRANSITION_TIME: f32 = 0.35;
+pub(crate) const DEFAULT_TRANSITION_TIME: f32 = 0.35;
 const DEFAULT_VIRTUAL_CAMERA_FOV: f32 = 60.0;
 /// The virtual camera sees everything but the outline layer (bit 19).
 const VIRTUAL_CAMERA_CULL_MASK: u32 = 0x7fff;

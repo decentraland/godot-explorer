@@ -73,8 +73,8 @@ Verbs: `pause`, `resume`, `reload_scene`, `get_status`, `set_file_logging`,
 `set_perf_interval`, `set_lifecycle_verbose`, `set_include_bin_payload`,
 `subscribe`/`unsubscribe {streams:[...]}`, and (delegated to the shared backend)
 `ping`, `scenes`, `scene`, `entity`, `ui_scene`, `ui_entity`, `avatars`,
-`avatar`, `app_ui`, `focus`, `node_query`, and the typed `state`, `teleport {x,y}`,
-`screenshot {inline?}`, `log_filter {filter}` (`eval` replies with an error pointing to them).
+`avatar`, `app_ui`, `focus`, `node_query`, and the typed `state`, `post_processing`,
+`teleport {x,y}`, `screenshot {inline?}`, `log_filter {filter}` (`eval` replies with an error pointing to them).
 Production builds serve only the inspection verbs (`PRODUCTION_COMMANDS` in `debug_hub/bridge.rs`): no `teleport`, `log_filter`, `pause`/`resume`,
 `reload_scene` or `set_file_logging`, and `node_query` returns props but skips `calls`.
 

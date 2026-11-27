@@ -149,6 +149,7 @@ typed commands (the mutating ones are non-production only):
 
 ```bash
 scripts/unified.sh state                              # realm, parcel, scenes loaded, fps, memory
+scripts/unified.sh post_processing                    # a scene's PBPostProcessing: source, blend, applied focus
 scripts/unified.sh teleport '{"x":77,"y":1}'          # move the player to a parcel
 scripts/unified.sh screenshot '{"inline":true}'       # PNG of the viewport (inline = base64)
 scripts/unified.sh log_filter '{"filter":"dclgodot::comms=debug,warn"}'

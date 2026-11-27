@@ -1,0 +1,80 @@
+syntax = "proto3";
+package decentraland.sdk.components;
+
+import "decentraland/sdk/components/common/id.proto";
+option (common.ecs_component_id) = 1226;
+
+// PBPostProcessing controls the image effects a camera applies after rendering the scene.
+//
+// It can be added to:
+// * engine.CameraEntity: the player's camera, while the player is in this scene. When the
+//   player moves to another scene, the explorer blends to that scene's settings (or to its own
+//   defaults) over a short, fixed time.
+// * an entity with a PBVirtualCamera: while that virtual camera is active, each field it sets
+//   replaces the one on engine.CameraEntity. Activating or leaving the virtual camera blends
+//   over the same time as the camera's own transition; an instant transition snaps.
+// * an entity with a PBTextureCamera: that texture camera only. It does not inherit the
+//   settings on engine.CameraEntity.
+//
+// Every field is optional: an unset field keeps the explorer's default. Values are relative to
+// the explorer's defaults (multipliers and offsets), and out-of-range values are clamped.
+// Changes made by the scene itself apply immediately; a scene can animate them.
+// If the player has turned bloom or depth of field off in their settings, a scene cannot turn
+// it on.
+message PBPostProcessing {
+  // the curve that maps the rendered brightness to the display. default: TONEMAP_DEFAULT
+  optional Tonemapping tonemapping = 1;
+  // brightness change before tonemapping, in photographic stops: +1 doubles the brightness,
+  // -1 halves it. range -5 to 5, default 0
+  optional float exposure = 2;
+  optional ColorGrading color_grading = 3;
+  // multiplier of the explorer's bloom (the glow around bright areas). 0 removes it.
+  // range 0 to 4, default 1
+  optional float bloom_intensity = 4;
+  optional DepthOfField depth_of_field = 5;
+}
+
+enum Tonemapping {
+  // the explorer's own curve, currently the same as TONEMAP_ACES
+  TONEMAP_DEFAULT = 0;
+  // no curve, and none of the explorer's default color grading: the camera's output is the
+  // rendered brightness, with only the fields this component sets applied.
+  // * on engine.CameraEntity or a virtual camera, brightness above white is clipped.
+  // * on a texture camera, the texture keeps brightness above white, for a camera that views
+  //   it (on an unlit or emissive material) to tonemap once. Its bloom defaults to 0, since
+  //   that camera blooms the bright areas.
+  TONEMAP_NONE = 1;
+  // the filmic ACES curve, even if the explorer's default changes
+  TONEMAP_ACES = 2;
+}
+
+message ColorGrading {
+  // multiplier of color saturation: 0 is greyscale. range 0 to 2, default 1
+  optional float saturation = 1;
+  // multiplier of contrast around mid grey. range 0 to 2, default 1
+  optional float contrast = 2;
+  // hue rotation in radians. range -pi to pi, default 0
+  optional float hue_shift = 3;
+  // white balance along the daylight locus: -1 is cool (blue), 1 is warm (orange). range -1 to 1,
+  // default 0
+  optional float temperature = 4;
+  // white balance across the daylight locus: -1 is green, 1 is magenta. range -1 to 1, default 0
+  optional float tint = 5;
+}
+
+// Blur for distant objects. Objects nearer than focus_start are sharp; the blur rises evenly
+// from focus_start to focus_end and stays at its focus_end value beyond.
+message DepthOfField {
+  // the blur reached at focus_end, as a fraction of the explorer's strongest blur. 0 turns depth
+  // of field off. range 0 to 1, default: the strength of the player's depth of field setting
+  optional float intensity = 1;
+  // distance from the camera, in meters, where blur begins. A value set here is used as given,
+  // even in front of the player.
+  // default on the player's camera: just beyond the player, following them.
+  // default on a texture camera: 50
+  optional float focus_start = 2;
+  // distance from the camera, in meters, where the blur reaches `intensity`; it stays at that
+  // level further away. At or before focus_start, everything beyond focus_start has the full
+  // blur. default 250
+  optional float focus_end = 3;
+}

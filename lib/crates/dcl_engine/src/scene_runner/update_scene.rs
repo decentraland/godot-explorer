@@ -107,6 +107,7 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
         S::SkyboxTime => "SkyboxTime",
         S::TriggerArea => "TriggerArea",
         S::VirtualCameras => "VirtualCameras",
+        S::PostProcessing => "PostProcessing",
         S::AudioSource => "AudioSource",
         S::ParticleSystem => "ParticleSystem",
         S::ProcessRpcs => "ProcessRpcs",
@@ -177,7 +178,7 @@ use crate::{
     godot_classes::dcl_global::DclGlobal,
     scene_runner::components::{
         audio_stream::update_audio_stream, avatar_shape::update_avatar_shape_emote_command,
-        virtual_cameras::update_main_and_virtual_cameras,
+        post_processing::update_post_processing, virtual_cameras::update_main_and_virtual_cameras,
     },
 };
 
@@ -575,6 +576,10 @@ pub fn _process_scene(
                 }
                 SceneUpdateState::VirtualCameras => {
                     update_main_and_virtual_cameras(scene, crdt_state);
+                    false
+                }
+                SceneUpdateState::PostProcessing => {
+                    update_post_processing(scene, crdt_state);
                     false
                 }
                 SceneUpdateState::AudioSource => {

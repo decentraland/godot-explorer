@@ -18,6 +18,7 @@ use crate::godot_classes::dcl_urls::DclUrls;
 use crate::player::body::Player;
 use crate::player::camera_controller::DclGlobalCameraController;
 use crate::player::mobile_input::MobileCameraInput;
+use crate::sky::post_processing::ScenePostProcessing;
 use crate::ui::emote_wheel::EmoteWheel;
 use crate::ui::joypad::Joypad;
 use crate::ui::joystick::VirtualJoystick;
@@ -340,4 +341,5 @@ fn finish(world: &World, explorer: &Gd<Explorer>) {
     crate::engine::local_task::defer(move || ui_root.grab_focus());
     let mut host = explorer.clone();
     host.add_child(&DclGlobalCameraController::new_alloc());
+    host.add_child(&ScenePostProcessing::new_alloc());
 }
