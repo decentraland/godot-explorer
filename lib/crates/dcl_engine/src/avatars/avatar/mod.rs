@@ -14,6 +14,7 @@ pub mod locomotion;
 pub mod lod;
 pub mod nametag;
 pub mod script_api;
+pub mod shape_motion;
 pub mod spawn_reveal;
 
 use godot::classes::{

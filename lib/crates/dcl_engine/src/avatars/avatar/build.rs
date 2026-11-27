@@ -107,9 +107,9 @@ pub async fn update_avatar(
         let mut this = handle.bind_mut();
         this.is_avatar_shape = shape.is_some();
         if let Some(shape) = shape.as_ref() {
-            // An eth-address AvatarShape.id routes the impostor capture through the catalyst
-            // body texture instead of an off-screen render.
-            if shape.id.starts_with("0x") && this.avatar_id.to_string() != shape.id {
+            // The id drives AvatarModifierArea.excludeIds; an eth-address id also takes the
+            // impostor from the catalyst body texture instead of an off-screen render.
+            if !shape.id.is_empty() && this.avatar_id.to_string() != shape.id {
                 this.avatar_id = shape.id.as_str().into();
                 this.set_click_area_meta("avatar_id", shape.id.as_str().to_variant());
                 this.try_show();

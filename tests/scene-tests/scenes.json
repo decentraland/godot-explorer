@@ -24,6 +24,7 @@
     { "parcel": [54, -68], "name": "nft-shape" },
     { "parcel": [54, -70], "name": "tween" },
     { "parcel": [54, -72], "name": "trigger-area" },
-    { "parcel": [54, -74], "name": "emotes" }
+    { "parcel": [54, -74], "name": "emotes" },
+    { "parcel": [56, -53], "name": "avatar-shape-motion" }
   ]
 }
