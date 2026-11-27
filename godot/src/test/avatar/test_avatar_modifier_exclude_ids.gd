@@ -59,6 +59,34 @@ func _init() -> void:
 	# Empty id must never silently match a non-empty exclude entry.
 	_expect("empty avatar_id never matches", failures, "", [ADDR_LOWER], false)
 
+	# Bug #3338: a scene AvatarShape id is a plain string, not an address.
+	_expect("plain scene id matches", failures, "npc-1", ["npc-1"], true)
+	_expect("plain scene id vs another", failures, "npc-1", ["npc-2"], false)
+	# Desktop lowercases both sides too, but never adds a `0x` prefix.
+	_expect("plain scene id ignores case", failures, "NPC-1", ["npc-1"], true)
+	_expect("plain scene id gains no 0x prefix", failures, "npc-1", ["0xnpc-1"], false)
+
+	# Only `0x` and 40 hex digits is an address (impostor cache key, catalyst fetch).
+	for id in [ADDR_LOWER, ADDR_CHECKSUM]:
+		if not MATCHER.is_address(id):
+			failures.append("is_address(%s) should be true" % id)
+	# A sign is not a hex digit, although String.is_valid_hex_number() accepts one.
+	var signed_minus := "0x-" + "a".repeat(39)
+	var signed_plus := "0x+" + "a".repeat(39)
+	for id in [
+		ADDR_NO_PREFIX, "0x1234", "npc-1", "", "0x" + "g".repeat(40), signed_minus, signed_plus
+	]:
+		if MATCHER.is_address(id):
+			failures.append("is_address(%s) should be false" % id)
+	# Nor does a signed 40-character id gain the `0x` prefix an address does.
+	_expect(
+		"signed id is not an unprefixed address",
+		failures,
+		signed_minus,
+		["-" + "a".repeat(39)],
+		false
+	)
+
 	# Multi-entry list: one of several entries matches with mixed casing.
 	_expect(
 		"mixed-casing entry among many is found",
@@ -69,7 +97,7 @@ func _init() -> void:
 	)
 
 	if failures.is_empty():
-		print("[test_avatar_modifier_exclude_ids] PASS (all 7 cases)")
+		print("[test_avatar_modifier_exclude_ids] PASS (all 12 cases, is_address)")
 		quit(0)
 		return
 

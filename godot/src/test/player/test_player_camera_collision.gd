@@ -463,13 +463,14 @@ func _test_rig_targets_first_person() -> void:
 # 1p<->3p once the accumulated spread passes MODE_TOGGLE_SPREAD, in either
 # direction; below it there is no toggle.
 func _test_pinch_toggle_direction() -> void:
-	if Pinch.toggle_direction(Pinch.MODE_TOGGLE_SPREAD - 0.5) != 0:
+	var toggle: float = Pinch.toggle_spread(Vector2(1080, 2400))
+	if Pinch.toggle_direction(toggle - 0.5, toggle) != 0:
 		_fail("toggle fired below the threshold (out)")
-	if Pinch.toggle_direction(-Pinch.MODE_TOGGLE_SPREAD + 0.5) != 0:
+	if Pinch.toggle_direction(-toggle + 0.5, toggle) != 0:
 		_fail("toggle fired below the threshold (in)")
-	if Pinch.toggle_direction(Pinch.MODE_TOGGLE_SPREAD) != 1:
+	if Pinch.toggle_direction(toggle, toggle) != 1:
 		_fail("spread at the threshold should toggle out (toward 3p)")
-	if Pinch.toggle_direction(-Pinch.MODE_TOGGLE_SPREAD) != -1:
+	if Pinch.toggle_direction(-toggle, toggle) != -1:
 		_fail("closing at the threshold should toggle in (toward 1p)")
 
 

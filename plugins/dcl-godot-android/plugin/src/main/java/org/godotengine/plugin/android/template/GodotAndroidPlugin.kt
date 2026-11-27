@@ -38,7 +38,9 @@ import androidx.browser.customtabs.CustomTabsService
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.exifinterface.media.ExifInterface
+import org.decentraland.godotexplorer.AdvertisingIds
 import org.decentraland.godotexplorer.NotificationReceiver
+import org.decentraland.godotexplorer.TenjinBridge
 import org.godotengine.godot.Dictionary
 import org.godotengine.godot.Godot
 import org.godotengine.godot.plugin.GodotPlugin
@@ -150,6 +152,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             // Application-scoped so it survives activity recreation; emitSignal marshals
             // the UI-thread callback onto Godot's render thread.
             it.applicationContext.registerComponentCallbacks(trimMemoryCallbacks)
+            advertisingIds.refresh(it)
         }
         // Kick off Firebase Analytics initialization early so getAppInstanceId() can be ready
         // by the time the first Segment batch is sent.
@@ -321,6 +324,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
      * Sets the canonical Firebase Analytics user id. Auto-attached to every Firebase event,
      * including SDK auto-events (screen_view, session_start, etc.). Pass "" to clear.
      */
+    @Deprecated("Superseded by Tenjin; removed once Tenjin is validated")
     @UsedByGodot
     fun setFirebaseUserId(userId: String) {
         ensureFirebaseInitialized()
@@ -339,6 +343,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
      * Sets a Firebase Analytics user property. User properties are auto-attached to every event
      * fired afterward (including SDK auto-events). Pass "" as value to clear the property.
      */
+    @Deprecated("Superseded by Tenjin; removed once Tenjin is validated")
     @UsedByGodot
     fun setFirebaseUserProperty(name: String, value: String) {
         ensureFirebaseInitialized()
@@ -357,6 +362,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
      * Logs a custom Firebase Analytics event. Parameters are passed as a JSON object string
      * containing primitive values (string/number/boolean). Returns true if the event was dispatched.
      */
+    @Deprecated("Superseded by Tenjin; removed once Tenjin is validated")
     @UsedByGodot
     fun logFirebaseEvent(eventName: String, paramsJson: String): Boolean {
         ensureFirebaseInitialized()
@@ -417,8 +423,33 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         }
     }
 
+    private val tenjin = TenjinBridge()
+
+    @UsedByGodot
+    fun tenjinStart(sdkKey: String, userId: String): Boolean {
+        val ctx = activity?.applicationContext ?: return false
+        return tenjin.start(ctx, sdkKey, userId)
+    }
+
+    @UsedByGodot
+    fun tenjinEvent(name: String, value: Int): Boolean = tenjin.event(name, value)
+
+    @UsedByGodot
+    fun tenjinGetAttribution(): Dictionary = tenjin.getAttribution()
+
+    @UsedByGodot
+    fun tenjinGetAnalyticsInstallationId(): String = tenjin.analyticsInstallationId()
+
+    private val advertisingIds = AdvertisingIds()
+
+    /** `{status: pending}` until the first read finishes, then `{status: ok, gaid, limit_ad_tracking, app_set_id}`. */
+    @UsedByGodot
+    fun getAdvertisingIds(): Dictionary = advertisingIds.snapshot()
+
     override fun onMainResume() {
         super.onMainResume()
+        tenjin.onResume()
+        activity?.let { advertisingIds.refresh(it) }
 
         // Backstop for the image picker guard. `pickImageInFlight` is normally cleared in
         // onMainActivityResult, but that callback never lands if our activity is recreated

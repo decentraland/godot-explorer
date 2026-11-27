@@ -83,6 +83,7 @@ gradient = SubResource("Gradient_horizon")
 shader = ExtResource("1_bggni")
 shader_parameter/milky_way_noise = SubResource("NoiseTexture2D_8yx6h")
 shader_parameter/stars_energy = 1.0
+shader_parameter/stars_override = 0.0
 shader_parameter/clouds_cubemap = ExtResource("2_ljc2v")
 shader_parameter/clouds_rotation_y_deg = 20.000009500000004
 shader_parameter/clouds_height_compress = 1.00000004424012
