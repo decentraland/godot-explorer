@@ -277,7 +277,7 @@ landscape('extra/menu-notifications-all-read', 'Notifications: all read', () =>
   ),
 );
 
-const card = (index: number) => () =>
+const card = (index: number, background?: 'solid') => () =>
   (
     <View style={styles.cardStage}>
       <LinearFill
@@ -292,6 +292,7 @@ const card = (index: number) => () =>
           item={mockNotifications[index]}
           now={MOCK_NOW}
           onPress={noop}
+          background={background}
         />
       </View>
     </View>
@@ -308,6 +309,11 @@ landscape(
 );
 landscape(`${M}notifications__891-6977`, 'Notification: event', card(3));
 landscape(`${M}notifications__891-6978`, 'Notification: reward', card(2));
+landscape(
+  'extra/menu-notification-solid',
+  'Notification: HUD (solid)',
+  card(0, 'solid'),
+);
 landscape(
   'extra/menu-notification-generic',
   'Notification: generic fallback',

@@ -11,10 +11,13 @@ export function NotificationCard({
   item,
   now,
   onPress,
+  background = 'translucent',
 }: {
   item: MenuNotification;
   now: number;
   onPress: () => void;
+  /** `solid` (deep plum) for a new notification shown over the 3D scene in the HUD. */
+  background?: 'translucent' | 'solid';
 }) {
   const view = notificationView(item);
   return (
@@ -24,6 +27,7 @@ export function NotificationCard({
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
+        background === 'solid' && styles.solid,
         item.read ? styles.read : styles.unread,
         pressed && styles.pressed,
       ]}
@@ -69,6 +73,7 @@ const styles = StyleSheet.create({
     gap: u(12),
     backgroundColor: 'rgba(18,0,36,0.55)',
   },
+  solid: { backgroundColor: colors.menu },
   unread: { borderWidth: 0.5, borderColor: 'rgba(232,185,255,0.35)' },
   read: { opacity: 0.72 },
   pressed: { opacity: 0.85 },
