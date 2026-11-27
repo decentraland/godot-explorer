@@ -25,6 +25,11 @@ thread_local! {
     static FALLBACKS: RefCell<Option<Fallbacks>> = const { RefCell::new(None) };
 }
 
+/// At engine shutdown: see `crate::release_thread_local_engine_objects`.
+pub(crate) fn release_engine_objects() {
+    FALLBACKS.take();
+}
+
 /// `font` with the bundled fallbacks attached once, and its rendered glyphs tracked for the
 /// disk cache.
 pub fn with_glyph_fallbacks(mut font: Gd<Font>, bold: bool) -> Gd<Font> {

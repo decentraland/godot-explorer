@@ -53,6 +53,11 @@ fn host() -> Option<Rc<Host>> {
     HOST.with(|host| host.borrow().clone())
 }
 
+/// At engine shutdown: see `crate::release_thread_local_engine_objects`.
+pub(crate) fn release_engine_objects() {
+    HOST.take();
+}
+
 /// The autoload node of the shell-driven app.
 #[derive(GodotClass)]
 #[class(base=Node, init)]

@@ -19,6 +19,11 @@ thread_local! {
     static CACHE: RefCell<HashMap<&'static str, Gd<PackedScene>>> = RefCell::new(HashMap::new());
 }
 
+/// At engine shutdown: see `crate::release_thread_local_engine_objects`.
+pub(crate) fn release_engine_objects() {
+    CACHE.take();
+}
+
 /// The `PackedScene` at `path`, loaded once per thread and kept alive.
 pub fn packed_scene(path: &'static str) -> Gd<PackedScene> {
     CACHE.with(|cache| {

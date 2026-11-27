@@ -119,6 +119,11 @@ fn with<R>(f: impl FnOnce(&mut Coordinator) -> R) -> R {
     COORDINATOR.with(|c| f(&mut c.borrow_mut()))
 }
 
+/// At engine shutdown: see `crate::release_thread_local_engine_objects`.
+pub(crate) fn release_engine_objects() {
+    COORDINATOR.take();
+}
+
 /// The pipeline's counters since boot.
 pub fn stats() -> (Stats, usize) {
     with(|c| (c.stats.clone(), c.groups.len()))
