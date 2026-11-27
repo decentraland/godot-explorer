@@ -1,6 +1,8 @@
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useEffect } from 'react';
 import { BackpackScreen } from '../backpack/BackpackScreen';
+import { preloadCatalog } from '../backpack/useCatalog';
 import { DiscoverScreen } from '../discover/DiscoverScreen';
 import { AppText, BottomNav, colors, u } from '@dcl/ui-native';
 import { I18nKey, t } from '../i18n';
@@ -18,6 +20,8 @@ export function HomeTabs({ onJumpIn }: { onJumpIn: (place: Place) => void }) {
   const { state, setTab } = useNav();
   const insets = useSafeAreaInsets();
   const tab = state.tab;
+  // The Backpack is one tap away: load its catalog now so it opens ready.
+  useEffect(() => preloadCatalog(), []);
   const footer = (
     <BottomNav active={tab} bottomInset={insets.bottom} onChange={setTab} />
   );

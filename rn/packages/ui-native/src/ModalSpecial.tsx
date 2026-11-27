@@ -46,6 +46,8 @@ export function ModalSpecial(props: ModalSpecialProps) {
       transparent
       animationType="fade"
       statusBarTranslucent
+      // iOS defaults to portrait and aborts when the screen is locked to landscape (in world).
+      supportedOrientations={['portrait', 'landscape']}
       onRequestClose={onRequestClose}
     >
       <View style={styles.scrim}>

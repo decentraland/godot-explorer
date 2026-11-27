@@ -16,7 +16,7 @@ import {
   View,
 } from 'react-native';
 import { SheetGlow } from './Sheet';
-import { colors, elevation, radius } from './tokens';
+import { colors, elevation, radius, space } from './tokens';
 import {
   DEFAULT_SNAP_CONFIG,
   nearestSnap,
@@ -50,6 +50,7 @@ export function BottomSheet({
   onSnapChange,
   containerHeight,
   config = DEFAULT_SNAP_CONFIG,
+  handle = true,
   header,
   onMovingChange,
   onVisibleChange,
@@ -59,6 +60,8 @@ export function BottomSheet({
   onSnapChange: (snap: Snap) => void;
   containerHeight?: number;
   config?: SnapConfig;
+  /** `Handle=Off`: no bar, the content starts 20 dp down; that strip still drags and toggles. */
+  handle?: boolean;
   header?: ReactNode;
   /** True from the moment a drag starts until the sheet has come to rest. */
   onMovingChange?: (moving: boolean) => void;
@@ -126,7 +129,17 @@ export function BottomSheet({
     [offset],
   );
 
-  useEffect(() => settle(heights[snap]), [snap, heights, settle]);
+  // A new container size (first measure, rotation) places the sheet at once; a snap or a config
+  // change animates it there.
+  const placedFor = useRef(height);
+  useEffect(() => {
+    if (placedFor.current !== height) {
+      placedFor.current = height;
+      offset.setValue(heights.full - heights[snap]);
+      return;
+    }
+    settle(heights[snap]);
+  }, [snap, heights, height, settle, offset]);
 
   const [grab, area] = useMemo(() => {
     const visibleAfter = (dy: number) => {
@@ -192,9 +205,9 @@ export function BottomSheet({
           accessibilityLabel={expanded ? 'Collapse sheet' : 'Expand sheet'}
           hitSlop={12}
           onPress={() => onSnapChange(target)}
-          style={styles.handleArea}
+          style={handle ? styles.handleArea : styles.handleOff}
         >
-          <View style={styles.handle} />
+          {handle && <View style={styles.handle} />}
         </Pressable>
         {header}
       </View>
@@ -227,6 +240,7 @@ const styles = StyleSheet.create({
     paddingTop: u(8),
     paddingBottom: u(20),
   },
+  handleOff: { height: space['40'] },
   handle: {
     width: u(100),
     height: u(4),

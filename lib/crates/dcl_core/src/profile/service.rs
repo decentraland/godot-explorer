@@ -14,7 +14,7 @@ use super::{
     multipart,
     transport::{HttpReply, HttpRequest, Transport},
 };
-use crate::{session::wallet::sign_request, urls};
+use crate::{app::AvatarState, avatar::TokenUrns, session::wallet::sign_request, urls};
 
 const NAMES_PAGE_SIZE: usize = 100;
 /// Pages fetched at most; a server that keeps answering full pages must not loop forever.
@@ -238,10 +238,31 @@ impl ProfileService {
     /// profile only changes once the catalyst accepted the deployment. A local guest's profile
     /// is updated on the device alone.
     pub async fn deploy(&self, update: &ProfileUpdate) -> Result<Profile, ProfileError> {
-        let address = self.identity.address().ok_or(ProfileError::NotSignedIn)?;
         let current = self.own_document().await?;
-        let next = current
-            .updated(update)
+        let next = current.updated(update);
+        Ok(self.commit(&current, next).await?.profile())
+    }
+
+    /// Publishes the own profile wearing `avatar`; `None` when it already wore it.
+    pub async fn deploy_avatar(
+        &self,
+        avatar: &AvatarState,
+        tokens: &TokenUrns,
+    ) -> Result<Option<ProfileDocument>, ProfileError> {
+        let current = self.own_document().await?;
+        let Some(next) = current.with_avatar(avatar, tokens) else {
+            return Ok(None);
+        };
+        self.commit(&current, next).await.map(Some)
+    }
+
+    async fn commit(
+        &self,
+        current: &ProfileDocument,
+        next: ProfileDocument,
+    ) -> Result<ProfileDocument, ProfileError> {
+        let address = self.identity.address().ok_or(ProfileError::NotSignedIn)?;
+        let next = next
             .with_address(&address)
             .with_version(current.version() + 1);
         if !self.identity.is_local_guest() && !self.deploy_disabled.load(Ordering::Relaxed) {
@@ -251,7 +272,12 @@ impl ProfileService {
             address,
             document: next.clone(),
         });
-        Ok(next.profile())
+        Ok(next)
+    }
+
+    /// The catalyst profiles are read from and deployed to.
+    pub fn endpoints(&self) -> Endpoints {
+        lock(&self.endpoints).clone()
     }
 
     async fn publish(&self, address: &str, document: &ProfileDocument) -> Result<(), ProfileError> {

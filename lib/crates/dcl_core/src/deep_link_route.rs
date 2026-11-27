@@ -140,6 +140,12 @@ pub enum ConfigParam {
     ControlsFtueShow,
     /// Non-production: offer the guided tutorial on the next scene entry.
     FtueTutorialStart,
+    /// Dev/testing: wearables the Backpack lists as owned (see `avatar::set_fake_owned`).
+    FakeOwnedWearables {
+        urns: Vec<String>,
+    },
+    /// Dev/testing: profile changes stay on this device.
+    DisableProfileDeploy,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -408,6 +414,14 @@ fn process_effects(
                 url: url.into(),
             }));
         }
+    }
+    if !link.fake_owned_wearables.is_empty() {
+        out.push(cfg(ConfigParam::FakeOwnedWearables {
+            urns: link.fake_owned_wearables.clone(),
+        }));
+    }
+    if link.disable_profile_deploy {
+        out.push(cfg(ConfigParam::DisableProfileDeploy));
     }
     if !ctx.production && param(link, "rotate-guest").eq_ignore_ascii_case("true") {
         out.push(cfg(ConfigParam::RotateGuest));
@@ -860,6 +874,10 @@ mod tests {
             ("controls-ftue=show", ConfigParam::ControlsFtueShow),
             ("ftue-tutorial=start", ConfigParam::FtueTutorialStart),
             (
+                "disable-profile-deploy=true",
+                ConfigParam::DisableProfileDeploy,
+            ),
+            (
                 "c=summer-24",
                 ConfigParam::CampaignToken {
                     token: "summer-24".into(),
@@ -870,6 +888,23 @@ mod tests {
             let routed = run(&format!("decentraland://open?{query}"), &mobile());
             assert_eq!(cfg_of(&routed), vec![expected], "{query}");
         }
+    }
+
+    #[test]
+    fn fake_owned_wearables_come_with_no_profile_deploys() {
+        let routed = run(
+            "decentraland://open?fake-owned-wearables=urn:a,urn:b",
+            &mobile(),
+        );
+        assert_eq!(
+            cfg_of(&routed),
+            vec![
+                ConfigParam::FakeOwnedWearables {
+                    urns: vec!["urn:a".into(), "urn:b".into()],
+                },
+                ConfigParam::DisableProfileDeploy,
+            ]
+        );
     }
 
     #[test]

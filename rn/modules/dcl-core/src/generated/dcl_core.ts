@@ -1318,7 +1318,7 @@ export function jumpRealmUrl(realm: string): string {
 }
 
 /**
- * Loads the base wearables once, makes them the catalog the avatar edits use and returns them.
+ * Loads the base wearables once, adds them to the catalog the avatar edits use and returns them.
  */
 export async function loadAvatarCatalog(asyncOpts_?: {
   signal: AbortSignal;
@@ -1349,6 +1349,57 @@ export async function loadAvatarCatalog(asyncOpts_?: {
       /*liftFunc:*/ __rb => {
         try {
           return FfiConverterSequenceTypeCatalogItem.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * Fetches the wearables and emotes the signed-in account owns and makes the wearables part of
+ * the catalog; a guest owns none. Call it each time the editor opens: purchases show up.
+ */
+export async function loadOwnedAvatarItems(asyncOpts_?: {
+  signal: AbortSignal;
+}): Promise<OwnedAvatarItems> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_load_owned_avatar_items();
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterTypeOwnedAvatarItems.lift(__rb);
         } finally {
           nativeModule().rustbuffer_free(__rb);
         }
@@ -1956,6 +2007,45 @@ export function reviewFire(
     return FfiConverterOptionalUInt32.lift(__rb);
   } finally {
     nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
+ * Publishes the avatar the editor left on the player, and has the engine wear it in the world.
+ * False when the profile already wore it.
+ */
+export async function saveAvatar(asyncOpts_?: {
+  signal: AbortSignal;
+}): Promise<boolean> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_save_avatar();
+      },
+      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_i8,
+      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_i8,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_i8,
+      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_i8,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      /*liftFunc:*/ FfiConverterBool.lift.bind(FfiConverterBool),
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
   }
 }
 
@@ -4954,6 +5044,114 @@ const FfiConverterTypeOpenUrl = (() => {
   return new FFIConverter();
 })();
 
+/**
+ * An emote the account owns.
+ */
+export type OwnedEmote = {
+  urn: string;
+  name: string;
+  thumbnail: string;
+  rarity: string;
+  category: string;
+};
+
+/**
+ * Generated factory for {@link OwnedEmote} record objects.
+ */
+export const OwnedEmote = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<OwnedEmote, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<OwnedEmote>,
+  });
+})();
+
+const FfiConverterTypeOwnedEmote = (() => {
+  type TypeName = OwnedEmote;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        urn: FfiConverterString.readFromCursor(c),
+        name: FfiConverterString.readFromCursor(c),
+        thumbnail: FfiConverterString.readFromCursor(c),
+        rarity: FfiConverterString.readFromCursor(c),
+        category: FfiConverterString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.urn, c);
+      FfiConverterString.writeIntoCursor(value.name, c);
+      FfiConverterString.writeIntoCursor(value.thumbnail, c);
+      FfiConverterString.writeIntoCursor(value.rarity, c);
+      FfiConverterString.writeIntoCursor(value.category, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.urn) +
+        FfiConverterString.allocationSize(value.name) +
+        FfiConverterString.allocationSize(value.thumbnail) +
+        FfiConverterString.allocationSize(value.rarity) +
+        FfiConverterString.allocationSize(value.category)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * What the account owns, on top of the base catalog.
+ */
+export type OwnedAvatarItems = {
+  wearables: Array<CatalogItem>;
+  emotes: Array<OwnedEmote>;
+};
+
+/**
+ * Generated factory for {@link OwnedAvatarItems} record objects.
+ */
+export const OwnedAvatarItems = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<OwnedAvatarItems, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<OwnedAvatarItems>,
+  });
+})();
+
+const FfiConverterTypeOwnedAvatarItems = (() => {
+  type TypeName = OwnedAvatarItems;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        wearables: FfiConverterSequenceTypeCatalogItem.readFromCursor(c),
+        emotes: FfiConverterSequenceTypeOwnedEmote.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterSequenceTypeCatalogItem.writeIntoCursor(value.wearables, c);
+      FfiConverterSequenceTypeOwnedEmote.writeIntoCursor(value.emotes, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterSequenceTypeCatalogItem.allocationSize(value.wearables) +
+        FfiConverterSequenceTypeOwnedEmote.allocationSize(value.emotes)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
 export type ParamPair = {
   key: string;
   value: string;
@@ -6992,6 +7190,8 @@ export enum ConfigParam_Tags {
   SafeMarginDebug = 'SafeMarginDebug',
   ControlsFtueShow = 'ControlsFtueShow',
   FtueTutorialStart = 'FtueTutorialStart',
+  FakeOwnedWearables = 'FakeOwnedWearables',
+  DisableProfileDeploy = 'DisableProfileDeploy',
 }
 /**
  * A setting a link carries, for the owner of that setting to apply.
@@ -7477,6 +7677,67 @@ export const ConfigParam = (() => {
     }
   }
 
+  type FakeOwnedWearables__interface = {
+    tag: ConfigParam_Tags.FakeOwnedWearables;
+    inner: Readonly<{ urns: Array<string> }>;
+  };
+  /**
+   * Dev/testing: wearables the Backpack lists as owned (see `avatar::set_fake_owned`).
+   */
+  class FakeOwnedWearables_
+    extends UniffiEnum
+    implements FakeOwnedWearables__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.FakeOwnedWearables;
+    readonly inner: Readonly<{ urns: Array<string> }>;
+    constructor(inner: { urns: Array<string> }) {
+      super('ConfigParam', 'FakeOwnedWearables');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { urns: Array<string> }): FakeOwnedWearables_ {
+      return new FakeOwnedWearables_(inner);
+    }
+
+    static instanceOf(obj: any): obj is FakeOwnedWearables_ {
+      return obj.tag === ConfigParam_Tags.FakeOwnedWearables;
+    }
+  }
+
+  type DisableProfileDeploy__interface = {
+    tag: ConfigParam_Tags.DisableProfileDeploy;
+  };
+  /**
+   * Dev/testing: profile changes stay on this device.
+   */
+  class DisableProfileDeploy_
+    extends UniffiEnum
+    implements DisableProfileDeploy__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.DisableProfileDeploy;
+    constructor() {
+      super('ConfigParam', 'DisableProfileDeploy');
+    }
+
+    static new(): DisableProfileDeploy_ {
+      return new DisableProfileDeploy_();
+    }
+
+    static instanceOf(obj: any): obj is DisableProfileDeploy_ {
+      return obj.tag === ConfigParam_Tags.DisableProfileDeploy;
+    }
+  }
+
   function instanceOf(obj: any): obj is ConfigParam {
     return obj[uniffiTypeNameSymbol] === 'ConfigParam';
   }
@@ -7501,6 +7762,8 @@ export const ConfigParam = (() => {
     SafeMarginDebug: SafeMarginDebug_,
     ControlsFtueShow: ControlsFtueShow_,
     FtueTutorialStart: FtueTutorialStart_,
+    FakeOwnedWearables: FakeOwnedWearables_,
+    DisableProfileDeploy: DisableProfileDeploy_,
   });
 })();
 /**
@@ -7525,7 +7788,9 @@ export type ConfigParam = InstanceType<
     | 'GpBenchmark'
     | 'SafeMarginDebug'
     | 'ControlsFtueShow'
-    | 'FtueTutorialStart']
+    | 'FtueTutorialStart'
+    | 'FakeOwnedWearables'
+    | 'DisableProfileDeploy']
 >;
 
 // FfiConverter for enum ConfigParam
@@ -7592,6 +7857,12 @@ const FfiConverterTypeConfigParam = (() => {
           return new ConfigParam.ControlsFtueShow();
         case 18:
           return new ConfigParam.FtueTutorialStart();
+        case 19:
+          return new ConfigParam.FakeOwnedWearables({
+            urns: FfiConverterSequenceString.readFromCursor(c),
+          });
+        case 20:
+          return new ConfigParam.DisableProfileDeploy();
         default:
           throw new UniffiInternalError.UnexpectedEnumCase();
       }
@@ -7692,6 +7963,16 @@ const FfiConverterTypeConfigParam = (() => {
           c.writeI32(18);
           return;
         }
+        case ConfigParam_Tags.FakeOwnedWearables: {
+          c.writeI32(19);
+          const inner = value.inner;
+          FfiConverterSequenceString.writeIntoCursor(inner.urns, c);
+          return;
+        }
+        case ConfigParam_Tags.DisableProfileDeploy: {
+          c.writeI32(20);
+          return;
+        }
         default:
           // Throwing from here means that ConfigParam_Tags hasn't matched an ordinal.
           throw new UniffiInternalError.UnexpectedEnumCase();
@@ -7784,6 +8065,15 @@ const FfiConverterTypeConfigParam = (() => {
           return 4;
         }
         case ConfigParam_Tags.FtueTutorialStart: {
+          return 4;
+        }
+        case ConfigParam_Tags.FakeOwnedWearables: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterSequenceString.allocationSize(inner.urns);
+          return size;
+        }
+        case ConfigParam_Tags.DisableProfileDeploy: {
           return 4;
         }
         default:
@@ -13439,6 +13729,16 @@ const FfiConverterOptionalTypeSupportModal = new FfiConverterOptional(
   FfiConverterTypeSupportModal,
 );
 
+// FfiConverter for Array<CatalogItem>
+const FfiConverterSequenceTypeCatalogItem = new FfiConverterArray(
+  FfiConverterTypeCatalogItem,
+);
+
+// FfiConverter for Array<OwnedEmote>
+const FfiConverterSequenceTypeOwnedEmote = new FfiConverterArray(
+  FfiConverterTypeOwnedEmote,
+);
+
 // FfiConverter for number | undefined
 const FfiConverterOptionalFloat64 = new FfiConverterOptional(
   FfiConverterFloat64,
@@ -13513,11 +13813,6 @@ const FfiConverterSequenceTypeIssueType = new FfiConverterArray(
 // FfiConverter for Array<Place>
 const FfiConverterSequenceTypePlace = new FfiConverterArray(
   FfiConverterTypePlace,
-);
-
-// FfiConverter for Array<CatalogItem>
-const FfiConverterSequenceTypeCatalogItem = new FfiConverterArray(
-  FfiConverterTypeCatalogItem,
 );
 
 // FfiConverter for number | undefined
@@ -13925,10 +14220,18 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_load_avatar_catalog() !==
-    40773
+    12027
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_load_avatar_catalog',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_load_owned_avatar_items() !==
+    34009
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_load_owned_avatar_items',
     );
   }
   if (
@@ -14034,6 +14337,13 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_review_fire',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_save_avatar() !== 36651
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_save_avatar',
     );
   }
   if (
@@ -14523,6 +14833,8 @@ export default Object.freeze({
     FfiConverterTypeNotificationKind,
     FfiConverterTypeNotificationSender,
     FfiConverterTypeOpenUrl,
+    FfiConverterTypeOwnedAvatarItems,
+    FfiConverterTypeOwnedEmote,
     FfiConverterTypeParamPair,
     FfiConverterTypeParcel,
     FfiConverterTypePlace,

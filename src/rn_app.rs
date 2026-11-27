@@ -89,6 +89,9 @@ pub fn build_android(format: &str, release: bool, with_godot: bool) -> anyhow::R
         )?;
     }
     ensure_node_modules()?;
+    // RN caches autolinking by lockfile hashes only: after a no-engine build the cache omits
+    // dcl-core, and the engine build then silently runs on the mock core.
+    let _ = fs::remove_dir_all(rn_path("android/build/generated/autolinking"));
 
     let aab = format == "aab";
     let mut gradle = Command::new("./gradlew");
@@ -197,7 +200,12 @@ pub fn prepare_ios() -> anyhow::Result<()> {
 fn pod_install() -> anyhow::Result<()> {
     let lock = fs::read_to_string(rn_path("ios/Podfile.lock")).unwrap_or_default();
     let manifest = fs::read_to_string(rn_path("ios/Pods/Manifest.lock")).unwrap_or_default();
-    if lock.is_empty() || lock != manifest {
+    // react-native.config.js links the core pod only once the Godot export is synced: re-resolve
+    // when that changed, or the app silently runs on the mock core.
+    let wants_core =
+        rn_path("ios/Godot/godot.xcconfig").exists() && std::env::var_os("DCL_NO_GODOT").is_none();
+    let has_core = manifest.contains("- DclCore");
+    if lock.is_empty() || lock != manifest || wants_core != has_core {
         run_checked(
             Command::new("pod")
                 .arg("install")

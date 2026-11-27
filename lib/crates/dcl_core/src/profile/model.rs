@@ -4,7 +4,12 @@
 //! muted lists, the whole avatar). `ProfileDocument` keeps that JSON whole and changes only the
 //! fields an update names, so a deploy never drops what this domain does not model.
 
+use std::collections::HashSet;
+
 use serde_json::{json, Map, Value};
+
+use crate::app::AvatarState;
+use crate::avatar::{item_urn, TokenUrns};
 
 const DEFAULT_AVATAR_BODY: &str = "urn:decentraland:off-chain:base-avatars:BaseFemale";
 const DEFAULT_WEARABLES: [&str; 7] = [
@@ -244,6 +249,103 @@ impl ProfileDocument {
         Self { content }
     }
 
+    /// A copy wearing `avatar`, `None` when it already does. Collectibles go out as their token
+    /// URNs: the one the profile already had, else the owned one from `tokens`.
+    pub fn with_avatar(&self, avatar: &AvatarState, tokens: &TokenUrns) -> Option<Self> {
+        let mut content = self.content.clone();
+        let current = match content.get_mut("avatar") {
+            Some(Value::Object(current)) => current,
+            _ => {
+                content.insert("avatar".into(), json!({}));
+                content.get_mut("avatar")?.as_object_mut()?
+            }
+        };
+        let mut changed = false;
+
+        let body = current
+            .get("bodyShape")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        if !body.eq_ignore_ascii_case(&avatar.body_shape) {
+            current.insert("bodyShape".into(), json!(avatar.body_shape));
+            changed = true;
+        }
+
+        let worn: Vec<String> = current
+            .get("wearables")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+            .map(str::to_string)
+            .collect();
+        let wearables: Vec<String> = avatar
+            .wearables
+            .iter()
+            .map(|urn| deployed_urn(urn, &worn, tokens))
+            .collect();
+        if lowercase_set(&worn) != lowercase_set(&wearables) {
+            current.insert("wearables".into(), json!(wearables));
+            changed = true;
+        }
+
+        let slotted: Vec<(u64, String)> = current
+            .get("emotes")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(|emote| Some((emote["slot"].as_u64()?, emote["urn"].as_str()?.to_string())))
+            .collect();
+        let known: Vec<String> = slotted.iter().map(|(_, urn)| urn.clone()).collect();
+        let emotes: Vec<(u64, String)> = avatar
+            .emotes
+            .iter()
+            .enumerate()
+            .filter(|(_, urn)| !urn.is_empty())
+            .map(|(slot, urn)| (slot as u64, deployed_urn(urn, &known, tokens)))
+            .collect();
+        let key = |list: &[(u64, String)]| -> HashSet<(u64, String)> {
+            list.iter()
+                .map(|(slot, urn)| (*slot, urn.to_lowercase()))
+                .collect()
+        };
+        if key(&slotted) != key(&emotes) {
+            let emotes: Vec<Value> = emotes
+                .iter()
+                .map(|(slot, urn)| json!({ "slot": slot, "urn": urn }))
+                .collect();
+            current.insert("emotes".into(), Value::Array(emotes));
+            changed = true;
+        }
+
+        for (key, hex) in [
+            ("skin", &avatar.skin),
+            ("hair", &avatar.hair),
+            ("eyes", &avatar.eyes),
+        ] {
+            let Some((r, g, b)) = parse_hex(hex) else {
+                continue;
+            };
+            let color = &current.get(key).cloned().unwrap_or(Value::Null)["color"];
+            let channel = |name: &str| color[name].as_f64().map(|c| (c * 255.0).round() as u8);
+            if (channel("r"), channel("g"), channel("b")) == (Some(r), Some(g), Some(b)) {
+                continue;
+            }
+            let mut stored = json!({
+                "r": f64::from(r) / 255.0,
+                "g": f64::from(g) / 255.0,
+                "b": f64::from(b) / 255.0,
+            });
+            if let Some(alpha) = color.get("a") {
+                stored["a"] = alpha.clone();
+            }
+            current.insert(key.into(), json!({ "color": stored }));
+            changed = true;
+        }
+
+        changed.then_some(Self { content })
+    }
+
     pub fn with_version(&self, version: u32) -> Self {
         let mut content = self.content.clone();
         content.insert("version".into(), json!(version));
@@ -269,4 +371,28 @@ impl ProfileDocument {
         }
         content
     }
+}
+
+/// The URN to deploy for an item: the token URN the profile already wore, the owned token, or
+/// the URN itself (base items, or a collectible whose token is not known).
+fn deployed_urn(urn: &str, worn: &[String], tokens: &TokenUrns) -> String {
+    let item = item_urn(urn);
+    worn.iter()
+        .find(|known| item_urn(known).eq_ignore_ascii_case(item))
+        .cloned()
+        .or_else(|| tokens.get(&item.to_lowercase()).cloned())
+        .unwrap_or_else(|| urn.to_string())
+}
+
+fn lowercase_set(urns: &[String]) -> HashSet<String> {
+    urns.iter().map(|urn| urn.to_lowercase()).collect()
+}
+
+fn parse_hex(hex: &str) -> Option<(u8, u8, u8)> {
+    let hex = hex.strip_prefix('#')?;
+    if hex.len() != 6 {
+        return None;
+    }
+    let channel = |at: usize| u8::from_str_radix(hex.get(at..at + 2)?, 16).ok();
+    Some((channel(0)?, channel(2)?, channel(4)?))
 }

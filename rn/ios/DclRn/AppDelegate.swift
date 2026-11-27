@@ -28,18 +28,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     reactNativeDelegate = delegate
     reactNativeFactory = factory
+    return true
+  }
 
+  /// The window, built by the scene delegate: apps built with the iOS 27 SDK must use scenes.
+  func makeWindow(scene: UIWindowScene, launchOptions: [UIApplication.LaunchOptionsKey: Any]?) {
+    guard let factory = reactNativeFactory else { return }
     // The root view controller stacks the React Native view over Godot's.
     let reactView = factory.rootViewFactory.view(
       withModuleName: "DclRn",
       initialProperties: nil,
       launchOptions: launchOptions
     )
-    window = UIWindow(frame: UIScreen.main.bounds)
+    window = UIWindow(windowScene: scene)
     window?.rootViewController = DclGodotHost.rootViewController(withReactView: reactView)
     window?.makeKeyAndVisible()
-
-    return true
   }
 
   func application(
@@ -64,6 +67,46 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   ) -> Bool {
     RCTLinkingManager.application(
       application, continue: userActivity, restorationHandler: restorationHandler)
+  }
+}
+
+/// With scenes, links that launch or reopen the app arrive here instead of the app delegate.
+class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+  var window: UIWindow?
+
+  private var app: AppDelegate? { UIApplication.shared.delegate as? AppDelegate }
+
+  func scene(
+    _ scene: UIScene,
+    willConnectTo session: UISceneSession,
+    options connectionOptions: UIScene.ConnectionOptions
+  ) {
+    guard let scene = scene as? UIWindowScene, let app else { return }
+    var launchOptions: [UIApplication.LaunchOptionsKey: Any] = [:]
+    if let url = connectionOptions.urlContexts.first?.url {
+      launchOptions[.url] = url
+    }
+    if let activity = connectionOptions.userActivities.first {
+      launchOptions[.userActivityDictionary] = [
+        "UIApplicationLaunchOptionsUserActivityTypeKey": activity.activityType,
+        "UIApplicationLaunchOptionsUserActivityKey": activity,
+      ]
+    }
+    app.makeWindow(scene: scene, launchOptions: launchOptions.isEmpty ? nil : launchOptions)
+    window = app.window
+  }
+
+  func scene(_ scene: UIScene, openURLContexts contexts: Set<UIOpenURLContext>) {
+    for context in contexts {
+      var options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+      options[.sourceApplication] = context.options.sourceApplication
+      options[.annotation] = context.options.annotation
+      _ = app?.application(UIApplication.shared, open: context.url, options: options)
+    }
+  }
+
+  func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
+    _ = app?.application(UIApplication.shared, continue: userActivity) { _ in }
   }
 }
 

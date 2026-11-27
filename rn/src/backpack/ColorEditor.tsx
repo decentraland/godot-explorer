@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { AppText, HsvSliders, Icon, layout, u } from '@dcl/ui-native';
+import {
+  AppText,
+  color as theme,
+  HsvSliders,
+  Icon,
+  layout,
+  space,
+} from '@dcl/ui-native';
 import { t } from '../i18n';
 import { isCustomColor } from './selection';
 import { SwatchStrip } from './SwatchStrip';
@@ -58,7 +65,7 @@ export function ColorEditor({
   return (
     <ScrollView
       removeClippedSubviews={false}
-      contentContainerStyle={{ paddingBottom: u(24) + bottomInset }}
+      contentContainerStyle={{ paddingBottom: space['2xl'] + bottomInset }}
       showsVerticalScrollIndicator={false}
     >
       <Pressable
@@ -67,8 +74,8 @@ export function ColorEditor({
         onPress={onBack}
         style={styles.header}
       >
-        <Icon name="back" size={22} />
-        <AppText variant="title" style={styles.title}>
+        <Icon name="back" size={28} />
+        <AppText variant="H2" style={styles.title}>
           {t(COLOR_TITLES[target])}
         </AppText>
       </Pressable>
@@ -87,14 +94,17 @@ export function ColorEditor({
   );
 }
 
+/** Figma `Header` (back 56 px + H2 title, 8 px apart), then `ColorPanel` 88 px below its top:
+ * presets, and the sliders 56 px under them. The swatch strip pads 3dp for its rings. */
 const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: u(8),
-    paddingHorizontal: layout.gutter,
+    alignSelf: 'flex-start',
+    gap: space.xs,
+    marginHorizontal: layout.gutter,
   },
-  title: { marginLeft: u(12), fontSize: u(18) },
-  swatches: { marginTop: u(10) },
-  sliders: { paddingHorizontal: layout.gutter },
+  title: { color: theme.text.primary },
+  swatches: { marginTop: space.lg },
+  sliders: { marginTop: space['50'], paddingHorizontal: layout.gutter },
 });

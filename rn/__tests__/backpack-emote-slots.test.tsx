@@ -1,4 +1,5 @@
 import { ScrollView } from 'react-native';
+import { ItemCard } from '@dcl/ui-native';
 import { act, create } from 'react-test-renderer';
 import { EmoteSlots } from '../src/backpack/EmoteSlots';
 import { BASE_EMOTE_PREFIX, DEFAULT_EMOTES } from '../src/backpack/emotes';
@@ -20,7 +21,7 @@ const render = (slots: string[], vertical: boolean) => {
 };
 const empty = () => Array.from({ length: 10 }, () => '');
 const plusCount = (tree: ReturnType<typeof create>) =>
-  tree.root.findAll(n => n.props.name === 'plus').length;
+  tree.root.findAllByType(ItemCard).filter(card => card.props.empty).length;
 
 describe('EmoteSlots', () => {
   it('fills slots from base urns and bare ids', () => {

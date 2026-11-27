@@ -1,4 +1,5 @@
 import { core } from '../core';
+import type { CatalogItem } from '../core/native';
 import { Rarity } from '@dcl/ui-native';
 
 export const BASE_PREFIX = 'urn:decentraland:off-chain:base-avatars:';
@@ -20,16 +21,17 @@ export type Wearable = {
   collectible: boolean;
 };
 
+export const toWearable = (item: CatalogItem): Wearable => ({
+  id: item.urn,
+  name: item.name,
+  category: item.category,
+  thumbnail: item.thumbnail,
+  rarity: item.rarity as Rarity,
+  bodyShapes: item.bodyShapes,
+  collectible: item.collectible,
+});
+
 /** The base wearables the core fetched and now resolves avatar edits against. */
 export async function loadWearables(): Promise<Wearable[]> {
-  const items = await core().loadAvatarCatalog();
-  return items.map(item => ({
-    id: item.urn,
-    name: item.name,
-    category: item.category,
-    thumbnail: item.thumbnail,
-    rarity: item.rarity as Rarity,
-    bodyShapes: item.bodyShapes,
-    collectible: item.collectible,
-  }));
+  return (await core().loadAvatarCatalog()).map(toWearable);
 }

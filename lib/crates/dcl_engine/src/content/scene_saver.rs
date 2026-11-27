@@ -15,6 +15,7 @@ use godot::classes::{Node, PackedScene, Resource, ResourceSaver};
 use godot::prelude::*;
 
 use super::cache_file_name::cache_file_name;
+use super::godot_path::godot_path;
 
 /// Saves a Node3D as a PackedScene to the specified file path
 ///
@@ -35,7 +36,7 @@ pub fn save_node_as_scene(node: Gd<Node3D>, file_path: &str) -> Result<(), Strin
 
     let err = ResourceSaver::singleton()
         .save_ex(&packed.upcast::<Resource>())
-        .path(file_path)
+        .path(&godot_path(file_path))
         .flags(SaverFlags::COMPRESS)
         .done();
     if err != godot::global::Error::OK {

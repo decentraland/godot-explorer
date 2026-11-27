@@ -32,19 +32,20 @@ export function visibleWearables(
   });
 }
 
-/** Items for the grid under a tab; "All" lists everything the avatar wears first. */
+/** Items for the grid under a tab; "All" lists first what `wornFirst` (default: `avatar`) wears. */
 export function gridItems(
   tab: TabKey,
   slot: Slot | null,
   catalog: Wearable[],
   avatar: AvatarState | null,
   filter: ItemFilter,
+  wornFirst: AvatarState | null = avatar,
 ): Wearable[] {
   const visible = visibleWearables(catalog, avatar, filter);
   if (tab === 'all') {
     return [
-      ...visible.filter(item => isEquipped(avatar, item.id)),
-      ...visible.filter(item => !isEquipped(avatar, item.id)),
+      ...visible.filter(item => isEquipped(wornFirst, item.id)),
+      ...visible.filter(item => !isEquipped(wornFirst, item.id)),
     ];
   }
   if (!slot?.category) {

@@ -23,7 +23,12 @@ use dcl_core::app::{CameraMode as HudCameraMode, HudSnapshot, Parcel, Vec3};
 /// Seconds between the HUD snapshots reported while in a world.
 const STATE_INTERVAL: f32 = 0.25;
 /// Commands that act on the avatar preview, which exists with or without a world.
-const AVATAR_CONTROLS: [&str; 3] = ["apply_avatar", "play_preview_emote", "set_name"];
+const AVATAR_CONTROLS: [&str; 4] = [
+    "apply_avatar",
+    "commit_avatar",
+    "play_preview_emote",
+    "set_name",
+];
 
 #[derive(Clone)]
 struct EnterArgs {
@@ -207,6 +212,7 @@ impl Host {
                 let args = args.clone();
                 spawn_local(async move { me.backpack.apply_avatar(&args).await });
             }
+            "commit_avatar" => self.backpack.commit_avatar(&text("profile")),
             "play_preview_emote" => self.backpack.play_emote(&text("urn")),
             "set_name" => {
                 let name = text("name");

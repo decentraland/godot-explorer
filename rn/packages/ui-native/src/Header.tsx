@@ -1,9 +1,10 @@
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { AppText } from './AppText';
 import { Button } from './Button';
+import { CreditsBadge } from './CreditsBadge';
 import { Icon } from './Icon';
 import { SearchField } from './SearchField';
-import { colors, fonts, radii } from './tokens';
+import { colors, fonts } from './tokens';
 import { u } from './scale';
 import { t } from './i18n';
 
@@ -145,18 +146,7 @@ export function Header({
           </Pressable>
         )}
         {credits && (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('APP_CREDITS')}
-            disabled={!credits.onPress}
-            onPress={credits.onPress}
-            style={styles.credits}
-          >
-            <Icon name="credits" size={20} />
-            <AppText style={styles.creditsAmount}>
-              {String(credits.amount)}
-            </AppText>
-          </Pressable>
+          <CreditsBadge amount={credits.amount} onPress={credits.onPress} />
         )}
       </View>
     </View>
@@ -189,20 +179,6 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   actions: { flexDirection: 'row', alignItems: 'center', gap: u(16) },
-  credits: {
-    height: u(30),
-    paddingHorizontal: u(9),
-    gap: u(5),
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: radii.pill,
-    backgroundColor: colors.black40,
-  },
-  creditsAmount: {
-    fontFamily: fonts.medium,
-    fontSize: u(16),
-    color: colors.snow,
-  },
   landscape: {
     minHeight: u(37),
     flexDirection: 'row',

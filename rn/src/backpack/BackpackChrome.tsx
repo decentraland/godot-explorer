@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { colors, Icon, u } from '@dcl/ui-native';
+import { Icon, u } from '@dcl/ui-native';
 import { t } from '../i18n';
 import { BackpackHeader } from './BackpackHeader';
 import { FilterMenu } from './FilterMenu';
@@ -13,6 +13,8 @@ export type LayoutProps = {
   subRow?: SubRow;
   controller: BackpackController;
   copy: EmptyCopy;
+  /** Credits balance to show over the avatar, or null for none. */
+  credits?: number | null;
   /** Portrait only: the app's bottom navigation, or the entry flow's Continue button. */
   footer?: ReactNode;
   onBack?: () => void;
@@ -55,6 +57,7 @@ export function HeaderRow({
     <BackpackHeader
       mode={state.mode}
       menuOpen={state.filterMenuOpen}
+      filtered={state.filter !== 'all'}
       filterGap={filterGap}
       onMode={mode => dispatch({ type: 'mode', mode })}
       onFilter={() => dispatch({ type: 'toggleFilterMenu' })}
@@ -105,10 +108,5 @@ const styles = StyleSheet.create({
     zIndex: 4,
     backgroundColor: 'transparent',
   },
-  menu: {
-    position: 'absolute',
-    zIndex: 5,
-    backgroundColor: colors.purple550,
-    borderRadius: u(8),
-  },
+  menu: { position: 'absolute', zIndex: 5 },
 });

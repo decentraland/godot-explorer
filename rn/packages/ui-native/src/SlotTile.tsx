@@ -1,12 +1,17 @@
 import { ReactNode } from 'react';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
-import { GradientView } from './Gradient';
-import { Icon } from './Icon';
-import { colors, radii } from './tokens';
+import { ItemCard } from './ItemCard';
+import { color, space } from './tokens';
 import { u } from './scale';
 
-/** Category slot: small thumbnail of what is worn (or "+" when empty) with a label below. */
+/** `Cards-Wearables` is drawn at 96 dp; the slot rows scale it to 62. */
+const CARD = 96;
+/** The slot rows' selected outline: 3 px, centred on the card edge. */
+const SLOT_RING = u(1.5);
+
+/** Figma `Card/SlotEquipped`: a `Cards-Wearables` at 124 px (what is worn, or the empty "+") and
+ * its label 4 px below, which may run wider than the card. */
 export function SlotTile({
   label,
   thumbnail,
@@ -25,81 +30,38 @@ export function SlotTile({
 }) {
   const size = u(designSize);
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.slot,
-        { width: size + u(6) },
-        pressed && styles.pressed,
-      ]}
-    >
-      <View
-        style={[
-          styles.frame,
-          { width: size + u(6), height: size + u(6) },
-          selected && styles.frameSelected,
-        ]}
+    <View style={[styles.slot, { width: size }]}>
+      <ItemCard
+        label={label}
+        thumbnail={thumbnail}
+        art={art}
+        empty={!thumbnail && !art}
+        state={selected ? 'selected' : 'default'}
+        ringWidth={SLOT_RING}
+        scale={designSize / CARD}
+        onPress={onPress}
+        style={{ width: size }}
+      />
+      <AppText
+        variant="Card/Body"
+        numberOfLines={1}
+        style={[styles.label, selected && styles.labelSelected]}
       >
-        {thumbnail || art ? (
-          <GradientView
-            angle={225}
-            stops={[
-              { offset: 0, color: colors.cardLight },
-              { offset: 0.65, color: colors.snow },
-            ]}
-            style={styles.tile}
-          >
-            {thumbnail ? (
-              <Image
-                source={{ uri: thumbnail }}
-                style={styles.image}
-                resizeMode="cover"
-              />
-            ) : (
-              art
-            )}
-          </GradientView>
-        ) : (
-          <View style={[styles.tile, styles.empty]}>
-            <Icon
-              name="plus"
-              size={18}
-              color={colors.silver}
-              strokeWidth={1.6}
-            />
-          </View>
-        )}
-      </View>
-      <AppText variant="body" numberOfLines={1} style={styles.label}>
         {label}
       </AppText>
-    </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  slot: { alignItems: 'center' },
-  frame: {
-    padding: u(3),
-    borderRadius: radii.card + 2,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  frameSelected: { borderColor: colors.orange },
-  tile: { flex: 1, borderRadius: radii.card, overflow: 'hidden' },
-  image: { ...StyleSheet.absoluteFill, width: '100%', height: '100%' },
-  empty: {
-    backgroundColor: colors.purple550,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  slot: { alignItems: 'center', overflow: 'visible' },
+  /** Figma `Card/SlotEquipped` label: `Card/Body`, `text/secondary`, `text/primary` when selected. */
   label: {
-    marginTop: u(6),
+    marginTop: space['3xs'],
+    paddingVertical: space.xs,
+    color: color.text.secondary,
     textAlign: 'center',
-    fontSize: u(14),
     width: u(88),
   },
-  pressed: { opacity: 0.85 },
+  labelSelected: { color: color.text.primary },
 });

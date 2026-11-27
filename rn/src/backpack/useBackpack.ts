@@ -13,6 +13,7 @@ import { tapEmote } from './emoteLogic';
 import { wearableCommand } from './selection';
 import { cameraFocusFor, ColorTarget, coreColorTarget } from './taxonomy';
 import { CatalogState, useCatalog } from './useCatalog';
+import { saveOnLeave } from './saveAvatar';
 
 const TOAST_MS = 900;
 const BUSY_MS = 3000;
@@ -33,6 +34,9 @@ export function useBackpack(options: BackpackOptions = {}) {
   const avatar = api.useAvatar();
   const holdToast = options.initial?.equippedToast === true;
   const [busy, setBusy] = useState<string | null>(null);
+
+  // Leaving the Backpack (back, another tab, the world) saves what it left on the avatar.
+  useEffect(() => () => saveOnLeave(api), [api]);
 
   const focus =
     state.mode === 'emotes' ? CameraFocus.Overall : cameraFocusFor(state.tab);

@@ -9,6 +9,7 @@ pub mod external_content;
 pub mod file_string;
 pub mod font;
 pub mod gltf;
+pub mod godot_path;
 pub mod packed_array;
 pub mod profile;
 #[cfg(feature = "use_resource_tracking")]

@@ -500,3 +500,102 @@ fn updates_name_only_what_they_carry() {
     assert_eq!(base.profile().pronouns, "");
     assert_eq!(next.avatar(), base.avatar());
 }
+
+const HAT: &str = "urn:decentraland:matic:collections-v2:0xab:0";
+
+fn worn(wearables: &[&str], emotes: &[&str]) -> crate::app::AvatarState {
+    let mut slots: Vec<String> = emotes.iter().map(|e| e.to_string()).collect();
+    slots.resize(10, String::new());
+    crate::app::AvatarState {
+        body_shape: "urn:body".into(),
+        wearables: wearables.iter().map(|w| w.to_string()).collect(),
+        emotes: slots,
+        skin: "#ffddbc".into(),
+        hair: "#985f37".into(),
+        eyes: "#4c38fc".into(),
+    }
+}
+
+#[tokio::test]
+async fn deploy_avatar_publishes_collectibles_as_their_tokens() {
+    let transport = FakeTransport::replying(vec![
+        ok(catalyst_profile(4)),
+        ok(json!({ "creationTimestamp": 1 })),
+    ]);
+    let service = service(&transport, identity(false));
+    let tokens = [(HAT.to_lowercase(), format!("{HAT}:77"))]
+        .into_iter()
+        .collect();
+    let saved = service
+        .deploy_avatar(&worn(&["urn:w1", HAT], &["urn:e0", "wave"]), &tokens)
+        .await
+        .unwrap()
+        .expect("the avatar changed");
+    assert_eq!(saved.version(), 5);
+
+    let body = String::from_utf8(transport.sent()[1].body.clone()).unwrap();
+    let entity_id = field(&body, "entityId");
+    let entity: Value = serde_json::from_str(field(&body, entity_id)).unwrap();
+    let avatar = &entity["metadata"]["avatars"][0]["avatar"];
+    assert_eq!(avatar["wearables"], json!(["urn:w1", format!("{HAT}:77")]));
+    assert_eq!(
+        avatar["emotes"],
+        json!([{ "slot": 0, "urn": "urn:e0" }, { "slot": 1, "urn": "wave" }])
+    );
+    assert_eq!(avatar["skin"]["color"]["r"], json!(1.0));
+    assert_eq!(entity["metadata"]["avatars"][0]["name"], "Ana");
+}
+
+#[tokio::test]
+async fn deploy_avatar_skips_an_avatar_the_profile_already_wears() {
+    let transport = FakeTransport::replying(vec![
+        ok(catalyst_profile(4)),
+        ok(json!({ "creationTimestamp": 1 })),
+    ]);
+    let service = service(&transport, identity(false));
+    let avatar = worn(&["urn:w1"], &["urn:e0"]);
+    let tokens = Default::default();
+    assert!(service
+        .deploy_avatar(&avatar, &tokens)
+        .await
+        .unwrap()
+        .is_some());
+    assert!(service
+        .deploy_avatar(&avatar, &tokens)
+        .await
+        .unwrap()
+        .is_none());
+    assert_eq!(transport.sent().len(), 2, "one fetch, one deploy");
+}
+
+#[test]
+fn with_avatar_keeps_the_token_the_profile_already_wore() {
+    let mut content = catalyst_profile(1)["avatars"][0].clone();
+    content["avatar"]["wearables"] = json!([format!("{HAT}:77")]);
+    let Value::Object(content) = content else {
+        unreachable!()
+    };
+    let document = ProfileDocument::from_content(content);
+    let edited = document
+        .with_avatar(&worn(&[HAT, "urn:w2"], &[]), &Default::default())
+        .unwrap();
+    assert_eq!(
+        edited.content()["avatar"]["wearables"],
+        json!([format!("{HAT}:77"), "urn:w2"])
+    );
+    assert!(edited
+        .with_avatar(&worn(&[HAT, "urn:w2"], &[]), &Default::default())
+        .is_none());
+}
+
+#[tokio::test]
+async fn a_guest_avatar_is_saved_on_the_device_only() {
+    let transport = FakeTransport::replying(vec![]);
+    let service = service(&transport, identity(true));
+    let saved = service
+        .deploy_avatar(&worn(&["urn:w1"], &[]), &Default::default())
+        .await
+        .unwrap();
+    assert!(saved.is_some());
+    assert!(transport.sent().is_empty());
+}

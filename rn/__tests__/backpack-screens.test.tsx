@@ -1,7 +1,8 @@
-import { ReactElement } from 'react';
+import { ReactElement, useState } from 'react';
 import { Dimensions } from 'react-native';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { CreditsBadge, ItemCard, LinkButton } from '@dcl/ui-native';
 import { setCoreForTests } from '../src/core';
 import type { CoreApi } from '../src/core';
 import { createMockCore } from '../src/core/mock';
@@ -15,7 +16,8 @@ import {
   MockApiOptions,
 } from '../src/backpack/mockApi';
 import { MOCK_CATALOG, MOCK_WEARABLES } from '../src/backpack/mockCatalog';
-import { EmptyCopy } from '../src/backpack/platformPolicy';
+import { EmptyCopy, showsCredits } from '../src/backpack/platformPolicy';
+import { registerModalApi } from '../src/modals/bridge';
 
 const mockCore = {
   ...createMockCore(),
@@ -40,6 +42,7 @@ async function mount(
     copy?: EmptyCopy;
     footer?: ReactElement | null;
     subRow?: 'tiles' | 'pills';
+    credits?: boolean;
   } = {},
 ): Promise<{ tree: ReactTestRenderer; api: MockApi }> {
   const api = createMockApi(options.api);
@@ -52,6 +55,7 @@ async function mount(
           initial={options.initial}
           emptyCopy={options.copy ?? 'marketplace_link'}
           subRow={options.subRow}
+          credits={options.credits ?? false}
           footer={options.footer === undefined ? null : options.footer}
         />
       </SafeAreaProvider>,
@@ -63,6 +67,11 @@ async function mount(
 }
 
 type Json = { children?: (Json | string)[] | null } | string;
+type Node = { parent: Node | null; props: Record<string, unknown> };
+/** Inside a kept, hidden grid: on screen it is transparent and untouchable. */
+const offScreen = (node: Node | null): boolean =>
+  node !== null &&
+  (node.props.accessibilityElementsHidden === true || offScreen(node.parent));
 const collect = (node: Json | Json[] | null): string =>
   node === null
     ? ''
@@ -70,6 +79,9 @@ const collect = (node: Json | Json[] | null): string =>
     ? node.map(collect).join(' ')
     : typeof node === 'string'
     ? node
+    : (node as { props?: { accessibilityElementsHidden?: boolean } }).props
+        ?.accessibilityElementsHidden
+    ? ''
     : (node.children ?? []).map(collect).join(' ');
 const text = (tree: ReactTestRenderer) =>
   collect(tree.toJSON() as Json | Json[]);
@@ -77,7 +89,8 @@ const find = (tree: ReactTestRenderer, label: string) =>
   tree.root.findAll(
     node =>
       node.props.accessibilityLabel === label &&
-      typeof node.props.onPress === 'function',
+      typeof node.props.onPress === 'function' &&
+      !offScreen(node as unknown as Node),
   )[0];
 const press = (tree: ReactTestRenderer, label: string) => {
   const node = find(tree, label);
@@ -106,6 +119,23 @@ const pressText = (tree: ReactTestRenderer, label: string) => {
   act(() => node.props.onPress());
 };
 
+/** Waits for the grids the Backpack mounts hidden after its first frame (at low priority). */
+const settleKept = async (tree: ReactTestRenderer) => {
+  const kept = () =>
+    tree.root.findAll(
+      node =>
+        typeof node.type === 'string' &&
+        node.props.accessibilityElementsHidden === true,
+    ).length;
+  let last = -1;
+  for (let i = 0; i < 40 && (kept() === 0 || kept() !== last); i++) {
+    last = kept();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 25));
+    });
+  }
+};
+
 const original = Dimensions.get('window');
 
 afterEach(() => {
@@ -120,6 +150,98 @@ describe('Backpack wearables', () => {
     expect(out).toContain('Wearables');
     expect(out).toContain('Unequip');
     expect(out).toContain('EXTRAS');
+  });
+
+  it('keeps every tab grid mounted, so changing tab mounts no new cards', async () => {
+    const { tree } = await mount();
+    // The other tabs mount hidden after the first frame.
+    await settleKept(tree);
+    const cards = () => tree.root.findAllByType(ItemCard);
+    const before = new Set(cards().map(card => card.instance ?? card));
+    const hidden = tree.root.findAll(
+      node => typeof node.type === 'string' && node.props.style?.opacity === 0,
+    );
+    expect(hidden.length).toBeGreaterThanOrEqual(4);
+    press(tree, 'CLOTHING');
+    await act(async () => {});
+    press(tree, 'ALL');
+    await act(async () => {});
+    expect(cards().length).toBe(before.size);
+  });
+
+  it('keeps every slot grid of the open tab mounted, so picking a slot mounts no new cards', async () => {
+    const { tree } = await mount({ initial: { tab: 'face' } });
+    await settleKept(tree);
+    const count = () => tree.root.findAllByType(ItemCard).length;
+    const before = count();
+    press(tree, 'Eye');
+    await act(async () => {});
+    press(tree, 'Hair');
+    await act(async () => {});
+    expect(count()).toBe(before);
+  });
+
+  it('draws the grid once the avatar is known, with the worn items first', async () => {
+    // Opening from Discover: the catalog is there but no preview has reported the avatar yet.
+    const api = createMockApi();
+    const real = api.useAvatar;
+    let release: (on: boolean) => void = () => {};
+    function useHeldAvatar() {
+      const avatar = real();
+      const [known, setKnown] = useState(false);
+      release = setKnown;
+      return known ? avatar : null;
+    }
+    api.useAvatar = useHeldAvatar;
+    let tree!: ReactTestRenderer;
+    act(() => {
+      tree = create(
+        <SafeAreaProvider initialMetrics={metrics}>
+          <BackpackScreen
+            api={api}
+            emptyCopy="marketplace_link"
+            credits={false}
+            footer={null}
+          />
+        </SafeAreaProvider>,
+      );
+    });
+    mounted.push(tree);
+    await act(async () => {});
+    const cards = () =>
+      tree.root
+        .findAllByType(ItemCard)
+        .filter(card => !offScreen(card as unknown as Node));
+    expect(cards()).toHaveLength(0);
+    await act(async () => release(true));
+    const first = cards()[0];
+    expect(first.props.state).toBe('unequip');
+  });
+
+  it('keeps the All order while equipping and unequipping', async () => {
+    const { tree, api } = await mount();
+    const names = new Set(MOCK_WEARABLES.map(w => w.name));
+    const order = () =>
+      tree.root
+        .findAll(
+          n =>
+            names.has(n.props.accessibilityLabel) &&
+            typeof n.props.onPress === 'function' &&
+            !offScreen(n as unknown as Node),
+        )
+        .map(n => n.props.accessibilityLabel as string)
+        .filter((name, i, all) => all.indexOf(name) === i);
+    const before = order();
+    const item = MOCK_WEARABLES.find(
+      w => w.name === before[before.length - 1],
+    )!;
+    press(tree, item.name);
+    await act(async () => {});
+    expect(api.calls).toContainEqual(new Control.Equip({ urn: item.id }));
+    expect(order()).toEqual(before);
+    press(tree, item.name);
+    await act(async () => {});
+    expect(order()).toEqual(before);
   });
 
   it('equips on tap and keeps the body shape untouched when it is already worn', async () => {
@@ -171,13 +293,17 @@ describe('Backpack wearables', () => {
     ).toBeGreaterThan(0);
   });
 
-  it('drops the swatches when a pill list is empty', async () => {
-    const { tree } = await mount({
-      subRow: 'pills',
-      initial: { tab: 'body', slotByTab: { body: 'skin' } },
-    });
-    expect(find(tree, 'Custom color')).toBeUndefined();
-  });
+  it.each(['pills', 'tiles'] as const)(
+    'keeps the skin swatches when no skin item is owned (%s)',
+    async subRow => {
+      const { tree } = await mount({
+        subRow,
+        initial: { tab: 'body', slotByTab: { body: 'skin' } },
+      });
+      expect(text(tree)).toContain('Nothing here yet');
+      expect(find(tree, 'Custom color')).toBeDefined();
+    },
+  );
 
   it('sends the head zoom when the face tab opens', async () => {
     const { tree, api } = await mount();
@@ -201,9 +327,7 @@ describe('Backpack wearables', () => {
     expect(out).toContain(expected);
     expect(out.includes('Shop')).toBe(copy === 'shop');
     if (copy === 'marketplace_link') {
-      act(() =>
-        tree.root.findByProps({ accessibilityRole: 'link' }).props.onPress(),
-      );
+      act(() => tree.root.findByType(LinkButton).props.onPress());
       expect(api.marketplaceOpens).toBe(1);
     }
   });
@@ -293,5 +417,60 @@ describe('Backpack layouts', () => {
       const { tree } = await mount({ initial: { sheet } });
       expect(tree.toJSON()).not.toBeNull();
     }
+  });
+
+  it('shows the credits balance over the avatar on iOS, wearables only', async () => {
+    expect(showsCredits('ios')).toBe(true);
+    expect(showsCredits('android')).toBe(false);
+    const { tree } = await mount({ api: { credits: 120 }, credits: true });
+    expect(tree.root.findByType(CreditsBadge).props.amount).toBe(120);
+    const off = await mount({ api: { credits: 120 } });
+    expect(off.tree.root.findAllByType(CreditsBadge)).toHaveLength(0);
+    const full = await mount({ credits: true, initial: { sheet: 'full' } });
+    expect(full.tree.root.findAllByType(CreditsBadge)).toHaveLength(0);
+    const emotes = await mount({ credits: true, initial: { mode: 'emotes' } });
+    expect(emotes.tree.root.findAllByType(CreditsBadge)).toHaveLength(0);
+  });
+});
+
+describe('Backpack data', () => {
+  it('adds what the account owns after the catalog', async () => {
+    const sweater = MOCK_WEARABLES.find(w => w.name === 'xmas_sweater')!;
+    const { tree } = await mount({
+      initial: { tab: 'clothing', filter: 'collectibles' },
+      api: {
+        catalog: {
+          ...MOCK_CATALOG,
+          wearables: MOCK_WEARABLES.filter(w => w !== sweater),
+        },
+        owned: { wearables: [sweater], emotes: [] },
+      },
+    });
+    expect(find(tree, 'xmas_sweater')).toBeDefined();
+  });
+
+  it('saves the avatar once when the Backpack goes away', async () => {
+    const { tree, api } = await mount();
+    expect(api.saves).toBe(0);
+    act(() => tree.unmount());
+    expect(api.saves).toBe(1);
+  });
+
+  it('asks to try again when the save fails', async () => {
+    const show = jest.fn();
+    registerModalApi({
+      show,
+      dismiss: jest.fn(),
+      askPassword: jest.fn(),
+      isOpen: () => false,
+    });
+    const { tree, api } = await mount({ api: { saveFails: true } });
+    await act(async () => tree.unmount());
+    expect(show).toHaveBeenCalledWith(
+      expect.objectContaining({ key: 'backpack-save-failed' }),
+    );
+    await act(async () => show.mock.calls[0][0].buttons[1].onPress());
+    expect(api.saves).toBe(2);
+    registerModalApi(null);
   });
 });

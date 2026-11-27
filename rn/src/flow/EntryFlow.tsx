@@ -22,6 +22,7 @@ import { ftuePlaces } from '../discover/ftue';
 import { UpdateDecision } from '../core/native';
 import { UpdateAvailable } from './UpdateAvailable';
 import { AvatarCustomize } from './AvatarCustomize';
+import { preloadCatalog } from '../backpack/useCatalog';
 import { takePreviewLaunch, whenInitialLinkRouted } from './launchLink';
 import { askNotificationPermission } from '../notifications/push';
 import { AuthOtpEntercode } from './AuthOtpEntercode';
@@ -66,6 +67,7 @@ export function EntryFlow({
   useEffect(() => {
     if (step === 'avatar_create') {
       ftuePlaces(api);
+      preloadCatalog();
     }
   }, [step, api]);
 
