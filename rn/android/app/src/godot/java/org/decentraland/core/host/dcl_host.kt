@@ -638,6 +638,84 @@ internal interface UniffiCallbackInterfaceAttestationServiceMethod2 : com.sun.jn
 internal interface UniffiCallbackInterfaceAttestationServiceMethod3 : com.sun.jna.Callback {
     fun callback(`uniffiHandle`: Long,`keyId`: RustBuffer.ByValue,`clientDataHash`: RustBuffer.ByValue,`uniffiFutureCallback`: UniffiForeignFutureCompleteRustBuffer,`uniffiCallbackData`: Long,`uniffiOutDroppedCallback`: UniffiForeignFutureDroppedCallbackStruct,)
 }
+internal interface UniffiCallbackInterfaceDeviceServiceMethod0 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceDeviceServiceMethod1 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceDeviceServiceMethod2 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`ms`: Int,`uniffiOutReturn`: ByteByReference,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceMarketingServiceMethod0 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceMarketingServiceMethod1 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`userId`: RustBuffer.ByValue,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceMarketingServiceMethod2 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`name`: RustBuffer.ByValue,`value`: RustBuffer.ByValue,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceMarketingServiceMethod3 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`name`: RustBuffer.ByValue,`paramsJson`: RustBuffer.ByValue,`uniffiOutReturn`: ByteByReference,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceMarketingServiceMethod4 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceMarketingServiceMethod5 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceVideoBackendMethod0 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: IntByReference,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceVideoBackendMethod1 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`player`: Int,`width`: Int,`height`: Int,`uniffiOutReturn`: ByteByReference,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceVideoBackendMethod2 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`player`: Int,`source`: RustBuffer.ByValue,`local`: Byte,`uniffiOutReturn`: ByteByReference,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceVideoBackendMethod3 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`player`: Int,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceVideoBackendMethod4 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`player`: Int,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceVideoBackendMethod5 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`player`: Int,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceVideoBackendMethod6 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`player`: Int,`seconds`: Double,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceVideoBackendMethod7 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`player`: Int,`uniffiOutReturn`: DoubleByReference,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceVideoBackendMethod8 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`player`: Int,`uniffiOutReturn`: DoubleByReference,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceVideoBackendMethod9 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`player`: Int,`uniffiOutReturn`: ByteByReference,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceVideoBackendMethod10 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`player`: Int,`volume`: Float,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceVideoBackendMethod11 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`player`: Int,`looping`: Byte,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceVideoBackendMethod12 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`player`: Int,`rate`: Float,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceVideoBackendMethod13 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`player`: Int,`uniffiOutReturn`: ByteByReference,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceVideoBackendMethod14 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`player`: Int,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceVideoBackendMethod15 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`player`: Int,`uniffiOutReturn`: LongByReference,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceVideoBackendMethod16 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`player`: Int,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
+}
 @Structure.FieldOrder("uniffiFree", "uniffiClone", "engineRequired", "avatarPreviewMode")
 internal open class UniffiVTableCallbackInterfaceHostListener(
     @JvmField internal var `uniffiFree`: UniffiCallbackInterfaceFree? = null,
@@ -688,6 +766,132 @@ internal open class UniffiVTableCallbackInterfaceAttestationService(
     }
 
 }
+@Structure.FieldOrder("uniffiFree", "uniffiClone", "info", "readings", "blockUiThread")
+internal open class UniffiVTableCallbackInterfaceDeviceService(
+    @JvmField internal var `uniffiFree`: UniffiCallbackInterfaceFree? = null,
+    @JvmField internal var `uniffiClone`: UniffiCallbackInterfaceClone? = null,
+    @JvmField internal var `info`: UniffiCallbackInterfaceDeviceServiceMethod0? = null,
+    @JvmField internal var `readings`: UniffiCallbackInterfaceDeviceServiceMethod1? = null,
+    @JvmField internal var `blockUiThread`: UniffiCallbackInterfaceDeviceServiceMethod2? = null,
+) : Structure() {
+    class UniffiByValue(
+        `uniffiFree`: UniffiCallbackInterfaceFree? = null,
+        `uniffiClone`: UniffiCallbackInterfaceClone? = null,
+        `info`: UniffiCallbackInterfaceDeviceServiceMethod0? = null,
+        `readings`: UniffiCallbackInterfaceDeviceServiceMethod1? = null,
+        `blockUiThread`: UniffiCallbackInterfaceDeviceServiceMethod2? = null,
+    ): UniffiVTableCallbackInterfaceDeviceService(`uniffiFree`,`uniffiClone`,`info`,`readings`,`blockUiThread`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiVTableCallbackInterfaceDeviceService) {
+        `uniffiFree` = other.`uniffiFree`
+        `uniffiClone` = other.`uniffiClone`
+        `info` = other.`info`
+        `readings` = other.`readings`
+        `blockUiThread` = other.`blockUiThread`
+    }
+
+}
+@Structure.FieldOrder("uniffiFree", "uniffiClone", "appInstanceId", "setUserId", "setUserProperty", "logEvent", "installReferrer", "deferredDeepLink")
+internal open class UniffiVTableCallbackInterfaceMarketingService(
+    @JvmField internal var `uniffiFree`: UniffiCallbackInterfaceFree? = null,
+    @JvmField internal var `uniffiClone`: UniffiCallbackInterfaceClone? = null,
+    @JvmField internal var `appInstanceId`: UniffiCallbackInterfaceMarketingServiceMethod0? = null,
+    @JvmField internal var `setUserId`: UniffiCallbackInterfaceMarketingServiceMethod1? = null,
+    @JvmField internal var `setUserProperty`: UniffiCallbackInterfaceMarketingServiceMethod2? = null,
+    @JvmField internal var `logEvent`: UniffiCallbackInterfaceMarketingServiceMethod3? = null,
+    @JvmField internal var `installReferrer`: UniffiCallbackInterfaceMarketingServiceMethod4? = null,
+    @JvmField internal var `deferredDeepLink`: UniffiCallbackInterfaceMarketingServiceMethod5? = null,
+) : Structure() {
+    class UniffiByValue(
+        `uniffiFree`: UniffiCallbackInterfaceFree? = null,
+        `uniffiClone`: UniffiCallbackInterfaceClone? = null,
+        `appInstanceId`: UniffiCallbackInterfaceMarketingServiceMethod0? = null,
+        `setUserId`: UniffiCallbackInterfaceMarketingServiceMethod1? = null,
+        `setUserProperty`: UniffiCallbackInterfaceMarketingServiceMethod2? = null,
+        `logEvent`: UniffiCallbackInterfaceMarketingServiceMethod3? = null,
+        `installReferrer`: UniffiCallbackInterfaceMarketingServiceMethod4? = null,
+        `deferredDeepLink`: UniffiCallbackInterfaceMarketingServiceMethod5? = null,
+    ): UniffiVTableCallbackInterfaceMarketingService(`uniffiFree`,`uniffiClone`,`appInstanceId`,`setUserId`,`setUserProperty`,`logEvent`,`installReferrer`,`deferredDeepLink`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiVTableCallbackInterfaceMarketingService) {
+        `uniffiFree` = other.`uniffiFree`
+        `uniffiClone` = other.`uniffiClone`
+        `appInstanceId` = other.`appInstanceId`
+        `setUserId` = other.`setUserId`
+        `setUserProperty` = other.`setUserProperty`
+        `logEvent` = other.`logEvent`
+        `installReferrer` = other.`installReferrer`
+        `deferredDeepLink` = other.`deferredDeepLink`
+    }
+
+}
+@Structure.FieldOrder("uniffiFree", "uniffiClone", "create", "initSurface", "setSource", "play", "pause", "stop", "seek", "position", "duration", "isPlaying", "setVolume", "setLooping", "setRate", "takeSizeChanged", "videoSize", "pollFrame", "release")
+internal open class UniffiVTableCallbackInterfaceVideoBackend(
+    @JvmField internal var `uniffiFree`: UniffiCallbackInterfaceFree? = null,
+    @JvmField internal var `uniffiClone`: UniffiCallbackInterfaceClone? = null,
+    @JvmField internal var `create`: UniffiCallbackInterfaceVideoBackendMethod0? = null,
+    @JvmField internal var `initSurface`: UniffiCallbackInterfaceVideoBackendMethod1? = null,
+    @JvmField internal var `setSource`: UniffiCallbackInterfaceVideoBackendMethod2? = null,
+    @JvmField internal var `play`: UniffiCallbackInterfaceVideoBackendMethod3? = null,
+    @JvmField internal var `pause`: UniffiCallbackInterfaceVideoBackendMethod4? = null,
+    @JvmField internal var `stop`: UniffiCallbackInterfaceVideoBackendMethod5? = null,
+    @JvmField internal var `seek`: UniffiCallbackInterfaceVideoBackendMethod6? = null,
+    @JvmField internal var `position`: UniffiCallbackInterfaceVideoBackendMethod7? = null,
+    @JvmField internal var `duration`: UniffiCallbackInterfaceVideoBackendMethod8? = null,
+    @JvmField internal var `isPlaying`: UniffiCallbackInterfaceVideoBackendMethod9? = null,
+    @JvmField internal var `setVolume`: UniffiCallbackInterfaceVideoBackendMethod10? = null,
+    @JvmField internal var `setLooping`: UniffiCallbackInterfaceVideoBackendMethod11? = null,
+    @JvmField internal var `setRate`: UniffiCallbackInterfaceVideoBackendMethod12? = null,
+    @JvmField internal var `takeSizeChanged`: UniffiCallbackInterfaceVideoBackendMethod13? = null,
+    @JvmField internal var `videoSize`: UniffiCallbackInterfaceVideoBackendMethod14? = null,
+    @JvmField internal var `pollFrame`: UniffiCallbackInterfaceVideoBackendMethod15? = null,
+    @JvmField internal var `release`: UniffiCallbackInterfaceVideoBackendMethod16? = null,
+) : Structure() {
+    class UniffiByValue(
+        `uniffiFree`: UniffiCallbackInterfaceFree? = null,
+        `uniffiClone`: UniffiCallbackInterfaceClone? = null,
+        `create`: UniffiCallbackInterfaceVideoBackendMethod0? = null,
+        `initSurface`: UniffiCallbackInterfaceVideoBackendMethod1? = null,
+        `setSource`: UniffiCallbackInterfaceVideoBackendMethod2? = null,
+        `play`: UniffiCallbackInterfaceVideoBackendMethod3? = null,
+        `pause`: UniffiCallbackInterfaceVideoBackendMethod4? = null,
+        `stop`: UniffiCallbackInterfaceVideoBackendMethod5? = null,
+        `seek`: UniffiCallbackInterfaceVideoBackendMethod6? = null,
+        `position`: UniffiCallbackInterfaceVideoBackendMethod7? = null,
+        `duration`: UniffiCallbackInterfaceVideoBackendMethod8? = null,
+        `isPlaying`: UniffiCallbackInterfaceVideoBackendMethod9? = null,
+        `setVolume`: UniffiCallbackInterfaceVideoBackendMethod10? = null,
+        `setLooping`: UniffiCallbackInterfaceVideoBackendMethod11? = null,
+        `setRate`: UniffiCallbackInterfaceVideoBackendMethod12? = null,
+        `takeSizeChanged`: UniffiCallbackInterfaceVideoBackendMethod13? = null,
+        `videoSize`: UniffiCallbackInterfaceVideoBackendMethod14? = null,
+        `pollFrame`: UniffiCallbackInterfaceVideoBackendMethod15? = null,
+        `release`: UniffiCallbackInterfaceVideoBackendMethod16? = null,
+    ): UniffiVTableCallbackInterfaceVideoBackend(`uniffiFree`,`uniffiClone`,`create`,`initSurface`,`setSource`,`play`,`pause`,`stop`,`seek`,`position`,`duration`,`isPlaying`,`setVolume`,`setLooping`,`setRate`,`takeSizeChanged`,`videoSize`,`pollFrame`,`release`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiVTableCallbackInterfaceVideoBackend) {
+        `uniffiFree` = other.`uniffiFree`
+        `uniffiClone` = other.`uniffiClone`
+        `create` = other.`create`
+        `initSurface` = other.`initSurface`
+        `setSource` = other.`setSource`
+        `play` = other.`play`
+        `pause` = other.`pause`
+        `stop` = other.`stop`
+        `seek` = other.`seek`
+        `position` = other.`position`
+        `duration` = other.`duration`
+        `isPlaying` = other.`isPlaying`
+        `setVolume` = other.`setVolume`
+        `setLooping` = other.`setLooping`
+        `setRate` = other.`setRate`
+        `takeSizeChanged` = other.`takeSizeChanged`
+        `videoSize` = other.`videoSize`
+        `pollFrame` = other.`pollFrame`
+        `release` = other.`release`
+    }
+
+}
 
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
@@ -723,6 +927,12 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_dcl_host_checksum_func_install_attestation(
     ): Int
+    external fun uniffi_dcl_host_checksum_func_install_device_service(
+    ): Int
+    external fun uniffi_dcl_host_checksum_func_install_marketing_service(
+    ): Int
+    external fun uniffi_dcl_host_checksum_func_install_video_backend(
+    ): Int
     external fun uniffi_dcl_host_checksum_method_hostlistener_engine_required(
     ): Int
     external fun uniffi_dcl_host_checksum_method_hostlistener_avatar_preview_mode(
@@ -734,6 +944,58 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_dcl_host_checksum_method_attestationservice_ios_generate_key(
     ): Int
     external fun uniffi_dcl_host_checksum_method_attestationservice_ios_attest_key(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_deviceservice_info(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_deviceservice_readings(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_deviceservice_block_ui_thread(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_marketingservice_app_instance_id(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_marketingservice_set_user_id(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_marketingservice_set_user_property(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_marketingservice_log_event(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_marketingservice_install_referrer(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_marketingservice_deferred_deep_link(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_videobackend_create(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_videobackend_init_surface(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_videobackend_set_source(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_videobackend_play(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_videobackend_pause(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_videobackend_stop(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_videobackend_seek(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_videobackend_position(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_videobackend_duration(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_videobackend_is_playing(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_videobackend_set_volume(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_videobackend_set_looping(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_videobackend_set_rate(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_videobackend_take_size_changed(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_videobackend_video_size(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_videobackend_poll_frame(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_videobackend_release(
     ): Int
     external fun ffi_dcl_host_uniffi_contract_version(
     ): Int
@@ -752,151 +1014,230 @@ internal object UniffiLib {
     init {
         Native.register(UniffiLib::class.java, findLibraryName(componentName = "dcl_host"))
         uniffiCallbackInterfaceAttestationService.register(this)
+        uniffiCallbackInterfaceDeviceService.register(this)
         uniffiCallbackInterfaceHostListener.register(this)
+        uniffiCallbackInterfaceMarketingService.register(this)
+        uniffiCallbackInterfaceVideoBackend.register(this)
         
     }
     external fun uniffi_dcl_host_fn_clone_hostlistener(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Long
-    external fun uniffi_dcl_host_fn_free_hostlistener(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    external fun uniffi_dcl_host_fn_init_callback_vtable_hostlistener(`vtable`: UniffiVTableCallbackInterfaceHostListener,
-    ): Unit
-    external fun uniffi_dcl_host_fn_method_hostlistener_engine_required(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    external fun uniffi_dcl_host_fn_method_hostlistener_avatar_preview_mode(`ptr`: Long,`on`: Byte,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    external fun uniffi_dcl_host_fn_clone_attestationservice(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Long
-    external fun uniffi_dcl_host_fn_free_attestationservice(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    external fun uniffi_dcl_host_fn_init_callback_vtable_attestationservice(`vtable`: UniffiVTableCallbackInterfaceAttestationService,
-    ): Unit
-    external fun uniffi_dcl_host_fn_method_attestationservice_is_supported(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    external fun uniffi_dcl_host_fn_method_attestationservice_play_integrity_token(`ptr`: Long,`requestHashB64url`: RustBuffer.ByValue,
-    ): Long
-    external fun uniffi_dcl_host_fn_method_attestationservice_ios_generate_key(`ptr`: Long,
-    ): Long
-    external fun uniffi_dcl_host_fn_method_attestationservice_ios_attest_key(`ptr`: Long,`keyId`: RustBuffer.ByValue,`clientDataHash`: RustBuffer.ByValue,
-    ): Long
-    external fun uniffi_dcl_host_fn_func_add_host_listener(`listener`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Long
-    external fun uniffi_dcl_host_fn_func_debug_fire_host_events(`count`: Int,`perSecond`: Int,
-    ): Long
-    external fun uniffi_dcl_host_fn_func_install(`dataDir`: RustBuffer.ByValue,`platform`: RustBuffer.ByValue,`deviceAnchor`: RustBuffer.ByValue,`appVersion`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    external fun uniffi_dcl_host_fn_func_remove_host_listener(`id`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    external fun uniffi_dcl_host_fn_func_attestation_status(uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    external fun uniffi_dcl_host_fn_func_install_attestation(`service`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    external fun ffi_dcl_host_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    external fun ffi_dcl_host_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    external fun ffi_dcl_host_rustbuffer_free(`buf`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    external fun ffi_dcl_host_rustbuffer_reserve(`buf`: RustBuffer.ByValue,`additional`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    external fun ffi_dcl_host_rust_future_poll_u8(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_cancel_u8(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_free_u8(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_complete_u8(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Int
-    external fun ffi_dcl_host_rust_future_poll_i8(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_cancel_i8(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_free_i8(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_complete_i8(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    external fun ffi_dcl_host_rust_future_poll_u16(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_cancel_u16(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_free_u16(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_complete_u16(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Int
-    external fun ffi_dcl_host_rust_future_poll_i16(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_cancel_i16(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_free_i16(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_complete_i16(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Short
-    external fun ffi_dcl_host_rust_future_poll_u32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_cancel_u32(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_free_u32(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_complete_u32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Int
-    external fun ffi_dcl_host_rust_future_poll_i32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_cancel_i32(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_free_i32(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_complete_i32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Int
-    external fun ffi_dcl_host_rust_future_poll_u64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_cancel_u64(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_free_u64(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_complete_u64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Long
-    external fun ffi_dcl_host_rust_future_poll_i64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_cancel_i64(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_free_i64(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_complete_i64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Long
-    external fun ffi_dcl_host_rust_future_poll_f32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_cancel_f32(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_free_f32(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_complete_f32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Float
-    external fun ffi_dcl_host_rust_future_poll_f64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_cancel_f64(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_free_f64(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_complete_f64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Double
-    external fun ffi_dcl_host_rust_future_poll_rust_buffer(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_cancel_rust_buffer(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_free_rust_buffer(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_complete_rust_buffer(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    external fun ffi_dcl_host_rust_future_poll_void(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_cancel_void(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_free_void(`handle`: Long,
-    ): Unit
-    external fun ffi_dcl_host_rust_future_complete_void(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
+): Long
+external fun uniffi_dcl_host_fn_free_hostlistener(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_dcl_host_fn_init_callback_vtable_hostlistener(`vtable`: UniffiVTableCallbackInterfaceHostListener,
+): Unit
+external fun uniffi_dcl_host_fn_method_hostlistener_engine_required(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_dcl_host_fn_method_hostlistener_avatar_preview_mode(`ptr`: Long,`on`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_dcl_host_fn_clone_attestationservice(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+external fun uniffi_dcl_host_fn_free_attestationservice(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_dcl_host_fn_init_callback_vtable_attestationservice(`vtable`: UniffiVTableCallbackInterfaceAttestationService,
+): Unit
+external fun uniffi_dcl_host_fn_method_attestationservice_is_supported(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+external fun uniffi_dcl_host_fn_method_attestationservice_play_integrity_token(`ptr`: Long,`requestHashB64url`: RustBuffer.ByValue,
+): Long
+external fun uniffi_dcl_host_fn_method_attestationservice_ios_generate_key(`ptr`: Long,
+): Long
+external fun uniffi_dcl_host_fn_method_attestationservice_ios_attest_key(`ptr`: Long,`keyId`: RustBuffer.ByValue,`clientDataHash`: RustBuffer.ByValue,
+): Long
+external fun uniffi_dcl_host_fn_clone_deviceservice(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+external fun uniffi_dcl_host_fn_free_deviceservice(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_dcl_host_fn_init_callback_vtable_deviceservice(`vtable`: UniffiVTableCallbackInterfaceDeviceService,
+): Unit
+external fun uniffi_dcl_host_fn_method_deviceservice_info(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+external fun uniffi_dcl_host_fn_method_deviceservice_readings(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+external fun uniffi_dcl_host_fn_method_deviceservice_block_ui_thread(`ptr`: Long,`ms`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+external fun uniffi_dcl_host_fn_clone_marketingservice(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+external fun uniffi_dcl_host_fn_free_marketingservice(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_dcl_host_fn_init_callback_vtable_marketingservice(`vtable`: UniffiVTableCallbackInterfaceMarketingService,
+): Unit
+external fun uniffi_dcl_host_fn_method_marketingservice_app_instance_id(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+external fun uniffi_dcl_host_fn_method_marketingservice_set_user_id(`ptr`: Long,`userId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_dcl_host_fn_method_marketingservice_set_user_property(`ptr`: Long,`name`: RustBuffer.ByValue,`value`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_dcl_host_fn_method_marketingservice_log_event(`ptr`: Long,`name`: RustBuffer.ByValue,`paramsJson`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+external fun uniffi_dcl_host_fn_method_marketingservice_install_referrer(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+external fun uniffi_dcl_host_fn_method_marketingservice_deferred_deep_link(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+external fun uniffi_dcl_host_fn_clone_videobackend(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+external fun uniffi_dcl_host_fn_free_videobackend(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_dcl_host_fn_init_callback_vtable_videobackend(`vtable`: UniffiVTableCallbackInterfaceVideoBackend,
+): Unit
+external fun uniffi_dcl_host_fn_method_videobackend_create(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Int
+external fun uniffi_dcl_host_fn_method_videobackend_init_surface(`ptr`: Long,`player`: Int,`width`: Int,`height`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+external fun uniffi_dcl_host_fn_method_videobackend_set_source(`ptr`: Long,`player`: Int,`source`: RustBuffer.ByValue,`local`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+external fun uniffi_dcl_host_fn_method_videobackend_play(`ptr`: Long,`player`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_dcl_host_fn_method_videobackend_pause(`ptr`: Long,`player`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_dcl_host_fn_method_videobackend_stop(`ptr`: Long,`player`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_dcl_host_fn_method_videobackend_seek(`ptr`: Long,`player`: Int,`seconds`: Double,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_dcl_host_fn_method_videobackend_position(`ptr`: Long,`player`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): Double
+external fun uniffi_dcl_host_fn_method_videobackend_duration(`ptr`: Long,`player`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): Double
+external fun uniffi_dcl_host_fn_method_videobackend_is_playing(`ptr`: Long,`player`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+external fun uniffi_dcl_host_fn_method_videobackend_set_volume(`ptr`: Long,`player`: Int,`volume`: Float,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_dcl_host_fn_method_videobackend_set_looping(`ptr`: Long,`player`: Int,`looping`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_dcl_host_fn_method_videobackend_set_rate(`ptr`: Long,`player`: Int,`rate`: Float,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_dcl_host_fn_method_videobackend_take_size_changed(`ptr`: Long,`player`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+external fun uniffi_dcl_host_fn_method_videobackend_video_size(`ptr`: Long,`player`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+external fun uniffi_dcl_host_fn_method_videobackend_poll_frame(`ptr`: Long,`player`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+external fun uniffi_dcl_host_fn_method_videobackend_release(`ptr`: Long,`player`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_dcl_host_fn_func_add_host_listener(`listener`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+external fun uniffi_dcl_host_fn_func_debug_fire_host_events(`count`: Int,`perSecond`: Int,
+): Long
+external fun uniffi_dcl_host_fn_func_install(`dataDir`: RustBuffer.ByValue,`platform`: RustBuffer.ByValue,`deviceAnchor`: RustBuffer.ByValue,`appVersion`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_dcl_host_fn_func_remove_host_listener(`id`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_dcl_host_fn_func_attestation_status(uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+external fun uniffi_dcl_host_fn_func_install_attestation(`service`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_dcl_host_fn_func_install_device_service(`service`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_dcl_host_fn_func_install_marketing_service(`service`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_dcl_host_fn_func_install_video_backend(`backend`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun ffi_dcl_host_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+external fun ffi_dcl_host_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+external fun ffi_dcl_host_rustbuffer_free(`buf`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun ffi_dcl_host_rustbuffer_reserve(`buf`: RustBuffer.ByValue,`additional`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+external fun ffi_dcl_host_rust_future_poll_u8(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_cancel_u8(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_free_u8(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_complete_u8(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Int
+external fun ffi_dcl_host_rust_future_poll_i8(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_cancel_i8(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_free_i8(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_complete_i8(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+external fun ffi_dcl_host_rust_future_poll_u16(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_cancel_u16(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_free_u16(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_complete_u16(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Int
+external fun ffi_dcl_host_rust_future_poll_i16(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_cancel_i16(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_free_i16(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_complete_i16(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Short
+external fun ffi_dcl_host_rust_future_poll_u32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_cancel_u32(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_free_u32(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_complete_u32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Int
+external fun ffi_dcl_host_rust_future_poll_i32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_cancel_i32(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_free_i32(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_complete_i32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Int
+external fun ffi_dcl_host_rust_future_poll_u64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_cancel_u64(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_free_u64(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_complete_u64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+external fun ffi_dcl_host_rust_future_poll_i64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_cancel_i64(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_free_i64(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_complete_i64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Long
+external fun ffi_dcl_host_rust_future_poll_f32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_cancel_f32(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_free_f32(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_complete_f32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Float
+external fun ffi_dcl_host_rust_future_poll_f64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_cancel_f64(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_free_f64(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_complete_f64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Double
+external fun ffi_dcl_host_rust_future_poll_rust_buffer(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_cancel_rust_buffer(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_free_rust_buffer(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_complete_rust_buffer(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+external fun ffi_dcl_host_rust_future_poll_void(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_cancel_void(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_free_void(`handle`: Long,
+): Unit
+external fun ffi_dcl_host_rust_future_complete_void(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
 
-        
+    
 }
 
 private fun uniffiCheckContractApiVersion(lib: IntegrityCheckingUniffiLib) {
@@ -928,6 +1269,15 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_dcl_host_checksum_func_install_attestation() != 45674) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_dcl_host_checksum_func_install_device_service() != 32975) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_func_install_marketing_service() != 48897) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_func_install_video_backend() != 38144) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_dcl_host_checksum_method_hostlistener_engine_required() != 17284) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -944,6 +1294,84 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_dcl_host_checksum_method_attestationservice_ios_attest_key() != 22304) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_deviceservice_info() != 35902) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_deviceservice_readings() != 44013) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_deviceservice_block_ui_thread() != 18315) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_marketingservice_app_instance_id() != 65230) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_marketingservice_set_user_id() != 27356) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_marketingservice_set_user_property() != 39802) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_marketingservice_log_event() != 21877) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_marketingservice_install_referrer() != 58302) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_marketingservice_deferred_deep_link() != 7954) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_videobackend_create() != 63901) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_videobackend_init_surface() != 39897) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_videobackend_set_source() != 46445) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_videobackend_play() != 57619) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_videobackend_pause() != 57567) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_videobackend_stop() != 61512) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_videobackend_seek() != 902) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_videobackend_position() != 12635) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_videobackend_duration() != 16267) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_videobackend_is_playing() != 24825) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_videobackend_set_volume() != 45305) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_videobackend_set_looping() != 26508) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_videobackend_set_rate() != 14856) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_videobackend_take_size_changed() != 2378) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_videobackend_video_size() != 5446) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_videobackend_poll_frame() != 12041) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_videobackend_release() != 9698) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
 }
@@ -1289,6 +1717,29 @@ public object FfiConverterUInt: FfiConverter<UInt, Int> {
 /**
  * @suppress
  */
+public object FfiConverterInt: FfiConverter<Int, Int> {
+    override fun lift(value: Int): Int {
+        return value
+    }
+
+    override fun read(buf: ByteBuffer): Int {
+        return buf.getInt()
+    }
+
+    override fun lower(value: Int): Int {
+        return value
+    }
+
+    override fun allocationSize(value: Int) = 4UL
+
+    override fun write(value: Int, buf: ByteBuffer) {
+        buf.putInt(value)
+    }
+}
+
+/**
+ * @suppress
+ */
 public object FfiConverterULong: FfiConverter<ULong, Long> {
     override fun lift(value: Long): ULong {
         return value.toULong()
@@ -1306,6 +1757,52 @@ public object FfiConverterULong: FfiConverter<ULong, Long> {
 
     override fun write(value: ULong, buf: ByteBuffer) {
         buf.putLong(value.toLong())
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterFloat: FfiConverter<Float, Float> {
+    override fun lift(value: Float): Float {
+        return value
+    }
+
+    override fun read(buf: ByteBuffer): Float {
+        return buf.getFloat()
+    }
+
+    override fun lower(value: Float): Float {
+        return value
+    }
+
+    override fun allocationSize(value: Float) = 4UL
+
+    override fun write(value: Float, buf: ByteBuffer) {
+        buf.putFloat(value)
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterDouble: FfiConverter<Double, Double> {
+    override fun lift(value: Double): Double {
+        return value
+    }
+
+    override fun read(buf: ByteBuffer): Double {
+        return buf.getDouble()
+    }
+
+    override fun lower(value: Double): Double {
+        return value
+    }
+
+    override fun allocationSize(value: Double) = 8UL
+
+    override fun write(value: Double, buf: ByteBuffer) {
+        buf.putDouble(value)
     }
 }
 
@@ -2013,6 +2510,378 @@ public object FfiConverterTypeAttestationService: FfiConverter<AttestationServic
 //
 
 
+public interface DeviceService {
+    
+    fun `info`(): DeviceInfo
+    
+    /**
+     * Thermal, battery and (iOS) memory; cheap enough for the game loop.
+     */
+    fun `readings`(): DeviceReadings
+    
+    /**
+     * Blocks the UI thread for `ms` (ANR testing); false when unsupported.
+     */
+    fun `blockUiThread`(`ms`: kotlin.UInt): kotlin.Boolean
+    
+    companion object
+}
+
+open class DeviceServiceImpl: Disposable, AutoCloseable, DeviceService
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_dcl_host_fn_free_deviceservice(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_dcl_host_fn_clone_deviceservice(handle, status)
+        }
+    }
+
+    override fun `info`(): DeviceInfo {
+            return FfiConverterTypeDeviceInfo.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_deviceservice_info(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Thermal, battery and (iOS) memory; cheap enough for the game loop.
+     */override fun `readings`(): DeviceReadings {
+            return FfiConverterTypeDeviceReadings.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_deviceservice_readings(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Blocks the UI thread for `ms` (ANR testing); false when unsupported.
+     */override fun `blockUiThread`(`ms`: kotlin.UInt): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_deviceservice_block_ui_thread(
+        it,
+        FfiConverterUInt.lower(`ms`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+
+    
+
+
+    
+    
+    /**
+     * @suppress
+     */
+    companion object
+    
+}
+
+
+
+// Put the implementation in an object so we don't pollute the top-level namespace
+internal object uniffiCallbackInterfaceDeviceService {
+    internal object `info`: UniffiCallbackInterfaceDeviceServiceMethod0 {
+        override fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeDeviceService.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`info`(
+                )
+            }
+            val writeReturn = { value: DeviceInfo -> uniffiOutReturn.setValue(FfiConverterTypeDeviceInfo.lower(value)) }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `readings`: UniffiCallbackInterfaceDeviceServiceMethod1 {
+        override fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeDeviceService.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`readings`(
+                )
+            }
+            val writeReturn = { value: DeviceReadings -> uniffiOutReturn.setValue(FfiConverterTypeDeviceReadings.lower(value)) }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `blockUiThread`: UniffiCallbackInterfaceDeviceServiceMethod2 {
+        override fun callback(`uniffiHandle`: Long,`ms`: Int,`uniffiOutReturn`: ByteByReference,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeDeviceService.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`blockUiThread`(
+                    FfiConverterUInt.lift(`ms`),
+                )
+            }
+            val writeReturn = { value: kotlin.Boolean -> uniffiOutReturn.setValue(FfiConverterBoolean.lower(value)) }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+
+    internal object uniffiFree: UniffiCallbackInterfaceFree {
+        override fun callback(handle: Long) {
+            FfiConverterTypeDeviceService.handleMap.remove(handle)
+        }
+    }
+
+    internal object uniffiClone: UniffiCallbackInterfaceClone {
+        override fun callback(handle: Long): Long {
+            return FfiConverterTypeDeviceService.handleMap.clone(handle)
+        }
+    }
+
+    internal var vtable = UniffiVTableCallbackInterfaceDeviceService.UniffiByValue(
+        uniffiFree,
+        uniffiClone,
+        `info`,
+        `readings`,
+        `blockUiThread`,
+    )
+
+    // Registers the foreign callback with the Rust side.
+    // This method is generated for each callback interface.
+    internal fun register(lib: UniffiLib) {
+        lib.uniffi_dcl_host_fn_init_callback_vtable_deviceservice(vtable)
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDeviceService: FfiConverter<DeviceService, Long> {
+    internal val handleMap = UniffiHandleMap<DeviceService>()
+
+    override fun lower(value: DeviceService): Long {
+        if (value is DeviceServiceImpl) {
+             // Rust-implemented object.  Clone the handle and return it
+            return value.uniffiCloneHandle()
+         } else {
+            // Kotlin object, generate a new vtable handle and return that.
+            return handleMap.insert(value)
+         }
+    }
+
+    override fun lift(value: Long): DeviceService {
+        if ((value and 1.toLong()) == 0.toLong()) {
+            // Rust-generated handle, construct a new class that uses the handle to implement the
+            // interface
+            return DeviceServiceImpl(UniffiWithHandle, value)
+        } else {
+            // Kotlin-generated handle, get the object from the handle map
+            return handleMap.remove(value)
+        }
+    }
+
+    override fun read(buf: ByteBuffer): DeviceService {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: DeviceService) = 8UL
+
+    override fun write(value: DeviceService, buf: ByteBuffer) {
+        buf.putLong(lower(value))
+    }
+}
+
+
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
 /**
  * Implemented in Kotlin/Swift. Called from a core thread.
  */
@@ -2267,6 +3136,1232 @@ public object FfiConverterTypeHostListener: FfiConverter<HostListener, Long> {
 }
 
 
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+/**
+ * Android: Firebase Analytics, the Play install referrer and the GA4F deferred deep link.
+ */
+public interface MarketingService {
+    
+    fun `appInstanceId`(): kotlin.String
+    
+    fun `setUserId`(`userId`: kotlin.String)
+    
+    fun `setUserProperty`(`name`: kotlin.String, `value`: kotlin.String)
+    
+    fun `logEvent`(`name`: kotlin.String, `paramsJson`: kotlin.String): kotlin.Boolean
+    
+    /**
+     * JSON object with a `status` (`pending`, `ok`, `error`, `not_available`) and its fields.
+     */
+    fun `installReferrer`(): kotlin.String
+    
+    /**
+     * JSON object with a `status` (`pending`, `ok`, `error`) and its fields.
+     */
+    fun `deferredDeepLink`(): kotlin.String
+    
+    companion object
+}
+
+/**
+ * Android: Firebase Analytics, the Play install referrer and the GA4F deferred deep link.
+ */
+open class MarketingServiceImpl: Disposable, AutoCloseable, MarketingService
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_dcl_host_fn_free_marketingservice(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_dcl_host_fn_clone_marketingservice(handle, status)
+        }
+    }
+
+    override fun `appInstanceId`(): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_marketingservice_app_instance_id(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    override fun `setUserId`(`userId`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_marketingservice_set_user_id(
+        it,
+        FfiConverterString.lower(`userId`),_status)
+}
+    }
+    
+    
+
+    override fun `setUserProperty`(`name`: kotlin.String, `value`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_marketingservice_set_user_property(
+        it,
+        FfiConverterString.lower(`name`),FfiConverterString.lower(`value`),_status)
+}
+    }
+    
+    
+
+    override fun `logEvent`(`name`: kotlin.String, `paramsJson`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_marketingservice_log_event(
+        it,
+        FfiConverterString.lower(`name`),FfiConverterString.lower(`paramsJson`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * JSON object with a `status` (`pending`, `ok`, `error`, `not_available`) and its fields.
+     */override fun `installReferrer`(): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_marketingservice_install_referrer(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * JSON object with a `status` (`pending`, `ok`, `error`) and its fields.
+     */override fun `deferredDeepLink`(): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_marketingservice_deferred_deep_link(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+
+    
+
+
+    
+    
+    /**
+     * @suppress
+     */
+    companion object
+    
+}
+
+
+
+// Put the implementation in an object so we don't pollute the top-level namespace
+internal object uniffiCallbackInterfaceMarketingService {
+    internal object `appInstanceId`: UniffiCallbackInterfaceMarketingServiceMethod0 {
+        override fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeMarketingService.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`appInstanceId`(
+                )
+            }
+            val writeReturn = { value: kotlin.String -> uniffiOutReturn.setValue(FfiConverterString.lower(value)) }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `setUserId`: UniffiCallbackInterfaceMarketingServiceMethod1 {
+        override fun callback(`uniffiHandle`: Long,`userId`: RustBuffer.ByValue,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeMarketingService.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`setUserId`(
+                    FfiConverterString.lift(`userId`),
+                )
+            }
+            val writeReturn = { _: Unit -> Unit }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `setUserProperty`: UniffiCallbackInterfaceMarketingServiceMethod2 {
+        override fun callback(`uniffiHandle`: Long,`name`: RustBuffer.ByValue,`value`: RustBuffer.ByValue,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeMarketingService.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`setUserProperty`(
+                    FfiConverterString.lift(`name`),
+                    FfiConverterString.lift(`value`),
+                )
+            }
+            val writeReturn = { _: Unit -> Unit }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `logEvent`: UniffiCallbackInterfaceMarketingServiceMethod3 {
+        override fun callback(`uniffiHandle`: Long,`name`: RustBuffer.ByValue,`paramsJson`: RustBuffer.ByValue,`uniffiOutReturn`: ByteByReference,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeMarketingService.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`logEvent`(
+                    FfiConverterString.lift(`name`),
+                    FfiConverterString.lift(`paramsJson`),
+                )
+            }
+            val writeReturn = { value: kotlin.Boolean -> uniffiOutReturn.setValue(FfiConverterBoolean.lower(value)) }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `installReferrer`: UniffiCallbackInterfaceMarketingServiceMethod4 {
+        override fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeMarketingService.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`installReferrer`(
+                )
+            }
+            val writeReturn = { value: kotlin.String -> uniffiOutReturn.setValue(FfiConverterString.lower(value)) }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `deferredDeepLink`: UniffiCallbackInterfaceMarketingServiceMethod5 {
+        override fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeMarketingService.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`deferredDeepLink`(
+                )
+            }
+            val writeReturn = { value: kotlin.String -> uniffiOutReturn.setValue(FfiConverterString.lower(value)) }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+
+    internal object uniffiFree: UniffiCallbackInterfaceFree {
+        override fun callback(handle: Long) {
+            FfiConverterTypeMarketingService.handleMap.remove(handle)
+        }
+    }
+
+    internal object uniffiClone: UniffiCallbackInterfaceClone {
+        override fun callback(handle: Long): Long {
+            return FfiConverterTypeMarketingService.handleMap.clone(handle)
+        }
+    }
+
+    internal var vtable = UniffiVTableCallbackInterfaceMarketingService.UniffiByValue(
+        uniffiFree,
+        uniffiClone,
+        `appInstanceId`,
+        `setUserId`,
+        `setUserProperty`,
+        `logEvent`,
+        `installReferrer`,
+        `deferredDeepLink`,
+    )
+
+    // Registers the foreign callback with the Rust side.
+    // This method is generated for each callback interface.
+    internal fun register(lib: UniffiLib) {
+        lib.uniffi_dcl_host_fn_init_callback_vtable_marketingservice(vtable)
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMarketingService: FfiConverter<MarketingService, Long> {
+    internal val handleMap = UniffiHandleMap<MarketingService>()
+
+    override fun lower(value: MarketingService): Long {
+        if (value is MarketingServiceImpl) {
+             // Rust-implemented object.  Clone the handle and return it
+            return value.uniffiCloneHandle()
+         } else {
+            // Kotlin object, generate a new vtable handle and return that.
+            return handleMap.insert(value)
+         }
+    }
+
+    override fun lift(value: Long): MarketingService {
+        if ((value and 1.toLong()) == 0.toLong()) {
+            // Rust-generated handle, construct a new class that uses the handle to implement the
+            // interface
+            return MarketingServiceImpl(UniffiWithHandle, value)
+        } else {
+            // Kotlin-generated handle, get the object from the handle map
+            return handleMap.remove(value)
+        }
+    }
+
+    override fun read(buf: ByteBuffer): MarketingService {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: MarketingService) = 8UL
+
+    override fun write(value: MarketingService, buf: ByteBuffer) {
+        buf.putLong(lower(value))
+    }
+}
+
+
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+/**
+ * ExoPlayer on Android, AVPlayer on iOS. Positions are seconds.
+ */
+public interface VideoBackend {
+    
+    fun `create`(): kotlin.Int
+    
+    fun `initSurface`(`player`: kotlin.Int, `width`: kotlin.Int, `height`: kotlin.Int): kotlin.Boolean
+    
+    fun `setSource`(`player`: kotlin.Int, `source`: kotlin.String, `local`: kotlin.Boolean): kotlin.Boolean
+    
+    fun `play`(`player`: kotlin.Int)
+    
+    fun `pause`(`player`: kotlin.Int)
+    
+    fun `stop`(`player`: kotlin.Int)
+    
+    fun `seek`(`player`: kotlin.Int, `seconds`: kotlin.Double)
+    
+    fun `position`(`player`: kotlin.Int): kotlin.Double
+    
+    fun `duration`(`player`: kotlin.Int): kotlin.Double
+    
+    fun `isPlaying`(`player`: kotlin.Int): kotlin.Boolean
+    
+    fun `setVolume`(`player`: kotlin.Int, `volume`: kotlin.Float)
+    
+    fun `setLooping`(`player`: kotlin.Int, `looping`: kotlin.Boolean)
+    
+    fun `setRate`(`player`: kotlin.Int, `rate`: kotlin.Float)
+    
+    fun `takeSizeChanged`(`player`: kotlin.Int): kotlin.Boolean
+    
+    fun `videoSize`(`player`: kotlin.Int): VideoSize
+    
+    /**
+     * `AHardwareBuffer*` / `IOSurfaceRef` of a frame that arrived since the last call, else 0.
+     */
+    fun `pollFrame`(`player`: kotlin.Int): kotlin.ULong
+    
+    fun `release`(`player`: kotlin.Int)
+    
+    companion object
+}
+
+/**
+ * ExoPlayer on Android, AVPlayer on iOS. Positions are seconds.
+ */
+open class VideoBackendImpl: Disposable, AutoCloseable, VideoBackend
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_dcl_host_fn_free_videobackend(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_dcl_host_fn_clone_videobackend(handle, status)
+        }
+    }
+
+    override fun `create`(): kotlin.Int {
+            return FfiConverterInt.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_videobackend_create(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    override fun `initSurface`(`player`: kotlin.Int, `width`: kotlin.Int, `height`: kotlin.Int): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_videobackend_init_surface(
+        it,
+        FfiConverterInt.lower(`player`),FfiConverterInt.lower(`width`),FfiConverterInt.lower(`height`),_status)
+}
+    }
+    )
+    }
+    
+
+    override fun `setSource`(`player`: kotlin.Int, `source`: kotlin.String, `local`: kotlin.Boolean): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_videobackend_set_source(
+        it,
+        FfiConverterInt.lower(`player`),FfiConverterString.lower(`source`),FfiConverterBoolean.lower(`local`),_status)
+}
+    }
+    )
+    }
+    
+
+    override fun `play`(`player`: kotlin.Int)
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_videobackend_play(
+        it,
+        FfiConverterInt.lower(`player`),_status)
+}
+    }
+    
+    
+
+    override fun `pause`(`player`: kotlin.Int)
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_videobackend_pause(
+        it,
+        FfiConverterInt.lower(`player`),_status)
+}
+    }
+    
+    
+
+    override fun `stop`(`player`: kotlin.Int)
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_videobackend_stop(
+        it,
+        FfiConverterInt.lower(`player`),_status)
+}
+    }
+    
+    
+
+    override fun `seek`(`player`: kotlin.Int, `seconds`: kotlin.Double)
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_videobackend_seek(
+        it,
+        FfiConverterInt.lower(`player`),FfiConverterDouble.lower(`seconds`),_status)
+}
+    }
+    
+    
+
+    override fun `position`(`player`: kotlin.Int): kotlin.Double {
+            return FfiConverterDouble.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_videobackend_position(
+        it,
+        FfiConverterInt.lower(`player`),_status)
+}
+    }
+    )
+    }
+    
+
+    override fun `duration`(`player`: kotlin.Int): kotlin.Double {
+            return FfiConverterDouble.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_videobackend_duration(
+        it,
+        FfiConverterInt.lower(`player`),_status)
+}
+    }
+    )
+    }
+    
+
+    override fun `isPlaying`(`player`: kotlin.Int): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_videobackend_is_playing(
+        it,
+        FfiConverterInt.lower(`player`),_status)
+}
+    }
+    )
+    }
+    
+
+    override fun `setVolume`(`player`: kotlin.Int, `volume`: kotlin.Float)
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_videobackend_set_volume(
+        it,
+        FfiConverterInt.lower(`player`),FfiConverterFloat.lower(`volume`),_status)
+}
+    }
+    
+    
+
+    override fun `setLooping`(`player`: kotlin.Int, `looping`: kotlin.Boolean)
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_videobackend_set_looping(
+        it,
+        FfiConverterInt.lower(`player`),FfiConverterBoolean.lower(`looping`),_status)
+}
+    }
+    
+    
+
+    override fun `setRate`(`player`: kotlin.Int, `rate`: kotlin.Float)
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_videobackend_set_rate(
+        it,
+        FfiConverterInt.lower(`player`),FfiConverterFloat.lower(`rate`),_status)
+}
+    }
+    
+    
+
+    override fun `takeSizeChanged`(`player`: kotlin.Int): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_videobackend_take_size_changed(
+        it,
+        FfiConverterInt.lower(`player`),_status)
+}
+    }
+    )
+    }
+    
+
+    override fun `videoSize`(`player`: kotlin.Int): VideoSize {
+            return FfiConverterTypeVideoSize.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_videobackend_video_size(
+        it,
+        FfiConverterInt.lower(`player`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * `AHardwareBuffer*` / `IOSurfaceRef` of a frame that arrived since the last call, else 0.
+     */override fun `pollFrame`(`player`: kotlin.Int): kotlin.ULong {
+            return FfiConverterULong.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_videobackend_poll_frame(
+        it,
+        FfiConverterInt.lower(`player`),_status)
+}
+    }
+    )
+    }
+    
+
+    override fun `release`(`player`: kotlin.Int)
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_videobackend_release(
+        it,
+        FfiConverterInt.lower(`player`),_status)
+}
+    }
+    
+    
+
+    
+
+    
+
+
+    
+    
+    /**
+     * @suppress
+     */
+    companion object
+    
+}
+
+
+
+// Put the implementation in an object so we don't pollute the top-level namespace
+internal object uniffiCallbackInterfaceVideoBackend {
+    internal object `create`: UniffiCallbackInterfaceVideoBackendMethod0 {
+        override fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: IntByReference,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeVideoBackend.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`create`(
+                )
+            }
+            val writeReturn = { value: kotlin.Int -> uniffiOutReturn.setValue(FfiConverterInt.lower(value)) }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `initSurface`: UniffiCallbackInterfaceVideoBackendMethod1 {
+        override fun callback(`uniffiHandle`: Long,`player`: Int,`width`: Int,`height`: Int,`uniffiOutReturn`: ByteByReference,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeVideoBackend.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`initSurface`(
+                    FfiConverterInt.lift(`player`),
+                    FfiConverterInt.lift(`width`),
+                    FfiConverterInt.lift(`height`),
+                )
+            }
+            val writeReturn = { value: kotlin.Boolean -> uniffiOutReturn.setValue(FfiConverterBoolean.lower(value)) }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `setSource`: UniffiCallbackInterfaceVideoBackendMethod2 {
+        override fun callback(`uniffiHandle`: Long,`player`: Int,`source`: RustBuffer.ByValue,`local`: Byte,`uniffiOutReturn`: ByteByReference,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeVideoBackend.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`setSource`(
+                    FfiConverterInt.lift(`player`),
+                    FfiConverterString.lift(`source`),
+                    FfiConverterBoolean.lift(`local`),
+                )
+            }
+            val writeReturn = { value: kotlin.Boolean -> uniffiOutReturn.setValue(FfiConverterBoolean.lower(value)) }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `play`: UniffiCallbackInterfaceVideoBackendMethod3 {
+        override fun callback(`uniffiHandle`: Long,`player`: Int,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeVideoBackend.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`play`(
+                    FfiConverterInt.lift(`player`),
+                )
+            }
+            val writeReturn = { _: Unit -> Unit }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `pause`: UniffiCallbackInterfaceVideoBackendMethod4 {
+        override fun callback(`uniffiHandle`: Long,`player`: Int,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeVideoBackend.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`pause`(
+                    FfiConverterInt.lift(`player`),
+                )
+            }
+            val writeReturn = { _: Unit -> Unit }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `stop`: UniffiCallbackInterfaceVideoBackendMethod5 {
+        override fun callback(`uniffiHandle`: Long,`player`: Int,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeVideoBackend.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`stop`(
+                    FfiConverterInt.lift(`player`),
+                )
+            }
+            val writeReturn = { _: Unit -> Unit }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `seek`: UniffiCallbackInterfaceVideoBackendMethod6 {
+        override fun callback(`uniffiHandle`: Long,`player`: Int,`seconds`: Double,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeVideoBackend.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`seek`(
+                    FfiConverterInt.lift(`player`),
+                    FfiConverterDouble.lift(`seconds`),
+                )
+            }
+            val writeReturn = { _: Unit -> Unit }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `position`: UniffiCallbackInterfaceVideoBackendMethod7 {
+        override fun callback(`uniffiHandle`: Long,`player`: Int,`uniffiOutReturn`: DoubleByReference,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeVideoBackend.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`position`(
+                    FfiConverterInt.lift(`player`),
+                )
+            }
+            val writeReturn = { value: kotlin.Double -> uniffiOutReturn.setValue(FfiConverterDouble.lower(value)) }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `duration`: UniffiCallbackInterfaceVideoBackendMethod8 {
+        override fun callback(`uniffiHandle`: Long,`player`: Int,`uniffiOutReturn`: DoubleByReference,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeVideoBackend.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`duration`(
+                    FfiConverterInt.lift(`player`),
+                )
+            }
+            val writeReturn = { value: kotlin.Double -> uniffiOutReturn.setValue(FfiConverterDouble.lower(value)) }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `isPlaying`: UniffiCallbackInterfaceVideoBackendMethod9 {
+        override fun callback(`uniffiHandle`: Long,`player`: Int,`uniffiOutReturn`: ByteByReference,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeVideoBackend.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`isPlaying`(
+                    FfiConverterInt.lift(`player`),
+                )
+            }
+            val writeReturn = { value: kotlin.Boolean -> uniffiOutReturn.setValue(FfiConverterBoolean.lower(value)) }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `setVolume`: UniffiCallbackInterfaceVideoBackendMethod10 {
+        override fun callback(`uniffiHandle`: Long,`player`: Int,`volume`: Float,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeVideoBackend.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`setVolume`(
+                    FfiConverterInt.lift(`player`),
+                    FfiConverterFloat.lift(`volume`),
+                )
+            }
+            val writeReturn = { _: Unit -> Unit }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `setLooping`: UniffiCallbackInterfaceVideoBackendMethod11 {
+        override fun callback(`uniffiHandle`: Long,`player`: Int,`looping`: Byte,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeVideoBackend.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`setLooping`(
+                    FfiConverterInt.lift(`player`),
+                    FfiConverterBoolean.lift(`looping`),
+                )
+            }
+            val writeReturn = { _: Unit -> Unit }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `setRate`: UniffiCallbackInterfaceVideoBackendMethod12 {
+        override fun callback(`uniffiHandle`: Long,`player`: Int,`rate`: Float,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeVideoBackend.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`setRate`(
+                    FfiConverterInt.lift(`player`),
+                    FfiConverterFloat.lift(`rate`),
+                )
+            }
+            val writeReturn = { _: Unit -> Unit }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `takeSizeChanged`: UniffiCallbackInterfaceVideoBackendMethod13 {
+        override fun callback(`uniffiHandle`: Long,`player`: Int,`uniffiOutReturn`: ByteByReference,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeVideoBackend.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`takeSizeChanged`(
+                    FfiConverterInt.lift(`player`),
+                )
+            }
+            val writeReturn = { value: kotlin.Boolean -> uniffiOutReturn.setValue(FfiConverterBoolean.lower(value)) }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `videoSize`: UniffiCallbackInterfaceVideoBackendMethod14 {
+        override fun callback(`uniffiHandle`: Long,`player`: Int,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeVideoBackend.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`videoSize`(
+                    FfiConverterInt.lift(`player`),
+                )
+            }
+            val writeReturn = { value: VideoSize -> uniffiOutReturn.setValue(FfiConverterTypeVideoSize.lower(value)) }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `pollFrame`: UniffiCallbackInterfaceVideoBackendMethod15 {
+        override fun callback(`uniffiHandle`: Long,`player`: Int,`uniffiOutReturn`: LongByReference,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeVideoBackend.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`pollFrame`(
+                    FfiConverterInt.lift(`player`),
+                )
+            }
+            val writeReturn = { value: kotlin.ULong -> uniffiOutReturn.setValue(FfiConverterULong.lower(value)) }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `release`: UniffiCallbackInterfaceVideoBackendMethod16 {
+        override fun callback(`uniffiHandle`: Long,`player`: Int,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeVideoBackend.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`release`(
+                    FfiConverterInt.lift(`player`),
+                )
+            }
+            val writeReturn = { _: Unit -> Unit }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+
+    internal object uniffiFree: UniffiCallbackInterfaceFree {
+        override fun callback(handle: Long) {
+            FfiConverterTypeVideoBackend.handleMap.remove(handle)
+        }
+    }
+
+    internal object uniffiClone: UniffiCallbackInterfaceClone {
+        override fun callback(handle: Long): Long {
+            return FfiConverterTypeVideoBackend.handleMap.clone(handle)
+        }
+    }
+
+    internal var vtable = UniffiVTableCallbackInterfaceVideoBackend.UniffiByValue(
+        uniffiFree,
+        uniffiClone,
+        `create`,
+        `initSurface`,
+        `setSource`,
+        `play`,
+        `pause`,
+        `stop`,
+        `seek`,
+        `position`,
+        `duration`,
+        `isPlaying`,
+        `setVolume`,
+        `setLooping`,
+        `setRate`,
+        `takeSizeChanged`,
+        `videoSize`,
+        `pollFrame`,
+        `release`,
+    )
+
+    // Registers the foreign callback with the Rust side.
+    // This method is generated for each callback interface.
+    internal fun register(lib: UniffiLib) {
+        lib.uniffi_dcl_host_fn_init_callback_vtable_videobackend(vtable)
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeVideoBackend: FfiConverter<VideoBackend, Long> {
+    internal val handleMap = UniffiHandleMap<VideoBackend>()
+
+    override fun lower(value: VideoBackend): Long {
+        if (value is VideoBackendImpl) {
+             // Rust-implemented object.  Clone the handle and return it
+            return value.uniffiCloneHandle()
+         } else {
+            // Kotlin object, generate a new vtable handle and return that.
+            return handleMap.insert(value)
+         }
+    }
+
+    override fun lift(value: Long): VideoBackend {
+        if ((value and 1.toLong()) == 0.toLong()) {
+            // Rust-generated handle, construct a new class that uses the handle to implement the
+            // interface
+            return VideoBackendImpl(UniffiWithHandle, value)
+        } else {
+            // Kotlin-generated handle, get the object from the handle map
+            return handleMap.remove(value)
+        }
+    }
+
+    override fun read(buf: ByteBuffer): VideoBackend {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: VideoBackend) = 8UL
+
+    override fun write(value: VideoBackend, buf: ByteBuffer) {
+        buf.putLong(lower(value))
+    }
+}
+
+
 
 /**
  * Where attestation stands, for diagnostics.
@@ -2317,6 +4412,178 @@ public object FfiConverterTypeAttestationStatus: FfiConverterRustBuffer<Attestat
             FfiConverterString.write(value.`state`, buf)
             FfiConverterBoolean.write(value.`hasValidSession`, buf)
             FfiConverterOptionalString.write(value.`lastFailure`, buf)
+    }
+}
+
+
+
+data class DeviceInfo (
+    var `brand`: kotlin.String
+    , 
+    var `model`: kotlin.String
+    , 
+    var `osVersion`: kotlin.String
+    , 
+    var `totalRamMb`: kotlin.Int
+    , 
+    var `socModel`: kotlin.String
+    , 
+    var `socManufacturer`: kotlin.String
+    , 
+    var `boardPlatform`: kotlin.String
+    , 
+    var `hardware`: kotlin.String
+    , 
+    var `processorType`: kotlin.String
+    , 
+    var `processorMaxFreqMhz`: kotlin.Int
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDeviceInfo: FfiConverterRustBuffer<DeviceInfo> {
+    override fun read(buf: ByteBuffer): DeviceInfo {
+        return DeviceInfo(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: DeviceInfo) = (
+            FfiConverterString.allocationSize(value.`brand`) +
+            FfiConverterString.allocationSize(value.`model`) +
+            FfiConverterString.allocationSize(value.`osVersion`) +
+            FfiConverterInt.allocationSize(value.`totalRamMb`) +
+            FfiConverterString.allocationSize(value.`socModel`) +
+            FfiConverterString.allocationSize(value.`socManufacturer`) +
+            FfiConverterString.allocationSize(value.`boardPlatform`) +
+            FfiConverterString.allocationSize(value.`hardware`) +
+            FfiConverterString.allocationSize(value.`processorType`) +
+            FfiConverterInt.allocationSize(value.`processorMaxFreqMhz`)
+    )
+
+    override fun write(value: DeviceInfo, buf: ByteBuffer) {
+            FfiConverterString.write(value.`brand`, buf)
+            FfiConverterString.write(value.`model`, buf)
+            FfiConverterString.write(value.`osVersion`, buf)
+            FfiConverterInt.write(value.`totalRamMb`, buf)
+            FfiConverterString.write(value.`socModel`, buf)
+            FfiConverterString.write(value.`socManufacturer`, buf)
+            FfiConverterString.write(value.`boardPlatform`, buf)
+            FfiConverterString.write(value.`hardware`, buf)
+            FfiConverterString.write(value.`processorType`, buf)
+            FfiConverterInt.write(value.`processorMaxFreqMhz`, buf)
+    }
+}
+
+
+
+data class DeviceReadings (
+    /**
+     * -1 where it is a slow read (Android).
+     */
+    var `memoryUsageMb`: kotlin.Int
+    , 
+    var `temperatureCelsius`: kotlin.Float
+    , 
+    var `thermalState`: kotlin.String
+    , 
+    var `batteryPercent`: kotlin.Float
+    , 
+    var `chargingState`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDeviceReadings: FfiConverterRustBuffer<DeviceReadings> {
+    override fun read(buf: ByteBuffer): DeviceReadings {
+        return DeviceReadings(
+            FfiConverterInt.read(buf),
+            FfiConverterFloat.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterFloat.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: DeviceReadings) = (
+            FfiConverterInt.allocationSize(value.`memoryUsageMb`) +
+            FfiConverterFloat.allocationSize(value.`temperatureCelsius`) +
+            FfiConverterString.allocationSize(value.`thermalState`) +
+            FfiConverterFloat.allocationSize(value.`batteryPercent`) +
+            FfiConverterString.allocationSize(value.`chargingState`)
+    )
+
+    override fun write(value: DeviceReadings, buf: ByteBuffer) {
+            FfiConverterInt.write(value.`memoryUsageMb`, buf)
+            FfiConverterFloat.write(value.`temperatureCelsius`, buf)
+            FfiConverterString.write(value.`thermalState`, buf)
+            FfiConverterFloat.write(value.`batteryPercent`, buf)
+            FfiConverterString.write(value.`chargingState`, buf)
+    }
+}
+
+
+
+data class VideoSize (
+    var `width`: kotlin.Int
+    , 
+    var `height`: kotlin.Int
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeVideoSize: FfiConverterRustBuffer<VideoSize> {
+    override fun read(buf: ByteBuffer): VideoSize {
+        return VideoSize(
+            FfiConverterInt.read(buf),
+            FfiConverterInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: VideoSize) = (
+            FfiConverterInt.allocationSize(value.`width`) +
+            FfiConverterInt.allocationSize(value.`height`)
+    )
+
+    override fun write(value: VideoSize, buf: ByteBuffer) {
+            FfiConverterInt.write(value.`width`, buf)
+            FfiConverterInt.write(value.`height`, buf)
     }
 }
 
@@ -2622,6 +4889,33 @@ public object FfiConverterOptionalTypeAttestationStatus: FfiConverterRustBuffer<
     UniffiLib.uniffi_dcl_host_fn_func_install_attestation(
     
         FfiConverterTypeAttestationService.lower(`service`),_status)
+}
+    
+    
+ fun `installDeviceService`(`service`: DeviceService)
+        = 
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_func_install_device_service(
+    
+        FfiConverterTypeDeviceService.lower(`service`),_status)
+}
+    
+    
+ fun `installMarketingService`(`service`: MarketingService)
+        = 
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_func_install_marketing_service(
+    
+        FfiConverterTypeMarketingService.lower(`service`),_status)
+}
+    
+    
+ fun `installVideoBackend`(`backend`: VideoBackend)
+        = 
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_func_install_video_backend(
+    
+        FfiConverterTypeVideoBackend.lower(`backend`),_status)
 }
     
     

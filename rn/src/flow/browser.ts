@@ -8,6 +8,7 @@ import type { Routed } from '../core/native';
 import { trackInitialLink } from './launchLink';
 
 let started = false;
+let browserOpen = false;
 
 /**
  * Opens the pages the core asks for (sign-in) and sends every `decentraland://` link back to it.
@@ -41,14 +42,22 @@ export function startLinkHandling() {
 
 /** A tab the player closes ends the sign-in it was opened for; one we close after the link returns does not. */
 async function openAndWatch(url: string) {
-  const result = await InAppBrowser.open(url);
-  if (result.type === 'cancel' && core().state().tag === 'SigningIn') {
-    core().cancelSignIn();
+  browserOpen = true;
+  try {
+    const result = await InAppBrowser.open(url);
+    if (result.type === 'cancel' && core().state().tag === 'SigningIn') {
+      core().cancelSignIn();
+    }
+  } finally {
+    browserOpen = false;
   }
 }
 
 function routeLink(url: string, start: StartKind): Routed {
-  InAppBrowser.close();
+  // Only a tab we opened: on web there is no native module behind `close`.
+  if (browserOpen) {
+    InAppBrowser.close();
+  }
   const routed = core().handleDeepLink(url, start);
   applyRouted(routed);
   return routed;

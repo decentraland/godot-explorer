@@ -46,7 +46,13 @@ fn signal_payload(command: &EngineCommand) -> Option<(&'static str, VarDictionar
         EngineCommand::CommitAvatar(profile) => {
             Some(("commit_avatar", vdict! { "profile" => profile.clone() }))
         }
+        EngineCommand::ApplyLook(avatar) => {
+            let mut args = avatar_args(avatar);
+            args.set("replace", true);
+            Some(("apply_avatar", args))
+        }
         EngineCommand::Control(control) => control_payload(control),
+        EngineCommand::ApplyLink { .. } => None,
     }
 }
 
@@ -100,6 +106,7 @@ pub(super) fn control_payload(control: &Control) -> Option<(&'static str, VarDic
         Control::FocusCamera { focus } => {
             ("focus_camera", vdict! { "focus" => focus_name(*focus) })
         }
+        Control::PreviewClip { bottom } => ("preview_clip", vdict! { "bottom" => *bottom }),
         Control::SetPreviewUrl { url } => ("set_preview_url", vdict! { "url" => url.clone() }),
         Control::PlayPreviewEmote { urn } => {
             ("play_preview_emote", vdict! { "urn" => urn.clone() })
@@ -113,6 +120,7 @@ pub(super) fn control_payload(control: &Control) -> Option<(&'static str, VarDic
         Control::Equip { .. }
         | Control::Unequip { .. }
         | Control::SetBodyShape { .. }
+        | Control::SetLook { .. }
         | Control::SetColor { .. }
         | Control::SetEmoteSlot { .. }
         | Control::RandomizeAvatar
@@ -201,6 +209,12 @@ impl DclEngine {
                 }
                 EngineCommand::Control(Control::AnswerSceneRequest { id, accepted }) => {
                     self.answer_scene_request(*id, *accepted);
+                }
+                EngineCommand::ApplyLink { url, cold } => {
+                    // Applying a link binds the engine again (`is_host_driven`, `set_setting`):
+                    // without this guard that bind panics and drops the rest of the batch.
+                    let _reentrant = self.base_mut();
+                    crate::app::global_runtime::apply_launch_link(url, *cold);
                 }
                 _ => {}
             }

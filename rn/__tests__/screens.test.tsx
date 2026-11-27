@@ -1,9 +1,11 @@
 import { ReactElement } from 'react';
+import { BackHandler, Keyboard, NativeModules, Platform } from 'react-native';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { HomeTabs } from '../src/app/HomeTabs';
 import { NavProvider } from '../src/app/NavProvider';
 import { EntryFlow } from '../src/flow/EntryFlow';
+import { core } from '../src/core';
 
 const metrics = {
   frame: { x: 0, y: 0, width: 400, height: 900 },
@@ -45,5 +47,170 @@ describe('screens render', () => {
   it('starts the entry flow on the splash screen', () => {
     const tree = mount(<EntryFlow onDone={() => {}} />);
     expect(tree.toJSON()).not.toBeNull();
+  });
+
+  it('asks for the notification permission at the Play as Guest tap', async () => {
+    const os = Platform.OS;
+    Platform.OS = 'android';
+    const push = {
+      hasPermission: jest.fn().mockResolvedValue(false),
+      requestPermission: jest.fn().mockResolvedValue(true),
+    };
+    NativeModules.DclPush = push;
+    jest.useFakeTimers();
+    try {
+      const tree = mount(<EntryFlow onDone={() => {}} />);
+      await act(async () => {
+        jest.advanceTimersByTime(1500);
+      });
+      await act(async () => {});
+      await act(async () =>
+        tree.root
+          .findByProps({ accessibilityLabel: 'PLAY AS GUEST' })
+          .props.onPress(),
+      );
+      expect(push.requestPermission).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+      Platform.OS = os;
+      delete NativeModules.DclPush;
+    }
+  });
+
+  it('plays as guest again after backing out of Avatar Create', async () => {
+    jest.useFakeTimers();
+    try {
+      const tree = mount(<EntryFlow onDone={() => {}} />);
+      const playAsGuest = async () => {
+        await act(async () =>
+          tree.root
+            .findByProps({ accessibilityLabel: 'PLAY AS GUEST' })
+            .props.onPress(),
+        );
+        await act(async () => {
+          jest.advanceTimersByTime(500);
+        });
+        await act(async () => {});
+      };
+      await act(async () => {
+        jest.advanceTimersByTime(1500);
+      });
+      await act(async () => {});
+      await playAsGuest();
+      expect(JSON.stringify(tree.toJSON())).toContain('Choose your look');
+      // On a device the avatar hole has opened the preview by now: the state is not `SignedIn`.
+      act(() =>
+        core().showAvatarPreview({ x: 0, y: 0, width: 10, height: 10 }),
+      );
+      expect(core().state().tag).toBe('AvatarPreview');
+      await act(async () =>
+        tree.root.findByProps({ accessibilityLabel: 'Back' }).props.onPress(),
+      );
+      expect(core().state().tag).toBe('SignedOut');
+      expect(JSON.stringify(tree.toJSON())).toContain('PLAY AS GUEST');
+      await playAsGuest();
+      expect(JSON.stringify(tree.toJSON())).toContain('Choose your look');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('hardware Back on the first places leaves the new account signed in', async () => {
+    if (core().state().tag !== 'SignedOut') {
+      act(() => core().signOut());
+    }
+    const handlers: Array<() => boolean> = [];
+    const listen = jest.spyOn(BackHandler, 'addEventListener');
+    listen.mockImplementation(((_: string, handler: () => boolean) => {
+      handlers.push(handler);
+      return { remove: () => handlers.splice(handlers.indexOf(handler), 1) };
+    }) as never);
+    jest.useFakeTimers();
+    try {
+      const tree = mount(<EntryFlow onDone={() => {}} />);
+      const press = async (label: string) => {
+        await act(async () =>
+          tree.root.findByProps({ accessibilityLabel: label }).props.onPress(),
+        );
+        await act(async () => {
+          jest.advanceTimersByTime(500);
+        });
+      };
+      await act(async () => {
+        jest.advanceTimersByTime(1500);
+      });
+      await press('PLAY AS GUEST');
+      await press('NEXT');
+      await press('Let’s Go');
+      expect(core().state().tag).toBe('SignedIn');
+      let handled = true;
+      act(() => {
+        handled = handlers[handlers.length - 1]();
+      });
+      expect(handled).toBe(false);
+      expect(core().state().tag).toBe('SignedIn');
+    } finally {
+      jest.useRealTimers();
+      listen.mockRestore();
+      act(() => core().signOut());
+    }
+  });
+
+  describe('from Sign In', () => {
+    const os = Platform.OS;
+    let tree: ReactTestRenderer;
+    const press = (label: string) =>
+      act(async () =>
+        tree.root.findByProps({ accessibilityLabel: label }).props.onPress(),
+      );
+
+    beforeEach(async () => {
+      if (core().state().tag !== 'SignedOut') {
+        act(() => core().signOut());
+      }
+      jest.useFakeTimers();
+      tree = mount(<EntryFlow onDone={() => {}} />);
+      await act(async () => {
+        jest.advanceTimersByTime(1500);
+      });
+      await act(async () => {});
+      await press('SIGN IN');
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+      jest.restoreAllMocks();
+      Platform.OS = os;
+      act(() => core().cancelSignIn());
+    });
+
+    it('opens the auth site on its wallet list from Wallet Connect', async () => {
+      const signInBrowser = jest.spyOn(core(), 'signInBrowser');
+      await press('Wallet Connect');
+      expect(signInBrowser).toHaveBeenCalledWith('wallet_connect');
+    });
+
+    it('closes the keyboard before Back leaves a screen', async () => {
+      const dismiss = jest.spyOn(Keyboard, 'dismiss');
+      await press('Continue with email');
+      await press('Back');
+      expect(dismiss).toHaveBeenCalled();
+    });
+
+    it('releases the email field before the code dialog opens on Android', async () => {
+      Platform.OS = 'android';
+      const dismiss = jest.spyOn(Keyboard, 'dismiss');
+      await press('Continue with email');
+      const field = tree.root.findByProps({ placeholder: 'name@email.com' });
+      act(() => field.props.onChangeText('qa@example.com'));
+      await press('NEXT');
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(dismiss).toHaveBeenCalledTimes(1);
+      expect(JSON.stringify(tree.toJSON())).toContain(
+        'Enter verification code',
+      );
+    });
   });
 });

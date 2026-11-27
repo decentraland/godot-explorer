@@ -42,8 +42,8 @@ Engine (phase 5)
 - Two autoloads remain (`Global`, `GlobalBoot`), both native, by design (see the exit criterion in `phase-5-engine-port.md`). `EngineHost` is created by the boot node and the empty-parcel props scene is instantiated on demand (unverified on device: floating-island props).
 - (done) the four legacy `Explorer` `#[func]`s were removed; the touch-controls tooltip and emote props are typed calls.
 - `dcl_resource_tracker.rs` is dead now that the addon is gone.
-- 5.10 not finished: `dcl-godot-android`, `dcl_build_plugin`, `godot/android`, `emote_converter` and the Swift
-  plugin are kept on purpose (decision 1); removal needs the user's call.
+- 5.10 not finished: `dcl_build_plugin`, `godot/android` and `emote_converter` are kept on purpose (decision 1).
+  `dcl-godot-android` and the Swift plugin were deleted with `plugins/` on 24 Nov 2026 (D-41).
 
 RN (phase 4 and earlier, still open)
 - [x] The name screen's avatar hole kept a small rect: fixed in RN (see above), verified on the Moto.

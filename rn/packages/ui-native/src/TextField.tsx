@@ -35,6 +35,7 @@ export function TextField({
   multilineHeight,
   autoFocus = false,
   secureTextEntry = false,
+  onFocusChange,
   accessibilityLabel,
 }: {
   label: string;
@@ -50,7 +51,7 @@ export function TextField({
   onClear?: () => void;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   keyboardType?: 'default' | 'url' | 'email-address' | 'numeric';
-  /** Counter under the box instead of beside the label. */
+  /** Counter under the box, on one row with the helper or error (the Name field). */
   counterBelow?: boolean;
   /** Helper under the label instead of under the box (an error still shows under the box). */
   helperAbove?: boolean;
@@ -60,6 +61,8 @@ export function TextField({
   multilineHeight?: number;
   autoFocus?: boolean;
   secureTextEntry?: boolean;
+  /** Told when the field gains or loses focus, for a caller that validates on blur. */
+  onFocusChange?: (focused: boolean) => void;
   /** Read by screen readers when the visible label is drawn elsewhere (defaults to `label`). */
   accessibilityLabel?: string;
 }) {
@@ -124,8 +127,14 @@ export function TextField({
           secureTextEntry={secureTextEntry}
           autoCapitalize={autoCapitalize}
           keyboardType={keyboardType}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          onFocus={() => {
+            setFocused(true);
+            onFocusChange?.(true);
+          }}
+          onBlur={() => {
+            setFocused(false);
+            onFocusChange?.(false);
+          }}
           style={[
             styles.input,
             disabled && styles.textDisabled,
@@ -144,16 +153,33 @@ export function TextField({
           </Pressable>
         )}
       </View>
-      {hint && (
-        <AppText
-          variant="caption"
-          style={[styles.hint, !!error && styles.errorText]}
-        >
-          {hint}
-        </AppText>
-      )}
-      {counterBelow && counter && (
-        <View style={styles.counterBelow}>{counter}</View>
+      {counterBelow && counter ? (
+        <View style={styles.descriptionRow}>
+          {hint ? (
+            <AppText
+              variant="caption"
+              style={[
+                styles.hint,
+                styles.hintInRow,
+                !!error && styles.errorText,
+              ]}
+            >
+              {hint}
+            </AppText>
+          ) : (
+            <View />
+          )}
+          {counter}
+        </View>
+      ) : (
+        hint && (
+          <AppText
+            variant="caption"
+            style={[styles.hint, !!error && styles.errorText]}
+          >
+            {hint}
+          </AppText>
+        )
       )}
     </View>
   );
@@ -165,12 +191,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: u(10),
+    marginBottom: u(9.5),
   },
-  label: { fontFamily: fonts.medium, fontSize: u(15), color: colors.snow },
+  /** Figma `Input-Label`: Medium 30 px in a 36 px line, so Android and web agree on the baseline. */
+  label: {
+    fontFamily: fonts.medium,
+    fontSize: u(15),
+    lineHeight: u(18),
+    color: colors.snow,
+  },
   labelDisabled: { color: colors.white30 },
   box: {
-    minHeight: u(34),
+    minHeight: u(35),
     borderRadius: u(6),
     paddingHorizontal: u(8),
     gap: u(5),
@@ -206,12 +238,20 @@ const styles = StyleSheet.create({
   },
   counter: { fontFamily: fonts.regular, fontSize: u(10), color: colors.pearl },
   counterMax: { color: colors.ruby200 },
-  counterBelow: { marginTop: u(4) },
+  descriptionRow: {
+    marginTop: u(2),
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: u(8),
+  },
   hint: {
     marginTop: u(4),
     fontFamily: fonts.regular,
     fontSize: u(10),
+    lineHeight: u(12),
     color: colors.pearl,
   },
+  hintInRow: { marginTop: 0, flexShrink: 1 },
   errorText: { color: colors.danger },
 });

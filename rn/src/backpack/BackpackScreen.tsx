@@ -21,6 +21,7 @@ export type BackpackScreenProps = {
   subRow?: SubRow;
   /** Credits badge over the avatar; defaults to the platform's store policy. */
   credits?: boolean;
+  tools?: boolean;
 };
 
 export function BackpackScreen({
@@ -31,9 +32,10 @@ export function BackpackScreen({
   emptyCopy,
   subRow,
   credits = showsCredits(),
+  tools,
 }: BackpackScreenProps) {
   const controller = useBackpack({ api, initial });
-  const balance = useCredits(api ?? getBackpackApi(), credits);
+  const balance = useCredits(api ?? getBackpackApi(), credits && tools !== false);
   return (
     <BackpackView
       controller={controller}
@@ -42,6 +44,7 @@ export function BackpackScreen({
       credits={balance}
       footer={footer}
       onBack={onBack}
+      tools={tools}
     />
   );
 }

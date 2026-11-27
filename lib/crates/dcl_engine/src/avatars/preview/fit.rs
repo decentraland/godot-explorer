@@ -46,6 +46,16 @@ pub fn focus_extra_margin(focus: &str) -> i32 {
     }
 }
 
+/// Room left above a region, as a fraction of the view: the head sits low in its frame, with
+/// the sheet cutting the chest (Figma AVATAR_CUSTOMIZE); the other regions are centred.
+pub fn focus_top_space(focus: &str) -> f32 {
+    if matches!(focus, "head" | "head_base" | "head_base_facial") {
+        0.09
+    } else {
+        0.0
+    }
+}
+
 pub fn focus_aabb_center_y(focus: &str, aabb: Aabb) -> f32 {
     if matches!(focus, "head" | "head_base" | "head_base_facial") {
         aabb.position.y + aabb.size.y * 0.3
@@ -144,7 +154,8 @@ fn world_y(avatar: Transform3D, local_y: f32) -> f32 {
 }
 
 /// The camera that frames the body, not "overall": wearables can be arbitrarily large and the
-/// avatar height must not depend on what is equipped.
+/// avatar height must not depend on what is equipped. The feet stand on the bottom edge and
+/// whatever the size floor leaves over goes above the head, where hair and hats need it.
 pub fn fit_to_overall(aabbs: &Aabbs, view: FitView, avatar: Transform3D) -> OverallFit {
     let Some(overall) = aabbs.get("overall") else {
         return OverallFit::NoBody;
@@ -166,14 +177,10 @@ pub fn fit_to_overall(aabbs: &Aabbs, view: FitView, avatar: Transform3D) -> Over
     let size = (aabb.size.y * vp_h / inner_h)
         .max(aabb.size.x * vp_h / inner_w)
         .max(MIN_CAMERA_SIZE_OVERALL);
-    let center_y = aabb.center().y + (view.top - view.bottom) * size / (2.0 * vp_h);
     let bottom_w = world_y(avatar, aabb.position.y);
-    let top_w = world_y(avatar, aabb.position.y + aabb.size.y);
-    let pan_min = bottom_w + size * (0.5 - view.bottom / vp_h);
-    let pan_max = top_w - size * (0.5 - view.top / vp_h);
     OverallFit::Fit(CameraTarget {
         size,
-        center_y: center_y.clamp(pan_min.min(pan_max), pan_min.max(pan_max)),
+        center_y: bottom_w + size * (0.5 - view.bottom / vp_h),
     })
 }
 
@@ -376,6 +383,25 @@ mod tests {
     }
 
     #[test]
+    fn the_feet_stand_on_the_bottom_edge() {
+        // The size floor leaves 0.2 m over the 1.8 m body: all of it above the head, none under
+        // the feet (the hair reaches the top of the box in Figma, the soles its bottom).
+        let vp = Vector2::new(390.0, 844.0);
+        let bare = FitView {
+            top: 0.0,
+            bottom: 0.0,
+            ..view(vp)
+        };
+        let OverallFit::Fit(target) = fit_to_overall(&aabbs(), bare, Transform3D::IDENTITY) else {
+            panic!("expected a fit");
+        };
+        assert!((target.size - MIN_CAMERA_SIZE_OVERALL).abs() < 1e-5);
+        let bottom_edge = target.center_y - target.size * 0.5;
+        assert!((bottom_edge - body().position.y).abs() < 1e-5);
+        assert!(target.center_y + target.size * 0.5 > body().size.y + 0.1);
+    }
+
+    #[test]
     fn categories_pick_their_region() {
         assert_eq!(focus_for_category("hat"), "head");
         assert_eq!(focus_for_category("eyes"), "head_base");
@@ -384,6 +410,8 @@ mod tests {
         assert_eq!(focus_for_category("body_shape"), "overall");
         assert_eq!(focus_extra_margin("hands"), 80);
         assert_eq!(focus_extra_margin("legs"), 0);
+        assert_eq!(focus_top_space("head_base_facial"), 0.09);
+        assert_eq!(focus_top_space("torso"), 0.0);
     }
 
     #[test]

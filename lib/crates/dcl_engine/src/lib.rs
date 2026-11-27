@@ -55,7 +55,33 @@ struct DecentralandGodotLibrary;
 // SAFETY: gdext requires this marker; the library keeps the contract (no engine access before
 // `InitLevel::Scene`, no `Gd` handed to another thread without a deferred call).
 #[gdextension]
-unsafe impl ExtensionLibrary for DecentralandGodotLibrary {}
+unsafe impl ExtensionLibrary for DecentralandGodotLibrary {
+    fn on_stage_deinit(stage: InitStage) {
+        if stage == InitStage::MainLoop {
+            release_thread_local_engine_objects();
+        }
+    }
+}
+
+/// Rust drops thread locals when their thread exits, and Godot's main thread exits after
+/// `Main::cleanup()` has torn the engine down, so releasing an engine object then aborts (Android:
+/// "Pure virtual function called!" on every exit). The main loop's shutdown is the first step of
+/// that cleanup: every main-thread thread local that keeps a resource, an `Array`, a `Dictionary`
+/// or a `Callable` is emptied there. A new one must be added here.
+fn release_thread_local_engine_objects() {
+    app::global_api::release_engine_objects();
+    avatars::mesh_assembler::release_engine_objects();
+    godot_classes::dcl_ui_background::release_engine_objects();
+    godot_classes::dcl_video_player::release_engine_objects();
+    lights::component::release_engine_objects();
+    scene_runner::components::material::release_engine_objects();
+    scene_runner::gltf_loading::release_engine_objects();
+    scene_runner::scene_cache::release_engine_objects();
+    text_shape::fallbacks::release_engine_objects();
+    text_shape::glyph_cache::release_engine_objects();
+    text_shape::node::release_engine_objects();
+    world::release_host_engine_objects();
+}
 
 pub mod framework {
     use godot::prelude::*;

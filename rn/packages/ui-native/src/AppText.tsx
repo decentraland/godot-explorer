@@ -129,6 +129,7 @@ const figmaStyles = {
     fontSize: u(9),
     lineHeight: u(12),
   },
+  'Alert/Body': { fontFamily: fonts.regular, fontSize: u(13) },
 } satisfies Record<string, TextStyle>;
 
 export type FigmaTextStyle = keyof typeof figmaStyles;
@@ -184,16 +185,20 @@ export function AppText({
   style,
   children,
   numberOfLines,
+  textBreakStrategy,
 }: {
   variant?: TextVariant;
   style?: StyleProp<TextStyle>;
   children: ReactNode;
   numberOfLines?: number;
+  /** `simple` breaks greedily, as Figma does; Android's default balances the lines. */
+  textBreakStrategy?: 'simple' | 'highQuality' | 'balanced';
 }) {
   return (
     <Text
       allowFontScaling={false}
       numberOfLines={numberOfLines}
+      textBreakStrategy={textBreakStrategy}
       style={[variants[variant], style]}
     >
       {children}

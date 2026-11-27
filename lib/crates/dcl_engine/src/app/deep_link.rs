@@ -9,7 +9,6 @@ use godot::prelude::*;
 
 use crate::fetcher::globals;
 use crate::godot_classes::dcl_global::DclGlobal;
-use crate::godot_classes::dcl_ios_plugin::DclIosPlugin;
 use crate::godot_classes::dcl_parse_deep_link::DclParseDeepLink;
 
 /// Truthy values of a deeplink flag.
@@ -67,14 +66,20 @@ impl DeepLinkRouter {
         if url.is_empty() {
             return;
         }
-        // Consume the plugin's received URL so the next resume does not read it again.
-        if DclIosPlugin::is_available() {
-            let _ = DclIosPlugin::get_deeplink_args();
-        }
         let obj = DclParseDeepLink::parse_decentraland_link(url.as_str().into());
+        let host_driven = globals::engine().bind().is_host_driven();
         {
             let mut global = DclGlobal::singleton();
             let mut global = global.bind_mut();
+            if host_driven {
+                // The core owns navigation: keep the destination `world::enter` stored for the
+                // explorer's boot, or a link routed before that boot would send it elsewhere.
+                let previous = global.deep_link_obj.bind();
+                let mut next = obj.clone();
+                let mut next = next.bind_mut();
+                next.realm = previous.realm.clone();
+                next.location = previous.location;
+            }
             global.deep_link_url = url.as_str().into();
             global.deep_link_obj = obj.clone();
         }
@@ -84,11 +89,11 @@ impl DeepLinkRouter {
         );
         apply_link_settings(&obj);
 
-        // With the host driving the app the core routes the link, including push attribution.
-        if globals::engine().bind().is_host_driven() {
-            return;
+        // With the host driving the app the core attributes push opens. The signal still goes out:
+        // its listeners apply engine-side params (`scene-inspector`, `test-logging`).
+        if !host_driven {
+            track_push_open(&obj, &start_kind.to_string());
         }
-        track_push_open(&obj, &start_kind.to_string());
         self.run_deferred(|this| this.emit_deep_link_received());
     }
 

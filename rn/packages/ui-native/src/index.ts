@@ -12,9 +12,11 @@ export { ActionSquareButton } from './ActionSquareButton';
 export { AppText } from './AppText';
 export type { FigmaTextStyle, TextVariant } from './AppText';
 export { Badge } from './Badge';
+export { BadgeBar, BadgeDCL, BadgeProfileRow, BadgeSmall } from './BadgeDCL';
+export type { BadgeState } from './BadgeDCL';
 export { BottomNav } from './BottomNav';
 export type { NavKey } from './BottomNav';
-export { BottomSheet, SHEET_HANDLE_HEIGHT } from './BottomSheet';
+export { BottomSheet, SHEET_HANDLE_HEIGHT, useSheetDrag } from './BottomSheet';
 export { Button } from './Button';
 export { ButtonProfileLink } from './ButtonProfileLink';
 export { ButtonSeeMore } from './ButtonSeeMore';
@@ -38,7 +40,7 @@ export { ClaimDialog } from './ClaimDialog';
 export type { ClaimState } from './ClaimDialog';
 export { OtpDialog } from './OtpDialog';
 export type { OtpState } from './OtpDialog';
-export { Dialog } from './Dialog';
+export { Dialog, GLOW_BOTTOM, GLOW_TOP } from './Dialog';
 export type { DialogButton, DialogIcon } from './Dialog';
 export { Dropdown } from './Dropdown';
 export type { DropdownOption } from './Dropdown';
@@ -84,7 +86,9 @@ export { counterLabel, TextField } from './TextField';
 export { ToastBubble, ToastProvider, toastReducer, useToast } from './Toast';
 export { Tooltip } from './Tooltip';
 export type { TooltipArrow } from './Tooltip';
-export { WarningBanner } from './WarningBanner';
+export { Alert } from './Alert';
+export type { AlertBackground } from './Alert';
+export { Notification } from './Notification';
 export { BugReportDialog, BUG_DESCRIPTION_MAX } from './BugReportDialog';
 export { FriendRow } from './FriendRow';
 export type { FriendAction } from './FriendRow';
@@ -108,13 +112,13 @@ export {
   icon,
   iconSize,
   layout,
+  lightRainbow,
   minTouchTarget,
   notificationTitle,
   radii,
   radius,
   space,
   rarityColors,
-  lightRainbow,
   motion,
 } from './tokens';
 export type { Rarity } from './tokens';

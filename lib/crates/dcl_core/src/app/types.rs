@@ -156,7 +156,15 @@ pub enum EngineCommand {
     ApplyAvatar(super::AvatarState),
     /// The profile the core saved, as JSON content: the engine makes it the player's own.
     CommitAvatar(String),
+    /// A whole look from a preset: the engine shows the loading state, not the avatar it replaces.
+    ApplyLook(super::AvatarState),
     Control(super::Control),
+    /// A deep link the core routed: the engine applies the engine settings it carries
+    /// (`skip-gltf`, `gp-benchmark`, comms and content overrides). `cold` when it launched the app.
+    ApplyLink {
+        url: String,
+        cold: bool,
+    },
 }
 
 /// Engine → core.

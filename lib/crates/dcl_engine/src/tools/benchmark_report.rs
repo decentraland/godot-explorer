@@ -64,7 +64,7 @@ use godot::{
     prelude::*,
 };
 
-use crate::godot_classes::{dcl_android_plugin::DclAndroidPlugin, dcl_ios_plugin::DclIosPlugin};
+use crate::analytics::metrics::device_readings_with_memory;
 
 use std::fs::{self, File};
 use std::io::Write as IoWrite;
@@ -527,18 +527,10 @@ impl BenchmarkReport {
     }
 
     fn get_mobile_metrics(&self) -> (Option<i32>, Option<f32>, Option<i32>) {
-        let metrics_data = if DclIosPlugin::is_available() {
-            DclIosPlugin::get_mobile_metrics_internal()
-        } else if DclAndroidPlugin::is_available() {
-            DclAndroidPlugin::get_mobile_metrics_internal()
-        } else {
-            None
-        };
-
-        if let Some(metrics) = metrics_data {
+        if let Some(metrics) = device_readings_with_memory() {
             (
-                Some(metrics.memory_usage),
-                Some(metrics.device_temperature_celsius),
+                Some(metrics.memory_usage_mb),
+                Some(metrics.temperature_celsius),
                 Some(metrics.battery_percent.round() as i32),
             )
         } else {

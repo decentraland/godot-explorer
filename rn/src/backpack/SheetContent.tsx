@@ -28,6 +28,7 @@ export function SheetContent({
   columns,
   bottomInset = 0,
   flushTop = false,
+  entry = false,
 }: {
   controller: BackpackController;
   copy: EmptyCopy;
@@ -36,6 +37,8 @@ export function SheetContent({
   bottomInset?: number;
   /** Portrait emotes: the sheet has no handle and already spaces the grid. */
   flushTop?: boolean;
+  /** The entry flow's editor (Figma AVATAR_CUSTOMIZE): bigger category tiles, no colour row. */
+  entry?: boolean;
 }) {
   const { state, dispatch, catalog, avatar } = controller;
   // The tab row answers a tap at once; the new tab's grid follows in a render that can wait.
@@ -78,6 +81,7 @@ export function SheetContent({
           busy={controller.busy}
           copy={copy}
           subRow={subRow}
+          entry={entry}
           onTab={next => dispatch({ type: 'tab', tab: next })}
           onSlot={next => dispatch({ type: 'slot', slot: next })}
           onToggle={controller.toggleWearable}
@@ -92,7 +96,7 @@ export function SheetContent({
   return (
     <View style={styles.fill}>
       <KeptLayer shown={wearablesShown}>
-        {TABS.map(entry => entry.key)
+        {TABS.map(item => item.key)
           .filter(tab => tab === gridTab || kept)
           .map(panel)}
       </KeptLayer>

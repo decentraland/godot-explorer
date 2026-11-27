@@ -22,6 +22,11 @@ thread_local! {
     static TOON_CACHE: RefCell<HashMap<i64, Gd<ShaderMaterial>>> = RefCell::new(HashMap::new());
 }
 
+/// At engine shutdown: see `crate::release_thread_local_engine_objects`.
+pub(crate) fn release_engine_objects() {
+    TOON_CACHE.take();
+}
+
 /// `Avatar_Hips_2` -> `Avatar_Hips`: a Blender-style duplicate-import suffix (issue #1945).
 fn strip_duplicate_suffix(bone_name: &str) -> Option<&str> {
     let (stem, tail) = bone_name.rsplit_once('_')?;

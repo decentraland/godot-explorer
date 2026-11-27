@@ -7,13 +7,6 @@
     "search.exclude": {
         "**/node_modules": true,
         "**/target": true,
-        "**/.git": true,
-        "plugins/dcl-godot-ios/godot/**": true
-    },
-    "files.exclude": {
-        "plugins/dcl-godot-ios/godot/**": true
-    },
-    "files.watcherExclude": {
-        "plugins/dcl-godot-ios/godot/**": true
+        "**/.git": true
     }
 }

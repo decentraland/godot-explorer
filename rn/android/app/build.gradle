@@ -73,8 +73,8 @@ def enableProguardInReleaseBuilds = false
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
 /**
- * The Godot engine is optional: scripts/sync-godot-android.sh fills app/godot (engine AAR, plugin
- * AARs, native libs, project assets). Without it, or with -PdclNoGodot, the app builds with the JS
+ * The Godot engine is optional: scripts/sync-godot-android.sh fills app/godot (engine AAR, native
+ * libs, project assets). Without it, or with -PdclNoGodot, the app builds with the JS
  * mock bridge.
  */
 def withGodot = file("godot").exists() && !project.hasProperty("dclNoGodot")
@@ -142,6 +142,8 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
+    // Plays the splash's animated GIF; the version is the Fresco one React Native ships.
+    implementation("com.facebook.fresco:animated-gif:3.6.0")
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

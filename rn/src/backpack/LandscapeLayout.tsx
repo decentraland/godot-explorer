@@ -21,6 +21,7 @@ export function LandscapeLayout({
   copy,
   subRow,
   onBack,
+  tools = true,
 }: LayoutProps) {
   const insets = useSafeAreaInsets();
   const { state, dispatch, catalog } = controller;
@@ -36,7 +37,9 @@ export function LandscapeLayout({
         pointerEvents="box-none"
         style={[styles.header, { top, left: u(119) }]}
       >
-        <HeaderRow controller={controller} filterGap={FILTER_GAP} />
+        {tools ? (
+          <HeaderRow controller={controller} filterGap={FILTER_GAP} />
+        ) : null}
       </View>
       {onBack ? (
         <BackButton onPress={onBack} style={{ left: u(52), top }} />
@@ -79,10 +82,12 @@ export function LandscapeLayout({
           />
         </View>
       </View>
-      <FilterOverlay
-        controller={controller}
-        position={{ top: top + u(36), left: u(FILTER_RIGHT) - u(164) }}
-      />
+      {tools ? (
+        <FilterOverlay
+          controller={controller}
+          position={{ top: top + u(36), left: u(FILTER_RIGHT) - u(164) }}
+        />
+      ) : null}
     </View>
   );
 }

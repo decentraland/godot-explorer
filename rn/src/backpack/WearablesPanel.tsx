@@ -1,6 +1,8 @@
 import { memo, startTransition, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import {
+  AppText,
+  colors,
   ItemCard,
   PillButton,
   SlotTile,
@@ -8,6 +10,7 @@ import {
   layout,
   space,
   u,
+  useSheetDrag,
 } from '@dcl/ui-native';
 import type { AvatarState } from '../core/native';
 import { t } from '../i18n';
@@ -60,6 +63,8 @@ export type WearablesPanelProps = {
   busy?: string | null;
   copy: EmptyCopy;
   subRow?: SubRow;
+  /** The entry flow's editor: 62 dp category tiles and no colour row, as Figma AVATAR_CUSTOMIZE draws it. */
+  entry?: boolean;
   onTab: (tab: TabKey) => void;
   onSlot: (slot: Slot) => void;
   onToggle: (item: Wearable, equipped: boolean) => void;
@@ -92,6 +97,7 @@ function WearablesPanelView(props: WearablesPanelProps) {
     order.current = { tab, avatar, hidden };
   }
   order.current.hidden = hidden;
+  const drag = useSheetDrag();
   const pills = props.subRow === 'pills';
 
   // Once the tab shows, its other slots' grids mount hidden at low priority: picking a slot then
@@ -117,6 +123,7 @@ function WearablesPanelView(props: WearablesPanelProps) {
     <View style={styles.fill}>
       <View
         style={[styles.tabs, tab !== 'all' && !pills && styles.tabsAboveSlots]}
+        {...drag}
       >
         <Tabs
           items={TABS.map(entry => ({ key: entry.key, label: t(entry.label) }))}
@@ -199,13 +206,27 @@ function SlotGridView(props: SlotGridProps) {
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.slotsScroll}
-          contentContainerStyle={styles.slots}
+          contentContainerStyle={props.entry ? styles.entrySlots : styles.slots}
         >
           {SLOTS[tab].map(entry => {
             const worn = catalog
               ? equippedItem(entry, catalog, avatar)
               : undefined;
-            return (
+            return props.entry ? (
+              <View key={entry.key} style={styles.entrySlot}>
+                <ItemCard
+                  style={styles.entryCard}
+                  label={t(entry.label)}
+                  thumbnail={worn?.thumbnail}
+                  empty={!worn}
+                  state={selected === entry.key ? 'selected' : 'default'}
+                  onPress={() => props.onSlot(entry)}
+                />
+                <AppText variant="body" style={styles.entryLabel}>
+                  {t(entry.label)}
+                </AppText>
+              </View>
+            ) : (
               <SlotTile
                 key={entry.key}
                 label={t(entry.label)}
@@ -217,7 +238,7 @@ function SlotGridView(props: SlotGridProps) {
           })}
         </ScrollView>
       )}
-      {color && avatar && showSwatches ? (
+      {color && avatar && showSwatches && !props.entry ? (
         <View style={styles.swatches}>
           <SwatchStrip
             palette={palette}
@@ -301,6 +322,17 @@ const styles = StyleSheet.create({
     marginTop: -space['2xs'],
     paddingBottom: space['54'] - space['2xs'],
   },
+  /** Figma AVATAR_CUSTOMIZE `Categories`: 124 px `Cards-Wearables` (emote wheel) tiles 32 px apart, the
+   * 24 px label 4 px under each, 40 px above the cards. */
+  entrySlots: {
+    paddingHorizontal: layout.gutter,
+    paddingTop: u(4),
+    gap: u(16),
+    paddingBottom: u(20),
+  },
+  entrySlot: { width: u(62), alignItems: 'center', gap: u(2) },
+  entryCard: { width: u(62), height: u(62) },
+  entryLabel: { fontSize: u(12), lineHeight: u(14.5), color: colors.snow },
   busy: { opacity: 0.55 },
   pills: {
     paddingHorizontal: layout.gutter,

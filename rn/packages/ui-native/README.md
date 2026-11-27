@@ -60,14 +60,15 @@ Grouped by what they are for; the doc comment in each file says which Figma comp
 - **Inputs**: `TextField`, `SearchField`, `InputUsername`, `Dropdown`, `Checkbox`, `Switch`,
   `Slider`, `CodeSlots`, `HsvSliders`, `Swatch`, `SwatchRow`
 - **Tags and badges**: `Badge`, `NotificationBadge`, `Chip`, `TagCategory`, `EventBadge`,
-  `EventTimeTag`, `RarityLabel`, `ProfileAttribute`
+  `EventTimeTag`, `RarityLabel`, `ProfileAttribute`; achievements: `BadgeDCL`, `BadgeSmall`,
+  `BadgeProfileRow`, `BadgeBar`
 - **Cards and rows**: `ItemCard`, `SkeletonCard`, `RarityBackground`, `DiscoverCard`,
   `DiscoverCardSkeleton`, `DetailRow`, `AvatarCard`, `ProfileCard`, `SlotTile`, `ScreenshotCard`,
   `FriendRow`, `NotificationRow`, `LinkRow`, `SettingsRow`
 - **Navigation**: `BottomNav`, `Tabs`, `MenuNavItem`, `MenuDrawer`, `Menu`, `SnapCarousel`, `PageDots`
 - **Dialogs and sheets**: `Dialog`, `ModalSpecial`, `ClaimDialog`, `OtpDialog`, `BugReportDialog`,
   `PlaceModalLandscape`, `Sheet`, `SheetFooter`, `BottomSheet`
-- **Feedback**: `ToastProvider` + `useToast`, `WarningBanner`, `EmptyState`, `ProgressBar`,
+- **Feedback**: `ToastProvider` + `useToast`, `Alert`, `Notification`, `EmptyState`, `ProgressBar`,
   `Skeleton`, `Spinner`
 
 ## Adding or changing a component

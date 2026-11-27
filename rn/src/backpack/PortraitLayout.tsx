@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ComponentRef, useCallback, useMemo, useRef, useState } from 'react';
+import { PixelRatio, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   BottomSheet,
@@ -11,7 +11,7 @@ import {
   u,
 } from '@dcl/ui-native';
 import type { SnapConfig } from '@dcl/ui-native';
-import { AvatarHole, PortraitStage } from './AvatarStage';
+import { AvatarHole, PortraitStage, StageBackground } from './AvatarStage';
 import {
   BackButton,
   FilterOverlay,
@@ -22,10 +22,12 @@ import { EmoteChip } from './EmoteChip';
 import { EmoteSlots } from './EmoteSlots';
 import { chipName } from './emoteLogic';
 import { SheetContent } from './SheetContent';
+import { core } from '../core';
+import { Control } from '../core/native';
 
 /** Sheet heights as fractions of the area above the footer (Figma 720x1600 frames). */
 /** `peek` is Figma `Sheet` Height=Collapsed: 54 px, the handle alone. */
-const WEARABLES_SNAPS: SnapConfig = { peek: u(27), half: 0.514, full: 0.863 };
+const WEARABLES_SNAPS: SnapConfig = { peek: u(27), half: 0.531, full: 0.863 };
 const EMOTES_SNAPS: SnapConfig = { peek: u(27), half: 0.427, full: 0.863 };
 /** Figma `Emote Wheel`: 16 px above the sheet, half of it the row's own ring padding. */
 const SLOTS_GAP = space.xs;
@@ -41,13 +43,21 @@ export function PortraitLayout({
   credits,
   footer,
   onBack,
+  tools = true,
 }: LayoutProps) {
   const insets = useSafeAreaInsets();
   const [area, setArea] = useState(0);
   const [slotRow, setSlotRow] = useState(0);
+  const areaRef = useRef<ComponentRef<typeof View>>(null);
+  const areaTop = useRef(0);
   const { state, dispatch, catalog } = controller;
+  // The avatar window is sized for the snap the sheet rests at, not for the one it is heading to:
+  // it keeps its size while the sheet slides over it.
+  const [rest, setRest] = useState(state.sheet);
+  const heading = useRef(state.sheet);
+  heading.current = state.sheet;
   const emotes = state.mode === 'emotes';
-  const covered = state.sheet === 'full';
+  const covered = rest === 'full';
   const showSlots = emotes && catalog.status === 'ready' && !covered;
   const top = Math.max(insets.top + u(4), u(43));
   // Figma `Full`: the open sheet starts right under the header (pills row + 30 px).
@@ -60,18 +70,54 @@ export function PortraitLayout({
   }, [emotes, area, headerBottom]);
   const heights = snapHeights(area, config);
 
+  // The avatar window is above every RN view: the engine cuts it at the sheet's top edge, so the
+  // sheet covers the avatar while it moves, instead of the avatar showing over the sheet.
+  const clip = useCallback(
+    (visible: number) => {
+      if (!area) {
+        return;
+      }
+      try {
+        core().control(
+          new Control.PreviewClip({
+            bottom: Math.round(
+              (areaTop.current + area - visible) * PixelRatio.get(),
+            ),
+          }),
+        );
+      } catch {
+        // The window is not open (yet): there is nothing to cut.
+      }
+    },
+    [area],
+  );
+
   return (
     <View style={styles.root}>
       <View
+        ref={areaRef}
         style={styles.area}
-        onLayout={event => setArea(event.nativeEvent.layout.height)}
+        onLayout={event => {
+          setArea(event.nativeEvent.layout.height);
+          areaRef.current?.measureInWindow((_x, y) => {
+            areaTop.current = y;
+          });
+        }}
       >
-        <PortraitStage />
+        {tools ? <PortraitStage /> : <StageBackground bottom={heights.peek} />}
         <View style={[styles.header, { paddingTop: top }]}>
           {onBack ? (
-            <BackButton onPress={onBack} style={{ left: u(18), top }} />
+            // The same arrow, size and place as the avatar screen it follows: the box is 1 dp
+            // larger on each side than the 30 dp arrow.
+            <BackButton
+              onPress={onBack}
+              size={30}
+              style={{ left: u(23), top: top - u(1) }}
+            />
           ) : null}
-          <HeaderRow controller={controller} filterGap={FILTER_GAP} />
+          {tools ? (
+            <HeaderRow controller={controller} filterGap={FILTER_GAP} />
+          ) : null}
         </View>
         {covered ? (
           <View style={styles.hole} />
@@ -83,7 +129,7 @@ export function PortraitLayout({
               styles.hole,
               {
                 marginBottom:
-                  heights[state.sheet] + (showSlots ? slotRow + SLOTS_GAP : 0),
+                  heights[rest] + (showSlots ? slotRow + SLOTS_GAP : 0),
               },
             ]}
           />
@@ -132,6 +178,12 @@ export function PortraitLayout({
             containerHeight={area || undefined}
             config={config}
             handle={!emotes}
+            onMovingChange={moving => {
+              if (!moving) {
+                setRest(heading.current);
+              }
+            }}
+            onVisibleChange={clip}
           >
             <SheetContent
               controller={controller}
@@ -139,17 +191,20 @@ export function PortraitLayout({
               subRow={subRow}
               bottomInset={heights.full - heights[state.sheet]}
               flushTop={emotes}
+              entry={!tools}
             />
           </BottomSheet>
         </View>
-        <FilterOverlay
-          controller={controller}
-          position={{
-            // 8 px under the filter button, centred on the pill row.
-            top: top + (control['pill-lg'] + control.sm) / 2 + space.xs,
-            right: space['2xl'],
-          }}
-        />
+        {tools ? (
+          <FilterOverlay
+            controller={controller}
+            position={{
+              // 8 px under the filter button, centred on the pill row.
+              top: top + (control['pill-lg'] + control.sm) / 2 + space.xs,
+              right: space['2xl'],
+            }}
+          />
+        ) : null}
       </View>
       {footer}
     </View>

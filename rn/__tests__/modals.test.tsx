@@ -307,7 +307,9 @@ describe('engine notices', () => {
     );
     expect(ban?.title).toBe(t('MODAL_BAN_KICKED_TITLE'));
     expect(ban?.dismissable).toBe(false);
-    expect(ban?.buttons[1].label).toBe(t('MODAL_SESSION_ENDED_SIGN_IN_PRIMARY'));
+    expect(ban?.buttons[1].label).toBe(
+      t('MODAL_SESSION_ENDED_SIGN_IN_PRIMARY'),
+    );
     ban?.buttons[1].onPress?.();
     expect(a.signOut).toHaveBeenCalled();
     ban?.buttons[0].onPress?.();
@@ -321,7 +323,9 @@ describe('engine notices', () => {
       a,
     );
     expect(outage?.key).toBe('disconnected-recoverable');
-    expect(outage?.buttons[1].label).toBe(t('MODAL_SESSION_ENDED_RETRY_PRIMARY'));
+    expect(outage?.buttons[1].label).toBe(
+      t('MODAL_SESSION_ENDED_RETRY_PRIMARY'),
+    );
     const closed = noticeModal(
       new EngineNotice.Disconnected({ reason: DisconnectReason.RoomClosed }),
       a,

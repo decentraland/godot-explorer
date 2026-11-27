@@ -13,15 +13,18 @@ export function indexFromOffset(
   return Math.min(count - 1, Math.max(0, index));
 }
 
-/** `round` keeps every dot the same size and only recolours the active one. */
+/** `round` keeps every dot the same size and only recolours the active one; `dark` draws the
+ * inactive dots Black 40%, for the brand background. */
 export function PageDots({
   count,
   index,
   round = false,
+  dark = false,
 }: {
   count: number;
   index: number;
   round?: boolean;
+  dark?: boolean;
 }) {
   return (
     <View
@@ -34,6 +37,7 @@ export function PageDots({
           accessibilityState={{ selected: i === index }}
           style={[
             styles.dot,
+            dark && styles.dotDark,
             i === index && (round ? styles.dotRound : styles.dotActive),
           ]}
         />
@@ -52,6 +56,8 @@ export function SnapCarousel<T>({
   renderItem,
   onIndexChange,
   inset = 0,
+  initialIndex = 0,
+  sideScale,
 }: {
   data: T[];
   itemWidth: number;
@@ -65,11 +71,16 @@ export function SnapCarousel<T>({
   onIndexChange?: (index: number) => void;
   /** Leading/trailing padding in dp so the first item can align with the page gutter. */
   inset?: number;
+  initialIndex?: number;
+  /** Scale of the items beside the settled one, eased as the carousel scrolls; they shrink
+   * towards it, so the gap to it stays. */
+  sideScale?: number;
 }) {
   const width = u(itemWidth);
   const spacing = u(gap);
-  const scrollX = useRef(new Animated.Value(0)).current;
   const step = width + spacing;
+  const scrollX = useRef(new Animated.Value(initialIndex * step)).current;
+  const shrink = ((1 - (sideScale ?? 1)) * width) / 2;
   return (
     <Animated.ScrollView
       horizontal
@@ -79,8 +90,9 @@ export function SnapCarousel<T>({
         { useNativeDriver: true },
       )}
       showsHorizontalScrollIndicator={false}
-      snapToInterval={width + spacing}
+      snapToInterval={step}
       decelerationRate="fast"
+      contentOffset={{ x: initialIndex * step, y: 0 }}
       contentContainerStyle={{ paddingHorizontal: u(inset), gap: spacing }}
       onMomentumScrollEnd={e =>
         onIndexChange?.(
@@ -94,7 +106,30 @@ export function SnapCarousel<T>({
       }
     >
       {data.map((item, i) => (
-        <View key={keyOf(item)} style={{ width }}>
+        <Animated.View
+          key={keyOf(item)}
+          style={[
+            { width },
+            sideScale !== undefined && {
+              transform: [
+                {
+                  translateX: scrollX.interpolate({
+                    inputRange: [(i - 1) * step, i * step, (i + 1) * step],
+                    outputRange: [-shrink, 0, shrink],
+                    extrapolate: 'clamp',
+                  }),
+                },
+                {
+                  scale: scrollX.interpolate({
+                    inputRange: [(i - 1) * step, i * step, (i + 1) * step],
+                    outputRange: [sideScale, 1, sideScale],
+                    extrapolate: 'clamp',
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
           {renderItem(
             item,
             i,
@@ -104,7 +139,7 @@ export function SnapCarousel<T>({
               extrapolate: 'clamp',
             }),
           )}
-        </View>
+        </Animated.View>
       ))}
     </Animated.ScrollView>
   );
@@ -118,6 +153,7 @@ const styles = StyleSheet.create({
     borderRadius: u(3),
     backgroundColor: colors.white30,
   },
+  dotDark: { backgroundColor: colors.black40 },
   dotRound: { backgroundColor: colors.lavender },
   dotActive: { width: u(16), backgroundColor: colors.snow },
 });

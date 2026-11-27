@@ -1,11 +1,17 @@
 // Design System Mobile components added on 2026-11-17: Button/SeeMore, Button/ProfileLink,
 // Profile/Attribute, Icon/Profile, Menu/NavItem, Settings/Row, Input/Username and Modal/Special;
-// Loader/Logo, Image Not Found, Background/Avatar and Tooltip on 2026-11-25.
+// Loader/Logo, Image Not Found, Background/Avatar, Tooltip, Alert and Notification on
+// 2026-11-25; Badge-DCL, Badge-Small, Badge-ProfileRow and Bar on 2026-11-27.
 import { useState } from 'react';
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import {
+  Alert,
   AppText,
   AvatarBackground,
+  BadgeBar,
+  BadgeDCL,
+  BadgeProfileRow,
+  BadgeSmall,
   BrandBackground,
   Button,
   ButtonProfileLink,
@@ -16,6 +22,7 @@ import {
   LogoLoader,
   MenuNavItem,
   ModalSpecial,
+  Notification,
   ProfileAttribute,
   ProfileIconType,
   ScrollFade,
@@ -31,6 +38,7 @@ import {
 import { registerPreview } from './registry';
 
 const media = require('./assets/modal-special-media.jpg');
+const badgeArt = require('./assets/badge-explorer-bronze.png');
 const noop = () => {};
 const PROFILE_TYPES: ProfileIconType[] = [
   'Gender',
@@ -212,6 +220,77 @@ registerPreview('extra/ds-tooltip', {
   ),
 });
 
+registerPreview('extra/ds-alert', {
+  title: 'DS: Alert and Notification',
+  orientation: 'portrait',
+  render: () => (
+    <View style={styles.page}>
+      <BrandBackground />
+      <ScrollView contentContainerStyle={styles.alerts}>
+        <Notification
+          title="Unlock the full experience"
+          body="Add email to play across mobile and desktop, and claim an exclusive Wearable."
+          actionLabel="Add email"
+          onAction={noop}
+        />
+        <Alert lead="Reward claim failed." message="Try again." />
+        <Alert
+          lead="Reward claim failed."
+          message="Check your connection and try again."
+        />
+        <Alert background="translucent" message="Device no longer supported" />
+      </ScrollView>
+    </View>
+  ),
+});
+
+registerPreview('extra/ds-badges', {
+  title: 'DS: Badges',
+  orientation: 'landscape',
+  render: () => (
+    <View style={styles.page}>
+      <BrandBackground />
+      <ScrollView contentContainerStyle={styles.badges}>
+        <View style={styles.row}>
+          <BadgeProfileRow image={badgeArt} selected />
+          <BadgeProfileRow image={badgeArt} />
+          <BadgeProfileRow />
+          <BadgeSmall image={badgeArt} />
+          <BadgeSmall image={badgeArt} state="selected" />
+          <BadgeSmall image={badgeArt} state="disabled" />
+        </View>
+        <View style={styles.row}>
+          <BadgeDCL image={badgeArt} name="Traveler bronze" progress={0} />
+          <BadgeDCL image={badgeArt} name="Traveler bronze" progress={0.4} />
+          <BadgeDCL
+            image={badgeArt}
+            name="Traveler bronze"
+            date="Jan. 2024"
+            state="selected"
+          />
+          <BadgeDCL
+            image={badgeArt}
+            name="Traveler bronze"
+            progress={0}
+            state="disabled"
+          />
+          <BadgeDCL
+            image={badgeArt}
+            name="Traveler bronze"
+            date="Jan. 2024"
+            state="disabled"
+          />
+        </View>
+        <View style={styles.row}>
+          <BadgeBar value={0} />
+          <BadgeBar value={0.4} />
+          <BadgeBar value={1} />
+        </View>
+      </ScrollView>
+    </View>
+  ),
+});
+
 const styles = StyleSheet.create({
   page: { flex: 1 },
   content: {
@@ -226,6 +305,7 @@ const styles = StyleSheet.create({
     gap: space.lg,
   },
   fadeRow: { gap: space.xs },
+  badges: { padding: space.xl, gap: space.xl },
   notFound: { width: u(147), height: u(78) },
   spotlight: { width: u(160), height: u(172) },
   tile: {
@@ -246,4 +326,5 @@ const styles = StyleSheet.create({
   tooltipPage: { flex: 1, backgroundColor: color.background.elevated },
   tooltips: { padding: space['2xl'], gap: space['2xl'] },
   tooltipLeft: { marginLeft: space.lg },
+  alerts: { padding: space['2xl'], gap: space.xl },
 });

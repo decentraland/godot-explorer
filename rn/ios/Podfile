@@ -30,12 +30,14 @@ target 'DclRn' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
-    # Resource-bundle targets (RNSVG-RNSVGFilters) keep their pod's 12.4 minimum; Xcode 27 rejects < 15.
+
+    # Xcode 27 rejects iOS deployment targets below 15.0, and react_native_post_install only raises
+    # each pod's main target, not resource bundles such as RNSVG-RNSVGFilters (12.4).
     installer.pods_project.targets.each do |target|
-      target.build_configurations.each do |config|
-        if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < min_ios_version_supported.to_f
-          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = min_ios_version_supported
-        end
+      target.build_configurations.each do |build_config|
+        current = build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        next if current.nil? || current.to_f >= min_ios_version_supported.to_f
+        build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = min_ios_version_supported
       end
     end
   end

@@ -43,7 +43,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     window = UIWindow(windowScene: scene)
     window?.rootViewController = DclGodotHost.rootViewController(withReactView: reactView)
     window?.makeKeyAndVisible()
-    DclGodotHost.forwardLaunchOptions(launchOptions)
   }
 
   func application(
@@ -58,8 +57,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     open url: URL,
     options: [UIApplication.OpenURLOptionsKey: Any] = [:]
   ) -> Bool {
-    DclGodotHost.forwardOpenURL(url, options: options)
-    return RCTLinkingManager.application(app, open: url, options: options)
+    RCTLinkingManager.application(app, open: url, options: options)
   }
 
   func application(
@@ -67,23 +65,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     continue userActivity: NSUserActivity,
     restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
   ) -> Bool {
-    DclGodotHost.forwardUserActivity(userActivity)
-    return RCTLinkingManager.application(
+    RCTLinkingManager.application(
       application, continue: userActivity, restorationHandler: restorationHandler)
-  }
-
-  func application(
-    _ application: UIApplication,
-    didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
-  ) {
-    DclGodotHost.forwardDeviceToken(deviceToken, error: nil)
-  }
-
-  func application(
-    _ application: UIApplication,
-    didFailToRegisterForRemoteNotificationsWithError error: Error
-  ) {
-    DclGodotHost.forwardDeviceToken(nil, error: error)
   }
 }
 
@@ -212,6 +195,8 @@ enum CoreHost {
     )
     _ = try? addHostListener(listener: listener)
     try? installAttestation(service: AppAttestAttestation())
+    installDeviceService(service: IosDevice())
+    installVideoBackend(backend: AVVideoBackend())
   }
 
   /// The Keychain UUID that survives reinstalls (the guest wallet derives from it): the same item

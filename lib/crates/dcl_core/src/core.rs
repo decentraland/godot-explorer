@@ -149,6 +149,8 @@ impl Core {
         start: crate::deep_link_route::StartKind,
     ) -> crate::deep_link_route::Routed {
         let outcome = self.hub.route_deep_link(url, start, self.config.platform);
+        let cold = matches!(start, crate::deep_link_route::StartKind::Cold);
+        self.with_app(|app| app.engine_link(url, cold));
         if let Some(token) = outcome.complete_sign_in {
             let hub = &self.hub;
             self.handle().spawn(async move {

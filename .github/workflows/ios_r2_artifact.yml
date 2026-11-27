@@ -81,8 +81,8 @@ concurrency:
 jobs:
   build:
     name: Build iOS export → R2
-    # iOS can only be compiled on macOS. Matches ios_builds.yml's runner; if WarpBuild is
-    # dropped for this repo too, swap to the GitHub-hosted `macos-26` image.
+    # iOS can only be compiled on macOS. WarpBuild's macOS 26 image also carries Xcode 27; if
+    # WarpBuild is dropped, the GitHub-hosted image with Xcode 27 is `xcode-27`.
     runs-on: warp-macos-26-arm64-6x
     timeout-minutes: 45
     outputs:
@@ -142,16 +142,14 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
-      # The Godot export is consumed (re-archived) by the deploy repo; build the dylib
-      # against the iOS 26 SDK so the final archive there satisfies Apple's SDK floor.
-      - name: Select Xcode 26 (iOS 26 SDK)
+      # The Godot export is consumed (re-archived) by the deploy repo; build the dylib against the
+      # iOS 27 SDK, which App Store Connect requires from April 2027. Newest stable Xcode 27 only:
+      # App Store Connect rejects binaries built with a beta Xcode.
+      - name: Select Xcode 27 (iOS 27 SDK)
         run: |
-          XCODE_APP="/Applications/Xcode_26.4.1.app"
-          if [ ! -d "$XCODE_APP" ]; then
-            XCODE_APP="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)"
-          fi
+          XCODE_APP="$(ls -d /Applications/Xcode_27*.app 2>/dev/null | grep -vi beta | sort -V | tail -1)"
           if [ -z "$XCODE_APP" ] || [ ! -d "$XCODE_APP" ]; then
-            echo "❌ No Xcode 26 found on the runner. Installed Xcodes:"
+            echo "❌ No Xcode 27 found on the runner. Installed Xcodes:"
             ls -d /Applications/Xcode*.app 2>/dev/null
             exit 1
           fi
@@ -200,13 +198,13 @@ jobs:
         uses: ./.github/actions/import-assets
 
       # The iOS export bakes shaders (export_presets.cfg `shader_baker/enabled=true`): Godot compiles them
-      # to .metallib through `xcrun metal`, which Xcode 26 ships as a separately downloaded component.
+      # to .metallib through `xcrun metal`, which Xcode ships as a separately downloaded component.
       # Without it the baker silently falls back to SPIR-V only and the device compiles every shader on
       # its main thread at first draw. `cargo run -- export` fails the build if that happens.
       - name: Ensure Metal toolchain (shader baker)
         run: |
           if ! xcrun -sdk iphoneos metal --version >/dev/null 2>&1; then
-            echo "Metal toolchain missing — downloading the Xcode 26 component…"
+            echo "Metal toolchain missing — downloading the Xcode component…"
             xcodebuild -downloadComponent MetalToolchain
           fi
           xcrun -sdk iphoneos metal --version

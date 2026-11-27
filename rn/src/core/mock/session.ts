@@ -84,7 +84,7 @@ export function createMockSession(
       await sleep(STEP_MS);
       signedIn('0xbrowser0000000000000000000000000000000003');
     },
-    // Like the core: only an unfinished sign-in is cancelled; a signed-in user stays signed in.
+    // Only a running sign-in can be cancelled, as in the core; a finished one stays.
     cancelSignIn: () => {
       if (bus.state().tag === 'SigningIn') {
         emit(new State.SignedOut());

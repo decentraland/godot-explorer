@@ -17,6 +17,18 @@ use crate::{
 const ADB_MAX_RETRIES: u32 = 3;
 const ADB_RETRY_DELAY_SECS: u64 = 2;
 
+/// Logcat tags of the RN host's Kotlin: the core's host side, push, video, device readings.
+const ANDROID_HOST_LOG_TAGS: &[&str] = &[
+    "CoreHost:V",
+    "DclPush:V",
+    "DclFcmService:V",
+    "NotificationReceiver:V",
+    "ExoVideoBackend:V",
+    "ExoPlayerWrapper:V",
+    "AndroidDevice:V",
+    "AndroidMarketing:V",
+];
+
 pub fn run(
     editor: bool,
     itest: bool,
@@ -900,10 +912,10 @@ fn deploy_and_run_android(
     print_message(MessageType::Success, "Application launched on device");
 
     // Show logs. Tags: Godot engine (godot), the launcher (GodotApp), the Rust lib
-    // + GDScript routed through it (dclgodot), the Kotlin plugin (dcl-godot-android
-    // — its [INIT]/Log.* lines), Kotlin println/stderr (System.out/err), and native
-    // crashes (AndroidRuntime:E). Kotlin `Log.*` only reach logcat (not the
-    // scene-inspector/hub channel), so logcat is the complete log view on Android.
+    // (dclgodot), the RN host's Kotlin (ANDROID_HOST_LOG_TAGS), Kotlin println/stderr
+    // (System.out/err), and native crashes (AndroidRuntime:E). Kotlin `Log.*` only
+    // reach logcat (not the scene-inspector/hub channel), so logcat is the complete
+    // log view on Android.
     //
     // Skipped under `--hub-viewer`: the caller streams logs through the hub instead
     // and blocks on that, so this would only duplicate (and Kotlin `Log.*` won't
@@ -919,11 +931,11 @@ fn deploy_and_run_android(
                 "godot:V",
                 "GodotApp:V",
                 "dclgodot:V",
-                "dcl-godot-android:V",
                 "System.out:V",
                 "System.err:V",
                 "AndroidRuntime:E",
             ])
+            .args(ANDROID_HOST_LOG_TAGS)
             .status()?;
     }
 
@@ -1349,8 +1361,8 @@ pub fn hotreload_android(extras: Vec<String>) -> anyhow::Result<()> {
         "Application restarted with new library!",
     );
 
-    // Show logs (same tag set as the full deploy — incl. the Kotlin plugin
-    // `dcl-godot-android`, System.out/err, and native crashes).
+    // Show logs (same tag set as the full deploy — incl. the RN host's Kotlin,
+    // System.out/err, and native crashes).
     print_message(MessageType::Info, "Showing device logs (Ctrl+C to stop):");
     std::process::Command::new("adb")
         .args([
@@ -1359,11 +1371,11 @@ pub fn hotreload_android(extras: Vec<String>) -> anyhow::Result<()> {
             "godot:V",
             "GodotApp:V",
             "dclgodot:V",
-            "dcl-godot-android:V",
             "System.out:V",
             "System.err:V",
             "AndroidRuntime:E",
         ])
+        .args(ANDROID_HOST_LOG_TAGS)
         .status()?;
 
     Ok(())

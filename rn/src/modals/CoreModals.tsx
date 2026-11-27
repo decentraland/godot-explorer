@@ -10,7 +10,6 @@ import {
   EntryRefusal,
   SceneRequest_Tags,
   SupportModal,
-  UpdateDecision,
 } from '../core/native';
 import type { EngineNotice, SceneRequest } from '../core/native';
 import { t } from '../i18n';
@@ -334,40 +333,6 @@ export function CoreModals({ ready }: { ready: boolean }) {
       return;
     }
     let cancelled = false;
-    (async () => {
-      const gate = await core()
-        .versionGate()
-        .catch(() => null);
-      if (cancelled || !gate || gate.decision === UpdateDecision.Proceed) {
-        return;
-      }
-      const required = gate.decision === UpdateDecision.Required;
-      modals.show({
-        key: 'update',
-        title: t('AUTH_UPDATE_TITLE'),
-        body: t('AUTH_UPDATE_BODY'),
-        dismissable: !required,
-        buttons: [
-          ...(required
-            ? []
-            : [
-                {
-                  label: t('COMMON_CANCEL'),
-                  tone: 'secondary' as const,
-                  onPress: () => core().snoozeVersionGate(),
-                },
-              ]),
-          {
-            label: t('COMMON_UPDATE'),
-            onPress: () => {
-              Linking.openURL(
-                'market://details?id=org.decentraland.godotexplorer',
-              ).catch(() => {});
-            },
-          },
-        ],
-      });
-    })();
     (async () => {
       const support = await deviceFacts()
         .then(facts => core().deviceSupport(facts))
