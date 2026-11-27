@@ -1159,13 +1159,17 @@ fn get_connected_ios_device() -> anyhow::Result<String> {
     // Lines contain: Name  Hostname  Identifier  State  ...
     // State can be "connected", "available", "available (paired)", etc.
     for line in stdout.lines() {
-        // "unavailable" (e.g. a paired Apple Watch) also contains "available".
+        // "unavailable" (e.g. a paired Apple Watch) also contains "available". Xcode 27 also lists
+        // booted simulators as "connected" (Reality "simulated").
         if !line.contains("unavailable")
+            && !line.contains("simulated")
             && (line.contains("connected") || line.contains("available"))
         {
-            // Extract the UUID (format: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX)
+            // A CoreDevice UUID (XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX) or, from Xcode 27, the
+            // device UDID (XXXXXXXX-XXXXXXXXXXXXXXXX).
             for word in line.split_whitespace() {
-                if word.len() == 36 && word.chars().filter(|c| *c == '-').count() == 4 {
+                let dashes = word.chars().filter(|c| *c == '-').count();
+                if (word.len() == 36 && dashes == 4) || (word.len() == 25 && dashes == 1) {
                     return Ok(word.to_string());
                 }
             }
