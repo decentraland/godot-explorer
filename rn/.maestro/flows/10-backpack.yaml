@@ -12,6 +12,21 @@ name: Backpack
 - tapOn: "ALL"
 - assertVisible: "Base(Male|Female)"
 
+# Sheet: the handle toggles half and full; dragging it down collapses the sheet to the handle alone.
+- tapOn: "Expand sheet"
+- assertVisible: "Collapse sheet"
+- tapOn: "Collapse sheet"
+- assertVisible: "Expand sheet"
+- swipe:
+    from:
+      text: "Expand sheet"
+    direction: DOWN
+- assertNotVisible: "CLOTHING"
+# From collapsed one tap reaches half (still "Expand sheet"); from half it would reach full.
+- tapOn: "Expand sheet"
+- assertVisible: "Expand sheet"
+- assertVisible: "CLOTHING"
+
 # BODY: shape is a pair of exclusive options and a required part, so tapping the worn one keeps it.
 - tapOn: "BODY"
 - assertVisible: "Shape"
@@ -48,6 +63,49 @@ name: Backpack
 # The editor's header (title and arrow) is its Back button; "Back" alone would match the screen's own.
 - tapOn: "Skin color"
 - assertVisible: "BODY"
+
+# The item lists do not depend on the body shape: both bodies offer the same items.
+- tapOn: "BODY"
+- tapOn: "Shape"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "BaseFemale"
+- tapOn: "FACE"
+- tapOn: "Eye"
+- assertVisible: "eyes_00"
+- assertVisible: "eyes_01"
+- assertVisible: "eyes_02"
+- tapOn: "Facial Hair"
+- assertVisible: "goatee"
+- assertVisible: "full_beard"
+- tapOn: "Eyebrows"
+- assertVisible: "eyebrows_00"
+- assertVisible: "eyebrows_01"
+- tapOn: "Mouth"
+- assertVisible: "mouth_00"
+- assertVisible: "mouth_01"
+- tapOn: "Hair"
+- tapOn: "BODY"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "BaseMale"
+- tapOn: "FACE"
+- tapOn: "Eye"
+- assertVisible: "eyes_00"
+- assertVisible: "eyes_01"
+- assertVisible: "eyes_02"
+- tapOn: "Facial Hair"
+- assertVisible: "goatee"
+- assertVisible: "full_beard"
+- tapOn: "Eyebrows"
+- assertVisible: "eyebrows_00"
+- assertVisible: "eyebrows_01"
+- tapOn: "Mouth"
+- assertVisible: "mouth_00"
+- assertVisible: "mouth_01"
+- tapOn: "Hair"
 
 # FACE: the slots, the hair palette and the hair items.
 - tapOn: "FACE"
@@ -156,6 +214,44 @@ name: Backpack
     text: "mouth_01"
     selected: true
 
+# The custom colour editor opens from every slot that has a colour, and its header returns to the tabs.
+- tapOn: "Hair"
+- tapOn: "Custom color"
+- assertVisible: "Hair color"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "#e0952c"
+- tapOn: "Hair color"
+- assertVisible: "FACE"
+- tapOn: "Facial Hair"
+- tapOn: "Custom color"
+- assertVisible: "Facial hair color"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "#1c1c1c"
+- tapOn: "Facial hair color"
+- assertVisible: "FACE"
+- tapOn: "Eyebrows"
+- tapOn: "Custom color"
+- assertVisible: "Eyebrows color"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "#5a3410"
+- tapOn: "Eyebrows color"
+- assertVisible: "FACE"
+- tapOn: "Eye"
+- tapOn: "Custom color"
+- assertVisible: "Eye color"
+- runFlow:
+    file: ../subflows/select.yaml
+    env:
+      ITEM: "#2f6f4a"
+- tapOn: "Eye color"
+- assertVisible: "FACE"
+
 # CLOTHING: each slot swaps its item; the grid starts on Chest.
 - tapOn: "CLOTHING"
 - assertVisible: "Chest"
@@ -219,11 +315,33 @@ name: Backpack
 
 # Filter on wearables: Collectibles keeps only the collectible items of the slot, All brings the rest back.
 - tapOn: "Chest"
+# A tap outside the menu closes it without changing the filter.
+- tapOn: "Filter"
+- assertVisible: "Collectibles"
+- tapOn:
+    point: "25%,40%"
+- assertNotVisible: "Collectibles"
+- assertVisible: "green_hoodie"
 - tapOn: "Filter"
 - tapOn: "Collectibles"
 - assertVisible: "neon_jacket"
 - assertNotVisible: "green_hoodie"
 - assertNotVisible: "blue_tshirt"
+# The filter stays on across tabs and applies to every slot.
+- tapOn: "EXTRAS"
+- tapOn: "Tiaras"
+- assertVisible: "crystal_tiara"
+- assertNotVisible: "silver_tiara"
+- tapOn: "Glasses"
+- assertVisible: "laser_visor"
+- assertNotVisible: "sunglasses"
+- tapOn: "Hat"
+- assertVisible: "Nothing here yet"
+- assertNotVisible: "cap"
+- tapOn: "CLOTHING"
+- tapOn: "Chest"
+- assertVisible: "neon_jacket"
+- assertNotVisible: "green_hoodie"
 - tapOn: "Filter"
 - assertVisible:
     text: "Collectibles"
@@ -323,7 +441,7 @@ name: Backpack
     text: "eyes_02"
     selected: true
 - assertVisible:
-    text: "#6b4a2e"
+    text: "#2f6f4a"
     selected: true
 - tapOn: "CLOTHING"
 - tapOn: "Chest"
@@ -463,6 +581,21 @@ name: Backpack
     selected: true
 - tapOn: "All"
 - assertVisible: "Dab"
+
+# Sheet on emotes: back to half from full, then collapsed by dragging it down.
+- tapOn: "Collapse sheet"
+- assertVisible: "Expand sheet"
+- assertVisible: "Hands Air"
+- swipe:
+    from:
+      text: "Expand sheet"
+    direction: DOWN
+# From collapsed one tap reaches half; items behind the bottom bar stay in the hierarchy, so the state is
+# read from the handle.
+- tapOn: "Expand sheet"
+- assertVisible: "Expand sheet"
+- assertNotVisible: "Collapse sheet"
+- assertVisible: "Hands Air"
 
 # The assigned emotes survive leaving the Backpack.
 - tapOn: "explore"
