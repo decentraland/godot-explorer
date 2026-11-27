@@ -84,6 +84,7 @@ var _profile_status_label: Label
 @onready var hash_container = %Hash
 @onready var checkmark_container = %ClaimedCheckmark
 @onready var message_clip = %MessageClip
+@onready var panel: Panel = %Panel
 @onready var version_label = %VersionLabel
 @onready var room_debug_label = %RoomDebugLabel
 
