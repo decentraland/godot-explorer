@@ -1,5 +1,5 @@
 import { ReactElement } from 'react';
-import { Keyboard, NativeModules, Platform } from 'react-native';
+import { BackHandler, Keyboard, NativeModules, Platform } from 'react-native';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { HomeTabs } from '../src/app/HomeTabs';
@@ -112,6 +112,47 @@ describe('screens render', () => {
       expect(JSON.stringify(tree.toJSON())).toContain('Choose your look');
     } finally {
       jest.useRealTimers();
+    }
+  });
+
+  it('hardware Back on the first places leaves the new account signed in', async () => {
+    if (core().state().tag !== 'SignedOut') {
+      act(() => core().signOut());
+    }
+    const handlers: Array<() => boolean> = [];
+    const listen = jest.spyOn(BackHandler, 'addEventListener');
+    listen.mockImplementation(((_: string, handler: () => boolean) => {
+      handlers.push(handler);
+      return { remove: () => handlers.splice(handlers.indexOf(handler), 1) };
+    }) as never);
+    jest.useFakeTimers();
+    try {
+      const tree = mount(<EntryFlow onDone={() => {}} />);
+      const press = async (label: string) => {
+        await act(async () =>
+          tree.root.findByProps({ accessibilityLabel: label }).props.onPress(),
+        );
+        await act(async () => {
+          jest.advanceTimersByTime(500);
+        });
+      };
+      await act(async () => {
+        jest.advanceTimersByTime(1500);
+      });
+      await press('PLAY AS GUEST');
+      await press('NEXT');
+      await press('Let’s Go');
+      expect(core().state().tag).toBe('SignedIn');
+      let handled = true;
+      act(() => {
+        handled = handlers[handlers.length - 1]();
+      });
+      expect(handled).toBe(false);
+      expect(core().state().tag).toBe('SignedIn');
+    } finally {
+      jest.useRealTimers();
+      listen.mockRestore();
+      act(() => core().signOut());
     }
   });
 
