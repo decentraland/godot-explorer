@@ -31,7 +31,9 @@ use crate::godot_classes::dcl_gltf_container::DclGltfContainer;
 use crate::world;
 
 const CONFIG_PATH: &str = "res://bench/genesis_plaza.config.json";
-const EXPLORER_SCENE: &str = "res://src/ui/explorer.tscn";
+/// 2.x boots `dcl_root.tscn`, which hosts the explorer; 1.x used `explorer.tscn` directly. Both are
+/// "the explorer is up" for this runner.
+const EXPLORER_SCENES: [&str; 2] = ["res://src/ui/explorer.tscn", "res://src/dcl_root.tscn"];
 /// A hard cap on the load: a mobile cold start is slow.
 const LOAD_TIMEOUT_MS: u64 = 1_800_000;
 /// The canonical benchmark pose. The scene's spawn point randomizes within a range, so two devices
@@ -199,11 +201,16 @@ impl GpBenchmarkRunner {
     }
 
     fn wait_for_explorer(&mut self) {
-        let in_explorer = DclGlobal::singleton()
+        // 2.x keeps the explorer inside the React Native shell instead of as the tree's current
+        // scene, so the scene runner existing is a better "client is up" signal than the scene path.
+        let current = DclGlobal::singleton()
             .get_tree_or_null()
-            .and_then(|tree| tree.get_current_scene())
-            .is_some_and(|scene| scene.get_scene_file_path() == EXPLORER_SCENE);
-        if !in_explorer {
+            .and_then(|tree| tree.get_current_scene());
+        let named = current.is_some_and(|scene| {
+            EXPLORER_SCENES.contains(&scene.get_scene_file_path().to_string().as_str())
+        });
+        let runner_up = globals::scene_runner().is_instance_valid();
+        if !named && !runner_up {
             return;
         }
         let mut runner = globals::scene_runner();

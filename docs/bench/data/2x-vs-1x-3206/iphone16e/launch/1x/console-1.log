@@ -1,0 +1,133 @@
+11:50:19  Acquired tunnel connection to device.
+11:50:19  Enabling developer disk image services.
+11:50:19  Acquired usage assertion.
+Launched application with org.decentraland.godotexplorer bundle identifier.
+Waiting for the application to terminate…
+2026-11-03 11:50:20.053 decentraland-godot-client[25294:946010] [DEEPLINK] +[DeeplinkServiceLoader load] fired (image load)
+2026-11-03 11:50:20.054 decentraland-godot-client[25294:946010] [DEEPLINK] scene:openURLContexts: already present on GDTApplicationDelegate, skipping injection
+2026-11-03 11:50:20.054 decentraland-godot-client[25294:946010] [DEEPLINK] scene:willConnectToSession:options: already present on GDTApplicationDelegate, skipping injection
+2026-11-03 11:50:20.054 decentraland-godot-client[25294:946010] [DEEPLINK] scene:continueUserActivity: already present on GDTApplicationDelegate, skipping injection
+2026-11-03 11:50:20.061 decentraland-godot-client[25294:946010] [NOTIFICATION] NotificationService initialized!
+2026-11-03 11:50:20.067 decentraland-godot-client[25294:946010] [NOTIFICATION] NotificationService initialized and set as delegate
+Initialize godot-rust (API v4.6.2.stable.gh-29, runtime v4.6.2.stable.gh-29, safeguards balanced)
+2026-11-03 11:50:20.344 decentraland-godot-client[25294:946010] [DEEPLINK] force_deeplink_service_initialization() called (Godot module init)
+2026-11-03 11:50:20.344 decentraland-godot-client[25294:946010] [DEEPLINK] force_init: scene methods already injected by +load
+2026-11-03 11:50:20.344 decentraland-godot-client[25294:946010] [DEEPLINK] force_init: registering DeeplinkService with GDTApplicationDelegate
+2026-11-03 11:50:20.344 decentraland-godot-client[25294:946010] [DEEPLINK] DeeplinkService initialized!
+Notification database initialized
+AVPlayer API initialized
+2026-11-03 11:50:20.345 decentraland-godot-client[25294:946010] Notification database opened successfully at: /var/mobile/Containers/Data/Application/B3503E1D-4F17-45B9-86EC-E4B83344E08D/Documents/dcl_notifications.db
+2026-11-03 11:50:20.345 decentraland-godot-client[25294:946010] Database current version: 1, target version: 1
+2026-11-03 11:50:20.345 decentraland-godot-client[25294:946010] Database already at current version 1
+2026-11-03 11:50:20.356 decentraland-godot-client[25294:946010] [DEEPLINK] DeeplinkService.application:openURL: fired, URL=decentraland://open?position=0,0
+2026-11-03 11:50:20.356 decentraland-godot-client[25294:946010] [DEEPLINK]   applicationState=1
+2026-11-03 11:50:20.356 decentraland-godot-client[25294:946010] [DEEPLINK] emit_deeplink_received called with URL: decentraland://open?position=0,0
+2026-11-03 11:50:20.356 decentraland-godot-client[25294:946010] [DEEPLINK] URL stored in static receivedUrl
+2026-11-03 11:50:20.356 decentraland-godot-client[25294:946010] [DEEPLINK] Signal emitted successfully
+2026-11-03 11:50:20.356 decentraland-godot-client[25294:946010] [PUSH] registerForRemoteNotifications
+[MemMonitor] total_ram=7718MB -> phys_footprint CRITICAL ceiling=3859MB
+[MemMonitor] background memory monitor started
+[MemMonitor] total_ram=7718MB -> phys_footprint CRITICAL ceiling=3859MB
+[MemMonitor] background memory monitor started
+[MemMonitor] available=6042MB footprint=101MB level=0
+[MemMonitor] available=6042MB footprint=101MB level=0
+2026-11-03 11:50:20.386 decentraland-godot-client[25294:946010] [DclSwiftLib] ping() called
+2026-11-03 11:50:20.386 decentraland-godot-client[25294:946010] [DclSwiftLib] version() called
+2026-11-03 11:50:20.387 decentraland-godot-client[25294:946010] [DEEPLINK] get_deeplink_url called, returning: decentraland://open?position=0,0
+2026-11-03 11:50:20.388 decentraland-godot-client[25294:946010] [DEEPLINK] get_deeplink_url called, returning: 
+2026-11-03 11:50:20.389 decentraland-godot-client[25294:946010] [PUSH] APNs device token ready (len=64)
+[MemMonitor] available=5580MB footprint=563MB level=0
+[MemMonitor] available=5580MB footprint=563MB level=0
+Error: unrecognized flag --wasm-test-streaming
+The remaining arguments were ignored: --no-validate-asm --turbo_fast_api_calls --harmony-temporal --js-float16array
+Try --help for options
+Created AVPlayer with ID: 1
+2026-11-03 11:50:23.047 decentraland-godot-client[25294:946010] [AVPlayerWrapper v1.0.1] Created player with ID: 1
+2026-11-03 11:50:23.089 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Initialized surface with size: 640x360
+2026-11-03 11:50:23.089 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Loading URL: https://vz-8a0704eb-552.b-cdn.net/868d1f35-9036-4985-9a3f-73d4498213a5/playlist.m3u8
+2026-11-03 11:50:23.116 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Video output configured with BGRA format and IOSurface backing
+2026-11-03 11:50:23.116 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Play at rate: 1.000000
+2026-11-03 11:50:23.128 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Pause
+2026-11-03 11:50:23.894 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Video size updated: 1280x720
+2026-11-03 11:50:23.894 decentraland-godot-client[25294:946010] [AVPlayerWrapper] CVPixelBuffer format: BGRA, bytesPerRow: 5120
+2026-11-03 11:50:23.894 decentraland-godot-client[25294:946010] [AVPlayerWrapper] IOSurface: 1280x720, format: BGRA, ptr: 0x1151e1b20
+2026-11-03 11:50:23.894 decentraland-godot-client[25294:946010] [AVPlayerWrapper] First frame received, IOSurface ready, ptr: 0x1151e1b20
+2026-11-03 11:50:23.894 decentraland-godot-client[25294:946010] [Metal IOSurface v1.0.2] texture_create_from_iosurface: IOSurface=0x1151e1b20, size=1280x720, format=BGRA
+2026-11-03 11:50:23.906 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Initialized surface with size: 1280x720
+2026-11-03 11:50:23.920 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Player ready to play
+2026-11-03 11:50:23.960 decentraland-godot-client[25294:946010] [AVPlayerWrapper v1.0.1] Created player with ID: 2
+Created AVPlayer with ID: 2
+Created AVPlayer with ID: 3
+2026-11-03 11:50:23.962 decentraland-godot-client[25294:946010] [AVPlayerWrapper v1.0.1] Created player with ID: 3
+2026-11-03 11:50:23.971 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Initialized surface with size: 640x360
+2026-11-03 11:50:23.971 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Loading URL: https://vz-8a0704eb-552.b-cdn.net/868d1f35-9036-4985-9a3f-73d4498213a5/playlist.m3u8
+2026-11-03 11:50:23.974 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Video output configured with BGRA format and IOSurface backing
+2026-11-03 11:50:23.974 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Play at rate: 1.000000
+2026-11-03 11:50:23.974 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Loading URL: http://ice3.somafm.com/dronezone-128-mp3
+2026-11-03 11:50:23.977 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Video output configured with BGRA format and IOSurface backing
+2026-11-03 11:50:23.977 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Play at rate: 1.000000
+2026-11-03 11:50:23.980 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Pause
+2026-11-03 11:50:24.170 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Video size updated: 1280x720
+2026-11-03 11:50:24.170 decentraland-godot-client[25294:946010] [AVPlayerWrapper] CVPixelBuffer format: BGRA, bytesPerRow: 5120
+2026-11-03 11:50:24.170 decentraland-godot-client[25294:946010] [AVPlayerWrapper] IOSurface: 1280x720, format: BGRA, ptr: 0x1151e1d80
+2026-11-03 11:50:24.170 decentraland-godot-client[25294:946010] [AVPlayerWrapper] First frame received, IOSurface ready, ptr: 0x1151e1d80
+2026-11-03 11:50:24.184 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Initialized surface with size: 1280x720
+2026-11-03 11:50:24.198 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Player ready to play
+[MemMonitor] available=4663MB footprint=1480MB level=0
+[MemMonitor] available=4663MB footprint=1480MB level=0
+2026-11-03 11:50:24.942 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Player ready to play
+[MemMonitor] available=3429MB footprint=2714MB level=0
+[MemMonitor] available=3429MB footprint=2714MB level=0
+[MemMonitor] available=3412MB footprint=2731MB level=0[MemMonitor] available=3412MB footprint=2731MB level=0
+
+2026-11-03 11:50:30.319 decentraland-godot-client[25294:946010] [AVPlayerWrapper v1.0.1] Created player with ID: 4
+Created AVPlayer with ID: 4
+2026-11-03 11:50:30.332 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Initialized surface with size: 640x360
+2026-11-03 11:50:30.332 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Loading URL: https://vz-8a0704eb-552.b-cdn.net/99f3d58d-57cc-414a-ab25-abb8f3a1ca28/playlist.m3u8
+2026-11-03 11:50:30.335 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Video output configured with BGRA format and IOSurface backing
+2026-11-03 11:50:30.335 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Play at rate: 1.000000
+2026-11-03 11:50:30.341 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Pause
+[MemMonitor] available=3219MB footprint=2924MB level=0
+[MemMonitor] available=3219MB footprint=2924MB level=0
+2026-11-03 11:50:30.870 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Video size updated: 1280x720
+2026-11-03 11:50:30.870 decentraland-godot-client[25294:946010] [AVPlayerWrapper] CVPixelBuffer format: BGRA, bytesPerRow: 5120
+2026-11-03 11:50:30.870 decentraland-godot-client[25294:946010] [AVPlayerWrapper] IOSurface: 1280x720, format: BGRA, ptr: 0x1151e2020
+2026-11-03 11:50:30.870 decentraland-godot-client[25294:946010] [AVPlayerWrapper] First frame received, IOSurface ready, ptr: 0x1151e2020
+2026-11-03 11:50:30.877 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Player ready to play
+2026-11-03 11:50:30.892 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Initialized surface with size: 1280x720
+2026-11-03 11:50:31.047 decentraland-godot-client[25294:946010] [AVPlayerWrapper v1.0.1] Created player with ID: 5
+Created AVPlayer with ID: 5
+2026-11-03 11:50:31.089 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Loading URL: https://strw3.openstream.co/1487?aw_0_1st.collectionid%3D4682%26stationId%3D4682%26publisherId%3D1511%26k%3D1708457720
+2026-11-03 11:50:31.093 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Video output configured with BGRA format and IOSurface backing
+2026-11-03 11:50:31.093 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Play at rate: 1.000000
+[MemMonitor] available=3045MB footprint=3098MB level=0
+[MemMonitor] available=3045MB footprint=3098MB level=0
+Created AVPlayer with ID: 6
+2026-11-03 11:50:34.577 decentraland-godot-client[25294:946010] [AVPlayerWrapper v1.0.1] Created player with ID: 6
+Released AVPlayer with ID: 4
+2026-11-03 11:50:34.579 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Deallocated player with ID: 4
+[MemMonitor] available=3034MB footprint=3109MB level=0
+[MemMonitor] available=3034MB footprint=3109MB level=0
+2026-11-03 11:50:34.589 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Initialized surface with size: 640x360
+2026-11-03 11:50:34.594 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Loading local file: /var/mobile/Containers/Data/Application/B3503E1D-4F17-45B9-86EC-E4B83344E08D/Documents/content/bafybeihq7jgd3w62noitmtihjholmd4pee2uhfmtjd4metpx66wstlw26a.mp4
+2026-11-03 11:50:34.598 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Video output configured with BGRA format and IOSurface backing
+2026-11-03 11:50:34.598 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Play at rate: 1.000000
+2026-11-03 11:50:34.684 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Player ready to play
+2026-11-03 11:50:34.694 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Video size updated: 1280x720
+2026-11-03 11:50:34.694 decentraland-godot-client[25294:946010] [AVPlayerWrapper] CVPixelBuffer format: BGRA, bytesPerRow: 5120
+2026-11-03 11:50:34.694 decentraland-godot-client[25294:946010] [AVPlayerWrapper] IOSurface: 1280x720, format: BGRA, ptr: 0x1151e2130
+2026-11-03 11:50:34.694 decentraland-godot-client[25294:946010] [AVPlayerWrapper] First frame received, IOSurface ready, ptr: 0x1151e2130
+2026-11-03 11:50:34.709 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Initialized surface with size: 1280x720
+2026-11-03 11:50:34.927 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Play at rate: 1.000000
+[MemMonitor] available=2974MB footprint=3169MB level=0
+[MemMonitor] available=2974MB footprint=3169MB level=0
+2026-11-03 11:50:37.528 decentraland-godot-client[25294:946010] [AVPlayerWrapper] Player ready to play
+[MemMonitor] available=2967MB footprint=3176MB level=0
+[MemMonitor] available=2967MB footprint=3176MB level=0
+[MemMonitor] available=3067MB footprint=3076MB level=0
+[MemMonitor] available=3067MB footprint=3076MB level=0
+[MemMonitor] available=3076MB footprint=3067MB level=0
+[MemMonitor] available=3076MB footprint=3067MB level=0
+[MemMonitor] available=3065MB footprint=3078MB level=0
+[MemMonitor] available=3065MB footprint=3078MB level=0
+App terminated due to signal 15.

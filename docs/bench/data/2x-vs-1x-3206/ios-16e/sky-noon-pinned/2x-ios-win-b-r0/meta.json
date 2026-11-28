@@ -1,0 +1,16 @@
+{
+  "label": "2x-ios-win-b-r0",
+  "build": "2x",
+  "platform": "ios",
+  "source": "xctrace/Game Performance/displayed-surfaces-interval",
+  "frames": {
+    "frames": "58",
+    "fps_avg": "18.207353",
+    "span_s": "3.185526",
+    "interval_p50_ms": "50.044500",
+    "interval_p95_ms": "66.729083",
+    "interval_p99_ms": "166.675041",
+    "interval_max_ms": "166.675041",
+    "interval_min_ms": "33.384584"
+  }
+}

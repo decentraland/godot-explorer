@@ -1,0 +1,27 @@
+{
+  "label": "fp-r0",
+  "build": "2x",
+  "utc": "2026-11-12T17:21:14Z",
+  "pid": "10668",
+  "package": "org.decentraland.godotexplorer",
+  "version_name": "2.0.0",
+  "thermal_status": 1,
+  "ap_c": 45.8,
+  "skin_c": 40.2,
+  "profile": 3,
+  "profile_changes": 0,
+  "engine_fps": 43.0,
+  "rt_p95_us": 5941,
+  "frames_missed": 892,
+  "blocked": 0,
+  "scenes": 1,
+  "window_fps": 43.67,
+  "window_frames": 1317,
+  "interval_p99_ms": 33.46,
+  "luma": 144.17,
+  "fps_source_delta_pct": 1.5,
+  "usable": false,
+  "reasons": [
+    "luma 144.2 outside [85.0, 115.0]"
+  ]
+}

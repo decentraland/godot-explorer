@@ -1,0 +1,15 @@
+{
+  "frames": "1042",
+  "fps_avg": "34.550000",
+  "span_s": "29.950000",
+  "interval_p50_ms": "25.280000",
+  "interval_p95_ms": "34.050000",
+  "interval_p99_ms": "42.160000",
+  "interval_max_ms": "49.970000",
+  "fps_p1_low": "23.720000",
+  "fps_p5_low": "29.370000",
+  "fps_median": "39.560000",
+  "pct_missed_deadline": "91.940000",
+  "jank_any": "1042"
+}
+wrote docs/bench/data/2x-vs-1x-3206/android-a54/sky-fixed-midday/1x-skyfix-r1

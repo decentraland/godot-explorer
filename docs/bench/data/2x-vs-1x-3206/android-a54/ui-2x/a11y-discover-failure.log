@@ -1,0 +1,19 @@
+$ adb -s R5CW60624NE shell "rm -f /sdcard/ui.xml; uiautomator dump /sdcard/ui.xml 2>&1; wc -c /sdcard/ui.xml"
+# attempt 1 (plain)
+Killed 
+wc: /sdcard/ui.xml: No such file or directory
+# attempt 2 (plain)
+Killed 
+wc: /sdcard/ui.xml: No such file or directory
+# attempt 3 (plain)
+Killed 
+wc: /sdcard/ui.xml: No such file or directory
+# attempt 1 (--compressed)
+Killed 
+wc: /sdcard/uc.xml: No such file or directory
+# attempt 2 (--compressed)
+Killed 
+wc: /sdcard/uc.xml: No such file or directory
+# same command on Settings for comparison
+UI hierchary dumped to: /sdcard/us.xml
+37592 /sdcard/us.xml

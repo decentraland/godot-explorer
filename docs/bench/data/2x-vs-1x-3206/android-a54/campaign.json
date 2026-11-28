@@ -1,0 +1,64 @@
+{
+  "campaign": "2x-vs-1x-3206-remesaure",
+  "started_utc": "2026-11-11T17:40Z",
+  "device": {
+    "model": "SM-A546E",
+    "serial": "R5CW60624NE",
+    "android": "16",
+    "refresh_pinned_hz": 120.0,
+    "refresh_verified_by": "settings get system min/peak_refresh_rate + dumpsys display mActiveModeId"
+  },
+  "scene": {
+    "primary_position": "100,100",
+    "primary_note": "scene-free parcel: no scene can take the skybox clock over, so the client's world clock applies on both builds",
+    "scene_id_gp": "bafkreihugp3rlcjryzkenaby4fb73gjdhvdxdkvu7uihhfqyxjqnhkkgxy",
+    "sky_policy": "Dynamic Skybox ON, so the sun is (utc_unix * 12) mod 86400 seconds of in-game time; both arms launch inside the same 2 s phase, period 7200 s",
+    "sky_policy_why_not_off": "with Dynamic Skybox off, 2.x reads skybox_time with try_to::<f64>() on an Int variant, fails, and falls back to 0.0 = midnight (lib/crates/dcl_engine/src/sky/skybox_time.rs)"
+  },
+  "settings": {
+    "dynamic_graphics_enabled": false,
+    "graphic_profile": "High (3, verified from the [RenderReady] line of the run's own pid)",
+    "shadow_quality": 1,
+    "bloom_quality": 2
+  },
+  "apk_sha256": {
+    "1x": "b0cb8beca737766303b42f4a363aa1d6782b0ff96977b3778ef76afb2b519f34",
+    "2x": "1f5dad68f87bde3a9e4acdbe228115877ce1f232ca015e8194d7af713643738e"
+  },
+  "arms": [
+    {
+      "id": "P",
+      "scenario": "sky-worldclock",
+      "position": "100,100",
+      "runs_per_build": 6,
+      "window_s": 30,
+      "purpose": "the comparison: sun equal by construction"
+    },
+    {
+      "id": "N",
+      "scenario": "sky-worldclock-null",
+      "position": "100,100",
+      "runs_per_build": 3,
+      "window_s": 30,
+      "purpose": "null control, 2x against 2x, same protocol: measures harness and thermal bias"
+    },
+    {
+      "id": "G",
+      "scenario": "gp-worldclock",
+      "position": "0,0",
+      "runs_per_build": 3,
+      "window_s": 30,
+      "purpose": "descriptive only, two bands, no delta, because the plaza scene owns its clock"
+    }
+  ],
+  "primary_metric": "fps_avg",
+  "primary_metric_why": "lowest within-arm coefficient of variation on light-held arms of the existing data (median 4.7 %, worst 6.0 %), so MDR 7.5 % at n=6; the stall fraction has CV 68.6 % and could only detect a 111 % difference",
+  "secondary_metrics": ["pct_frames_on_modal", "interval_p99_ms", "cpu_mean_pct", "rss_steady_kb"],
+  "gate": {
+    "thermal_status_max": 1,
+    "ap_max_c": 40.0,
+    "skin_margin_c": 1.0,
+    "min_seconds_between_windows": 480,
+    "battery_min_percent_before_block": 40
+  }
+}

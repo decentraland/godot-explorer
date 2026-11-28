@@ -1,0 +1,50 @@
+{
+  "gp": {
+    "1x": {
+      "runs": 5,
+      "fps_avg": 17.94,
+      "fps_p1_low": 14.95,
+      "fps_p5_low": 14.99,
+      "interval_p50_ms": 58.26,
+      "interval_p95_ms": 66.7,
+      "interval_p99_ms": 66.91,
+      "interval_max_ms": 91.63,
+      "rss_steady_mb": 2031.0869140625,
+      "rss_peak_mb": 2094.1044921875,
+      "render_ready_t100_ms": 7710,
+      "render_ready_t90_ms": 6965,
+      "cold_launch_to_render_ready_ms": 27775,
+      "am_total_time_ms": 335,
+      "cpu_mean_pct": 132.7
+    },
+    "2x": {
+      "runs": 5,
+      "fps_avg": 18.07,
+      "fps_p1_low": 13.36,
+      "fps_p5_low": 14.98,
+      "interval_p50_ms": 58.24,
+      "interval_p95_ms": 66.75,
+      "interval_p99_ms": 74.86,
+      "interval_max_ms": 100.11,
+      "rss_steady_mb": 1966.916015625,
+      "rss_peak_mb": 1998.38671875,
+      "render_ready_t100_ms": 1410,
+      "render_ready_t90_ms": 1410,
+      "cold_launch_to_render_ready_ms": 19433,
+      "am_total_time_ms": 316,
+      "cpu_mean_pct": 119.0
+    },
+    "runs": [
+      "1x-gp-r10",
+      "1x-gp-r2",
+      "1x-gp-r4",
+      "1x-gp-r6",
+      "1x-gp-r8",
+      "2x-gp-r1",
+      "2x-gp-r3",
+      "2x-gp-r5",
+      "2x-gp-r7",
+      "2x-gp-r9"
+    ]
+  }
+}

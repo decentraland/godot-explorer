@@ -1,0 +1,576 @@
+ts,interval_ms,jank_type,on_time_finish,present_type,display_frame_token
+72590266786732,[NULL],Display HAL,1,Late Present,1328287
+72590316786963,50.000000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328288
+72590366750616,49.964000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328289
+72590433404732,66.654000,Display HAL,1,Late Present,1328290
+72590483383155,49.978000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328291
+72590533422424,50.039000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328341
+72590591724194,58.302000,Display HAL,1,Late Present,1328342
+72590641698924,49.975000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328343
+72590691749808,50.051000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328344
+72590741799039,50.049000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328345
+72590791729732,49.931000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328346
+72590841719693,49.990000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328347
+72590891724231,50.005000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328348
+72590950239732,58.516000,Display HAL,1,Late Present,1328349
+72591000037924,49.798000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328350
+72591050099077,50.061000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328351
+72591100370885,50.272000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328352
+72591149992347,49.621000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328353
+72591200035847,50.044000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328354
+72591250039847,50.004000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328355
+72591308632270,58.592000,Display HAL,1,Late Present,1328356
+72591366782961,58.151000,Display HAL,1,Late Present,1328357
+72591408367577,41.585000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328358
+72591458655885,50.288000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328359
+72591516941770,58.286000,Display HAL,1,Late Present,1328360
+72591566809731,49.868000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328361
+72591616641769,49.832000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328362
+72591666665423,50.024000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328363
+72591716626809,49.961000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328364
+72591766659885,50.033000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328365
+72591816932770,50.273000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328366
+72591874933154,58.000000,Display HAL,1,Late Present,1328367
+72591924981500,50.048000,Display HAL,1,Late Present,1328368
+72591975058577,50.077000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328369
+72592025161885,50.103000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328370
+72592074963539,49.802000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328371
+72592133296039,58.333000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328372
+72592183259230,49.963000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328373
+72592233658191,50.399000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328374
+72592291638692,57.981000,Display HAL,1,Late Present,1328375
+72592341667499,50.029000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328376
+72592391839692,50.172000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328377
+72592441609961,49.770000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328378
+72592491589038,49.979000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328379
+72592541791884,50.203000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328380
+72592599980307,58.188000,Display HAL,1,Late Present,1328381
+72592650228999,50.249000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328382
+72592699986269,49.757000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328383
+72592749917384,49.931000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328384
+72592808503576,58.586000,Display HAL,1,Late Present,1328385
+72592858161615,49.658000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328386
+72592908225576,50.064000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328387
+72592958203000,49.977000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328388
+72593008249884,50.047000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328389
+72593058190807,49.941000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328390
+72593108211037,50.020000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328391
+72593158211576,50.001000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328392
+72593217177537,58.966000,Display HAL,1,Late Present,1328393
+72593266483960,49.306000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328394
+72593316594268,50.110000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328395
+72593366588384,49.994000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328396
+72593424897307,58.309000,Display HAL,1,Late Present,1328397
+72593474851114,49.954000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328398
+72593524995730,50.145000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328399
+72593583368229,58.372000,Display HAL,1,Late Present,1328400
+72593633719998,50.352000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328401
+72593683494345,49.774000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328402
+72593741598883,58.105000,Display HAL,1,Late Present,1328403
+72593791587306,49.988000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328404
+72593841973114,50.386000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328405
+72593891573268,49.600000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328406
+72593941523191,49.950000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328407
+72593999874883,58.352000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328408
+72594058198844,58.324000,Display HAL,1,Late Present,1328409
+72594108204152,50.005000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328410
+72594158330999,50.127000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328411
+72594208147729,49.817000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328412
+72594266486767,58.339000,Display HAL,1,Late Present,1328413
+72594316451498,49.965000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328414
+72594366514575,50.063000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328415
+72594424849190,58.335000,Display HAL,1,Late Present,1328416
+72594474822806,49.974000,Display HAL,1,Late Present,1328417
+72594525063729,50.241000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328418
+72594574919960,49.856000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328419
+72594624810728,49.891000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328420
+72594674842959,50.032000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328421
+72594733320497,58.478000,Display HAL,1,Late Present,1328422
+72594783102613,49.782000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328423
+72594833145690,50.043000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328424
+72594891443882,58.298000,Display HAL,1,Late Present,1328425
+72594941467305,50.023000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328426
+72594991481612,50.014000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328427
+72595041462460,49.981000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328428
+72595091443266,49.981000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328429
+72595141361728,49.918000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328430
+72595191324574,49.963000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328431
+72595249908113,58.584000,Display HAL,1,Late Present,1328432
+72595299720074,49.812000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328433
+72595349675575,49.956000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328434
+72595407998998,58.323000,Display HAL,1,Late Present,1328435
+72595458073613,50.075000,Display HAL,1,Late Present,1328436
+72595508129151,50.056000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328437
+72595558051844,49.923000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328438
+72595608068421,50.017000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328439
+72595658001498,49.933000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328440
+72595708312652,50.311000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328441
+72595758139574,49.827000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328442
+72595824745459,66.606000,Display HAL,1,Late Present,1328443
+72595874673343,49.928000,Display HAL,1,Late Present,1328444
+72595933030612,58.357000,Display HAL,1,Late Present,1328445
+72595982970575,49.940000,Display HAL,1,Late Present,1328446
+72596033124150,50.154000,Display HAL,1,Late Present,1328447
+72596082960035,49.836000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328448
+72596141318997,58.359000,Display HAL,1,Late Present,1328449
+72596182892613,41.574000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328450
+72596249569921,66.677000,Display HAL,1,Late Present,1328451
+72596299549997,49.980000,Display HAL,1,Late Present,1328452
+72596341275420,41.725000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328453
+72596391180381,49.905000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328454
+72596449794688,58.614000,Display HAL,1,Late Present,1328455
+72596507996881,58.202000,Display HAL,1,Late Present,1328456
+72596549839459,41.843000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328457
+72596599508305,49.669000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328458
+72596649493765,49.985000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328459
+72596707804573,58.311000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328460
+72596758165650,50.361000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328461
+72596807837612,49.672000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328462
+72596874471650,66.634000,Display HAL,1,Late Present,1328463
+72596916171651,41.700000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328464
+72596966200535,50.029000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328465
+72597024685035,58.484000,Display HAL,1,Late Present,1328466
+72597083126266,58.441000,Display HAL,1,Late Present,1328467
+72597124524151,41.398000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328468
+72597174502304,49.978000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328469
+72597233047381,58.545000,Display HAL,1,Late Present,1328470
+72597282831265,49.784000,Display HAL,1,Late Present,1328471
+72597332905535,50.074000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328472
+72597382875881,49.970000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328473
+72597441182688,58.307000,Display HAL,1,Late Present,1328474
+72597491167111,49.984000,Display HAL,1,Late Present,1328475
+72597541408227,50.241000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328476
+72597599421919,58.014000,Display HAL,1,Late Present,1328477
+72597649568573,50.147000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328478
+72597699428226,49.860000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328479
+72597749718496,50.290000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328480
+72597799573151,49.855000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328481
+72597866437150,66.864000,Display HAL,1,Late Present,1328482
+72597907781649,41.344000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328483
+72597957847611,50.066000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328484
+72598016170880,58.323000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328485
+72598074502226,58.331000,Display HAL,1,Late Present,1328486
+72598124795842,50.294000,Display HAL,1,Late Present,1328487
+72598174630572,49.835000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328488
+72598232873880,58.243000,Display HAL,1,Late Present,1328489
+72598282993072,50.119000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328490
+72598332917572,49.925000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328491
+72598391224841,58.307000,Display HAL,1,Late Present,1328492
+72598441477187,50.252000,Display HAL,1,Late Present,1328493
+72598491489611,50.012000,Display HAL,1,Late Present,1328494
+72598541187265,49.698000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328495
+72598591213264,50.026000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328496
+72598641182611,49.969000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328497
+72598691111572,49.929000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328498
+72598749615918,58.504000,Display HAL,1,Late Present,1328499
+72598799630495,50.015000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328500
+72598849613956,49.983000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328501
+72598899883341,50.269000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328502
+72598949492418,49.609000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328503
+72598999526764,50.034000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328504
+72599057919995,58.393000,Display HAL,1,Late Present,1328505
+72599124520302,66.600000,Display HAL,1,Late Present,1328506
+72599174516226,49.996000,Display HAL,1,Late Present,1328507
+72599224561341,50.045000,Display HAL,1,Late Present,1328508
+72599274653302,50.092000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328509
+72599324501264,49.848000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328510
+72599382885033,58.384000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328511
+72599449520648,66.636000,Display HAL,1,Late Present,1328512
+72599499507610,49.987000,Display HAL,1,Late Present,1328513
+72599541160418,41.653000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328514
+72599599488533,58.328000,Display HAL,1,Late Present,1328515
+72599649472110,49.984000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328516
+72599699705456,50.233000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328517
+72599749523148,49.818000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328518
+72599808173533,58.650000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328519
+72599858186955,50.013000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328520
+72599916189840,58.003000,Display HAL,1,Late Present,1328521
+72599966281302,50.091000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328522
+72600016107687,49.826000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328523
+72600074520763,58.413000,Display HAL,1,Late Present,1328524
+72600124427148,49.906000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328525
+72600174663379,50.236000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328526
+72600224516418,49.853000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328527
+72600282800379,58.284000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328528
+72600332817225,50.017000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328529
+72600382793340,49.976000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328530
+72600432865955,50.073000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328531
+72600482872840,50.007000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328532
+72600532869687,49.997000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328533
+72600583175532,50.306000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328534
+72600632885571,49.710000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328535
+72600682771532,49.886000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328536
+72600732886340,50.115000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328537
+72600791272916,58.387000,Display HAL,1,Late Present,1328538
+72600841239725,49.967000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328539
+72600891145532,49.906000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328540
+72600941212763,50.067000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328541
+72600991285301,50.073000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328542
+72601041113071,49.828000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328543
+72601099502186,58.389000,Display HAL,1,Late Present,1328544
+72601149757493,50.255000,Display HAL,1,Late Present,1328545
+72601199500301,49.743000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328546
+72601249468763,49.968000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328547
+72601299477493,50.009000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328548
+72601357820032,58.343000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328549
+72601407725724,49.906000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328599
+72601458043455,50.318000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328600
+72601516199955,58.157000,Display HAL,1,Late Present,1328601
+72601566175340,49.975000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328602
+72601616114031,49.939000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328603
+72601666067878,49.954000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328604
+72601716197993,50.130000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328605
+72601766077532,49.880000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328606
+72601824503032,58.425000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328607
+72601874611108,50.108000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328608
+72601924704761,50.094000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328609
+72601974388647,49.684000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328610
+72602032653916,58.265000,Display HAL,1,Late Present,1328611
+72602082692723,50.039000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328612
+72602132681146,49.988000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328613
+72602183223185,50.542000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328614
+72602232626685,49.404000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328615
+72602282737069,50.110000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328616
+72602340997800,58.261000,Display HAL,1,Late Present,1328617
+72602390907185,49.909000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328618
+72602440950031,50.043000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328619
+72602490901415,49.951000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328620
+72602540832531,49.931000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328621
+72602590849915,50.017000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328622
+72602649191800,58.342000,Display HAL,1,Late Present,1328623
+72602699432607,50.241000,Display HAL,1,Late Present,1328624
+72602749160492,49.728000,Display HAL,1,Late Present,1328625
+72602799202146,50.042000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328626
+72602849171492,49.969000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328627
+72602899198761,50.027000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328628
+72602949071030,49.872000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328629
+72602999105800,50.035000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328630
+72603049047992,49.942000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328631
+72603107427300,58.379000,Display HAL,1,Late Present,1328632
+72603157434184,50.007000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328633
+72603207366761,49.933000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328634
+72603265716800,58.350000,Display HAL,1,Late Present,1328635
+72603315808876,50.092000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328636
+72603365807453,49.999000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328637
+72603415745876,49.938000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328638
+72603482399222,66.653000,Display HAL,1,Late Present,1328639
+72603524411222,42.012000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328640
+72603574173415,49.762000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328641
+72603624101915,49.928000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328642
+72603682706184,58.604000,Display HAL,1,Late Present,1328643
+72603732497530,49.791000,Display HAL,1,Late Present,1328644
+72603782497183,50.000000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328645
+72603832505838,50.009000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328646
+72603882769030,50.263000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328647
+72603932431453,49.662000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328648
+72603982490068,50.059000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328649
+72604032874684,50.385000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328650
+72604082600414,49.726000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328651
+72604141180799,58.580000,Display HAL,1,Late Present,1328652
+72604191193530,50.013000,Display HAL,1,Late Present,1328653
+72604240886568,49.693000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328654
+72604307493145,66.607000,Display HAL,1,Late Present,1328655
+72604349257761,41.765000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328656
+72604407539569,58.282000,Display HAL,1,Late Present,1328657
+72604457777067,50.237000,Display HAL,1,Late Present,1328658
+72604507576761,49.800000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328659
+72604557510030,49.933000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328660
+72604607574337,50.064000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328661
+72604657718029,50.144000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328662
+72604715857452,58.139000,Display HAL,1,Late Present,1328663
+72604765865452,50.008000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328664
+72604815976491,50.111000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328665
+72604865882298,49.906000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328666
+72604915885028,50.003000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328667
+72604974233606,58.349000,Display HAL,1,Late Present,1328668
+72605024333029,50.099000,Display HAL,1,Late Present,1328669
+72605074355990,50.023000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328670
+72605124352105,49.996000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328671
+72605174204067,49.852000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328672
+72605224339913,50.136000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328673
+72605282859952,58.520000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328674
+72605332697067,49.837000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328675
+72605382763298,50.066000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328676
+72605440991029,58.228000,Display HAL,1,Late Present,1328677
+72605490985029,49.994000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328678
+72605540878106,49.893000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328679
+72605590925644,50.048000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328680
+72605641076029,50.150000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328681
+72605691046567,49.971000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328682
+72605749344297,58.298000,Display HAL,1,Late Present,1328683
+72605799149413,49.805000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328684
+72605849318336,50.169000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328685
+72605899373645,50.055000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328686
+72605949136298,49.763000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328687
+72606007522875,58.387000,Display HAL,1,Late Present,1328688
+72606057700374,50.177000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328689
+72606107574028,49.874000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328690
+72606157551220,49.977000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328691
+72606207560067,50.009000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328692
+72606257490567,49.931000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328693
+72606307488451,49.998000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328694
+72606357554221,50.066000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328695
+72606415855605,58.301000,Display HAL,1,Late Present,1328696
+72606465873451,50.018000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328697
+72606515884220,50.011000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328698
+72606565796182,49.912000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328699
+72606615835758,50.040000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328700
+72606674162720,58.327000,Display HAL,1,Late Present,1328701
+72606724250605,50.088000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328702
+72606774197874,49.947000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328703
+72606824120528,49.923000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328704
+72606874159181,50.039000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328705
+72606932457796,58.299000,Display HAL,1,Late Present,1328706
+72606982472720,50.015000,Display HAL,1,Late Present,1328707
+72607032512759,50.040000,Display HAL,1,Late Present,1328708
+72607082795336,50.283000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328709
+72607132549258,49.754000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328710
+72607182509181,49.960000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328711
+72607232495835,49.987000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328712
+72607290796373,58.301000,Display HAL,1,Late Present,1328713
+72607340844182,50.048000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328714
+72607390889066,50.045000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328715
+72607440835258,49.946000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328716
+72607507469066,66.634000,Display HAL,1,Late Present,1328717
+72607549203566,41.734000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328718
+72607599208796,50.005000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328719
+72607649240142,50.031000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328720
+72607707476489,58.236000,Display HAL,1,Late Present,1328721
+72607757546104,50.070000,Display HAL,1,Late Present,1328722
+72607807505450,49.959000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328723
+72607857621835,50.116000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328724
+72607907494720,49.873000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328725
+72607957450796,49.956000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328726
+72608007501950,50.051000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328727
+72608057486334,49.984000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328728
+72608115808335,58.322000,Display HAL,1,Late Present,1328729
+72608165877065,50.069000,Display HAL,1,Late Present,1328730
+72608215881218,50.004000,Display HAL,1,Late Present,1328731
+72608265899796,50.019000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328732
+72608315860911,49.961000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328733
+72608365844103,49.983000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328734
+72608415794295,49.950000,SurfaceFlinger Stuffing,0,Late Present,1328742
+72608433155334,17.361000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328750
+72608474225411,41.070000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328751
+72608524201219,49.976000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328752
+72608582545104,58.344000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328753
+72608632544643,50.000000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328754
+72608682493757,49.949000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328755
+72608740888219,58.394000,Display HAL,1,Late Present,1328756
+72608790803180,49.915000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328757
+72608840769719,49.967000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328758
+72608890857988,50.088000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328759
+72608949076526,58.219000,Display HAL,1,Late Present,1328760
+72608999050027,49.974000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328761
+72609049249179,50.199000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328762
+72609098977680,49.729000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328763
+72609157405949,58.428000,Display HAL,1,Late Present,1328764
+72609207364219,49.958000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328765
+72609257389603,50.025000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328766
+72609307301719,49.912000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328767
+72609365699641,58.398000,Display HAL,1,Late Present,1328768
+72609415707027,50.007000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328769
+72609482311833,66.605000,Display HAL,1,Late Present,1328770
+72609524079679,41.768000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328771
+72609573968641,49.889000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328772
+72609632357642,58.389000,Display HAL,1,Late Present,1328773
+72609682362488,50.005000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328774
+72609732380834,50.018000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328775
+72609790826257,58.445000,Display HAL,1,Late Present,1328776
+72609840661833,49.836000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328777
+72609890932488,50.271000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328778
+72609940848333,49.916000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328779
+72609990591140,49.743000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328780
+72610048948064,58.357000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328781
+72610099022871,50.075000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328782
+72610149002872,49.980000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328783
+72610198936372,49.934000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328784
+72610257332218,58.396000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328785
+72610323930679,66.598000,Display HAL,1,Late Present,1328786
+72610373929025,49.998000,Display HAL,1,Late Present,1328787
+72610432265294,58.336000,Display HAL,1,Late Present,1328788
+72610482283449,50.018000,Display HAL,1,Late Present,1328789
+72610532533910,50.250000,Display HAL,1,Late Present,1328790
+72610590614333,58.080000,Display HAL,1,Late Present,1328791
+72610640572601,49.958000,Display HAL,1,Late Present,1328792
+72610698938948,58.366000,Display HAL,1,Late Present,1328793
+72610748899871,49.961000,Display HAL,1,Late Present,1328794
+72610807298563,58.399000,Display HAL,1,Late Present,1328795
+72610857191525,49.893000,Display HAL,1,Late Present,1328796
+72610907426409,50.235000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328797
+72610957251294,49.825000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328798
+72611015634025,58.383000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328799
+72611065529678,49.896000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328800
+72611115792371,50.263000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328801
+72611174207948,58.416000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328802
+72611223823256,49.615000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328803
+72611273806101,49.983000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328804
+72611332151871,58.346000,Display HAL,1,Late Present,1328805
+72611382183333,50.031000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328806
+72611432221871,50.039000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328807
+72611482152486,49.931000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328808
+72611557160986,75.008000,Display HAL,1,Late Present,1328809
+72611598790831,41.630000,Display HAL,1,Late Present,1328810
+72611648953832,50.163000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328811
+72611699369986,50.416000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328812
+72611757216793,57.847000,Display HAL,1,Late Present,1328813
+72611807096447,49.880000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328814
+72611865466601,58.370000,Display HAL,1,Late Present,1328815
+72611915712678,50.246000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328816
+72611965602486,49.890000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328817
+72612023847755,58.245000,Display HAL,1,Late Present,1328818
+72612073949139,50.101000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328819
+72612123816485,49.867000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328820
+72612182324832,58.508000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328821
+72612232137101,49.812000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328822
+72612298781678,66.645000,Display HAL,1,Late Present,1328872
+72612348822754,50.041000,Display HAL,1,Late Present,1328873
+72612398910062,50.087000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328874
+72612448745486,49.835000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328875
+72612498814985,50.069000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328876
+72612557175486,58.361000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328877
+72612607136639,49.961000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328878
+72612657057447,49.921000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328879
+72612715460024,58.403000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328880
+72612765444370,49.984000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328881
+72612823789677,58.345000,Display HAL,1,Late Present,1328882
+72612873958985,50.169000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328883
+72612923831408,49.872000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328884
+72612973867946,50.037000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328885
+72613032388523,58.521000,Display HAL,1,Late Present,1328886
+72613082196523,49.808000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328887
+72613132189870,49.993000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328888
+72613182124908,49.935000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328889
+72613232161409,50.037000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328890
+72613290848100,58.687000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328891
+72613340459715,49.612000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328892
+72613390650176,50.190000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328893
+72613449028331,58.378000,Display HAL,1,Late Present,1328894
+72613498864946,49.837000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328895
+72613549027907,50.163000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328896
+72613599121638,50.094000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328897
+72613648800754,49.679000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328898
+72613707221753,58.421000,Display HAL,1,Late Present,1328899
+72613757204022,49.982000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328900
+72613807170753,49.967000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328901
+72613857189254,50.019000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328902
+72613915548369,58.359000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328903
+72613965461945,49.914000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328904
+72614015608253,50.146000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328905
+72614073929676,58.321000,Display HAL,1,Late Present,1328906
+72614123821830,49.892000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328907
+72614173754754,49.933000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328908
+72614232123868,58.369000,Display HAL,1,Late Present,1328909
+72614282342369,50.219000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328910
+72614332463445,50.121000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328911
+72614382418022,49.955000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328912
+72614440587945,58.170000,Display HAL,1,Late Present,1328913
+72614490555253,49.967000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328914
+72614540365445,49.810000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328915
+72614598725407,58.360000,Display HAL,1,Late Present,1328916
+72614648692522,49.967000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328917
+72614698780945,50.088000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328918
+72614748757061,49.976000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328919
+72614798733753,49.977000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328920
+72614857080253,58.346000,Display HAL,1,Late Present,1328921
+72614907285599,50.205000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328922
+72614957055753,49.770000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328923
+72615007076906,50.021000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328924
+72615065386099,58.309000,Display HAL,1,Late Present,1328925
+72615115370561,49.984000,Display HAL,1,Late Present,1328926
+72615165402829,50.032000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328927
+72615215395560,49.993000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328928
+72615265352291,49.957000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328929
+72615323737867,58.386000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328930
+72615373806175,50.068000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328931
+72615423657637,49.851000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328932
+72615482488906,58.831000,Display HAL,1,Late Present,1328933
+72615531994944,49.506000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328934
+72615590380714,58.386000,Display HAL,1,Late Present,1328935
+72615632194868,41.814000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328936
+72615690330329,58.135000,Display HAL,1,Late Present,1328937
+72615740359214,50.029000,Display HAL,1,Late Present,1328938
+72615790383406,50.024000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328939
+72615840349868,49.966000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328940
+72615898685021,58.335000,Display HAL,1,Late Present,1328941
+72615948920867,50.236000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328942
+72615998623521,49.703000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328943
+72616057105829,58.482000,Display HAL,1,Late Present,1328944
+72616107305290,50.199000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328945
+72616157136637,49.831000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328946
+72616206975751,49.839000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328947
+72616265270636,58.295000,Display HAL,1,Late Present,1328948
+72616315261598,49.991000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328949
+72616365379406,50.118000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328950
+72616415291291,49.912000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328951
+72616473789213,58.498000,Display HAL,1,Late Present,1328952
+72616523692405,49.903000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328953
+72616573977828,50.285000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328954
+72616623612483,49.635000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328955
+72616682011290,58.399000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328956
+72616731943905,49.933000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328957
+72616781929405,49.986000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328958
+72616840466982,58.538000,Display HAL,1,Late Present,1328959
+72616890463983,49.997000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328960
+72616940495828,50.032000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328961
+72616990357982,49.862000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328962
+72617048482983,58.125000,Display HAL,1,Late Present,1328963
+72617098566943,50.084000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328964
+72617148526290,49.959000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328965
+72617198495828,49.970000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328966
+72617256771866,58.276000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328967
+72617306791712,50.020000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328968
+72617356846482,50.055000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328969
+72617415159212,58.313000,Display HAL,1,Late Present,1328970
+72617465194058,50.035000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328971
+72617515127481,49.933000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328972
+72617573510674,58.383000,Display HAL,1,Late Present,1328973
+72617623480251,49.970000,Display HAL,1,Late Present,1328974
+72617673438251,49.958000,Display HAL,1,Late Present,1328975
+72617723619943,50.182000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328976
+72617773463943,49.844000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328977
+72617831824058,58.360000,Display HAL,1,Late Present,1328978
+72617881778827,49.955000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328979
+72617931790058,50.011000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328980
+72617990073789,58.284000,Display HAL,1,Late Present,1328981
+72618040175135,50.101000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328982
+72618090104481,49.929000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328983
+72618140107019,50.003000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328984
+72618198891058,58.784000,Display HAL,1,Late Present,1328985
+72618248478981,49.588000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328986
+72618298890097,50.411000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328987
+72618348551481,49.661000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328988
+72618407059635,58.508000,Display HAL,1,Late Present,1328989
+72618456967481,49.908000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328990
+72618506749866,49.782000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328991
+72618556738135,49.988000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328992
+72618606866673,50.129000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328993
+72618665213866,58.347000,Display HAL,1,Late Present,1328994
+72618715142673,49.929000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328995
+72618765159019,50.016000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328996
+72618815017096,49.858000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328997
+72618865059174,50.042000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328998
+72618923419557,58.360000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1328999
+72618973442481,50.023000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1329000
+72619023363866,49.921000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1329001
+72619081714019,58.350000,Display HAL,1,Late Present,1329002
+72619131886903,50.173000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1329003
+72619181698442,49.812000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1329004
+72619231913403,50.215000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1329005
+72619289986826,58.073000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1329006
+72619340057326,50.071000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1329007
+72619389990865,49.934000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1329008
+72619448521750,58.531000,Display HAL,1,Late Present,1329009
+72619498386557,49.865000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1329010
+72619548233287,49.847000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1329011
+72619615056249,66.823000,Display HAL,1,Late Present,1329012
+72619656656903,41.601000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1329013
+72619714928403,58.272000,Display HAL,1,Late Present,1329014
+72619764996980,50.069000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1329015
+72619814967250,49.970000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1329016
+72619864948288,49.981000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1329017
+72619915097595,50.149000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1329018
+72619973594326,58.497000,Display HAL,1,Late Present,1329019
+72620023358365,49.764000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1329020
+72620073318211,49.960000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1329021
+72620123232249,49.914000,SurfaceFlinger CPU Deadline Missed,0,Late Present,1329022
